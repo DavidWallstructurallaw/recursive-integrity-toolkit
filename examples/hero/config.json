@@ -1,0 +1,9 @@
+{
+  "representation": {
+    "name": "topic",
+    "source": "topic_field",
+    "field": "topic",
+    "version": "hero-topic-v1",
+    "missing_value_policy": "error"
+  }
+}

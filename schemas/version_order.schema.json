@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recursive-integrity-toolkit.example/schemas/version_order.schema.json",
+  "title": "Recursive Integrity Toolkit Version Order Skeleton",
+  "description": "Phase 1 structural contract for an explicit ordered list of dataset versions.",
+  "type": "object",
+  "required": ["version_order"],
+  "properties": {
+    "version_order": {
+      "type": "array",
+      "description": "Dataset versions in user-declared chronological order.",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
+}

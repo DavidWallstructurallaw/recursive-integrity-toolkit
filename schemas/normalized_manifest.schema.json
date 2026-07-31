@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recursive-integrity-toolkit.example/schemas/normalized_manifest.schema.json",
+  "title": "Recursive Integrity Toolkit Normalized Manifest Row Skeleton",
+  "description": "Phase 1 structural contract for one normalized provenance-manifest row. Detailed enum, lineage, and cross-row validation is deferred to Phase 2.",
+  "type": "object",
+  "required": [
+    "dataset_version",
+    "record_id",
+    "source_type",
+    "provenance_confidence",
+    "external_grounding",
+    "parent_ids"
+  ],
+  "properties": {
+    "record_key": {"type": ["string", "null"]},
+    "dataset_version": {"type": "string"},
+    "record_id": {"type": "string"},
+    "source_type": {"type": "string"},
+    "provenance_confidence": {"type": "string"},
+    "external_grounding": {"type": "string"},
+    "parent_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "generator_id": {"type": ["string", "null"]},
+    "generator_version": {"type": ["string", "null"]},
+    "transformation": {"type": ["string", "null"]},
+    "generation": {"type": ["integer", "null"]},
+    "human_reviewed": {"type": ["boolean", "null"]},
+    "batch_id": {"type": ["string", "null"]},
+    "timestamp": {"type": ["string", "null"]},
+    "grounding_evidence_ref": {"type": ["string", "null"]},
+    "source_uri": {"type": ["string", "null"]},
+    "license_id": {"type": ["string", "null"]},
+    "_validation_status": {"type": ["string", "null"]},
+    "_warning_codes": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "extras": {
+      "type": "object",
+      "description": "Explicitly preserved unmapped fields. These fields must not affect metrics automatically.",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

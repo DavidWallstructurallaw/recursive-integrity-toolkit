@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recursive-integrity-toolkit.example/schemas/config.schema.json",
+  "title": "Recursive Integrity Toolkit Configuration Skeleton",
+  "description": "Phase 1 structural contract for local audit configuration. Detailed cross-field validation is deferred to Phase 2.",
+  "type": "object",
+  "properties": {
+    "config_version": {
+      "type": "string",
+      "description": "Version of the configuration document format."
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Local input roles and paths.",
+      "additionalProperties": true
+    },
+    "representation": {
+      "type": "object",
+      "description": "Declared state representation.",
+      "properties": {
+        "name": {"type": "string"},
+        "source": {"type": "string"},
+        "field": {"type": "string"},
+        "version": {"type": "string"},
+        "missing_value_policy": {"type": "string"},
+        "normalization_profile": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "representation_compatibility": {
+      "type": "object",
+      "description": "Dataset-version to representation-version declarations.",
+      "additionalProperties": {"type": "string"}
+    },
+    "state_mapping": {
+      "type": "object",
+      "description": "Explicit state mapping used only when separately approved.",
+      "additionalProperties": {"type": "string"}
+    },
+    "version_order": {
+      "type": "array",
+      "description": "Explicit dataset version order.",
+      "items": {"type": "string"}
+    },
+    "privacy_mode": {
+      "type": "string",
+      "description": "Selected standard, redacted, or debug privacy mode."
+    },
+    "output": {
+      "type": "object",
+      "description": "Local output settings.",
+      "additionalProperties": true
+    },
+    "simulation": {
+      "type": "object",
+      "description": "Optional experimental scenario configuration. Presence does not activate analysis in Phase 1.",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "seed": {"type": "integer"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

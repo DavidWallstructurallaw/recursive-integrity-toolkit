@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=82"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recursive-integrity-toolkit"
+version = "0.1.0.dev1"
+description = "Local-first, auditable research toolkit for recursive data integrity"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [
+  { name = "Xiangyu Guo" },
+]
+keywords = [
+  "synthetic data",
+  "data provenance",
+  "lineage",
+  "recursive training",
+  "auditability",
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = [
+  "numpy>=2.0",
+  "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+parquet = [
+  "pyarrow>=15",
+]
+test = [
+  "pytest>=8",
+  "pytest-cov>=5",
+  "hypothesis>=6",
+  "jsonschema>=4",
+]
+lint = [
+  "ruff>=0.6",
+]
+type = [
+  "mypy>=1.10",
+]
+release = [
+  "build>=1",
+  "twine>=5",
+]
+security = [
+  "pip-audit>=2",
+]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=5",
+  "hypothesis>=6",
+  "jsonschema>=4",
+  "ruff>=0.6",
+  "mypy>=1.10",
+  "build>=1",
+  "twine>=5",
+  "pip-audit>=2",
+]
+
+[project.scripts]
+rit = "recursive_integrity_toolkit.cli:main"
+recursive-integrity = "recursive_integrity_toolkit.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["recursive_integrity_toolkit*"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+strict = true

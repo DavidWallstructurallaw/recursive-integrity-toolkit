@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose a bounded change with traceability information
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Proposals must preserve the approved phase boundary and theory-to-code traceability.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: State the practical problem without proposing an unbounded platform expansion.
+    validations:
+      required: true
+  - type: input
+    id: owners
+    attributes:
+      label: Relevant Trace IDs or Product Rule IDs
+      placeholder: T1, PR-004
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Proposed validation evidence
+    validations:
+      required: true

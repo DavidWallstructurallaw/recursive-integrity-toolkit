@@ -1,0 +1,34 @@
+name: Phase 1 Security Boundary
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-first-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package and Phase 1 test tools
+        run: python -m pip install ".[test]"
+      - name: Verify import, optional dependency, and prohibited structure boundaries
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: >-
+          python -m pytest -p no:cacheprovider -q
+          tests/integration/test_no_network.py
+          tests/integration/test_optional_dependency.py
+          tests/integration/test_no_algorithms.py
+          tests/integration/test_prohibited_structure.py
+          tests/integration/test_license_notices.py
+
+# This workflow starts no service and runs no audit calculation.

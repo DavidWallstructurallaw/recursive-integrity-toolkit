@@ -1,0 +1,28 @@
+name: Bug report
+description: Report a reproducible scaffold or future implementation defect
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Do not upload private datasets, secrets, raw content, or confidential paths.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the observed behavior and the expected behavior.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Toolkit version
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal synthetic reproduction
+      description: Use harmless synthetic data or a structure-only example.
+    validations:
+      required: true

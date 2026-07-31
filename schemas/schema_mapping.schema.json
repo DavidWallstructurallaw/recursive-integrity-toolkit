@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recursive-integrity-toolkit.example/schemas/schema_mapping.schema.json",
+  "title": "Recursive Integrity Toolkit Schema Mapping Skeleton",
+  "description": "Phase 1 structural contract for declarative field mapping. It does not authorize arbitrary code, imports, shell commands, filesystem access, environment access, or network access.",
+  "type": "object",
+  "properties": {
+    "mapping_version": {
+      "type": "string",
+      "description": "Version of the mapping document format."
+    },
+    "records": {
+      "$ref": "#/$defs/mappingSection"
+    },
+    "provenance": {
+      "$ref": "#/$defs/mappingSection"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "mappingSection": {
+      "type": "object",
+      "description": "Declarative mappings for one input role.",
+      "properties": {
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/fieldMapping"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "fieldMapping": {
+      "type": "object",
+      "description": "Source, constant, and allowlisted operation declarations for one canonical field.",
+      "properties": {
+        "source": {"type": "string"},
+        "constant": {},
+        "operations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/operation"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "operation": {
+      "type": "object",
+      "description": "One declarative operation. Operation-specific validation is deferred to Phase 2.",
+      "required": ["op"],
+      "properties": {
+        "op": {
+          "type": "string",
+          "description": "Approved operation name such as rename, trim, cast, parse, coalesce, map, or case normalization."
+        },
+        "mapping": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "unmapped": {"type": "string"},
+        "format": {"type": "string"},
+        "sources": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "value": {}
+      },
+      "additionalProperties": false
+    }
+  }
+}

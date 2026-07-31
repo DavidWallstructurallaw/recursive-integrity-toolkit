@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recursive-integrity-toolkit.example/schemas/report.schema.json",
+  "title": "Recursive Integrity Toolkit Report Skeleton",
+  "description": "Phase 1 structural contract for the required top-level audit report sections. Analytical field validation is deferred to later phases.",
+  "type": "object",
+  "required": [
+    "run",
+    "inputs",
+    "observability",
+    "capabilities",
+    "observed_facts",
+    "derived_metrics",
+    "proxy_signals",
+    "simulations",
+    "unavailable_conclusions",
+    "recommended_next_metadata",
+    "warnings",
+    "errors"
+  ],
+  "properties": {
+    "run": {
+      "type": "object",
+      "description": "Run metadata and report schema identity.",
+      "required": ["report_schema_version"],
+      "properties": {
+        "report_schema_version": {
+          "type": "string",
+          "description": "Version of the public report schema."
+        }
+      },
+      "additionalProperties": true
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Input inventory and input metadata.",
+      "additionalProperties": true
+    },
+    "observability": {
+      "type": "object",
+      "description": "Maximum observability level and supporting status.",
+      "additionalProperties": true
+    },
+    "capabilities": {
+      "type": "object",
+      "description": "Capability matrix entries.",
+      "additionalProperties": true
+    },
+    "observed_facts": {
+      "type": "object",
+      "description": "Directly observed facts.",
+      "additionalProperties": true
+    },
+    "derived_metrics": {
+      "type": "object",
+      "description": "Approved derived metrics. Detailed metric validation is deferred.",
+      "additionalProperties": true
+    },
+    "proxy_signals": {
+      "type": "object",
+      "description": "Explicitly labeled proxy signals.",
+      "additionalProperties": true
+    },
+    "simulations": {
+      "type": "object",
+      "description": "Explicitly labeled simulation outputs.",
+      "additionalProperties": true
+    },
+    "unavailable_conclusions": {
+      "type": "array",
+      "description": "Conclusions that the available evidence cannot support.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "recommended_next_metadata": {
+      "type": "array",
+      "description": "Recommended metadata additions that could unlock further capabilities.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "description": "Structured warning records.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "errors": {
+      "type": "array",
+      "description": "Structured error records.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}
