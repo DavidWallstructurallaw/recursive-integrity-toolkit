@@ -94,3 +94,25 @@ class SchemaError(ToolkitError):
 
 class SecurityError(ToolkitError):
     """Local security-boundary violation."""
+
+
+class IngestionError(InputError):
+    """Physical input failure with a safe location and no source-value echo."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        file_role: str | None = None,
+        file_path: str | None = None,
+        row_number: int | None = None,
+        line_number: int | None = None,
+        byte_offset: int | None = None,
+    ) -> None:
+        self.file_role = file_role
+        self.file_path = file_path
+        self.row_number = row_number
+        self.line_number = line_number
+        self.byte_offset = byte_offset
+        super().__init__(code, message)

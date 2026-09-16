@@ -1,20 +1,32 @@
-"""Own future file, exact-content, and redacted-identifier hashing helpers.
+"""Hash an explicitly supplied file-byte snapshot for input inventory.
 
 Owner IDs:
-    PR-006, PR-015, PR-016
+    PR-016; PR-002 supporting input identity; PR-006 and PR-015 remain deferred.
 
-Future inputs:
-    Future explicit local bytes, identifiers, and optional salts.
+Inputs:
+    Bytes already read by the local file loader.
 
-Future outputs:
-    Future deterministic hashes or redacted identifier tokens.
+Outputs:
+    Lowercase SHA-256 hexadecimal digest of exactly those bytes.
 
 Assumptions:
-    Hashing supports identity and reproducibility but does not prove provenance.
+    The caller uses the same snapshot for parsing and inventory.
 
 Limits:
-    No hashing, normalization, salt generation, or content access is implemented here.
+    No file access, content normalization, duplicate detection, ID redaction,
+    provenance inference, or analytical calculation.
 
 Current phase status:
-    Phase 1 package scaffold only. Import-safe. No analytical or data-processing logic.
+    Phase 2 Step 2 file hashing only. No analytical behavior.
 """
+
+from __future__ import annotations
+
+import hashlib
+
+
+def sha256_bytes(data: bytes) -> str:
+    """Return the SHA-256 of bytes without decoding or normalizing them."""
+    if not isinstance(data, bytes):
+        raise TypeError("file snapshot must be bytes")
+    return hashlib.sha256(data).hexdigest()

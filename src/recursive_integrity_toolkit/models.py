@@ -241,3 +241,27 @@ class ObservabilityAssessment:
             missing = sorted(key.value for key in expected - supplied)
             extra = sorted(str(key) for key in supplied - expected)
             raise ValueError(f"capability matrix keys mismatch; missing={missing}, extra={extra}")
+
+
+@dataclass(frozen=True, slots=True)
+class RawRow:
+    """Unmapped row with physical location; payload is excluded from repr.
+
+    CSV strings and their original serialized spelling are retained so later
+    normalization can distinguish a quoted empty string from an empty field.
+    JSONL keeps native values, absent keys, and explicit nulls distinct.
+    Parquet rows have an ordinal but no text line or serialized spelling.
+    """
+
+    values: Mapping[str, object] = field(repr=False)
+    row_number: int
+    line_number: int | None = None
+    serialized_text: str | None = field(default=None, repr=False)
+
+
+@dataclass(frozen=True, slots=True)
+class LoadedTable:
+    """Parsed physical table and inventory; canonical validation is deferred."""
+
+    inventory: FileInventoryEntry
+    rows: tuple[RawRow, ...] = field(repr=False)
