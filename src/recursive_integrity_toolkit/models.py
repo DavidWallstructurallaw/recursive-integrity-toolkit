@@ -18,7 +18,7 @@ Limits:
     implemented here. These types carry validated metadata only.
 
 Current phase status:
-    Phase 2 Step 4 core and canonical-row contracts. Import-safe. No analytical behavior.
+    Phase 2 Step 5 canonical-row and provenance-join contracts. Import-safe. No analytical behavior.
 """
 
 from __future__ import annotations
@@ -209,6 +209,12 @@ class ValidationCoverage:
             raise ValueError("coverage denominator must be named")
 
 
+    @property
+    def ratio(self) -> float | None:
+        """Validation coverage only; zero denominator has no defined ratio."""
+        return self.numerator / self.denominator if self.denominator else None
+
+
 @dataclass(frozen=True, slots=True)
 class Capability:
     """One independently evaluated analysis-family status."""
@@ -352,3 +358,63 @@ class CanonicalRow:
     ignored_fields: tuple[str, ...] = ()
     defaulted_fields: tuple[str, ...] = ()
     location: RowLocation = RowLocation()
+
+
+@dataclass(frozen=True, slots=True)
+class ProvenanceAssessment:
+    """Typed row evidence, which may have missing required provenance fields.
+
+    This is not a CanonicalRow. Missing fields retain their absence or null and
+    remain errors; they are never synthesized as an explicit unknown value.
+    join_provenance revalidates the stored fields and does not trust these flags.
+    """
+
+    record_key: RecordKey
+    values: Mapping[str, object] = field(repr=False)
+    location: RowLocation = RowLocation()
+    missing_required_fields: tuple[str, ...] = ()
+    required_fields_valid: bool = False
+    grounding_known: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ProvenanceMatch:
+    """One selected record and its optional unique provenance row.
+
+    Shared metadata stays in separate namespaces. conflicting_fields identifies
+    discrepancies without choosing or overwriting either declaration. Raw record
+    content is deliberately not retained in the join result.
+    """
+
+    record_key: RecordKey
+    provenance: ProvenanceAssessment | None = field(repr=False)
+    record_location: RowLocation = RowLocation()
+    record_metadata: Mapping[str, object] = field(default_factory=dict, repr=False)
+    conflicting_fields: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ProvenanceJoinResult:
+    """Step 5 internal validation basis; no metric/report/capability output.
+
+    All coverage denominators are the same explicit selected valid-record scope.
+    Missing-field diagnostics remain errors even when coverage can be measured.
+    The original records are not discarded and this object writes no report.
+    """
+
+    selected_dataset_versions: tuple[str, ...]
+    scope_record_keys: tuple[RecordKey, ...]
+    provenance_supplied: bool
+    matches: tuple[ProvenanceMatch, ...] = field(repr=False)
+    missing_record_keys: tuple[RecordKey, ...]
+    provenance_row_coverage: ValidationCoverage
+    provenance_required_field_coverage: ValidationCoverage
+    grounding_field_coverage: ValidationCoverage
+    messages: tuple[ValidationMessage, ...]
+    promoted_warning_codes: tuple[str, ...] = ()
+
+    @property
+    def has_errors(self) -> bool:
+        """Expose retained errors; partial coverage never suppresses a failure."""
+        return any(m.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)
+                   for m in self.messages)

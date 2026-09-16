@@ -198,3 +198,68 @@ Lexical row order is a deterministic presentation convention. In particular,
 provenance joins/coverage, parent resolution, generation consistency, metrics,
 reports and simulation remain outside Step 4. The normalized manifest schema
 adds field types/enums and identifier constraints only, without cross-row logic.
+
+## Phase 2 Step 5: provenance attachment and validation coverage
+
+`io.validation.join_provenance(records, provenance)` accepts a tuple of valid
+canonical records and an optional tuple of canonical or explicitly assessed
+provenance rows. It returns `ProvenanceJoinResult`, an internal validation basis.
+No file, report, metric result, or capability classification is produced.
+
+Matching uses the exact `(dataset_version, record_id)` pair. Multiple provenance
+rows for a key raise `E_PROVENANCE_DUPLICATE_ROW`; provenance with no matching
+loaded record raises `E_PROVENANCE_UNMATCHED_ROW`. Missing provenance produces a
+`None` match and `W_PROVENANCE_MISSING_ROW`. A missing manifest and an explicitly
+supplied empty manifest remain distinguishable through `provenance_supplied`.
+Neither case synthesizes source or grounding declarations.
+
+The optional `dataset_versions` tuple selects the coverage scope from the full
+loaded record scope. Every supplied provenance key must still match a loaded
+record, even when that record is outside the selected versions. An unloaded
+selected version is an error. Scope and matches use deterministic identifier
+order only; their order supplies no version chronology.
+
+Three separate unweighted fractions follow `DEFINITIONS_AND_UNITS.md` section 5:
+
+| Validation basis | Numerator | Denominator |
+|---|---|---|
+| `provenance_row_coverage` | Selected records with a matching provenance row | All valid records in the selected scope |
+| `provenance_required_field_coverage` | Selected records whose matching row has every required field valid | The same selected scope |
+| `grounding_field_coverage` | Selected records whose matching row explicitly declares `yes` or `no` grounding | The same selected scope |
+
+Each `ValidationCoverage` retains numerator, denominator, denominator name, and
+its `ratio`. `unknown` is a valid declared enum for required-field coverage but
+is excluded from grounding-known coverage. Record weights never alter these
+fractions. Empty selected record scopes fail with `E_EMPTY_DATASET`; the generic
+coverage container returns `None` for a zero-denominator ratio.
+
+`assess_provenance_row` accepts already typed fields with valid identity even
+when a non-identity required field is absent or explicitly null. These rows are
+`ProvenanceAssessment` objects, never certified `CanonicalRow` objects. This
+allows row coverage to differ from required-field coverage without filling
+missing values or weakening Step 4. Invalid present types or enum values still
+fail. The strict Step 4 normalizer continues rejecting incomplete canonical
+rows. Incomplete CSV serialization recovery is not implemented by this helper;
+callers must supply already typed fields and retain the original diagnostics.
+
+Required-field errors remain in `messages`, including errors on supplied rows
+outside the selected coverage scope. `has_errors` exposes those failures; a
+numerically complete row-coverage value does not make an invalid input pass.
+Explicit unknown grounding and estimated provenance confidence produce their
+existing warning codes. Optional strict warning promotion requires the explicit
+`strict_mode` and approved `strict_warning_codes` arguments; it changes severity
+without changing declarations or coverage. No new run-config keys are added.
+
+Shared record/provenance `batch_id` and `timestamp` declarations stay in separate
+namespaces. `conflicting_fields` identifies differing non-null declarations;
+neither side silently overwrites the other. Raw record content is not retained
+in the join result. Provenance field snapshots are detached read-only mappings,
+with payload values excluded from default repr. Original input rows remain
+unchanged and keep their own field-state and extras metadata.
+
+The join revalidates identities, present fields and assessment flags instead of
+trusting manually constructed metadata. Parent declarations, source URIs and
+other reference-like values are never followed. No source counts/shares,
+closure bounds, parent resolution, expected generation, lineage, observability
+levels, simulations or reports are implemented in Step 5. Real optional PyArrow
+presence verification remains a separate outstanding Step 2 validation item.

@@ -1,9 +1,9 @@
-"""Check module ownership and the approved Phase 2 Step 4 boundary.
+"""Check module ownership and the approved Phase 2 Step 5 boundary.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
-approved Phase 2 step on 2026-09-16. Step 4 adds only canonical row normalization,
-basic field/identity validation and deterministic row ordering. Joins, chronology,
-parent resolution, generation derivation and later modules remain unauthorized.
+approved Phase 2 step on 2026-09-16. Step 5 adds exact provenance joins and
+validation coverage inside the existing validation and model modules only.
+Chronology, parent resolution, generation derivation and later layers stay protected.
 
 This script inspects source syntax without importing the package or loading
 hero data. Definition and import allowlists are structural checks; behavioral
@@ -86,7 +86,7 @@ ALLOWED_CORE_IMPORTS = {
 }
 
 # Step 4 permission covers row-local normalization, base validation and ordering.
-# These static lists do not authorize provenance joins or generation derivation.
+# Step 5 join definitions are authorized individually below, never by wildcard.
 STEP4_ROWS = {"io/normalization.py", "io/validation.py", "utils/ordering.py"}
 ALLOWED_FUNCTIONS.update({
     "io/normalization.py": {
@@ -113,6 +113,15 @@ ALLOWED_CORE_IMPORTS.update({
     "utils/ordering.py": {"__future__", "..models"},
 })
 
+# Step 5 changes no module-level allowlist. Only these exact definitions are added.
+ALLOWED_FUNCTIONS["io/validation.py"].update({
+    "_validate_present_fields", "_join_location", "_join_fields", "_join_identity",
+    "assess_provenance_row", "_join_message", "_join_options", "join_provenance",
+})
+ALLOWED_FUNCTIONS["models.py"].update({"ValidationCoverage.ratio", "ProvenanceJoinResult.has_errors"})
+ALLOWED_CLASSES["models.py"].update({"ProvenanceAssessment", "ProvenanceMatch", "ProvenanceJoinResult"})
+ALLOWED_CORE_IMPORTS["io/validation.py"].add("types")
+
 # Preserve every import and file restriction from the Phase 1 checker.
 FORBIDDEN_IMPORTS = {
     "numpy", "pandas", "pyarrow", "networkx", "scipy", "sklearn", "torch",
@@ -130,7 +139,7 @@ def _definitions(tree: ast.AST, prefix: str = "") -> tuple[list[str], list[str]]
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             name = f"{prefix}.{node.name}" if prefix else node.name
             if isinstance(node, ast.AsyncFunctionDef):
-                raise SystemExit(f"Async implementation is outside Step 4: {name}")
+                raise SystemExit(f"Async implementation is outside Step 5: {name}")
             if isinstance(node, ast.ClassDef):
                 classes.append(name)
             else:
@@ -149,7 +158,7 @@ def main() -> int:
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
     missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS) - relative_paths
     if missing:
-        raise SystemExit(f"Required startup or Step 4 modules missing: {sorted(missing)}")
+        raise SystemExit(f"Required startup or Step 5 modules missing: {sorted(missing)}")
 
     imported_roots: set[str] = set()
     forbidden_locations: list[str] = []
@@ -171,14 +180,14 @@ def main() -> int:
                 and isinstance(tree.body[0].value, ast.Constant)
                 and isinstance(tree.body[0].value.value, str)
             ):
-                raise SystemExit(f"Protected non-Step-4 executable body found: {path}")
+                raise SystemExit(f"Protected non-Step-5 executable body found: {path}")
             placeholder_count += 1
         else:
             functions, classes = _definitions(tree)
             if set(functions) != ALLOWED_FUNCTIONS[relative] or len(functions) != len(set(functions)):
-                raise SystemExit(f"Unexpected Step 4 functions in {relative}: {functions}")
+                raise SystemExit(f"Unexpected Step 5 functions in {relative}: {functions}")
             if set(classes) != ALLOWED_CLASSES.get(relative, set()) or len(classes) != len(set(classes)):
-                raise SystemExit(f"Unexpected Step 4 classes in {relative}: {classes}")
+                raise SystemExit(f"Unexpected Step 5 classes in {relative}: {classes}")
 
         for node in ast.walk(tree):
             if relative in STEP3_MAPPING | STEP4_ROWS:
@@ -225,7 +234,7 @@ def main() -> int:
             if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
-                    raise SystemExit(f"Import outside Step 4 contracts in {relative}: {sorted(unexpected)}")
+                    raise SystemExit(f"Import outside Step 5 contracts in {relative}: {sorted(unexpected)}")
 
     if forbidden_locations:
         raise SystemExit(f"Dependency outside the approved scope: {forbidden_locations}")
@@ -238,7 +247,7 @@ def main() -> int:
     print(f"authorized Step 4 row modules: {sorted(STEP4_ROWS)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Step 4 definition and import allowlists: PASS")
+    print("Step 5 definition and import allowlists: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 
