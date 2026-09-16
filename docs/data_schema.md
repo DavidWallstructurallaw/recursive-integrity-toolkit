@@ -130,3 +130,71 @@ No dependency was added. The mapper uses fixed local branches, accepts plain
 finite data, and never resolves dotted fields, paths, URLs, templates, environment
 variables or callable objects. Unsafe syntax raises `E_MAPPING_UNSAFE_TRANSFORM`.
 Strings that resemble code remain inert data when used as literal values.
+
+## Phase 2 Step 4: canonical row fields and identity
+
+`io.normalization.normalize_row(row, kind="records")` and its `provenance` form
+accept already supplied fields. `normalize_table(loaded_table)` accepts the
+existing `LoadedTable`, performs row-local normalization and same-kind identity
+uniqueness checks, and returns lexically ordered rows. It never loads a file,
+executes mapping, joins tables, resolves parents, or classifies observability.
+Required table columns are checked even for a zero-row provenance table; a
+header-only table with the required columns remains an empty supplied table.
+
+The implementation follows the record/provenance fields in sections 8 and 9
+and field-specific normalization rules in section 15 of the data specification.
+Identity is exactly `(dataset_version, record_id)`: no trim, case conversion,
+Unicode normalization, numeric coercion, or content deduplication is implicit.
+Duplicate keys fail, even for identical physical rows. Repeated IDs in different
+versions remain different keys. `validate_unique_keys` can validate a caller's
+explicit combined same-kind scope across files, without a provenance join.
+
+CSV conversion requires `file_format=FileFormat.CSV` and original `RawRow`
+spelling. It distinguishes unquoted blank/null tokens from quoted empty or
+literal strings. `null` and `NULL` are the default unquoted tokens. Required
+empty fields fail; blank optional IDs/numbers/booleans become null; a blank CSV
+parent list becomes an empty sequence. Native JSONL/Parquet values do not acquire
+CSV token semantics. Native `unknown`, false, zero, null and absent fields remain
+distinct. String identifiers, categories and notes are never inferred.
+
+For an existing mapped CSV row, supply `source_row=original_raw_row`. Unchanged
+source selectors inherit quoting evidence; explicit transforms/constants use
+their returned values without fabricating original quote states. CSV numeric
+and boolean serialization still follows the target field's type. A plain typed
+mapping result can instead use the default native mode. This step does not
+change the previously approved mapper's coalesce or null behavior.
+
+`NormalizationOptions` supplies explicit in-memory policies for content mode,
+null tokens, optional blank-as-null behavior, boolean compatibility tokens, and
+extras preservation. No additional JSON/TOML run-config keys or CLI commands
+have been introduced. Compatibility boolean tokens require explicit opt-in.
+Source type, external grounding and human review never overwrite one another.
+
+Finite, nonnegative weights are checked per row. Generation is nullable,
+nonnegative and integer-only; no expected generation or lineage depth is
+computed. Timestamps require an explicit timezone and normalize to UTC.
+Native standard-library timezone/ZoneInfo datetimes and ISO 8601 strings are
+supported; no local timezone is guessed. An inline content byte limit can be
+provided. Local-reference strings are never opened or certified as safe here;
+complete content-reference validation remains Step 7.
+
+`CanonicalRow.values`, `field_states` and `extras` are detached read-only
+mappings. Parent arrays are immutable tuples internally, sorted for presentation
+without deduplication or reference resolution. An omitted or explicit-null
+parent declaration stays null, with its original absence/null state retained.
+It never becomes proof of parentlessness, external grounding or independence.
+The existing export-row schema still requires an array; these nullable internal
+rows are not advertised as export-ready and no exporter exists in this step.
+
+Optional fields stay absent unless supplied, apart from the documented
+`text/plain` content-type default and minimum nullable parent column. Defaults
+are marked separately from source-supplied fields. Extras stay separate and are
+empty unless explicitly preserved. Normalized payloads and private notes do not
+appear in default repr or error messages. Errors include field, role, original
+row/line, and key where valid; they never echo the rejected value.
+
+Lexical row order is a deterministic presentation convention. In particular,
+`v10` can precede `v2`; this does not supply version chronology. Observability,
+provenance joins/coverage, parent resolution, generation consistency, metrics,
+reports and simulation remain outside Step 4. The normalized manifest schema
+adds field types/enums and identifier constraints only, without cross-row logic.

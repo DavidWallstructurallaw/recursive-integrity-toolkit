@@ -1,17 +1,41 @@
-"""Phase 1 placeholder for PR-016.
+"""PR-016 Step 4 lexical row order only. Analytical-output determinism is deferred."""
 
-Planned scope:
-    Future deterministic analytical-output tests are deferred to Phase 4.
+import ast
+from itertools import permutations
+import pytest
 
-Current Phase 1 scope:
-    Verify the approved owner ID and confirm that the target module remains a
-    docstring-only, import-safe placeholder.
-
-Limits:
-    No mathematical metric, data loading, graph operation, or report result is tested.
-"""
+from recursive_integrity_toolkit.io.normalization import normalize_row
+from recursive_integrity_toolkit.utils.ordering import stable_record_order
 
 
-def test_PR016_determinism_owner_and_placeholder(owner_checker, placeholder_checker):
+def _row(version, identity):
+    return normalize_row({"dataset_version": version, "record_id": identity, "content": "synthetic"},
+                         kind="records")
+
+
+def test_PR016_ordering_owner_and_no_later_behavior(owner_checker, package_root, placeholder_checker):
     owner_checker("utils/ordering.py", "PR-016")
-    placeholder_checker("utils/ordering.py")
+    tree = ast.parse((package_root / "utils/ordering.py").read_text())
+    names = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+    assert names == {"_record_order_key", "stable_record_order"}
+    for path in ["reports/json_report.py", "reports/markdown_report.py", "metrics/resampling.py"]:
+        placeholder_checker(path)
+
+
+def test_PR016_stable_exact_lexical_order_is_not_version_chronology():
+    rows = (_row("v2", "a"), _row("v10", "b"), _row("v1", "0001"))
+    expected = (rows[2], rows[1], rows[0])
+    for permutation in permutations(rows):
+        assert stable_record_order(permutation) == expected
+    assert rows[0].record_key.dataset_version == "v2"
+
+
+def test_PR016_ordering_does_not_drop_repeated_rows():
+    row = _row("v1", "a")
+    assert stable_record_order((row, row)) == (row, row)
+
+
+@pytest.mark.parametrize("rows", [[], ("invalid",)])
+def test_PR016_only_canonical_tuple_rows_accepted(rows):
+    with pytest.raises(TypeError):
+        stable_record_order(rows)

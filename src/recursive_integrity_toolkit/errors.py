@@ -18,7 +18,7 @@ Limits:
     or automatic remediation is implemented here.
 
 Current phase status:
-    Phase 2 Step 1 error contracts. Import-safe. No analytical behavior.
+    Phase 2 Step 4 error contracts. Import-safe. No analytical behavior.
 """
 
 from __future__ import annotations
@@ -137,4 +137,30 @@ class MappingError(SchemaError):
         self.operation_index = operation_index
         self.row_number = row_number
         self.line_number = line_number
+        super().__init__(code, message)
+
+
+class CanonicalValidationError(SchemaError):
+    """A Step 4 row/schema/identity failure without echoing source field values."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        field: str | None = None,
+        file_role: str | None = None,
+        file_path: str | None = None,
+        row_number: int | None = None,
+        line_number: int | None = None,
+        record_key: str | None = None,
+        severity: str = "error",
+    ) -> None:
+        self.field = field
+        self.file_role = file_role
+        self.file_path = file_path
+        self.row_number = row_number
+        self.line_number = line_number
+        self.record_key = record_key
+        self.severity = severity
         super().__init__(code, message)

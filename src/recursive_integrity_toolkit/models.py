@@ -1,7 +1,7 @@
 """Define Phase 2 core contracts for validated input metadata.
 
 Owner IDs:
-    PR-001, PR-002, PR-007, PR-008, PR-010, PR-011, PR-017
+    PR-001, PR-002, PR-004, PR-007, PR-008, PR-009, PR-010, PR-011, PR-016, PR-017
 
 Inputs:
     Explicit identifiers, file metadata, validation metadata, and capability declarations.
@@ -18,7 +18,7 @@ Limits:
     implemented here. These types carry validated metadata only.
 
 Current phase status:
-    Phase 2 Step 1 core contracts. Import-safe. No analytical behavior.
+    Phase 2 Step 4 core and canonical-row contracts. Import-safe. No analytical behavior.
 """
 
 from __future__ import annotations
@@ -265,3 +265,90 @@ class LoadedTable:
 
     inventory: FileInventoryEntry
     rows: tuple[RawRow, ...] = field(repr=False)
+
+
+class SourceType(StrEnum):
+    """Declared source categories from DATA_AND_PROVENANCE_SPEC section 9.3."""
+
+    HUMAN = "human"
+    SYNTHETIC = "synthetic"
+    MIXED = "mixed"
+    SENSOR = "sensor"
+    UNKNOWN = "unknown"
+
+
+class ProvenanceConfidence(StrEnum):
+    """Declared confidence categories, without conversion to probabilities."""
+
+    CONFIRMED = "confirmed"
+    LOG_DERIVED = "log_derived"
+    ESTIMATED = "estimated"
+    UNKNOWN = "unknown"
+
+
+class ExternalGrounding(StrEnum):
+    """Declared grounding values, independent of source type and human review."""
+
+    YES = "yes"
+    NO = "no"
+    UNKNOWN = "unknown"
+
+
+class Transformation(StrEnum):
+    """Approved transformation names; no operation is executed by this enum."""
+
+    GENERATE = "generate"
+    REWRITE = "rewrite"
+    SUMMARIZE = "summarize"
+    TRANSLATE = "translate"
+    FILTER = "filter"
+    LABEL = "label"
+    CARRYOVER = "carryover"
+    OTHER = "other"
+
+
+class ContentMode(StrEnum):
+    """Source-wide content interpretation; local_ref resolution remains Step 7."""
+
+    INLINE = "inline"
+    LOCAL_REF = "local_ref"
+
+
+@dataclass(frozen=True, slots=True)
+class NormalizationOptions:
+    """Explicit serialization policies; no new run-config fields are introduced."""
+
+    content_mode: ContentMode = ContentMode.INLINE
+    null_tokens: tuple[str, ...] = ("null", "NULL")
+    csv_boolean_compatibility: bool = False
+    blank_as_null: bool = False
+    preserve_extras: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class RowLocation:
+    """Physical input location. Private paths do not appear in default repr."""
+
+    file_role: FileRole | None = None
+    file_path: str | None = field(default=None, repr=False)
+    row_number: int | None = None
+    line_number: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalRow:
+    """Step 4 row-valid fields only; no join, parent, or capability certification.
+
+    values, field_states and extras are detached read-only mappings returned by
+    normalization. Parent arrays use immutable tuples internally. Field states
+    preserve absence, explicit null, and CSV blank/token distinctions separately.
+    """
+
+    kind: str
+    record_key: RecordKey
+    values: Mapping[str, object] = field(repr=False)
+    field_states: Mapping[str, str] = field(repr=False)
+    extras: Mapping[str, object] = field(repr=False)
+    ignored_fields: tuple[str, ...] = ()
+    defaulted_fields: tuple[str, ...] = ()
+    location: RowLocation = RowLocation()

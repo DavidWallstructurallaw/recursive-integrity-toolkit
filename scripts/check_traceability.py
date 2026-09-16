@@ -1,9 +1,9 @@
-"""Check module ownership and the approved Phase 2 Step 3 boundary.
+"""Check module ownership and the approved Phase 2 Step 4 boundary.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
-approved Phase 2 step on 2026-09-16. Step 3 adds only io/schema_mapping.py and
-its mapping-specific error contracts. Later-step modules remain docstring-only.
-Every Step 1 and Step 2 restriction remains active outside that exact exception.
+approved Phase 2 step on 2026-09-16. Step 4 adds only canonical row normalization,
+basic field/identity validation and deterministic row ordering. Joins, chronology,
+parent resolution, generation derivation and later modules remain unauthorized.
 
 This script inspects source syntax without importing the package or loading
 hero data. Definition and import allowlists are structural checks; behavioral
@@ -84,6 +84,35 @@ ALLOWED_CORE_IMPORTS = {
         "dataclasses", "datetime", "json", "math", "pathlib", "re",
     },
 }
+
+# Step 4 permission covers row-local normalization, base validation and ordering.
+# These static lists do not authorize provenance joins or generation derivation.
+STEP4_ROWS = {"io/normalization.py", "io/validation.py", "utils/ordering.py"}
+ALLOWED_FUNCTIONS.update({
+    "io/normalization.py": {
+        "_policy", "_location", "_csv_quotes", "_input", "_state", "_timestamp",
+        "_parent_list", "_field_value", "_freeze", "normalize_row", "normalize_table",
+    },
+    "io/validation.py": {
+        "_fail", "canonical_fields", "validate_canonical_values", "validate_unique_keys",
+    },
+    "utils/ordering.py": {"_record_order_key", "stable_record_order"},
+})
+ALLOWED_FUNCTIONS["errors.py"].add("CanonicalValidationError.__init__")
+ALLOWED_CLASSES["errors.py"].add("CanonicalValidationError")
+ALLOWED_CLASSES["models.py"].update({
+    "SourceType", "ProvenanceConfidence", "ExternalGrounding", "Transformation",
+    "ContentMode", "NormalizationOptions", "RowLocation", "CanonicalRow",
+})
+ALLOWED_CORE_IMPORTS.update({
+    "io/normalization.py": {
+        "__future__", "math", "re", "datetime", "zoneinfo", "types", "json", "..config",
+        "..errors", "..models", "..utils.ordering", ".schema_mapping", ".loaders", ".validation",
+    },
+    "io/validation.py": {"__future__", "math", "datetime", "..errors", "..models"},
+    "utils/ordering.py": {"__future__", "..models"},
+})
+
 # Preserve every import and file restriction from the Phase 1 checker.
 FORBIDDEN_IMPORTS = {
     "numpy", "pandas", "pyarrow", "networkx", "scipy", "sklearn", "torch",
@@ -101,7 +130,7 @@ def _definitions(tree: ast.AST, prefix: str = "") -> tuple[list[str], list[str]]
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             name = f"{prefix}.{node.name}" if prefix else node.name
             if isinstance(node, ast.AsyncFunctionDef):
-                raise SystemExit(f"Async implementation is outside Step 3: {name}")
+                raise SystemExit(f"Async implementation is outside Step 4: {name}")
             if isinstance(node, ast.ClassDef):
                 classes.append(name)
             else:
@@ -118,9 +147,9 @@ def main() -> int:
     if len(paths) != 40:
         raise SystemExit(f"Expected 40 package modules, found {len(paths)}")
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
-    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING) - relative_paths
+    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS) - relative_paths
     if missing:
-        raise SystemExit(f"Required startup or Step 3 modules missing: {sorted(missing)}")
+        raise SystemExit(f"Required startup or Step 4 modules missing: {sorted(missing)}")
 
     imported_roots: set[str] = set()
     forbidden_locations: list[str] = []
@@ -135,24 +164,24 @@ def main() -> int:
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
 
-        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING:
+        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS:
             if not (
                 len(tree.body) == 1
                 and isinstance(tree.body[0], ast.Expr)
                 and isinstance(tree.body[0].value, ast.Constant)
                 and isinstance(tree.body[0].value.value, str)
             ):
-                raise SystemExit(f"Protected non-Step-3 executable body found: {path}")
+                raise SystemExit(f"Protected non-Step-4 executable body found: {path}")
             placeholder_count += 1
         else:
             functions, classes = _definitions(tree)
             if set(functions) != ALLOWED_FUNCTIONS[relative] or len(functions) != len(set(functions)):
-                raise SystemExit(f"Unexpected Step 3 functions in {relative}: {functions}")
+                raise SystemExit(f"Unexpected Step 4 functions in {relative}: {functions}")
             if set(classes) != ALLOWED_CLASSES.get(relative, set()) or len(classes) != len(set(classes)):
-                raise SystemExit(f"Unexpected Step 3 classes in {relative}: {classes}")
+                raise SystemExit(f"Unexpected Step 4 classes in {relative}: {classes}")
 
         for node in ast.walk(tree):
-            if relative in STEP3_MAPPING:
+            if relative in STEP3_MAPPING | STEP4_ROWS:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
                 if isinstance(node, ast.Call):
@@ -165,8 +194,10 @@ def main() -> int:
                     ):
                         raise SystemExit(f"Unexpected executable or IO capability in {relative}")
                     if isinstance(node.func, ast.Name) and node.func.id == "_read_source":
-                        if not any(isinstance(fn, ast.FunctionDef) and fn.name == "load_mapping"
-                                   and any(child is node for child in ast.walk(fn)) for fn in tree.body):
+                        if relative not in STEP3_MAPPING or not any(
+                            isinstance(fn, ast.FunctionDef) and fn.name == "load_mapping"
+                            and any(child is node for child in ast.walk(fn)) for fn in tree.body
+                        ):
                             raise SystemExit(f"Unexpected file read outside explicit mapping loader in {relative}")
             imports: set[str] = set()
             if isinstance(node, ast.Import):
@@ -191,10 +222,10 @@ def main() -> int:
                     )
                     if not lazy_parquet:
                         forbidden_locations.append(f"{relative}: {imported}")
-            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING:
+            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
-                    raise SystemExit(f"Import outside Step 3 contracts in {relative}: {sorted(unexpected)}")
+                    raise SystemExit(f"Import outside Step 4 contracts in {relative}: {sorted(unexpected)}")
 
     if forbidden_locations:
         raise SystemExit(f"Dependency outside the approved scope: {forbidden_locations}")
@@ -204,9 +235,10 @@ def main() -> int:
     print(f"authorized Step 2 contract modules: {sorted(STEP1_CORE)}")
     print(f"authorized Step 2 file modules: {sorted(STEP2_IO)}")
     print(f"authorized Step 3 mapping modules: {sorted(STEP3_MAPPING)}")
+    print(f"authorized Step 4 row modules: {sorted(STEP4_ROWS)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Step 3 definition and import allowlists: PASS")
+    print("Step 4 definition and import allowlists: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 
