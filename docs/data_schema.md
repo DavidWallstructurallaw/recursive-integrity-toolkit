@@ -68,3 +68,65 @@ RIT_TEST_PARQUET=1 python -m pytest -p no:cacheprovider -q
 On PowerShell, set `$env:RIT_TEST_PARQUET = "1"` before the pytest command.
 The current workflows retain their approved dependency sets; optional-presence
 coverage must be reported separately from core CI coverage.
+
+## Phase 2 Step 3: declarative field mapping
+
+`io.schema_mapping.load_mapping(path)` reads an explicit local JSON mapping
+snapshot. `compile_mapping(document)` validates a supplied plain dictionary;
+`parse_mapping_json(text)` additionally detects duplicate object keys before
+JSON decoding can discard them. `map_row(row, plan, section="records")` applies
+the frozen declaration to a plain dictionary or an existing `RawRow`. No CLI
+audit command, canonical validation, table join, or analysis is added.
+
+The canonical version key is `schema_version: "1.0"`, from the approved data
+specification section 14.2. The Phase 1 skeleton used `mapping_version`; that
+spelling remains an explicit compatibility option. Exactly one version key is
+required. A document needs a `records` or `provenance` section with `fields`.
+Every target has one selector: `source`, `constant`, or an initial `constant`
+or `coalesce` operation. Two selectors for one target are rejected. Duplicate
+JSON target keys are errors. All operation-specific parameters are closed.
+
+The following are the Step 3 parameter conventions for the approved verbs:
+
+| Operation | Explicit parameters and behavior |
+|---|---|
+| `rename` | The enclosing `fields` key names the target and `source` names the original field. The operation has no additional parameter. |
+| `trim` | Removes leading and trailing Unicode whitespace only when listed. |
+| `cast_string` | Strings or finite scalar numbers/booleans; booleans become `true` or `false`. Arrays and objects are rejected. |
+| `cast_integer` | Integer values or ASCII integer strings with optional sign. Booleans, floats, surrounding whitespace and fractional strings are rejected. |
+| `cast_float` | Finite numeric values or explicit decimal/exponent strings. No booleans, nonfinite values, underscores or implicit trim. |
+| `cast_boolean` | Requires `mapping`, an exact string-token to boolean dictionary. No implicit truthiness, trimming or case conversion. |
+| `parse_datetime` | Requires `format: "iso8601"` or a portable numeric strptime format using `%Y`, `%y`, `%m`, `%d`, `%H`, `%M`, `%S`, `%f`, `%z`, `%j`, `%%`. Locale-dependent directives are rejected. Missing timezones are not inferred. |
+| `parse_json_list` | Parses a strict JSON array string; objects, scalars, duplicate nested keys and nonfinite numbers fail. |
+| `constant` | Requires `value` when used as an operation. Field-level `constant` is also supported. |
+| `coalesce` | Requires a nonempty `sources` list. Selects the first present, non-null value from the original row. |
+| `map_values` | Requires `mapping` and `unmapped: keep`, `null` or `error`. String keys match exactly; other input types are not converted to token strings. |
+| `normalize_whitespace` | Requires `format: "collapse"`. Replaces Unicode whitespace runs with one space; boundary spaces are retained unless `trim` is separately listed. |
+| `lowercase`, `uppercase` | Explicit string case conversion; no automatic Unicode normalization. |
+
+All selectors read the original row. Fields cannot refer to previously generated
+targets. Operations execute in listed order. An absent required `source` raises
+`E_MAPPING_SOURCE_FIELD_MISSING`; optional coalesce sources may be absent.
+When all coalesce sources are absent, the target remains absent. When at least
+one is explicitly null and no value is available, the target is null. Zero,
+false, empty strings, empty arrays/objects and the literal `unknown` are not
+missing. Ordinary transforms preserve explicit nulls. CSV null-token and
+quoted-empty semantics remain available in the original `RawRow` for Step 4;
+this step does not guess them from decoded empty strings.
+
+`MappedRow.extras` is empty by default. The explicit `preserve_extras=True`
+argument preserves unused source fields in a separate namespace. Unmapped
+field names are always recorded. Payloads are copied; source rows and plans are
+not mutated. This remains mapping output, not certified canonical records.
+
+Each result retains original row/line locations, source/unmapped field names,
+selector and operation order for each target, a mapping snapshot SHA-256, and
+any `W_MAPPING_VALUE_UNMAPPED` notices for the explicit keep/null policy.
+The frozen plan retains the full declaration without printing its values in
+`repr`. A loaded plan also retains the original mapping-file inventory and
+byte hash. These are internal metadata for later assembly, not an audit report.
+
+No dependency was added. The mapper uses fixed local branches, accepts plain
+finite data, and never resolves dotted fields, paths, URLs, templates, environment
+variables or callable objects. Unsafe syntax raises `E_MAPPING_UNSAFE_TRANSFORM`.
+Strings that resemble code remain inert data when used as literal values.

@@ -116,3 +116,25 @@ class IngestionError(InputError):
         self.line_number = line_number
         self.byte_offset = byte_offset
         super().__init__(code, message)
+
+
+class MappingError(SchemaError):
+    """Declarative mapping failure with location metadata, never payload values."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        section: str | None = None,
+        target: str | None = None,
+        operation_index: int | None = None,
+        row_number: int | None = None,
+        line_number: int | None = None,
+    ) -> None:
+        self.section = section
+        self.target = target
+        self.operation_index = operation_index
+        self.row_number = row_number
+        self.line_number = line_number
+        super().__init__(code, message)

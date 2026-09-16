@@ -1,10 +1,9 @@
-"""Check module ownership and the approved Phase 2 Step 2 boundary.
+"""Check module ownership and the approved Phase 2 Step 3 boundary.
 
-The Theory Owner authorized the Step 2 checker exception on 2026-09-16.
-Only io/loaders.py, utils/hashing.py, and utils/paths.py gain local physical
-file behavior in addition to Step 2 contracts. Every other non-bootstrap
-module remains docstring-only. No mapping, normalization, metrics, graph,
-observability classification, or report implementation is authorized here.
+The Theory Owner authorized synchronized checker maintenance for each explicitly
+approved Phase 2 step on 2026-09-16. Step 3 adds only io/schema_mapping.py and
+its mapping-specific error contracts. Later-step modules remain docstring-only.
+Every Step 1 and Step 2 restriction remains active outside that exact exception.
 
 This script inspects source syntax without importing the package or loading
 hero data. Definition and import allowlists are structural checks; behavioral
@@ -22,116 +21,73 @@ PACKAGE = ROOT / "src" / "recursive_integrity_toolkit"
 BOOTSTRAP = {"__init__.py", "__main__.py", "cli.py"}
 STEP1_CORE = {"models.py", "errors.py", "config.py"}
 STEP2_IO = {"io/loaders.py", "utils/hashing.py", "utils/paths.py"}
-ALLOWED_FUNCTIONS = {'__init__.py': set(),
- '__main__.py': set(),
- 'cli.py': {'build_parser', 'main'},
- 'config.py': {'_bool_value',
-               '_enum_value',
-               '_frozen_mapping',
-               '_invalid',
-               '_optional_positive_int',
-               '_optional_string',
-               '_parse_input_source',
-               '_parse_inputs',
-               '_parse_representation',
-               '_parse_resource_limits',
-               '_parse_simulation',
-               '_parse_version_order',
-               '_string_mapping',
-               '_string_sequence',
-               'load_config',
-               'resolve_config'},
- 'errors.py': {'IngestionError.__init__', 'ToolkitError.__init__'},
- 'io/loaders.py': {'_check_csv_quotes',
-                   '_check_depth',
-                   '_failure',
-                   '_finite_float',
-                   '_headers',
-                   '_limits',
-                   '_parse_csv',
-                   '_parse_jsonl',
-                   '_parse_parquet',
-                   '_read_source',
-                   '_reject_constant',
-                   '_row_limit',
-                   '_select_format',
-                   '_text',
-                   '_unique_object',
-                   'inventory_source',
-                   'load_table'},
- 'models.py': {'ObservabilityAssessment.__post_init__',
-               'RecordKey.__post_init__',
-               'RecordKey.__str__',
-               'RecordKey.parse',
-               'ValidationCoverage.__post_init__',
-               '_validate_identifier'},
- 'utils/hashing.py': {'sha256_bytes'},
- 'utils/paths.py': {'local_input_path'}}
-ALLOWED_CLASSES = {'config.py': {'RepresentationConfig', 'ResourceLimits', 'ScenarioConfig', 'ResolvedConfig'},
- 'errors.py': {'ConfigurationError',
-               'ErrorCode',
-               'IngestionError',
-               'InputError',
-               'SchemaError',
-               'SecurityError',
-               'ToolkitError',
-               'WarningCode'},
- 'models.py': {'AuditBundle',
-               'Capability',
-               'CapabilityKey',
-               'CapabilityStatus',
-               'FileFormat',
-               'FileInventoryEntry',
-               'FileRole',
-               'InputSource',
-               'LoadedTable',
-               'ObservabilityAssessment',
-               'ParentResolutionStatus',
-               'PrivacyMode',
-               'RawRow',
-               'RecordKey',
-               'ValidationCoverage',
-               'ValidationMessage',
-               'ValidationSeverity'}}
-ALLOWED_CORE_IMPORTS = {'config.py': {'.errors',
-               '.models',
-               '__future__',
-               'dataclasses',
-               'json',
-               'pathlib',
-               'tomllib',
-               'typing'},
- 'errors.py': {'enum', '__future__'},
- 'io/loaders.py': {'..config',
-                   '..errors',
-                   '..models',
-                   '..utils.hashing',
-                   '..utils.paths',
-                   '__future__',
-                   'csv',
-                   'io',
-                   'json',
-                   'math',
-                   'os',
-                   'pathlib',
-                   'pyarrow',
-                   'pyarrow.parquet',
-                   'stat',
-                   'threading'},
- 'models.py': {'__future__', 'dataclasses', 'typing', 'enum', 'pathlib'},
- 'utils/hashing.py': {'__future__', 'hashlib'},
- 'utils/paths.py': {'__future__', 're', 'os', 'pathlib', '..errors'}}
+STEP3_MAPPING = {"io/schema_mapping.py"}
+ALLOWED_FUNCTIONS = {
+    "__init__.py": set(),
+    "__main__.py": set(),
+    "cli.py": {"build_parser", "main"},
+    "config.py": {
+        "_bool_value", "_enum_value", "_frozen_mapping", "_invalid",
+        "_optional_positive_int", "_optional_string", "_parse_input_source",
+        "_parse_inputs", "_parse_representation", "_parse_resource_limits",
+        "_parse_simulation", "_parse_version_order", "_string_mapping",
+        "_string_sequence", "load_config", "resolve_config",
+    },
+    "errors.py": {"IngestionError.__init__", "ToolkitError.__init__", "MappingError.__init__"},
+    "io/loaders.py": {
+        "_check_csv_quotes", "_check_depth", "_failure", "_finite_float", "_headers",
+        "_limits", "_parse_csv", "_parse_jsonl", "_parse_parquet", "_read_source",
+        "_reject_constant", "_row_limit", "_select_format", "_text",
+        "_unique_object", "inventory_source", "load_table",
+    },
+    "models.py": {
+        "ObservabilityAssessment.__post_init__", "RecordKey.__post_init__",
+        "RecordKey.__str__", "RecordKey.parse", "ValidationCoverage.__post_init__",
+        "_validate_identifier",
+    },
+    "utils/hashing.py": {"sha256_bytes"},
+    "utils/paths.py": {"local_input_path"},
+    "io/schema_mapping.py": {
+        "_error", "_copy_value", "_unique_object", "_reject_constant", "_finite_float",
+        "_json_value", "_name", "_validate_operation", "_validate_document",
+        "compile_mapping", "parse_mapping_json", "load_mapping", "_select",
+        "_coalesce", "_apply_operation", "map_row",
+    },
+}
+ALLOWED_CLASSES = {
+    "config.py": {"RepresentationConfig", "ResourceLimits", "ScenarioConfig", "ResolvedConfig"},
+    "errors.py": {
+        "ConfigurationError", "ErrorCode", "IngestionError", "InputError",
+        "SchemaError", "SecurityError", "ToolkitError", "WarningCode", "MappingError",
+    },
+    "models.py": {
+        "AuditBundle", "Capability", "CapabilityKey", "CapabilityStatus", "FileFormat",
+        "FileInventoryEntry", "FileRole", "InputSource", "LoadedTable",
+        "ObservabilityAssessment", "ParentResolutionStatus", "PrivacyMode", "RawRow",
+        "RecordKey", "ValidationCoverage", "ValidationMessage", "ValidationSeverity",
+    },
+    "io/schema_mapping.py": {"MappingPlan", "FieldMappingTrace", "MappingNotice", "MappedRow"},
+}
+ALLOWED_CORE_IMPORTS = {
+    "config.py": {".errors", ".models", "__future__", "dataclasses", "json", "pathlib", "tomllib", "typing"},
+    "errors.py": {"enum", "__future__"},
+    "io/loaders.py": {
+        "..config", "..errors", "..models", "..utils.hashing", "..utils.paths",
+        "__future__", "csv", "io", "json", "math", "os", "pathlib", "pyarrow",
+        "pyarrow.parquet", "stat", "threading",
+    },
+    "models.py": {"__future__", "dataclasses", "typing", "enum", "pathlib"},
+    "utils/hashing.py": {"__future__", "hashlib"},
+    "utils/paths.py": {"__future__", "re", "os", "pathlib", "..errors"},
+    "io/schema_mapping.py": {
+        "..config", "..errors", "..models", "..utils.hashing", ".loaders", "__future__",
+        "dataclasses", "datetime", "json", "math", "pathlib", "re",
+    },
+}
 # Preserve every import and file restriction from the Phase 1 checker.
 FORBIDDEN_IMPORTS = {
-    "numpy",
-    "pandas",
-    "pyarrow",
-    "networkx",
-    "scipy",
-    "sklearn",
-    "torch",
-    "tensorflow",
-    "transformers",
+    "numpy", "pandas", "pyarrow", "networkx", "scipy", "sklearn", "torch",
+    "tensorflow", "transformers",
 }
 FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.py"}
 
@@ -145,7 +101,7 @@ def _definitions(tree: ast.AST, prefix: str = "") -> tuple[list[str], list[str]]
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             name = f"{prefix}.{node.name}" if prefix else node.name
             if isinstance(node, ast.AsyncFunctionDef):
-                raise SystemExit(f"Async implementation is outside Step 2: {name}")
+                raise SystemExit(f"Async implementation is outside Step 3: {name}")
             if isinstance(node, ast.ClassDef):
                 classes.append(name)
             else:
@@ -162,9 +118,9 @@ def main() -> int:
     if len(paths) != 40:
         raise SystemExit(f"Expected 40 package modules, found {len(paths)}")
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
-    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO) - relative_paths
+    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING) - relative_paths
     if missing:
-        raise SystemExit(f"Required startup or Step 2 modules missing: {sorted(missing)}")
+        raise SystemExit(f"Required startup or Step 3 modules missing: {sorted(missing)}")
 
     imported_roots: set[str] = set()
     forbidden_locations: list[str] = []
@@ -179,29 +135,39 @@ def main() -> int:
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
 
-        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO:
+        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING:
             if not (
                 len(tree.body) == 1
                 and isinstance(tree.body[0], ast.Expr)
                 and isinstance(tree.body[0].value, ast.Constant)
                 and isinstance(tree.body[0].value.value, str)
             ):
-                raise SystemExit(f"Protected non-Step-2 executable body found: {path}")
+                raise SystemExit(f"Protected non-Step-3 executable body found: {path}")
             placeholder_count += 1
         else:
             functions, classes = _definitions(tree)
-            if (
-                set(functions) != ALLOWED_FUNCTIONS[relative]
-                or len(functions) != len(set(functions))
-            ):
-                raise SystemExit(f"Unexpected Step 2 functions in {relative}: {functions}")
-            if (
-                set(classes) != ALLOWED_CLASSES.get(relative, set())
-                or len(classes) != len(set(classes))
-            ):
-                raise SystemExit(f"Unexpected Step 2 classes in {relative}: {classes}")
+            if set(functions) != ALLOWED_FUNCTIONS[relative] or len(functions) != len(set(functions)):
+                raise SystemExit(f"Unexpected Step 3 functions in {relative}: {functions}")
+            if set(classes) != ALLOWED_CLASSES.get(relative, set()) or len(classes) != len(set(classes)):
+                raise SystemExit(f"Unexpected Step 3 classes in {relative}: {classes}")
 
         for node in ast.walk(tree):
+            if relative in STEP3_MAPPING:
+                if isinstance(node, ast.Lambda):
+                    raise SystemExit(f"Unexpected dynamic callback in {relative}")
+                if isinstance(node, ast.Call):
+                    dangerous = {"eval", "exec", "compile", "__import__", "getattr", "setattr",
+                                 "delattr", "globals", "locals", "vars", "open", "input", "breakpoint"}
+                    io_methods = {"open", "read_text", "read_bytes", "write_text", "write_bytes",
+                                  "mkdir", "unlink", "system", "popen", "connect", "urlopen"}
+                    if (isinstance(node.func, ast.Name) and node.func.id in dangerous) or (
+                        isinstance(node.func, ast.Attribute) and node.func.attr in io_methods
+                    ):
+                        raise SystemExit(f"Unexpected executable or IO capability in {relative}")
+                    if isinstance(node.func, ast.Name) and node.func.id == "_read_source":
+                        if not any(isinstance(fn, ast.FunctionDef) and fn.name == "load_mapping"
+                                   and any(child is node for child in ast.walk(fn)) for fn in tree.body):
+                            raise SystemExit(f"Unexpected file read outside explicit mapping loader in {relative}")
             imports: set[str] = set()
             if isinstance(node, ast.Import):
                 imports.update(alias.name for alias in node.names)
@@ -225,12 +191,10 @@ def main() -> int:
                     )
                     if not lazy_parquet:
                         forbidden_locations.append(f"{relative}: {imported}")
-            if relative in STEP1_CORE | STEP2_IO:
+            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
-                    raise SystemExit(
-                        f"Import outside Step 2 contracts in {relative}: {sorted(unexpected)}"
-                    )
+                    raise SystemExit(f"Import outside Step 3 contracts in {relative}: {sorted(unexpected)}")
 
     if forbidden_locations:
         raise SystemExit(f"Dependency outside the approved scope: {forbidden_locations}")
@@ -239,9 +203,10 @@ def main() -> int:
     print(f"allowed startup functions: {sorted(ALLOWED_FUNCTIONS['cli.py'])}")
     print(f"authorized Step 2 contract modules: {sorted(STEP1_CORE)}")
     print(f"authorized Step 2 file modules: {sorted(STEP2_IO)}")
+    print(f"authorized Step 3 mapping modules: {sorted(STEP3_MAPPING)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Step 2 definition and import allowlists: PASS")
+    print("Step 3 definition and import allowlists: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 

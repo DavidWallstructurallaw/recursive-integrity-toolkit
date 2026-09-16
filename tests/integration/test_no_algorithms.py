@@ -1,4 +1,4 @@
-"""Protect Phase 2 Step 2 from premature analytical implementation."""
+"""Protect Phase 2 Step 3 from premature analytical implementation."""
 
 import ast
 from pathlib import Path
@@ -6,6 +6,7 @@ from pathlib import Path
 
 STEP1_EXECUTABLE = {"__init__.py", "__main__.py", "cli.py", "config.py", "errors.py", "models.py"}
 STEP2_EXECUTABLE = {"io/loaders.py", "utils/hashing.py", "utils/paths.py"}
+STEP3_EXECUTABLE = {"io/schema_mapping.py"}
 PROTECTED_PREFIXES = {"io", "lineage", "metrics", "observability", "reports", "representations", "utils"}
 FORBIDDEN_ANALYTICAL_IMPORT_ROOTS = {"networkx", "scipy", "sklearn", "torch", "tensorflow", "transformers"}
 FORBIDDEN_ANALYTICAL_NAMES = {"support_size", "gini_simpson", "tail_fragility", "source_type_shares", "closure_bounds", "ancestry_hhi", "effective_external_roots", "resample", "reopening"}
@@ -16,10 +17,10 @@ def _is_docstring_only(path: Path) -> bool:
     return len(tree.body) == 1 and isinstance(tree.body[0], ast.Expr) and isinstance(tree.body[0].value, ast.Constant) and isinstance(tree.body[0].value.value, str)
 
 
-def test_only_step2_authorized_modules_gain_behavior(package_root) -> None:
+def test_only_step3_authorized_modules_gain_behavior(package_root) -> None:
     for path in sorted(package_root.rglob("*.py")):
         relative = path.relative_to(package_root)
-        if relative.as_posix() in STEP2_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
+        if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
             continue
         assert _is_docstring_only(path), f"Premature executable body: {relative}"
 
@@ -27,7 +28,7 @@ def test_only_step2_authorized_modules_gain_behavior(package_root) -> None:
 def test_protected_phase3_plus_modules_remain_placeholders(package_root) -> None:
     for prefix in PROTECTED_PREFIXES:
         for path in sorted((package_root / prefix).rglob("*.py")):
-            if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE:
+            if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE:
                 continue
             assert _is_docstring_only(path), f"Protected module changed in Step 1: {path}"
     assert _is_docstring_only(package_root / "result.py")
@@ -53,16 +54,16 @@ def test_no_analytical_function_names_exist(package_root) -> None:
     assert not (names & FORBIDDEN_ANALYTICAL_NAMES)
 
 
-def test_PR002_traceability_script_enforces_step2_scope(repo_root) -> None:
+def test_PR003_traceability_script_enforces_step3_scope(repo_root) -> None:
     import subprocess
     import sys
     result = subprocess.run([sys.executable, "scripts/check_traceability.py"],
                             cwd=repo_root, capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "protected docstring-only modules: 31" in result.stdout
+    assert "protected docstring-only modules: 30" in result.stdout
 
 
-# The checker itself must reject new work outside the exact Step 2 exception.
+# The checker itself must reject new work outside the exact Step 3 exception.
 import shutil
 import subprocess
 import sys
@@ -84,6 +85,13 @@ import pytest
     ("io/loaders.py", "import pyarrow\n"),
     ("io/loaders.py", "import pandas\n"),
     ("models.py", "import math\n"),
+    ("io/schema_mapping.py", "import os\n"),
+    ("io/schema_mapping.py", "import socket\n"),
+    ("io/schema_mapping.py", "eval('1')\n"),
+    ("io/schema_mapping.py", "exec('pass')\n"),
+    ("io/schema_mapping.py", "__import__('os')\n"),
+    ("io/schema_mapping.py", "lambda: None\n"),
+    ("io/schema_mapping.py", "Path('unexpected').write_text('x')\n"),
 ])
 def test_PR002_checker_rejects_unauthorized_mutations(repo_root, package_root, tmp_path, relative, injected):
     target = tmp_path / "repo"
