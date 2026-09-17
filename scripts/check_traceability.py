@@ -416,7 +416,7 @@ ALLOWED_CLASSES["metrics/diversity.py"] = {"StateFrequency", "DistributionMetric
 ALLOWED_CORE_IMPORTS["metrics/diversity.py"] = {
     "__future__", "dataclasses", "math", "types", "..errors", "..models", "..representations.base",
 }
-DISTRIBUTION_AST_SHA256 = "fee11548d6d14e15f71bc3a8f2a1c4c2b124d8d7a7605524fa37f80efdee3ece95e"
+DISTRIBUTION_AST_SHA256 = "20afdb7b9e6670d36e9aa2ed8af990da7d16692a44939854d1cb6cafb001bfff"
 
 
 def _phase3_distribution_boundary(tree: ast.Module) -> None:
