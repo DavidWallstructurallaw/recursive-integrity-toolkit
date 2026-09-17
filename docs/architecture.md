@@ -76,3 +76,25 @@ function, class, named-import, call and operation-family checks apply to the new
 modules. Original Phase 2 file/test anchors remain frozen; accepted Step 1 is an
 additional checkpoint for incremental scope and regression identities. Ordinary
 validate_bundle calls retain input-only behavior.
+
+## Phase 3 Step 3: exact record form and PR-006 counts
+
+`representations/content_hash.py` now encodes explicit validated content under
+`exact_utf8_v1` and uses the unchanged `utils/hashing.py` byte helper. It reuses
+Step 2's scope-validation helpers without modifying their implementation.
+`metrics/duplicates.py` delegates to this pure representation boundary and returns
+only exact groups plus the two PR-006 counts. Its output does not retain source
+text, notes or provenance. A caller-supplied digest is never trusted as equality.
+
+Exactly two previously empty modules gain behavior; 22 package modules remain
+protected placeholders. All field-representation behavior and Phase 2 ingestion,
+normalization, provenance, observability and CLI behavior remain unchanged.
+No metric is dispatched automatically from an input capability. No file/network
+access, content transform beyond the declared byte profile, cross-version pooling,
+semantic similarity, sampler, graph traversal or report assembly is added.
+
+Step 3 retains all accepted Phase 2, Step 1 and Step 2 test identities. Historical
+source hashes and the Step 2 test exception remain frozen. Current-stage function,
+import, call, arithmetic and path gates are explicit. Installed validation includes
+both the inherited no-dependency input check and a separate exact-count check with
+NumPy/pandas present. Intermediate artifacts do not declare phase completion.

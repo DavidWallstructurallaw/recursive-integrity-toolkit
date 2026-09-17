@@ -135,3 +135,58 @@ included_representation_records; provenance scope is unchanged. There are no
 state-frequency, support, diversity or tail calculations in this interface.
 Payload-bearing result fields are hidden from repr; errors retain coordinates
 without echoing raw contents or unredacted paths. Inputs are never mutated.
+
+## Phase 3 Step 3: exact decoded-content representation
+
+`assign_content_states` and `detect_exact_duplicates` are explicit in-memory calls.
+The first returns an `ExactContentRepresentation` whose `.representation` uses the
+shared immutable representation result. The second returns the two registered
+PR-006 counts and exact duplicate groups. Neither is called by `validate_bundle`.
+
+Both require exactly one `dataset_versions` entry, `scope_id`,
+`representation_name`, `representation_version`, `normalization_profile` and a
+`ContentMode` enum. The only implemented profile is `exact_utf8_v1`.
+The profile encodes the validated decoded text as UTF-8 without changes to case,
+Unicode form, whitespace, line endings or BOM. Empty/whitespace-only, NUL-bearing
+or unencodable content fails. File-inventory hashing remains a separate operation.
+
+```python
+from recursive_integrity_toolkit.metrics.duplicates import detect_exact_duplicates
+from recursive_integrity_toolkit.models import ContentMode
+
+result = detect_exact_duplicates(
+    canonical_records,
+    dataset_versions=("v1",),
+    scope_id="v1-exact-record-form",
+    representation_name="record_form",
+    representation_version="declared-v1",
+    normalization_profile="exact_utf8_v1",
+    content_mode=ContentMode.INLINE,
+)
+```
+
+In `LOCAL_REF`, additionally pass `resolved_content={RecordKey(...): loaded_text}`
+for exactly the selected keys. The caller explicitly obtains text through the
+existing PR-017 reader before this call. Missing/extra payload keys fail, and the
+path-valued canonical cell is never used as content in that mode. An INLINE call
+rejects payload substitution. A type or metadata declaration cannot prove that a
+caller-created string came from a trusted source. No new serialized config key is
+introduced; this is an internal call interface.
+
+Equal SHA-256 digests are checked against their exact bytes. Unequal bytes sharing
+an artificial digest cause a structured error; no alternate state ID is invented.
+Groups are maximal equal-content sets of at least two records. Members are ordered
+by canonical RecordKey, groups by digest. The first member is a display
+representative, not a retained replacement for the group.
+
+`duplicate_record_count` is the sum of each group size minus one;
+`duplicate_group_count` is the number of qualifying groups. Both are unweighted
+`observed_fact` values owned by PR-006, with method, unit, scope, representation,
+assumptions and limitations. Definitions 8.3/8.4 register these counts without
+F-numbers, so `formula_id` remains None. Empty input yields no numeric values and
+EMPTY_SCOPE; a nonempty unique scope yields real zero counts.
+
+Exact record form establishes no semantic equivalence, independent origin,
+authorship or provenance. No record/provenance is edited, removed or reweighted.
+Support/diversity, near-duplicates, longitudinal grouping and public reports remain
+outside this step.

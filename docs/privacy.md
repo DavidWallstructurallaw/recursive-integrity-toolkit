@@ -32,4 +32,24 @@ Tests use synthetic data and verify offline behavior, unchanged sources, rejecte
 
 Delivery archives contain tracked public source, project wheel/sdist and synthetic test evidence. Git internals, environments, caches, private data and full theory PDFs are excluded. No third-party source, datasets, models or fonts are bundled. Metadata lists actual installed tool versions and their declared license metadata; this is not an independent vulnerability or legal audit.
 
-The completion record reports failures, repairs and unexecuted checks separately. No production security certification is claimed. Phase 3 is not authorized.
+The completion record reports failures, repairs and unexecuted checks separately. No production security certification is claimed. Only explicitly authorized Phase 3 steps may add bounded calculation behavior.
+
+
+## Phase 3 Step 3 exact-content privacy
+
+Exact hashing and duplicate grouping operate solely on explicitly supplied memory.
+LOCAL_REF paths are never opened or hashed by this layer. The existing safe reader
+remains responsible for explicit reads, containment, encoding and resource limits.
+No new file reader, network client, logger or background process is introduced.
+
+The representation object retains exact byte snapshots for equality checks and
+hides them from default repr. The duplicate result retains only the selected scope,
+representation metadata, groups and counts, without source content or notes.
+Default repr suppression is not anonymization or protection from deliberate object
+inspection. A content digest is linkable and can be tested against guessed text;
+it must not be described as a redacted record ID or proof of origin.
+
+Tests use synthetic text, independent copies, supplied local-reference payloads,
+Unicode and newline variants, artificial digest collisions, and no-I/O/no-logging
+checks. Errors use static messages; collision failures do not echo the conflicting
+text. Public report serialization and redaction remain deferred to Phase 4.

@@ -168,3 +168,77 @@ independent human review or security certification is asserted.
 No state frequencies, support, diversity, content hashing, tail calculation,
 weighted calculation, sampling, pair comparison, graph or report is implemented.
 Stop after Step 2 verification. Step 3, main merge and publication are not authorized.
+
+## Phase 3 Step 3 authorization and implementation contract
+
+The Theory Owner accepted Step 2 and explicitly instructed Phase 3 Step 3 in the
+project conversation on 2026-09-17. The accepted Step 2 commit is
+`9e5d4c4f38834c42a5b7c19de4e67f471ab9bbca`, tree
+`096e038145bced4b01f2c0059659082a72501112`. The original Phase 2 baseline,
+Step 1 anchor, sixteen source hashes, approved plan and mathematical oracle
+remain frozen. The Step 2 single-expression exception remains historical;
+no further edit to `tests/unit/test_phase3_contracts.py` is authorized here.
+
+### Recorded before implementation
+
+PR-006 uses `exact_utf8_v1`: UTF-8 bytes of validated decoded text with no trim,
+casefold, Unicode normalization, whitespace collapse, newline rewrite or BOM
+removal. Whitespace-only, empty, NUL-bearing and unencodable text is invalid,
+consistent with required content and the safe content reader. Validation does
+not alter valid text. State IDs are lowercase SHA-256 hex from the unchanged
+`utils/hashing.py` helper. File inventory hashes remain separate.
+
+The two explicit entry points are `assign_content_states` in the representation
+module and `detect_exact_duplicates` in the metric module. They take canonical
+rows, exactly one selected version, a named scope, explicit representation name,
+version, profile and content mode. No implicit cross-version grouping is selected.
+The duplicate entry point delegates to the pure representation implementation;
+it accepts no caller-supplied digest or unchecked result as certified equality.
+
+INLINE hashes the literal content value. LOCAL_REF requires an explicitly supplied
+plain record-key-to-text mapping for exactly the selected records. A path alone,
+missing payload, extra payload identity or ambiguous composite identity fails.
+No path is opened, guessed or hashed in LOCAL_REF. The caller obtains text through
+the existing PR-017 safe reader; the representation layer does not certify the
+origin of arbitrary in-memory text. Missing content is an error, never a synthetic
+missing-content state. Empty explicitly selected input returns unavailable with
+EMPTY_SCOPE and no numeric counts; a nonempty scope without duplicates returns
+real zero counts. No new serialized config keys or reason enums are introduced.
+
+Before grouping, equal digests are checked against the exact normalized bytes.
+An artificial digest collision between different bytes fails with the existing
+SCHEMA_TYPE error. It does not create a suffixed state ID, merge unequal text or
+change the declared representation. This records the fail-closed collision rule
+per plan section 5.3 before its implementation.
+
+Groups contain at least two canonical record keys, ordered by RecordKey; groups
+are ordered by ascending digest. The first member is a presentation representative
+only. `duplicate_record_count` sums group size minus one;
+`duplicate_group_count` counts qualifying groups. Both use PR-006,
+`observed_fact`, unweighted metadata, named units and the selected scope.
+These definitions have no registered F-number; formula_id is None with explicit
+method and source sections DEFINITIONS_AND_UNITS 8.3/8.4. No new F-ID is invented.
+
+Raw bytes and state/member IDs are hidden from default repr where applicable.
+Nothing logs, writes or returns source notes/provenance as duplicate evidence.
+Explicit inspection of internal objects is not anonymization; content digests
+remain linkable. No report redaction or PR-015 implementation is claimed.
+
+### Gate migrations
+
+Advance the active stage to 3 and allow exactly content_hash.py and duplicates.py
+in addition to previously opened modules. Keep field/base behavior byte-identical,
+all other metric/graph/report modules protected, and exact imports/call families
+checked. Change the former PR-006 placeholder test in place to owner/import and
+implemented-boundary checks; retain its historical node ID. The general placeholder
+count becomes 22. Add negative injections and runtime no-I/O tests. Update workflow
+stage arguments and artifact names without removing any safety/regression checks.
+Freeze Step 2 source and test identities alongside Phase 2 and Step 1; previous
+Step 2 tests and the exact historical exception remain preserved. No new scope
+exception is requested. No main merge, publication, Step 4 or final phase completion.
+
+### Review roles
+
+Theory decisions: Theory Owner approval already recorded above and in P3-D05.
+Implementation, numerical-definition, privacy and boundary review: assistant
+self-review plus executable tests. No independent reviewer sign-off is claimed.

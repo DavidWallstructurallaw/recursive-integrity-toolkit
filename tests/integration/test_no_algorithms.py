@@ -1,4 +1,4 @@
-"""Protect Phase 2 Step 9 from premature analytical implementation."""
+"""Protect Phase 3 Step 3 exact counts from premature analytical implementation."""
 
 import ast
 from pathlib import Path
@@ -9,6 +9,7 @@ STEP2_EXECUTABLE = {"io/loaders.py", "utils/hashing.py", "utils/paths.py"}
 STEP3_EXECUTABLE = {"io/schema_mapping.py"}
 STEP8_EXECUTABLE = {"observability/levels.py"}
 PHASE3_FIELD_EXECUTABLE = {"representations/base.py", "representations/field.py"}
+PHASE3_EXACT_EXECUTABLE = {"representations/content_hash.py", "metrics/duplicates.py"}
 STEP4_EXECUTABLE = {"io/normalization.py", "io/validation.py", "utils/ordering.py"}
 PROTECTED_PREFIXES = {"io", "lineage", "metrics", "observability", "reports", "representations", "utils"}
 FORBIDDEN_ANALYTICAL_IMPORT_ROOTS = {"networkx", "scipy", "sklearn", "torch", "tensorflow", "transformers"}
@@ -23,7 +24,7 @@ def _is_docstring_only(path: Path) -> bool:
 def test_only_step8_authorized_modules_gain_behavior(package_root) -> None:
     for path in sorted(package_root.rglob("*.py")):
         relative = path.relative_to(package_root)
-        if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
+        if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE | PHASE3_EXACT_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
             continue
         assert _is_docstring_only(path), f"Premature executable body: {relative}"
 
@@ -31,7 +32,7 @@ def test_only_step8_authorized_modules_gain_behavior(package_root) -> None:
 def test_protected_phase3_plus_modules_remain_placeholders(package_root) -> None:
     for prefix in PROTECTED_PREFIXES:
         for path in sorted((package_root / prefix).rglob("*.py")):
-            if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE:
+            if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE | PHASE3_EXACT_EXECUTABLE:
                 continue
             assert _is_docstring_only(path), f"Protected module changed after Step 8: {path}"
     assert _is_docstring_only(package_root / "result.py")
@@ -63,7 +64,7 @@ def test_PR003_traceability_script_enforces_step8_scope(repo_root) -> None:
     result = subprocess.run([sys.executable, "scripts/check_traceability.py"],
                             cwd=repo_root, capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "protected docstring-only modules: 24" in result.stdout
+    assert "protected docstring-only modules: 22" in result.stdout
 
 
 # The checker itself must reject new work outside the current Step 8 boundary.
@@ -215,3 +216,47 @@ def test_phase3_step2_contract_test_exception_is_exact(repo_root, change):
     else: bad = after.decode()
     with pytest.raises(ValueError):
         checker["verify_step2_contract_test_migration"](before, bad)
+
+
+# Phase 3 Step 3: inherited identities stay; exact-content modules have bounded calls.
+@pytest.mark.parametrize("relative", ["representations/content_hash.py", "metrics/duplicates.py"])
+@pytest.mark.parametrize("injection", [
+    "import socket\n", "from ..io.loaders import load_table\n", "from ..metrics import diversity\n",
+    "from ..utils.hashing import sha256_bytes as eval\n", "from ..models import __builtins__\n",
+    "open('private')\n", "def semantic_support(): return 1\n", "x = 1\n",
+    "lambda: None\n", "eval('1')\n",
+])
+def test_phase3_step3_later_feature_injection_is_rejected(repo_root, tmp_path, relative, injection):
+    target = tmp_path / "gate"
+    shutil.copytree(repo_root / "src", target / "src", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    (target / "scripts").mkdir()
+    shutil.copy2(repo_root / "scripts/check_traceability.py", target / "scripts/check_traceability.py")
+    file = target / "src/recursive_integrity_toolkit" / relative
+    file.write_text(file.read_text(encoding="utf-8") + "\n" + injection, encoding="utf-8")
+    result = subprocess.run([sys.executable, str(target / "scripts/check_traceability.py")],
+                            cwd=target, text=True, capture_output=True)
+    assert result.returncode != 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("relative", ["representations/content_hash.py", "metrics/duplicates.py"])
+@pytest.mark.parametrize("body", [
+    "return value ** 2", "return value / 2", "return sum(values)", "return callback(values)",
+    "return text.lower()", "return text.casefold()", "return text.replace('a', 'b')",
+    "return __import__('numpy')", "return open(value)", "return members.pop()", "value += 1",
+])
+def test_phase3_step3_hidden_operation_is_rejected(repo_root, relative, body):
+    import runpy
+    checker = runpy.run_path(str(repo_root / "scripts/check_traceability.py"), run_name="exact_gate")
+    with pytest.raises(SystemExit):
+        checker["_phase3_exact_boundary"](ast.parse("def helper():\n    " + body + "\n"), relative)
+
+
+@pytest.mark.parametrize("path", ["tests/unit/test_phase3_contracts.py",
+    "src/recursive_integrity_toolkit/representations/base.py",
+    "src/recursive_integrity_toolkit/representations/field.py",
+    "src/recursive_integrity_toolkit/utils/hashing.py", "tests/golden/phase3_math_cases.json"])
+def test_phase3_step3_incremental_scope_keeps_prior_implementations_frozen(repo_root, path):
+    import runpy
+    checker = runpy.run_path(str(repo_root / "scripts/release_check.py"), run_name="step3_paths")
+    with pytest.raises(ValueError):
+        checker["verify_phase3_changes"]([("M", path)], incremental=True)

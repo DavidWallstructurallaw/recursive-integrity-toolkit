@@ -1,4 +1,4 @@
-"""Check inherited Phase 2 rules and approved Phase 3 Step 1 contracts.
+"""Check inherited Phase 2 rules and approved Phase 3 Step 3 boundaries.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
 approved Phase 2 step on 2026-09-16. Step 9 adds explicit local bundle orchestration only. Earlier
@@ -206,7 +206,7 @@ FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.p
 
 
 # Phase 3 Step 1: declarations and validation contracts only.
-PHASE3_ACTIVE_STEP = 2
+PHASE3_ACTIVE_STEP = 3
 PHASE3_CONTRACT_CLASSES = {
     "CalculationEvidenceClass", "CalculationStatus", "CalculationReason", "NumericalPolicy",
     "RepresentationDescriptor", "RecordStateAssignment", "CalculationScope", "WeightingOptions",
@@ -315,6 +315,95 @@ def _phase3_representation_boundary(tree: ast.Module, relative: str) -> None:
                 raise SystemExit("Unexpected call in pure field representations")
 
 
+
+# Step 3 opens only exact record-form states and PR-006 duplicate counts.
+PHASE3_EXACT_MODULES = {"representations/content_hash.py", "metrics/duplicates.py"}
+ALLOWED_FUNCTIONS["representations/content_hash.py"] = {
+    "exact_content_bytes", "_payload_snapshot", "assign_content_states",
+}
+ALLOWED_CLASSES["representations/content_hash.py"] = {"ExactContentRepresentation"}
+ALLOWED_FUNCTIONS["metrics/duplicates.py"] = {
+    "ExactDuplicateGroup.representative", "ExactDuplicateGroup.record_count", "detect_exact_duplicates",
+}
+ALLOWED_CLASSES["metrics/duplicates.py"] = {"ExactDuplicateGroup", "ExactDuplicateResult"}
+EXACT_IMPORT_NAMES = {
+    "representations/content_hash.py": {
+        "__future__": {"annotations"}, "dataclasses": {"dataclass", "field"},
+        "types": {"MappingProxyType"}, "..errors": {"ErrorCode"},
+        "..models": {"CalculationReason", "CalculationScope", "CalculationStatus", "CanonicalRow",
+                     "ContentMode", "RecordKey", "RecordStateAssignment", "RepresentationDescriptor", "ValidationCoverage"},
+        "..utils.hashing": {"sha256_bytes"},
+        ".base": {"RepresentationResult", "RepresentationSelection", "_literal_text",
+                  "_representation_error", "_selected_records"},
+    },
+    "metrics/duplicates.py": {
+        "__future__": {"annotations"}, "dataclasses": {"dataclass", "field"},
+        "..models": {"CalculationEvidenceClass", "CalculationMetadata", "CalculationScope", "CalculationStatus",
+                     "CanonicalRow", "ContentMode", "RecordKey", "RepresentationDescriptor", "ScalarCalculation",
+                     "ValidationCoverage"},
+        "..representations.content_hash": {"assign_content_states"},
+    },
+}
+for _exact_module, _exact_imports in EXACT_IMPORT_NAMES.items():
+    ALLOWED_CORE_IMPORTS[_exact_module] = set(_exact_imports)
+
+
+def _phase3_exact_boundary(tree: ast.Module, relative: str) -> None:
+    """Exact imports and calls; only PR-006 counting arithmetic is admitted."""
+    direct_calls = {
+        "representations/content_hash.py": {
+            "dataclass", "field", "type", "len", "set", "tuple", "_literal_text", "_representation_error",
+            "_selected_records", "_payload_snapshot", "exact_content_bytes", "sha256_bytes",
+            "RepresentationDescriptor", "RepresentationSelection", "RepresentationResult",
+            "RecordStateAssignment", "CalculationScope", "ValidationCoverage", "ExactContentRepresentation",
+        },
+        "metrics/duplicates.py": {
+            "dataclass", "field", "assign_content_states", "sorted", "tuple", "len",
+            "ExactDuplicateGroup", "CalculationMetadata", "ScalarCalculation", "ExactDuplicateResult",
+        },
+    }
+    methods = {
+        "representations/content_hash.py": {
+            ("text", "strip"), ("text", "encode"), ("resolved_content", "items"),
+            ("assignments", "append"), ("snapshots", "append"), ("keys", "append"), ("states", "append"),
+        },
+        "metrics/duplicates.py": {
+            ("members", "setdefault"), ("bucket", "append"), ("groups", "append"), ("counts", "append"),
+        },
+    }
+    expected_subtractions = {
+        "representations/content_hash.py": {ast.dump(ast.parse(expr, mode="eval").body) for expr in
+                                             ("set(payloads) - selected_keys", "selected_keys - set(payloads)")},
+        "metrics/duplicates.py": {ast.dump(ast.parse("len(keys) - 1", mode="eval").body)},
+    }
+    for top in tree.body:
+        doc = (isinstance(top, ast.Expr) and isinstance(top.value, ast.Constant)
+               and isinstance(top.value.value, str))
+        if not doc and not isinstance(top, (ast.ImportFrom, ast.FunctionDef, ast.ClassDef)):
+            raise SystemExit("Unexpected eager exact-content operation")
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Lambda, ast.AsyncFunctionDef, ast.Await, ast.Yield, ast.YieldFrom, ast.Import)):
+            raise SystemExit("Unexpected dynamic or import operation in exact-content scope")
+        if isinstance(node, ast.ImportFrom):
+            module = "." * node.level + (node.module or "")
+            allowed = EXACT_IMPORT_NAMES[relative].get(module, set())
+            if any(a.name not in allowed or a.asname is not None for a in node.names):
+                raise SystemExit("Import symbol outside exact-content scope")
+        if isinstance(node, ast.BinOp) and not isinstance(node.op, ast.BitOr):
+            if ast.dump(node) not in expected_subtractions[relative]:
+                raise SystemExit("Unexpected arithmetic outside exact duplicate definitions")
+        if isinstance(node, ast.AugAssign):
+            expected = ast.parse("duplicates += len(keys) - 1").body[0]
+            if relative != "metrics/duplicates.py" or ast.dump(node) != ast.dump(expected):
+                raise SystemExit("Unexpected augmented arithmetic outside PR-006")
+        if isinstance(node, ast.Call):
+            direct = isinstance(node.func, ast.Name) and node.func.id in direct_calls[relative]
+            method = (isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name)
+                      and (node.func.value.id, node.func.attr) in methods[relative])
+            if not direct and not method:
+                raise SystemExit("Unexpected call in pure exact-content scope")
+
+
 def _phase3_contract_boundary(tree: ast.Module) -> None:
     """Reject calculation or execution inside the newly authorized declarations."""
     permitted = {"type", "len", "set", "any", "ValueError", "TypeError", "field", "dataclass",
@@ -370,7 +459,7 @@ def main() -> int:
     if len(paths) != 40:
         raise SystemExit(f"Expected 40 package modules, found {len(paths)}")
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
-    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES) - relative_paths
+    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES) - relative_paths
     if missing:
         raise SystemExit(f"Required startup or Step 8 modules missing: {sorted(missing)}")
 
@@ -387,11 +476,13 @@ def main() -> int:
             _phase3_contract_boundary(tree)
         if relative in PHASE3_FIELD_MODULES:
             _phase3_representation_boundary(tree, relative)
+        if relative in PHASE3_EXACT_MODULES:
+            _phase3_exact_boundary(tree, relative)
         doc = ast.get_docstring(tree) or ""
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
 
-        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES:
+        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES:
             if not (
                 len(tree.body) == 1
                 and isinstance(tree.body[0], ast.Expr)
@@ -441,7 +532,7 @@ def main() -> int:
                         isinstance(node.func, ast.Attribute) and node.func.attr in blocked_methods
                     ):
                         raise SystemExit(f"Unexpected executable, write or network capability in {relative}")
-            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | {"models.py"}:
+            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | {"models.py"}:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
                 if isinstance(node, ast.Call):
@@ -485,7 +576,7 @@ def main() -> int:
                     )
                     if not lazy_parquet:
                         forbidden_locations.append(f"{relative}: {imported}")
-            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES:
+            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
                     raise SystemExit(f"Import outside Step 9 contracts in {relative}: {sorted(unexpected)}")
@@ -502,7 +593,7 @@ def main() -> int:
     print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Phase 3 Step 2 field and inherited definition/import boundaries: PASS")
+    print("Phase 3 Step 3 exact counts, field and inherited definition/import boundaries: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 
