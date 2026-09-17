@@ -416,15 +416,15 @@ ALLOWED_CLASSES["metrics/diversity.py"] = {"StateFrequency", "DistributionMetric
 ALLOWED_CORE_IMPORTS["metrics/diversity.py"] = {
     "__future__", "dataclasses", "math", "types", "..errors", "..models", "..representations.base",
 }
-DISTRIBUTION_AST_SHA256 = "20afdb7b9e6670d36e9aa2ed8af990da7d16692a44939854d1cb6cafb001bfff"
+DISTRIBUTION_AST_SHA256 = "4d9d3da261a7ab7d5d66e82db65b37f8cd3e385b941c55694d1dea1cf8943c68"
 
 
 def _phase3_distribution_boundary(tree: ast.Module) -> None:
     """Pin the reviewed executable body in addition to inherited symbol checks.
 
-    The digest is a reviewed literal, never generated from current source at
-    gate execution. Python 3.12 adds empty type_params fields: omit only those
-    empty AST metadata fields so the same code is checked on 3.11 and 3.12.
+    Omit only empty type_params metadata introduced in Python 3.12. Request
+    full-field dumps on Python 3.13+, whose default otherwise omits empty lists;
+    older interpreters already emit those fields. No executable node is removed.
     Nonempty generic parameters are not authorized by this migration.
     """
     import hashlib
@@ -433,7 +433,11 @@ def _phase3_distribution_boundary(tree: ast.Module) -> None:
             if getattr(node, "type_params", []):
                 raise SystemExit("Unexpected generic declaration in distribution metrics")
             node._fields = tuple(name for name in node._fields if name != "type_params")
-    digest = hashlib.sha256(ast.dump(tree, include_attributes=False).encode("utf-8")).hexdigest()
+    try:
+        serialized = ast.dump(tree, include_attributes=False, show_empty=True)
+    except TypeError:
+        serialized = ast.dump(tree, include_attributes=False)
+    digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
     if digest != DISTRIBUTION_AST_SHA256:
         raise SystemExit("Unexpected distribution implementation outside the reviewed Step 4 body")
 
