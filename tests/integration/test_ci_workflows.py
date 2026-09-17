@@ -27,6 +27,7 @@ def test_workflows_preserve_phase_boundary(repo_root: Path) -> None:
     assert "python -m build" in combined
     assert "rit version" in combined
     assert "--phase 3 --step 1" in combined
+    assert "release_check.py --diff" not in combined
 
 
 import ast
