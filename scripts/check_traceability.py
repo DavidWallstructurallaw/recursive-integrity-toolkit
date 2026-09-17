@@ -1,8 +1,8 @@
-"""Check module ownership and the approved Phase 2 Step 6 boundary.
+"""Check module ownership and the approved Phase 2 Step 7 boundary.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
-approved Phase 2 step on 2026-09-16. Step 6 adds only declared chronology,
-immediate parent-reference checks and bounded generation consistency validation.
+approved Phase 2 step on 2026-09-16. Step 7 adds contained local content paths
+and explicitly requested UTF-8 reads. Earlier validation definitions stay intact.
 General graphs, cycles, roots, ancestors, metrics and later layers stay protected.
 
 This script inspects source syntax without importing the package or loading
@@ -137,6 +137,14 @@ ALLOWED_CLASSES["models.py"].update({
 })
 ALLOWED_CORE_IMPORTS["io/validation.py"].add("json")
 
+# Step 7 opens no new module. Content paths and explicit reads stay in IO helpers.
+ALLOWED_FUNCTIONS["utils/paths.py"].update({
+    "_content_error", "_content_lexical", "_content_base", "_inside_base",
+    "resolve_content_reference", "_open_content_fd",
+})
+ALLOWED_FUNCTIONS["io/loaders.py"].add("load_content_reference")
+ALLOWED_CORE_IMPORTS["utils/paths.py"].add("stat")
+
 # Preserve every import and file restriction from the Phase 1 checker.
 FORBIDDEN_IMPORTS = {
     "numpy", "pandas", "pyarrow", "networkx", "scipy", "sklearn", "torch",
@@ -154,7 +162,7 @@ def _definitions(tree: ast.AST, prefix: str = "") -> tuple[list[str], list[str]]
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             name = f"{prefix}.{node.name}" if prefix else node.name
             if isinstance(node, ast.AsyncFunctionDef):
-                raise SystemExit(f"Async implementation is outside Step 6: {name}")
+                raise SystemExit(f"Async implementation is outside Step 7: {name}")
             if isinstance(node, ast.ClassDef):
                 classes.append(name)
             else:
@@ -173,7 +181,7 @@ def main() -> int:
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
     missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS) - relative_paths
     if missing:
-        raise SystemExit(f"Required startup or Step 6 modules missing: {sorted(missing)}")
+        raise SystemExit(f"Required startup or Step 7 modules missing: {sorted(missing)}")
 
     imported_roots: set[str] = set()
     forbidden_locations: list[str] = []
@@ -195,16 +203,26 @@ def main() -> int:
                 and isinstance(tree.body[0].value, ast.Constant)
                 and isinstance(tree.body[0].value.value, str)
             ):
-                raise SystemExit(f"Protected non-Step-6 executable body found: {path}")
+                raise SystemExit(f"Protected non-Step-7 executable body found: {path}")
             placeholder_count += 1
         else:
             functions, classes = _definitions(tree)
             if set(functions) != ALLOWED_FUNCTIONS[relative] or len(functions) != len(set(functions)):
-                raise SystemExit(f"Unexpected Step 6 functions in {relative}: {functions}")
+                raise SystemExit(f"Unexpected Step 7 functions in {relative}: {functions}")
             if set(classes) != ALLOWED_CLASSES.get(relative, set()) or len(classes) != len(set(classes)):
-                raise SystemExit(f"Unexpected Step 6 classes in {relative}: {classes}")
+                raise SystemExit(f"Unexpected Step 7 classes in {relative}: {classes}")
 
         for node in ast.walk(tree):
+            if relative in STEP2_IO:
+                if isinstance(node, ast.Lambda):
+                    raise SystemExit(f"Unexpected dynamic callback in {relative}")
+                if isinstance(node, ast.Call):
+                    blocked_calls = {"eval", "exec", "compile", "__import__", "globals", "locals", "vars", "input", "breakpoint"}
+                    blocked_methods = {"write_text", "write_bytes", "mkdir", "unlink", "remove", "system", "popen", "connect", "urlopen", "urlretrieve", "send", "sendall"}
+                    if (isinstance(node.func, ast.Name) and node.func.id in blocked_calls) or (
+                        isinstance(node.func, ast.Attribute) and node.func.attr in blocked_methods
+                    ):
+                        raise SystemExit(f"Unexpected executable, write or network capability in {relative}")
             if relative in STEP3_MAPPING | STEP4_ROWS | {"models.py"}:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
@@ -249,7 +267,7 @@ def main() -> int:
             if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
-                    raise SystemExit(f"Import outside Step 6 contracts in {relative}: {sorted(unexpected)}")
+                    raise SystemExit(f"Import outside Step 7 contracts in {relative}: {sorted(unexpected)}")
 
     if forbidden_locations:
         raise SystemExit(f"Dependency outside the approved scope: {forbidden_locations}")
@@ -262,7 +280,7 @@ def main() -> int:
     print(f"authorized Step 4 row modules: {sorted(STEP4_ROWS)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Step 6 definition and import allowlists: PASS")
+    print("Step 7 definition and import allowlists: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 

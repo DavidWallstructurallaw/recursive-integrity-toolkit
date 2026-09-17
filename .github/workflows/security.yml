@@ -31,5 +31,6 @@ jobs:
           tests/integration/test_prohibited_structure.py
           tests/integration/test_license_notices.py
           tests/unit/test_PR003_schema_mapping.py
+          tests/unit/test_PR017_content_refs.py
 
 # This workflow starts no service and runs no audit calculation.

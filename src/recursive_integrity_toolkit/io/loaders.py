@@ -1,26 +1,27 @@
-"""Read local physical tables and inventory files without canonical inference.
+"""Read local physical tables and explicit contained UTF-8 content files.
 
 Owner IDs:
-    PR-002; PR-017 local paths; PR-016 file-hash support.
+    PR-002; PR-017 local paths and content references; PR-016 file-hash support.
 
 Inputs:
-    Explicit InputSource declarations and optional ResourceLimits.
+    Explicit InputSource declarations, content references and ResourceLimits.
 
 Outputs:
-    FileInventoryEntry or LoadedTable with unmapped rows and source locations.
+    FileInventoryEntry, LoadedTable or explicitly requested local text.
 
 Assumptions:
     CSV and JSONL are UTF-8. A declared format overrides the extension only
     when that parser succeeds. Parquet is optional and loaded lazily.
+    Content reference directories are trusted and stable during a read.
 
 Limits:
     No schema mapping, canonical coercion, joins, record-key validation,
-    content-reference resolution, observability, metric, graph, or report.
+    observability, metric, graph, or report. Table parsing never opens content.
     File-byte limits bound the snapshot, not arbitrary decompression memory.
     A successful parse establishes physical format only.
 
 Current phase status:
-    Phase 2 Step 2 local ingestion. No analytical behavior.
+    Phase 2 Step 7 explicit local content loading. No analytical behavior.
 """
 
 from __future__ import annotations
@@ -339,3 +340,84 @@ def load_table(source: InputSource, *, limits: ResourceLimits | None = None) -> 
         raise _failure(source, ErrorCode.EMPTY_DATASET, "records table contains no data rows")
     inventory = FileInventoryEntry(source.role, path, chosen, len(raw), sha256_bytes(raw), len(rows), fields)
     return LoadedTable(inventory, rows)
+
+
+def load_content_reference(reference: str, *, base_directory: str | Path | None = None,
+                           records_path: str | Path | None = None, allow_absolute: bool = False,
+                           limits: ResourceLimits | None = None, location=None) -> str:
+    """Explicitly read one contained, regular UTF-8 text file under PR-017.
+
+    No table loader or normalizer calls this automatically. The returned text
+    belongs to the caller; no content, path, or notes are logged or reported.
+    A failure leaves caller-owned records/provenance intact. Total-bundle load
+    budgeting and capability classification belong to later orchestration.
+    """
+    from ..errors import CanonicalValidationError
+    from ..models import RowLocation
+    from ..utils.paths import _content_base, _open_content_fd, resolve_content_reference
+
+    loc = RowLocation() if location is None else location
+    if type(loc) is not RowLocation or (loc.file_role is not None and type(loc.file_role) is not FileRole):
+        raise CanonicalValidationError(ErrorCode.CONFIG_INVALID, "content location must use the approved types")
+    for number in (loc.row_number, loc.line_number):
+        if number is not None and (type(number) is not int or number < 1):
+            raise CanonicalValidationError(ErrorCode.CONFIG_INVALID, "content location numbers must be positive integers")
+    maximum = None
+    if limits is not None:
+        if type(limits) is not ResourceLimits:
+            raise CanonicalValidationError(ErrorCode.CONFIG_INVALID, "content limits must use ResourceLimits")
+        maximum = limits.max_content_bytes
+        if maximum is not None and (type(maximum) is not int or maximum <= 0):
+            raise CanonicalValidationError(ErrorCode.CONFIG_INVALID, "max_content_bytes must be a positive integer")
+    try:
+        path = resolve_content_reference(reference, base_directory=base_directory,
+                                         records_path=records_path, allow_absolute=allow_absolute)
+        base = _content_base(base_directory, records_path)
+        before = path.lstat()
+        if maximum is not None and before.st_size > maximum:
+            raise CanonicalValidationError(ErrorCode.FILE_PARSE, "content exceeds max_content_bytes")
+        fd = _open_content_fd(path, base)
+        try:
+            opened = os.fstat(fd)
+            again = resolve_content_reference(reference, base_directory=base, allow_absolute=allow_absolute)
+            checked = again.lstat()
+            if (again != path or not stat.S_ISREG(opened.st_mode)
+                    or (before.st_dev, before.st_ino) != (opened.st_dev, opened.st_ino)
+                    or (checked.st_dev, checked.st_ino) != (opened.st_dev, opened.st_ino)):
+                raise CanonicalValidationError(ErrorCode.FILE_PARSE, "content path changed before reading")
+            chunks = []
+            total = 0
+            while True:
+                amount = 65536 if maximum is None else min(65536, maximum - total + 1)
+                chunk = os.read(fd, amount)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if maximum is not None and total > maximum:
+                    raise CanonicalValidationError(ErrorCode.FILE_PARSE, "content exceeds max_content_bytes")
+                chunks.append(chunk)
+            after = os.fstat(fd)
+            if (total != opened.st_size or (after.st_size, after.st_mtime_ns) != (opened.st_size, opened.st_mtime_ns)):
+                raise CanonicalValidationError(ErrorCode.FILE_PARSE, "content file changed during reading")
+        finally:
+            os.close(fd)
+        raw = b"".join(chunks)
+        if b"\x00" in raw:
+            raise CanonicalValidationError(ErrorCode.FILE_FORMAT_UNSUPPORTED, "NUL-bearing binary content is unsupported")
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            raise CanonicalValidationError(ErrorCode.FILE_ENCODING, "content file must use valid UTF-8") from None
+        if not text.strip():
+            raise CanonicalValidationError(ErrorCode.RECORD_EMPTY_CONTENT, "referenced text is empty or whitespace-only")
+        return text
+    except CanonicalValidationError as error:
+        raise CanonicalValidationError(error.code, error.safe_message, field="content",
+            file_role=loc.file_role.value if loc.file_role is not None else None,
+            file_path="[redacted]", row_number=loc.row_number, line_number=loc.line_number) from None
+    except FileNotFoundError:
+        raise CanonicalValidationError(ErrorCode.CONTENT_REF_MISSING, "content disappeared before reading",
+            field="content", file_path="[redacted]", row_number=loc.row_number, line_number=loc.line_number) from None
+    except (OSError, ValueError, RuntimeError):
+        raise CanonicalValidationError(ErrorCode.FILE_PARSE, "local content cannot be read safely",
+            field="content", file_path="[redacted]", row_number=loc.row_number, line_number=loc.line_number) from None
