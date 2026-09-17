@@ -1,37 +1,94 @@
-name: Phase 1 CI
+name: Phase 2 CI
 
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  scaffold:
-    name: Scaffold checks on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+  core:
+    name: Core on ${{ matrix.os }} with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ["3.11", "3.12"]
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      RIT_TEST_PARQUET: "0"
     steps:
+      - name: Preserve canonical repository bytes
+        run: git config --global core.autocrlf false
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install package and Phase 1 test tools
+      - name: Install package and approved test tools
         run: python -m pip install ".[test]"
-      - name: Run complete Phase 1 tests
-        env:
-          PYTHONDONTWRITEBYTECODE: "1"
-        run: python -m pytest -p no:cacheprovider -q
-      - name: Check specification structure
-        run: python scripts/check_spec_consistency.py
-      - name: Check module traceability and no-algorithm boundary
-        run: python scripts/check_traceability.py
-      - name: Run release scaffold check
-        run: python scripts/release_check.py
+      - name: Verify actual optional dependency absence
+        run: python -c "import importlib.util; assert importlib.util.find_spec('pyarrow') is None"
+      - name: Run complete core suite
+        run: |
+          mkdir -p "$RUNNER_TEMP/rit-core"
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" | tee "$RUNNER_TEMP/rit-core/phase2_test_results.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 1131
+      - name: Check specifications and exact Phase 2 boundaries
+        run: |
+          python scripts/check_spec_consistency.py
+          python scripts/check_traceability.py
+          python scripts/release_check.py --diff
+      - name: Retain actual core test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-core-${{ matrix.os }}-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/rit-core/
+          if-no-files-found: error
+          retention-days: 30
+
+  parquet:
+    name: Real optional Parquet on Ubuntu with Python 3.12
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      RIT_TEST_PARQUET: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install approved real Parquet extra
+        run: python -m pip install ".[test,parquet]"
+      - name: Verify real PyArrow and run the whole extra-enabled suite
+        run: |
+          mkdir -p "$RUNNER_TEMP/rit-parquet"
+          python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" | tee "$RUNNER_TEMP/rit-parquet/phase2_parquet_results.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 1134
+      - name: Retain actual Parquet test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-real-parquet
+          path: ${{ runner.temp }}/rit-parquet/
+          if-no-files-found: error
+          retention-days: 30

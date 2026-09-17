@@ -1,75 +1,35 @@
-# Privacy
+# Privacy and Local Input Boundaries
 
-Status: Phase 2 Step 7 input-security boundary.
+Status: Phase 2. `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
 
-Core behavior is local-first. Importing the package must not contact a network, load user content, create a service, or require the optional Parquet dependency.
+Package import does not contact a network, open user audit files, require optional PyArrow or start a service. Runtime operates on explicitly supplied local files and declarations. No telemetry, background worker, plugin, cloud client, database, model download or LLM service exists. CI/package installation acquire dependencies separately; CI uses synthetic fixtures only.
 
-The controlling privacy specification is `PRIVACY_AND_DATA_HANDLING.md`.
+## Mapping
 
-## Phase 2 Step 3 mapping boundary
+The fixed language accepts plain finite data. It cannot evaluate expressions, execute templates/commands, invoke user callbacks, resolve dotted attributes or access environment/network resources. URL/code-like literals remain data. Only the explicit mapping-file loader reads a declared snapshot with limits. Row source values are not echoed in ordinary errors. Payload/declaration repr suppression does not anonymize caller-owned objects. These are language constraints, not a sandbox for arbitrary host Python.
 
-Compiling and applying a declaration operate on supplied plain data. They do
-not open files, call a network, execute commands, discover plugins, resolve
-attribute paths or read environment variables. Only the explicit `load_mapping`
-entry point reads its declared local mapping file using the Step 2 byte-snapshot
-reader and its configured limits. URLs inside fields and constants are inert.
+## Content references
 
-Mapping diagnostics carry section, target and operation index, plus available
-row/line positions, without echoing source values or parser fragments. Normal
-execution prints nothing. Mapping plans and result payloads are excluded from
-`repr`; callers can explicitly inspect them locally. The field/operation trace
-contains names rather than source values. Unused source values are retained only
-when the caller explicitly requests the separate extras namespace.
+Explicit base_directory controls resolution. Without it, an explicit records_path supplies the containing directory; current-directory fallback is prohibited. Absolute references are blocked by default; explicit in-memory opt-in still cannot escape the same base.
 
-Tests deny file access, network connections, subprocesses and executable builtins
-while a normal mapping runs. Additional tests reject unsafe operation syntax,
-unknown executable parameters, custom conversion/copy hooks and altered plans.
-These controls concern the mapping language, not a sandbox for arbitrary Python
-code run by the host process. Redacted report generation remains deferred.
+The reader accepts only regular local UTF-8 files, with configured per-file max_content_bytes checked before and during reading. Original line endings/BOM remain. Empty/whitespace-only content, malformed encoding and NUL-bearing binary content fail. No archive extraction, encoding guessing or content analysis occurs.
 
-## Phase 2 Step 7 content references
+Portable separators include slash/backslash. Remote URI, UNC/device, drive-relative Windows syntax, alternate data streams, reserved devices, control characters and trailing dots/spaces are rejected. Percent escapes, variables and tilde text remain literal. Internal symlinks are allowed only inside the base. Targets are inspected before following; remote targets are rejected. A forty-link limit bounds loops. Error codes distinguish missing targets, containment and input failures. Normal content errors use [redacted] paths and never echo payloads.
 
-`utils.paths.resolve_content_reference(reference, base_directory=...)` resolves
-one explicitly supplied local reference. With no `base_directory`, the caller
-must supply `records_path`; its containing directory supplies the base. There is
-no implicit current-directory fallback. `allow_absolute=True` is an explicit
-in-memory opt-in and still cannot escape the same approved base. No run-config
-schema, new output field, or public CLI command has been added.
+Configured bases and directory trees must be trusted and stable while reading. POSIX uses additional directory-descriptor/no-follow controls; Windows uses checked-path and file-identity verification. Malicious concurrent directory replacement and host-mounted network filesystems remain outside the guarantee. No universally race-proof containment or operating-system sandbox is claimed.
 
-`io.loaders.load_content_reference` performs the safe resolution and explicit
-read together. It accepts the existing `ResourceLimits(max_content_bytes=...)`
-and an optional `RowLocation`. A configured size limit is checked both before
-and during streaming. Text is decoded as strict UTF-8 with line endings and BOM
-preserved. Empty/whitespace-only files and NUL-bearing binary payloads fail.
-No extension-based decoding, archive extraction, byte guessing or content
-analysis occurs. The returned string is available only to the explicit caller.
-Table loaders, normalization, provenance joins and generation validation never
-call this loader automatically or start traversing reference-valued metadata.
+## Orchestration and internal results
 
-Slash and backslash are treated as portable separators. References cannot use
-remote schemes, UNC/device syntax, drive-relative Windows syntax, alternate
-data streams, reserved device names, or control characters. Percent escapes,
-variables, and tilde text are literal filename data, never expanded. Portable
-content references reject trailing dots/spaces in path components. Existing
-explicit source-file path behavior remains unchanged.
+Table loading, mapping, normalization, joins and generation checks do not automatically follow reference-valued metadata. validate_bundle requires LOCAL_REF and resolve_local_content=True before invoking PR-017. Each record uses its source-file directory when no explicit base is supplied.
 
-Internal symlinks are permitted when their targets remain inside the base.
-Link targets are inspected before following them so a remote target is rejected
-without fetching it. A maximum of 40 link traversals bounds loops. Missing targets
-use `E_CONTENT_REF_MISSING`; containment violations use `E_CONTENT_REF_OUTSIDE_BASE`.
-Unsupported file types, malformed encoding and resource-limit failures use the
-existing structured input codes. No full source path or rejected content is
-interpolated into a normal error; content paths are represented as `[redacted]`.
+Content failures preserve metadata and enter diagnostics. Independent capabilities can remain usable, but errors remain visible. Output paths are not executed and no report is written. Resource controls are explicit per-file/row/depth limits, not a total-bundle memory or decompression sandbox.
 
-Configured base directories are trusted local inputs. Reads assume a stable
-filesystem tree, with extra directory-descriptor/no-follow protections on POSIX
-and pre-read identity checks on all platforms. Windows uses a checked-path
-fallback. Hostile concurrent directory replacement and host-mounted network
-filesystems are outside this boundary; this is not an operating-system sandbox.
-No claim of race-proof containment across all platforms is made.
+Internal results retain records, provenance, file inventory and private source locations. Default repr excludes payloads, while aggregate messages redact paths. Explicit object serialization can still expose sensitive local data. Redacted public report generation is deferred; handle these internal objects under the governing data policy.
 
-A content-specific failure leaves caller-owned record and provenance objects
-unchanged. Later validation orchestration decides whether metadata-only work
-can continue and how to expose unavailable capabilities. This step introduces
-no observability verdict, report, global content cache, or total-bundle load
-budget manager. Real optional Parquet-presence validation remains outstanding.
+## Development evidence
+
+Tests use synthetic data and verify offline behavior, unchanged sources, rejected mapping execution and contained reference access. A clean installed-wheel check blocks network plus NumPy/pandas/PyArrow, imports all forty modules and runs Hero validation.
+
+Delivery archives contain tracked public source, project wheel/sdist and synthetic test evidence. Git internals, environments, caches, private data and full theory PDFs are excluded. No third-party source, datasets, models or fonts are bundled. Metadata lists actual installed tool versions and their declared license metadata; this is not an independent vulnerability or legal audit.
+
+The completion record reports failures, repairs and unexecuted checks separately. No production security certification is claimed. Phase 3 is not authorized.

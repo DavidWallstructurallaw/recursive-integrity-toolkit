@@ -1,341 +1,90 @@
-# Data Schema
+# Data Schema and Phase 2 Workflow
 
-Status: Phase 1 structural contract.
+Canonical field meanings remain governed by `DATA_AND_PROVENANCE_SPEC.md` and `DEFINITIONS_AND_UNITS.md`. This guide describes implemented interfaces and their boundaries. Actual final acceptance is recorded separately.
 
-Canonical field meanings are controlled by `DATA_AND_PROVENANCE_SPEC.md` and `DEFINITIONS_AND_UNITS.md`.
+## Explicit bundle
 
-The hero files under `examples/hero/` are format fixtures. Phase 1 checks names, types, JSON syntax, and composite parent-reference form without calculating metrics.
+`io.validation.validate_bundle(AuditBundle(...))` performs the complete input workflow and returns `BundleValidationResult` in memory. Exactly one primary records source, zero or more comparison sources, and at most one provenance, mapping, config and version-order source are accepted. Duplicate or competing singleton declarations fail. No directory discovery or recursive include occurs.
 
-## Phase 2 Step 2: physical ingestion
+Bundle paths must be absolute or relative to explicit absolute base_directory. Config-file input paths resolve relative to that file. An in-memory configuration cannot silently override a supplied config file. Conflicting explicit resource limits fail. Control snapshots reject invalid roots, duplicate JSON keys, nonfinite values and syntax/depth violations. TOML uses the standard-library parser. EXPECTED_OUTPUTS.md remains a static analytical contract, never input data.
 
-`io.loaders.load_table(InputSource(...), limits=ResourceLimits(...))` now parses
-local records, comparison, and provenance tables. `inventory_source` inventories
-a declared file without parsing it; its row count is `None` and its field list
-is empty. A parsed `LoadedTable` supplies row count, field order, file role,
-byte size, exact SHA-256, unmapped values, and physical row/line locations.
-These objects are internal input contracts, not final audit reports.
+## Physical ingestion
 
-CSV/JSONL use the standard library so parsing does not adopt pandas' default
-missing-value or identifier coercions. pandas remains an approved dependency
-for later tabular operations. CSV strings and raw record spelling are retained,
-including quoted empty strings and embedded newlines. JSONL native values,
-missing keys, explicit null, and literal `unknown` remain distinct. The loader
-never validates canonical record IDs, joins provenance, maps fields, resolves
-parent links, opens paths found in content, or computes an analytical metric.
+`load_table(InputSource(...), limits=ResourceLimits(...))` reads local CSV/JSONL or optional Parquet. Inventory retains role, format, exact byte SHA-256, size, row count, fields and source path. Hashing and parsing consume the same snapshot. `inventory_source` alone leaves row_count=None and fields empty, without interpreting contents.
 
-CSV has a required nonempty unique header and consistent row width. Blank
-physical lines are ignored outside quoted fields. Malformed quotes, duplicate
-JSON keys, non-object JSONL lines, nonfinite JSON numbers (including overflow),
-and invalid UTF-8 fail with content-safe errors. Empty primary/comparison tables
-fail; an empty provenance table remains a zero-row input for later validation.
-An empty content cell or duplicate record key is preserved here for canonical
-validation in a later step. The loader does not certify these records as valid.
+CSV retains strings, original row spelling, quoted/empty distinctions, embedded newlines and physical row/line positions. JSONL retains native values and absent fields. Nonempty unique CSV headers and consistent widths are required. Blank lines outside quotes are ignored. Malformed quoting, non-object JSONL, duplicate keys, nonfinite/overflowed numbers and invalid UTF-8 fail. Empty record tables fail; supplied-empty provenance remains distinct from no manifest and must still have required schema columns.
 
-Explicit format declarations select one parser and may override an extension
-when parsing succeeds, as specified in `DATA_AND_PROVENANCE_SPEC.md` section
-3.7. There is no fallback sniffing. A format incompatible with the declared file
-role, or bytes rejected by the selected parser, fails. JSON/TOML control files
-and NPY embedding files can be inventoried; they are not executed or interpreted
-by the table loader. Snapshot hashing and parsing use the same bytes.
+An explicit format selects one parser and may override the extension when parsing succeeds, under data-spec section 3.7. There is no fallback sniffing. Role conflicts fail. JSON/TOML/NPY declarations can be inventoried without becoming evidence for unimplemented capabilities. max_file_bytes, max_rows and max_json_depth are explicit; compressed-byte bounds do not certify decompression memory safety. Detected file changes during reads fail. URI/UNC/device forms are blocked; host-mounted network filesystems are outside the lexical guarantee. No source file is changed.
 
-Only `max_file_bytes`, `max_rows`, and `max_json_depth` are enforced in this step.
-No default universal size threshold is invented. Limits on content references,
-parent lists, and later capabilities remain deferred. File size limits cover
-compressed input bytes, not arbitrary decompression memory. File changes detected
-during reading fail rather than attaching an inconsistent hash to parsed data.
+### Real optional Parquet
 
-Explicit local source-file paths may be absolute. URI, UNC, device, and invalid
-paths are rejected before opening. Record-content path containment and symlink
-policy belong to Step 7 and are not claimed here. OS-mounted filesystems are
-outside this lexical path check. No source file is written or modified.
-
-### Optional Parquet verification
-
-The optional backend imports `pyarrow` only inside the Parquet read function and
-passes a byte buffer to `ParquetFile`; it never asks Arrow to resolve a path or
-remote filesystem. No core runtime or test dependency has been changed.
-
-Core tests verify CSV/JSONL with PyArrow actively blocked and verify the clear
-missing-extra error. Real Parquet tests require explicit selection after the
-extra is installed. They fail if selected without it, rather than skipping or
-substituting a fake reader:
+PyArrow imports only in the Parquet reader. A byte buffer is used rather than allowing Arrow to resolve paths or remote filesystems. Missing PyArrow does not break package import or CSV/JSONL. To run the explicit real backend suite:
 
 ```bash
-python -m pip install ".[parquet,test]"
+python -m pip install ".[test,parquet]"
 RIT_TEST_PARQUET=1 python -m pytest -p no:cacheprovider -q
 ```
 
-On PowerShell, set `$env:RIT_TEST_PARQUET = "1"` before the pytest command.
-The current workflows retain their approved dependency sets; optional-presence
-coverage must be reported separately from core CI coverage.
+PowerShell requires setting `$env:RIT_TEST_PARQUET = "1"` separately. Selecting those tests without PyArrow fails instead of skipping. Step 10 CI runs full core and real-extra suites independently and checks that roundtrip, row-limit and invalid-file cases were all collected. Results are never summed as independent populations.
 
-## Phase 2 Step 3: declarative field mapping
+## Safe mapping
 
-`io.schema_mapping.load_mapping(path)` reads an explicit local JSON mapping
-snapshot. `compile_mapping(document)` validates a supplied plain dictionary;
-`parse_mapping_json(text)` additionally detects duplicate object keys before
-JSON decoding can discard them. `map_row(row, plan, section="records")` applies
-the frozen declaration to a plain dictionary or an existing `RawRow`. No CLI
-audit command, canonical validation, table join, or analysis is added.
+`load_mapping` reads an explicit snapshot; `compile_mapping` validates a plain dictionary; `parse_mapping_json` preserves duplicate-key diagnostics; `map_row` transforms a plain row or RawRow without mutation.
 
-The canonical version key is `schema_version: "1.0"`, from the approved data
-specification section 14.2. The Phase 1 skeleton used `mapping_version`; that
-spelling remains an explicit compatibility option. Exactly one version key is
-required. A document needs a `records` or `provenance` section with `fields`.
-Every target has one selector: `source`, `constant`, or an initial `constant`
-or `coalesce` operation. Two selectors for one target are rejected. Duplicate
-JSON target keys are errors. All operation-specific parameters are closed.
+Canonical version syntax is schema_version=1.0. The early mapping_version spelling remains compatibility-only; exactly one is allowed. Sections are records/provenance with fields. Each target has one source/constant selector or an initial constant/coalesce. Duplicate targets/selectors and extra operation arguments fail.
 
-The following are the Step 3 parameter conventions for the approved verbs:
-
-| Operation | Explicit parameters and behavior |
+| Operation | Explicit behavior |
 |---|---|
-| `rename` | The enclosing `fields` key names the target and `source` names the original field. The operation has no additional parameter. |
-| `trim` | Removes leading and trailing Unicode whitespace only when listed. |
-| `cast_string` | Strings or finite scalar numbers/booleans; booleans become `true` or `false`. Arrays and objects are rejected. |
-| `cast_integer` | Integer values or ASCII integer strings with optional sign. Booleans, floats, surrounding whitespace and fractional strings are rejected. |
-| `cast_float` | Finite numeric values or explicit decimal/exponent strings. No booleans, nonfinite values, underscores or implicit trim. |
-| `cast_boolean` | Requires `mapping`, an exact string-token to boolean dictionary. No implicit truthiness, trimming or case conversion. |
-| `parse_datetime` | Requires `format: "iso8601"` or a portable numeric strptime format using `%Y`, `%y`, `%m`, `%d`, `%H`, `%M`, `%S`, `%f`, `%z`, `%j`, `%%`. Locale-dependent directives are rejected. Missing timezones are not inferred. |
-| `parse_json_list` | Parses a strict JSON array string; objects, scalars, duplicate nested keys and nonfinite numbers fail. |
-| `constant` | Requires `value` when used as an operation. Field-level `constant` is also supported. |
-| `coalesce` | Requires a nonempty `sources` list. Selects the first present, non-null value from the original row. |
-| `map_values` | Requires `mapping` and `unmapped: keep`, `null` or `error`. String keys match exactly; other input types are not converted to token strings. |
-| `normalize_whitespace` | Requires `format: "collapse"`. Replaces Unicode whitespace runs with one space; boundary spaces are retained unless `trim` is separately listed. |
-| `lowercase`, `uppercase` | Explicit string case conversion; no automatic Unicode normalization. |
+| rename | Enclosing field key names target; source names original literal field. |
+| trim | Leading/trailing Unicode whitespace removal only when listed. |
+| cast_string | Strings and finite scalar numbers/booleans; no objects/arrays. |
+| cast_integer | Native integers or signed ASCII integer strings, no booleans/floats/fractions/implicit trim. |
+| cast_float | Finite numbers or explicit decimal/exponent strings, no bool/nonfinite/implicit trim. |
+| cast_boolean | Exact string-token-to-boolean mapping required. |
+| parse_datetime | Explicit iso8601 or portable numeric strptime directives; no timezone inference. |
+| parse_json_list | Strict JSON-array parsing with duplicate/nonfinite rejection. |
+| constant | Explicit field constant or operation value. |
+| coalesce | First present non-null original source in declared order. |
+| map_values | Exact mapping and explicit unmapped keep/null/error. |
+| normalize_whitespace | Explicit collapse mode, separate from trim. |
+| lowercase, uppercase | Explicit case changes without automatic Unicode normalization. |
 
-All selectors read the original row. Fields cannot refer to previously generated
-targets. Operations execute in listed order. An absent required `source` raises
-`E_MAPPING_SOURCE_FIELD_MISSING`; optional coalesce sources may be absent.
-When all coalesce sources are absent, the target remains absent. When at least
-one is explicitly null and no value is available, the target is null. Zero,
-false, empty strings, empty arrays/objects and the literal `unknown` are not
-missing. Ordinary transforms preserve explicit nulls. CSV null-token and
-quoted-empty semantics remain available in the original `RawRow` for Step 4;
-this step does not guess them from decoded empty strings.
+All selectors read the original row; targets never feed other targets. Operations remain ordered. Missing required sources fail. All-absent coalesce leaves absent; present-null with no value yields null. Zero, false, empty values and literal unknown are not missing. CSV null-token interpretation belongs to normalization, with original spelling retained.
 
-`MappedRow.extras` is empty by default. The explicit `preserve_extras=True`
-argument preserves unused source fields in a separate namespace. Unmapped
-field names are always recorded. Payloads are copied; source rows and plans are
-not mutated. This remains mapping output, not certified canonical records.
+MappedRow retains source/unmapped names, SHA-256, selector/operation traces, locations and explicit unmapped-policy notices. preserve_extras=True keeps unused values separately; default does not. Payload/declaration values are hidden from repr. Expressions, templates, callbacks, dynamic imports, subprocess and environment/network access are forbidden; literal code-like strings remain inert.
 
-Each result retains original row/line locations, source/unmapped field names,
-selector and operation order for each target, a mapping snapshot SHA-256, and
-any `W_MAPPING_VALUE_UNMAPPED` notices for the explicit keep/null policy.
-The frozen plan retains the full declaration without printing its values in
-`repr`. A loaded plan also retains the original mapping-file inventory and
-byte hash. These are internal metadata for later assembly, not an audit report.
+## Canonical normalization
 
-No dependency was added. The mapper uses fixed local branches, accepts plain
-finite data, and never resolves dotted fields, paths, URLs, templates, environment
-variables or callable objects. Unsafe syntax raises `E_MAPPING_UNSAFE_TRANSFORM`.
-Strings that resemble code remain inert data when used as literal values.
+`normalize_row` accepts typed dictionaries, RawRow or MappedRow; `normalize_table` accepts LoadedTable. Neither loads files, maps fields, joins evidence or classifies capabilities. Identity is exactly (dataset_version, record_id), serialized as dataset_version::record_id. No automatic trim, case folding, Unicode normalization, numeric-ID coercion or content deduplication. Repeated composite keys fail; same ID in different versions remains distinct.
 
-## Phase 2 Step 4: canonical row fields and identity
+CSV needs FileFormat.CSV and original RawRow spelling. Unquoted blanks and default null/NULL tokens, quoted empty strings, literal unknown, native null and absent fields retain distinctions. Required empty values fail. Blank optional IDs/numbers/booleans become null; blank CSV parents become an empty tuple. JSONL/Parquet do not inherit CSV token semantics.
 
-`io.normalization.normalize_row(row, kind="records")` and its `provenance` form
-accept already supplied fields. `normalize_table(loaded_table)` accepts the
-existing `LoadedTable`, performs row-local normalization and same-kind identity
-uniqueness checks, and returns lexically ordered rows. It never loads a file,
-executes mapping, joins tables, resolves parents, or classifies observability.
-Required table columns are checked even for a zero-row provenance table; a
-header-only table with the required columns remains an empty supplied table.
+Mapped CSV additionally supplies source_row. Unchanged selectors inherit quoting evidence; explicit transforms/constants use their returned values without invented lexemes. Numeric/boolean target serialization still applies. NormalizationOptions provides explicit in-memory content/null/blank/boolean/extras policies without changing run-config grammar.
 
-The implementation follows the record/provenance fields in sections 8 and 9
-and field-specific normalization rules in section 15 of the data specification.
-Identity is exactly `(dataset_version, record_id)`: no trim, case conversion,
-Unicode normalization, numeric coercion, or content deduplication is implicit.
-Duplicate keys fail, even for identical physical rows. Repeated IDs in different
-versions remain different keys. `validate_unique_keys` can validate a caller's
-explicit combined same-kind scope across files, without a provenance join.
+Finite nonnegative weights are row-validated. Generation is nullable nonnegative integer-only. Timestamp strings need explicit timezone and normalize to UTC; supported native timezone/ZoneInfo objects do likewise. Local timezone is not guessed. Inline content obeys an explicit byte limit; local references remain unread.
 
-CSV conversion requires `file_format=FileFormat.CSV` and original `RawRow`
-spelling. It distinguishes unquoted blank/null tokens from quoted empty or
-literal strings. `null` and `NULL` are the default unquoted tokens. Required
-empty fields fail; blank optional IDs/numbers/booleans become null; a blank CSV
-parent list becomes an empty sequence. Native JSONL/Parquet values do not acquire
-CSV token semantics. Native `unknown`, false, zero, null and absent fields remain
-distinct. String identifiers, categories and notes are never inferred.
+Canonical values, field_states and extras are detached read-only mappings. Parents are sorted immutable tuples here without resolution/deduplication. Missing/null parents remain unavailable declarations, not inferred independence or grounding. Optional fields stay absent except documented text/plain default and minimum nullable parent column. Defaults are identified. Internal nullable parents do not satisfy the unchanged normalized export-row schema's array requirement; there is no exporter. Private values are excluded from ordinary repr/errors, while source locations remain internal metadata. Lexical presentation order never supplies chronology.
 
-For an existing mapped CSV row, supply `source_row=original_raw_row`. Unchanged
-source selectors inherit quoting evidence; explicit transforms/constants use
-their returned values without fabricating original quote states. CSV numeric
-and boolean serialization still follows the target field's type. A plain typed
-mapping result can instead use the default native mode. This step does not
-change the previously approved mapper's coalesce or null behavior.
+## Provenance attachment
 
-`NormalizationOptions` supplies explicit in-memory policies for content mode,
-null tokens, optional blank-as-null behavior, boolean compatibility tokens, and
-extras preservation. No additional JSON/TOML run-config keys or CLI commands
-have been introduced. Compatibility boolean tokens require explicit opt-in.
-Source type, external grounding and human review never overwrite one another.
+`join_provenance` uses exact composite identities. Duplicate provenance and unmatched loaded-record identities fail. Missing attachment remains None plus warning, not a fabricated unknown. Absent and supplied-empty manifests remain distinct. Explicit version selection affects coverage only; supplied provenance outside the selected scope must still match the full loaded scope and errors survive.
 
-Finite, nonnegative weights are checked per row. Generation is nullable,
-nonnegative and integer-only; no expected generation or lineage depth is
-computed. Timestamps require an explicit timezone and normalize to UTC.
-Native standard-library timezone/ZoneInfo datetimes and ISO 8601 strings are
-supported; no local timezone is guessed. An inline content byte limit can be
-provided. Local-reference strings are never opened or certified as safe here;
-complete content-reference validation remains Step 7.
+Three independent unweighted coverage measures use all valid records in the selected scope: matched-row count, matched valid-required-field count, and explicit yes/no grounding count. Numerator, denominator and denominator name remain attached. Unknown is valid enum syntax but not known grounding. Weight does not alter fractions. Empty selected scope fails; generic zero-denominator ratio is None.
 
-`CanonicalRow.values`, `field_states` and `extras` are detached read-only
-mappings. Parent arrays are immutable tuples internally, sorted for presentation
-without deduplication or reference resolution. An omitted or explicit-null
-parent declaration stays null, with its original absence/null state retained.
-It never becomes proof of parentlessness, external grounding or independence.
-The existing export-row schema still requires an array; these nullable internal
-rows are not advertised as export-ready and no exporter exists in this step.
+Typed incomplete required fields remain ProvenanceAssessment plus errors, never canonical certification. Invalid present types/enums fail. The strict normalizer stays strict; bundle orchestration reuses conversion helpers for eligible incomplete CSV assessments without substituting valid values. Source type, grounding and human review remain independent. Estimated/unknown warnings and explicit strict-promotion settings preserve counts/declarations. Conflicting shared batch_id/timestamps retain both namespaces. Joins never follow parents or source URIs.
 
-Optional fields stay absent unless supplied, apart from the documented
-`text/plain` content-type default and minimum nullable parent column. Defaults
-are marked separately from source-supplied fields. Extras stay separate and are
-empty unless explicitly preserved. Normalized payloads and private notes do not
-appear in default repr or error messages. Errors include field, role, original
-row/line, and key where valid; they never echo the rejected value.
+## Chronology and dependencies
 
-Lexical row order is a deterministic presentation convention. In particular,
-`v10` can precede `v2`; this does not supply version chronology. Observability,
-provenance joins/coverage, parent resolution, generation consistency, metrics,
-reports and simulation remain outside Step 4. The normalized manifest schema
-adds field types/enums and identifier constraints only, without cross-row logic.
+`resolve_version_order` validates parsed explicit lists, integer ranks, timezone timestamps and optional tie-break/invocation evidence. Every source covers loaded versions and agrees on shared pairs; extra declared versions remain recorded. Rank gaps/negative starting points are allowed, duplicates/conflicts are errors. Equal instants need explicit ties. Empty explicit documents fail. Retained declarations, not cached flags or filename spelling, are authoritative.
 
-## Phase 2 Step 5: provenance attachment and validation coverage
+`parse_parent_ids` validates native arrays or explicitly CSV-encoded JSON arrays. Null stays null, blank CSV means empty, limits apply before deduplication. `resolve_parent_references` resolves immediate targets only. Bare identifiers require one match; ambiguity fails. Missing targets remain unresolved. Aliases/duplicates collapse deterministically with warnings and retained original spellings. Direct self-parent uses the existing cycle input code without implementing general T6. Declared future targets fail when chronology proves them future, even if unloaded. Same-version graph validation remains deferred.
 
-`io.validation.join_provenance(records, provenance)` accepts a tuple of valid
-canonical records and an optional tuple of canonical or explicitly assessed
-provenance rows. It returns `ProvenanceJoinResult`, an internal validation basis.
-No file, report, metric result, or capability classification is produced.
+`validate_generation_declarations` independently establishes expected counts from validated grounding/dependencies. Grounding yes establishes zero including carryovers. Ungrounded children require all parent counts before one plus their maximum. Declared generation never seeds expectation. Missing/unknown/invalid evidence and stalled dependencies retain unavailable reasons; stalling is not called a cycle. Mismatches warn or explicitly promote. Bounded monotone scans use flat indexes and existing version order, without root traversal, depth or topological graph algorithms. Some same-version chains have quadratic worst case; no large-scale performance certification is claimed.
 
-Matching uses the exact `(dataset_version, record_id)` pair. Multiple provenance
-rows for a key raise `E_PROVENANCE_DUPLICATE_ROW`; provenance with no matching
-loaded record raises `E_PROVENANCE_UNMATCHED_ROW`. Missing provenance produces a
-`None` match and `W_PROVENANCE_MISSING_ROW`. A missing manifest and an explicitly
-supplied empty manifest remain distinguishable through `provenance_supplied`.
-Neither case synthesizes source or grounding declarations.
+## Content, classification and internal handoff
 
-The optional `dataset_versions` tuple selects the coverage scope from the full
-loaded record scope. Every supplied provenance key must still match a loaded
-record, even when that record is outside the selected versions. An unloaded
-selected version is an error. Scope and matches use deterministic identifier
-order only; their order supplies no version chronology.
+Content is read only by explicit LOCAL_REF requests through PR-017 containment and UTF-8 checks. See docs/privacy.md for trusted stable filesystem assumptions. Reference-like metadata stays inert.
 
-Three separate unweighted fractions follow `DEFINITIONS_AND_UNITS.md` section 5:
+The bundle returns inventory, records, optional provenance, join evidence, chronology, generation when available, capability classification, mapping evidence, resolved-content identities and diagnostics. It writes no report. Check has_errors independently of maximum level. Content/parent-family failures can coexist with independent valid metadata; fatal structural input errors raise.
 
-| Validation basis | Numerator | Denominator |
-|---|---|---|
-| `provenance_row_coverage` | Selected records with a matching provenance row | All valid records in the selected scope |
-| `provenance_required_field_coverage` | Selected records whose matching row has every required field valid | The same selected scope |
-| `grounding_field_coverage` | Selected records whose matching row explicitly declares `yes` or `no` grounding | The same selected scope |
-
-Each `ValidationCoverage` retains numerator, denominator, denominator name, and
-its `ratio`. `unknown` is a valid declared enum for required-field coverage but
-is excluded from grounding-known coverage. Record weights never alter these
-fractions. Empty selected record scopes fail with `E_EMPTY_DATASET`; the generic
-coverage container returns `None` for a zero-denominator ratio.
-
-`assess_provenance_row` accepts already typed fields with valid identity even
-when a non-identity required field is absent or explicitly null. These rows are
-`ProvenanceAssessment` objects, never certified `CanonicalRow` objects. This
-allows row coverage to differ from required-field coverage without filling
-missing values or weakening Step 4. Invalid present types or enum values still
-fail. The strict Step 4 normalizer continues rejecting incomplete canonical
-rows. Incomplete CSV serialization recovery is not implemented by this helper;
-callers must supply already typed fields and retain the original diagnostics.
-
-Required-field errors remain in `messages`, including errors on supplied rows
-outside the selected coverage scope. `has_errors` exposes those failures; a
-numerically complete row-coverage value does not make an invalid input pass.
-Explicit unknown grounding and estimated provenance confidence produce their
-existing warning codes. Optional strict warning promotion requires the explicit
-`strict_mode` and approved `strict_warning_codes` arguments; it changes severity
-without changing declarations or coverage. No new run-config keys are added.
-
-Shared record/provenance `batch_id` and `timestamp` declarations stay in separate
-namespaces. `conflicting_fields` identifies differing non-null declarations;
-neither side silently overwrites the other. Raw record content is not retained
-in the join result. Provenance field snapshots are detached read-only mappings,
-with payload values excluded from default repr. Original input rows remain
-unchanged and keep their own field-state and extras metadata.
-
-The join revalidates identities, present fields and assessment flags instead of
-trusting manually constructed metadata. Parent declarations, source URIs and
-other reference-like values are never followed. No source counts/shares,
-closure bounds, parent resolution, expected generation, lineage, observability
-levels, simulations or reports are implemented in Step 5. Real optional PyArrow
-presence verification remains a separate outstanding Step 2 validation item.
-
-## Phase 2 Step 6: chronology, immediate parents and generation declarations
-
-`io.validation.resolve_version_order(loaded_versions, document=..., invocation_order=...)`
-validates already parsed ordering evidence. `document` accepts the closed fields
-`version_order`, `version_rank`, `version_timestamps` and `timestamp_tiebreak`.
-The existing run-config `version_order` tuple can be passed inside a document.
-No new run-config key, public CLI command, file loader or report is introduced.
-A caller parsing a standalone JSON file must preserve duplicate-key diagnostics;
-a dictionary interface cannot recover keys discarded by an earlier parser.
-
-Explicit lists and integer ranks have priority over timestamp order; explicit
-invocation order follows timestamps. All simultaneously supplied sources must
-agree on every shared version pair and each must cover all loaded versions.
-Integer ranks can have gaps or negative starting values. Duplicate ranks,
-missing versions and contradictory sources raise `E_VERSION_ORDER_CONFLICT`.
-Timezone-bearing ISO 8601 strings are compared as UTC instants. Equal timestamps
-require an explicit tie-break covering every tied version. An independently
-supplied explicit list, rank order or invocation order can supply that tie-break.
-An explicit empty document is invalid. With no evidence, multiple versions
-retain an empty resolved order and `W_VERSION_ORDER_MISSING`; a single version
-needs no inferred cross-version chronology. Filenames and natural-number
-interpretation of version names are never used to derive chronology.
-
-`VersionOrderResult` retains the loaded-version inventory, selected source,
-resolved order, every checked source order and detached source declarations.
-Extra explicitly declared versions remain in that source order. Parent checks
-can therefore reject a declared future version even when its record is absent.
-A consumer revalidates the declarations instead of trusting manually replaced
-result flags. No source is silently supplemented with an inferred order.
-
-`parse_parent_ids` accepts native string arrays or, with `csv_encoded=True`,
-a CSV JSON-array string. Null stays null; a blank CSV field becomes an empty
-list. The Step 4 null-token policy must already have run. The explicit parent
-list length limit is checked before deduplication. Scalar declarations, malformed
-JSON and non-string array entries fail. No CSV token policy is invented here.
-
-`resolve_parent_references(child_key, parent_ids, loaded_keys, ...)` resolves
-immediate references against all supplied canonical record keys. Composite
-references use `dataset_version::record_id`. Bare compatibility requires exactly
-one loaded match, with `W_PARENT_BARE_COMPATIBILITY`; multiple matches are errors.
-No match retains `W_PARENT_UNRESOLVED`, with no external-root inference. Repeated
-identical references or aliases of one resolved target produce a deterministic
-single reference and `W_PARENT_DUPLICATE_REFERENCE`, retaining original spellings.
-No source value is trimmed and no URI or content reference is followed.
-
-A direct self-parent fails with the specified `E_LINEAGE_CYCLE` code. This is one
-identity comparison under PR-008, not implementation of T6 cycle detection.
-A later-version parent fails under the validated order. Without usable evidence,
-cross-version chronology stays unavailable. Same-version references retain
-`graph_validation_deferred=True`. Successful immediate lookup never establishes
-complete lineage validity, external independence or ancestral completeness.
-
-`validate_generation_declarations(loaded_keys, provenance, ...)` preserves each
-declared count and supplies a separate expected value and reason codes. Valid
-direct grounding `yes` establishes expected zero, including grounded carryovers.
-For grounding `no`, every parent must resolve, chronology must be checkable, and
-all parent expected counts must already be established before one plus their
-maximum can be used. Declared counts never seed expected counts. Unknown
-grounding, missing provenance, incomplete required fields, unavailable parent
-declarations, unresolved parents and stalled dependencies retain explicit
-unavailable reasons. No parentlessness or external root is inferred from an
-empty list. A grounded reset does not hide unresolved-parent warnings.
-
-The dependency procedure uses bounded monotone scans and flat identity indexes.
-An already declared version order may schedule scans; no topological order is
-derived from parent edges. Same-version dependency chains may require repeated
-scans and have a quadratic worst case. No large-scale performance claim is made
-in this step. A stalled dependency is not diagnosed as a general cycle.
-
-Mismatch emits `W_GENERATION_MISMATCH`. Explicit `strict_mode` plus selected
-`strict_warning_codes` promotes severity while retaining counts and declarations.
-Required-field errors and parent diagnostics remain visible in `messages` and
-`has_errors`. Input objects stay unchanged. No `lineage_depth`, graph, root set,
-ancestor set, source share, HHI, metric, capability classification or audit report
-is produced. Step 7 content-reference security and all later layers stay deferred.
+Hero qualifies as Level 4 without metric calculation. Model longitudinal remains unavailable. Scenario declarations may establish experimental eligibility without execution. State assignment, analytical shares/bounds/deltas, general lineage, ancestry, simulation and rendering remain deferred. All five schemas remain unchanged in Step 10. Phase 3 is not authorized.

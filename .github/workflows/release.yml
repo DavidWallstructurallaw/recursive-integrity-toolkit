@@ -1,35 +1,86 @@
-name: Phase 1 Release Scaffold
+name: Phase 2 Build and Delivery
 
 on:
-  workflow_dispatch:
   push:
-    tags:
-      - "v*"
+  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  build-and-install:
+  build-and-verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install release tools
-        run: python -m pip install ".[release,test]"
-      - name: Build wheel and source distribution
-        run: python -m build
-      - name: Install built wheel
-        run: python -m pip install --force-reinstall dist/*.whl
-      - name: Verify installed CLI
+          python-version: "3.12"
+      - name: Install approved build and test tools without optional PyArrow
         run: |
-          rit --help
+          mkdir -p "$RUNNER_TEMP/rit-delivery/dist"
+          python -m pip install ".[release,test]"
+          python -c "import importlib.util; assert importlib.util.find_spec('pyarrow') is None"
+      - name: Run and retain complete core validation
+        env:
+          RIT_TEST_PARQUET: "0"
+        run: |
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-delivery/core.xml" | tee "$RUNNER_TEMP/rit-delivery/phase2_test_results.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-delivery/core.xml" --minimum-tests 1131
+      - name: Close real optional Parquet validation
+        env:
+          RIT_TEST_PARQUET: "1"
+        run: |
+          python -m pip install ".[parquet]"
+          python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-delivery/parquet.xml" | tee "$RUNNER_TEMP/rit-delivery/phase2_parquet_results.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-delivery/parquet.xml" --require-parquet --minimum-tests 1134
+      - name: Run explicit security and Hero integration gates
+        env:
+          RIT_TEST_PARQUET: "0"
+        run: |
+          python -m pytest -p no:cacheprovider -q tests/integration/test_no_network.py tests/integration/test_optional_dependency.py tests/integration/test_no_algorithms.py tests/integration/test_prohibited_structure.py tests/integration/test_license_notices.py tests/unit/test_PR003_schema_mapping.py tests/unit/test_PR017_content_refs.py tests/integration/test_partial_lineage_report.py --junitxml="$RUNNER_TEMP/rit-delivery/security.xml" | tee "$RUNNER_TEMP/rit-delivery/phase2_security_results.log"
+          python -m pytest -p no:cacheprovider -q tests/integration/test_hero_structure.py tests/integration/test_hero_end_to_end.py --junitxml="$RUNNER_TEMP/rit-delivery/hero.xml" | tee "$RUNNER_TEMP/rit-delivery/phase2_hero_results.log"
+      - name: Verify specifications and unchanged package boundaries
+        run: |
+          python scripts/check_spec_consistency.py | tee "$RUNNER_TEMP/rit-delivery/phase2_spec_results.log"
+          python scripts/check_traceability.py | tee "$RUNNER_TEMP/rit-delivery/phase2_boundary_results.log"
+          python scripts/release_check.py --diff | tee "$RUNNER_TEMP/rit-delivery/phase2_audit_results.log"
+      - name: Build wheel and source distribution
+        run: |
+          python -m build --outdir "$RUNNER_TEMP/rit-delivery/dist" | tee "$RUNNER_TEMP/rit-delivery/phase2_build_results.log"
+          python -m twine check --strict "$RUNNER_TEMP/rit-delivery/dist/"* | tee "$RUNNER_TEMP/rit-delivery/phase2_package_metadata_results.log"
+      - name: Verify clean offline wheel install, all modules, CLI and Hero
+        run: |
+          python scripts/release_check.py --dist "$RUNNER_TEMP/rit-delivery/dist" | tee "$RUNNER_TEMP/rit-delivery/phase2_install_results.log"
           rit version
-      - name: Verify license and repository scaffold
-        run: python scripts/release_check.py
-
-# Publishing is intentionally outside the Phase 1 workflow.
+      - name: Assemble verified Phase 2 repository archive and checksums
+        run: python scripts/release_check.py --delivery "$RUNNER_TEMP/rit-delivery"
+      - name: Upload verified development milestone
+        uses: actions/upload-artifact@v4
+        with:
+          name: recursive-integrity-toolkit-phase2
+          path: ${{ runner.temp }}/rit-delivery/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Preserve failure evidence without suppressing a failed job
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-failed-delivery-evidence
+          path: ${{ runner.temp }}/rit-delivery/
+          if-no-files-found: error
+          retention-days: 30
+# Development artifacts only. No tag, registry upload, release publication or merge.

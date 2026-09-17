@@ -1,113 +1,62 @@
 # Architecture
 
-Status: Phase 2 Step 8 input eligibility implemented.
+Status: Phase 2 input workflow. Actual milestone acceptance is recorded in `PHASE_2_COMPLETION.md`.
 
-The controlling architecture is `REPOSITORY_ARCHITECTURE.md`.
+`REPOSITORY_ARCHITECTURE.md` remains authoritative. Forty package modules are retained, including twenty-six docstring-only later-layer placeholders. Step 10 changes no package module.
 
-The approved dependency direction is:
+## Ownership and flow
+
+| Layer | Modules | Responsibility |
+|---|---|---|
+| Contracts | models, errors, config | Project-owned metadata, structured failures and explicit settings |
+| Ingestion | io/loaders, utils/hashing, utils/paths | Local snapshots, inventory and explicit contained text reads |
+| Mapping | io/schema_mapping | Fixed declarative row transformations |
+| Canonical boundary | io/normalization, utils/ordering | Row typing, identity and presentation order |
+| Validation | io/validation | Joins, chronology, immediate parents, generation and bundle orchestration |
+| Classification | observability/levels | Evidence-bounded levels and independent capabilities |
+
+Implemented owners are PR-001, PR-002, PR-003, PR-004 input basis, PR-007, PR-008 input basis, PR-009 validation, PR-010, PR-011 and PR-017. PR-016 supports input determinism and hashing. Similar terminology does not authorize later analytical owners.
 
 ```text
-utilities and shared models
--> input and representation boundaries
--> observability eligibility
--> metrics and lineage
--> result assembly
--> renderers
--> CLI
+explicit AuditBundle
+-> source roles and local paths
+-> inventory and strict control parsing
+-> table loading
+-> explicit mapping
+-> canonical normalization and identity
+-> provenance attachment and validation coverage
+-> explicit chronology and immediate dependencies
+-> optional explicit PR-017 content reads
+-> independent capability classification
+-> BundleValidationResult in memory
 ```
 
-Phase 1 provides import-safe module locations and owner metadata. Analytical behavior begins only in later approved phases.
+Adjacent-layer imports in the orchestrator occur only at invocation, because normalization/classification reuse validators. The checker authorizes exact import and IO-call sites; the validation module is not broadly exempted. Existing validators retain their earlier no-IO boundaries. Output configuration is not executed. No directory scan, report, cache, worker or public audit CLI is created.
 
-## Phase 2 Step 8: input eligibility
+## Input observability
 
-`observability.levels.classify_observability` accepts already normalized canonical
-records, optional typed provenance, an explicit `RepresentationConfig`, and a
-`VersionOrderResult`. It reuses identity, provenance and immediate-parent
-validators. It never reads a file, executes a mapping, assigns states, hashes
-content, traverses ancestors, renders a report or samples. Full audit-bundle
-orchestration remains Step 9; no public CLI command is introduced here.
+The classifier accepts already normalized records, typed provenance, explicit representation and VersionOrderResult. It never reads files, applies mapping, assigns states, hashes content, traverses ancestry or samples. ObservabilityAssessment retains levels, all seven independent capability keys, reasons, requirements, named coverage and validation messages. Result mappings are read-only. Zero valid records raise E_EMPTY_DATASET rather than qualifying as Level 0.
 
-The internal `ObservabilityAssessment` carries the maximum supported Level 0-5,
-all seven independent capabilities, requirements/reason codes, named coverage,
-and retained `validation_messages`. Internal `coverage_details` keeps provenance
-row, required-field and grounding coverage distinct. No report schema is changed.
-Output mappings are read-only; source payloads are not copied into this result.
-Fatal identity/schema failures raise errors. A zero-record valid scope raises
-`E_EMPTY_DATASET` and cannot be certified as Level 0.
+Unread local-reference strings are not analyzable text. Supplied resolved-content identities/text are checked, but the classifier cannot certify a caller's IO history. The bundle obtains text through the explicit PR-017 reader. A usable declared topic/label field can qualify independently.
 
-One call uses one explicit content mode. In local_ref mode, unread path strings
-are not analyzable content. Callers can pass `resolved_content` only after an
-explicit PR-017 read. Matching record keys and nonempty UTF-8 text are checked,
-but the classifier neither reopens the file nor certifies a caller's IO history.
-Missing or failed reads stay unavailable. A declared usable topic/label field
-can qualify independently. In inline mode the canonical content is already text.
+Representation checks cover declarations, field types and coverage. Missing exclude values reduce coverage; error blocks requested representation. Explicit-missing-state gaps and embedding/config-derived states remain deferred. Exact form requires normalization_profile=exact_utf8_v1, without computing hashes or semantic certification. Shared explicit representation IDs or a complete compatible map can permit comparison. Conflicts/missing IDs or unvalidated state mappings block it. Version-order flags are rechecked from declarations, never filenames.
 
-Representation validation checks declarations, field types and coverage only.
-No state assignments are created. Missing exclude values reduce coverage; error
-blocks the requested representation; explicit_missing_state with gaps remains
-deferred until that configured identity can be validated. Embedding/config-derived
-representations and cross-version state mapping are not executed. The supported
-exact-form declaration requires `normalization_profile=exact_utf8_v1`; no hash
-is calculated. Raw content and record form never certify semantic capability.
+Provenance availability needs valid matching rows and known grounding. Unknown grounding preserves Level 2 but yields partial provenance. Missing required fields stay errors despite complete row coverage. Source category and human review never substitute for grounding.
 
-A shared explicit representation version can apply to every supplied version.
-Alternatively, a complete compatibility map can name one common representation
-version. Conflicting/missing IDs block comparison. Each compared dataset version
-must have usable represented records. Partial coverage remains disclosed.
-`state_mapping_present=True` does not certify the mapping; it makes comparison
-unavailable pending its validation. Version-order flags are reconstructed from
-retained declarations, never from filenames.
+Lineage readiness uses a sufficient input certificate: complete declarations, resolved immediate references and strictly earlier explicitly ordered versions without affected errors. Acyclicity follows from those conditions without a graph algorithm. Unknown grounding and ungrounded terminal declarations keep the capability partial. Same-version edges defer graph validation. Reference coverage counts original entries, including aliases/duplicates, not ancestry or external-root coverage. Invalid parents do not erase independent valid dataset evidence.
 
-Provenance availability requires valid matching rows and known grounding.
-Unknown grounding preserves Level 2 but lowers this capability to partial.
-Incomplete required-field assessments preserve errors and cannot become valid
-merely because row coverage is high. Source type, grounding and review remain
-independent declarations.
+Model longitudinal remains unavailable without an approved evidence validator. A presence flag cannot certify it. Dataset Level 4 does not imply model performance.
 
-Lineage uses a sufficient input certificate: references resolve and every edge
-crosses strictly to an earlier explicitly ordered version, with complete parent
-declarations and no affected errors. Acyclicity follows from version order; no
-cycle detector or graph traversal runs. Unknown grounding and ungrounded terminal
-declarations keep lineage partial even when a path is certified. Same-version
-edges leave general graph validation deferred. Ambiguous/invalid parents preserve
-errors and block lineage without erasing independent dataset evidence. Coverage
-counts resolved declared reference entries, including original duplicate/alias
-occurrences. It is not ancestry coverage or external-root coverage.
+## Experimental declarations
 
-The seven capabilities are ingestion, content_diagnostics, provenance, lineage,
-dataset_longitudinal, model_longitudinal and intervention_simulation. A high
-maximum level cannot erase another family's limitations. Model longitudinal is
-unavailable without an approved model-evidence validator. Merely setting
-`model_evidence_present` cannot certify evidence or promote its capability.
+Activation and seed alone do not grant Level 5. Internal ScenarioParameters carries explicitly declared approved model parameters. Only closed_resampling and reopened_resampling are recognized. Distribution tuples require unique states, finite nonnegative masses and total one within approved 1e-12 tolerances. Reopening needs an external distribution on the same declared state space and weight in [0,1]. Size/replicates are positive integers; horizon may be zero. No distribution is inferred, renormalized or mixed. Qualification remains experimental with R_SCENARIO_EXECUTION_DEFERRED, without execution.
 
-### Experimental scenario declarations
+## Errors and limits
 
-Existing JSON/TOML config still accepts only simulation enabled/seed. These alone
-never grant Level 5. An internal `ScenarioParameters` object can carry already
-approved parameters from `DEFINITIONS_AND_UNITS` sections 12-13: model_name,
-resample_size, simulation_horizon, simulation_replicates, state_distribution,
-external_input_distribution and reopening_weight. Activation and integer seed
-remain in the existing `ScenarioConfig`. There is no new run-config syntax.
+Reason codes remain separate from E_*/W_* diagnostics. Higher maximum level never erases a family's missing requirements or errors. Unknown input denominators remain unavailable. Check has_errors separately.
 
-Only closed_resampling and reopened_resampling are recognized. Distribution
-inputs are explicit unique (state, mass) tuples. Values must be finite, nonnegative
-and sum to one within the approved 1e-12 absolute/relative tolerances. No distribution
-is inferred, renormalized or mixed. Reopening needs an external distribution over
-the same explicitly declared state space and a weight in [0,1]. A zero mass can
-preserve a named re-entry state. Resample size/replicates are positive integers;
-horizon may be zero. Valid declarations grant experimental input eligibility only,
-with `R_SCENARIO_EXECUTION_DEFERRED`. No simulated or empirical intervention result
-is produced.
+Fatal parsing, identity, unsafe mapping and invalid present fields raise. Incomplete provenance and content/parent-family failures may coexist with other valid metadata and retained diagnostics. Aggregate diagnostic paths are redacted; internal records/inventory still contain caller-sensitive information and are not public redacted reports.
 
-### Reason codes and preserved diagnostics
+Generation uses flat indexes and bounded monotone scans. Some same-version chains have quadratic worst case. No 100,000-row performance claim or independent security certification is made. Content containment assumes a trusted stable directory; see docs/privacy.md.
 
-The closed `REASON_CODES` registry in `observability/levels.py` is separate from
-existing E_* and W_* validation codes. Every unavailable/partial capability has
-registered reasons and missing requirements; original validation messages remain
-visible. Input failures with unknown record denominators keep coverage unavailable
-rather than inventing a denominator. Probabilities are checked only as declared
-scenario inputs. No analytical score, aggregate integrity rating or conclusion
-about model collapse is introduced.
-
-All prior validation/normalization implementations and security limits remain.
-Real optional Parquet-presence verification is still outstanding from Step 2.
+No protected metric, representation-execution, lineage or report module is opened. The conceptual dependency direction remains utilities/contracts, input boundaries, observability, later metrics/lineage, assembly, renderers and CLI. Phase 3 is not authorized.

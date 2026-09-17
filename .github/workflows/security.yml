@@ -1,4 +1,4 @@
-name: Phase 1 Security Boundary
+name: Phase 2 Security Boundary
 
 on:
   push:
@@ -8,29 +8,49 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   local-first-boundary:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      RIT_TEST_PARQUET: "0"
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install package and Phase 1 test tools
+          python-version: "3.12"
+      - name: Install package and approved test tools
         run: python -m pip install ".[test]"
-      - name: Verify import, optional dependency, and prohibited structure boundaries
-        env:
-          PYTHONDONTWRITEBYTECODE: "1"
-        run: >-
-          python -m pytest -p no:cacheprovider -q
-          tests/integration/test_no_network.py
-          tests/integration/test_optional_dependency.py
-          tests/integration/test_no_algorithms.py
-          tests/integration/test_prohibited_structure.py
-          tests/integration/test_license_notices.py
-          tests/unit/test_PR003_schema_mapping.py
-          tests/unit/test_PR017_content_refs.py
-
-# This workflow starts no service and runs no audit calculation.
+      - name: Verify import, mapping, content-reference and orchestration boundaries
+        run: |
+          mkdir -p "$RUNNER_TEMP/rit-security"
+          python -m pytest -p no:cacheprovider -q \
+            tests/integration/test_no_network.py \
+            tests/integration/test_optional_dependency.py \
+            tests/integration/test_no_algorithms.py \
+            tests/integration/test_prohibited_structure.py \
+            tests/integration/test_license_notices.py \
+            tests/unit/test_PR003_schema_mapping.py \
+            tests/unit/test_PR017_content_refs.py \
+            tests/integration/test_hero_end_to_end.py \
+            tests/integration/test_partial_lineage_report.py \
+            --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/phase2_security_results.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-security/security.xml"
+          python scripts/check_traceability.py
+      - name: Retain actual security test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-security-boundary
+          path: ${{ runner.temp }}/rit-security/
+          if-no-files-found: error
+          retention-days: 30
