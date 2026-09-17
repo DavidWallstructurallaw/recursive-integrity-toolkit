@@ -263,3 +263,79 @@ other reference-like values are never followed. No source counts/shares,
 closure bounds, parent resolution, expected generation, lineage, observability
 levels, simulations or reports are implemented in Step 5. Real optional PyArrow
 presence verification remains a separate outstanding Step 2 validation item.
+
+## Phase 2 Step 6: chronology, immediate parents and generation declarations
+
+`io.validation.resolve_version_order(loaded_versions, document=..., invocation_order=...)`
+validates already parsed ordering evidence. `document` accepts the closed fields
+`version_order`, `version_rank`, `version_timestamps` and `timestamp_tiebreak`.
+The existing run-config `version_order` tuple can be passed inside a document.
+No new run-config key, public CLI command, file loader or report is introduced.
+A caller parsing a standalone JSON file must preserve duplicate-key diagnostics;
+a dictionary interface cannot recover keys discarded by an earlier parser.
+
+Explicit lists and integer ranks have priority over timestamp order; explicit
+invocation order follows timestamps. All simultaneously supplied sources must
+agree on every shared version pair and each must cover all loaded versions.
+Integer ranks can have gaps or negative starting values. Duplicate ranks,
+missing versions and contradictory sources raise `E_VERSION_ORDER_CONFLICT`.
+Timezone-bearing ISO 8601 strings are compared as UTC instants. Equal timestamps
+require an explicit tie-break covering every tied version. An independently
+supplied explicit list, rank order or invocation order can supply that tie-break.
+An explicit empty document is invalid. With no evidence, multiple versions
+retain an empty resolved order and `W_VERSION_ORDER_MISSING`; a single version
+needs no inferred cross-version chronology. Filenames and natural-number
+interpretation of version names are never used to derive chronology.
+
+`VersionOrderResult` retains the loaded-version inventory, selected source,
+resolved order, every checked source order and detached source declarations.
+Extra explicitly declared versions remain in that source order. Parent checks
+can therefore reject a declared future version even when its record is absent.
+A consumer revalidates the declarations instead of trusting manually replaced
+result flags. No source is silently supplemented with an inferred order.
+
+`parse_parent_ids` accepts native string arrays or, with `csv_encoded=True`,
+a CSV JSON-array string. Null stays null; a blank CSV field becomes an empty
+list. The Step 4 null-token policy must already have run. The explicit parent
+list length limit is checked before deduplication. Scalar declarations, malformed
+JSON and non-string array entries fail. No CSV token policy is invented here.
+
+`resolve_parent_references(child_key, parent_ids, loaded_keys, ...)` resolves
+immediate references against all supplied canonical record keys. Composite
+references use `dataset_version::record_id`. Bare compatibility requires exactly
+one loaded match, with `W_PARENT_BARE_COMPATIBILITY`; multiple matches are errors.
+No match retains `W_PARENT_UNRESOLVED`, with no external-root inference. Repeated
+identical references or aliases of one resolved target produce a deterministic
+single reference and `W_PARENT_DUPLICATE_REFERENCE`, retaining original spellings.
+No source value is trimmed and no URI or content reference is followed.
+
+A direct self-parent fails with the specified `E_LINEAGE_CYCLE` code. This is one
+identity comparison under PR-008, not implementation of T6 cycle detection.
+A later-version parent fails under the validated order. Without usable evidence,
+cross-version chronology stays unavailable. Same-version references retain
+`graph_validation_deferred=True`. Successful immediate lookup never establishes
+complete lineage validity, external independence or ancestral completeness.
+
+`validate_generation_declarations(loaded_keys, provenance, ...)` preserves each
+declared count and supplies a separate expected value and reason codes. Valid
+direct grounding `yes` establishes expected zero, including grounded carryovers.
+For grounding `no`, every parent must resolve, chronology must be checkable, and
+all parent expected counts must already be established before one plus their
+maximum can be used. Declared counts never seed expected counts. Unknown
+grounding, missing provenance, incomplete required fields, unavailable parent
+declarations, unresolved parents and stalled dependencies retain explicit
+unavailable reasons. No parentlessness or external root is inferred from an
+empty list. A grounded reset does not hide unresolved-parent warnings.
+
+The dependency procedure uses bounded monotone scans and flat identity indexes.
+An already declared version order may schedule scans; no topological order is
+derived from parent edges. Same-version dependency chains may require repeated
+scans and have a quadratic worst case. No large-scale performance claim is made
+in this step. A stalled dependency is not diagnosed as a general cycle.
+
+Mismatch emits `W_GENERATION_MISMATCH`. Explicit `strict_mode` plus selected
+`strict_warning_codes` promotes severity while retaining counts and declarations.
+Required-field errors and parent diagnostics remain visible in `messages` and
+`has_errors`. Input objects stay unchanged. No `lineage_depth`, graph, root set,
+ancestor set, source share, HHI, metric, capability classification or audit report
+is produced. Step 7 content-reference security and all later layers stay deferred.

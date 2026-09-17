@@ -1,4 +1,4 @@
-"""Protect Phase 2 Step 5 from premature analytical implementation."""
+"""Protect Phase 2 Step 6 from premature analytical implementation."""
 
 import ast
 from pathlib import Path
@@ -18,7 +18,7 @@ def _is_docstring_only(path: Path) -> bool:
     return len(tree.body) == 1 and isinstance(tree.body[0], ast.Expr) and isinstance(tree.body[0].value, ast.Constant) and isinstance(tree.body[0].value.value, str)
 
 
-def test_only_step5_authorized_modules_gain_behavior(package_root) -> None:
+def test_only_step6_authorized_modules_gain_behavior(package_root) -> None:
     for path in sorted(package_root.rglob("*.py")):
         relative = path.relative_to(package_root)
         if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
@@ -31,7 +31,7 @@ def test_protected_phase3_plus_modules_remain_placeholders(package_root) -> None
         for path in sorted((package_root / prefix).rglob("*.py")):
             if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE:
                 continue
-            assert _is_docstring_only(path), f"Protected module changed after Step 5: {path}"
+            assert _is_docstring_only(path), f"Protected module changed after Step 6: {path}"
     assert _is_docstring_only(package_root / "result.py")
 
 
@@ -55,7 +55,7 @@ def test_no_analytical_function_names_exist(package_root) -> None:
     assert not (names & FORBIDDEN_ANALYTICAL_NAMES)
 
 
-def test_PR003_traceability_script_enforces_step5_scope(repo_root) -> None:
+def test_PR003_traceability_script_enforces_step6_scope(repo_root) -> None:
     import subprocess
     import sys
     result = subprocess.run([sys.executable, "scripts/check_traceability.py"],
@@ -64,7 +64,7 @@ def test_PR003_traceability_script_enforces_step5_scope(repo_root) -> None:
     assert "protected docstring-only modules: 27" in result.stdout
 
 
-# The checker itself must reject new work outside the current Step 5 boundary.
+# The checker itself must reject new work outside the current Step 6 boundary.
 import shutil
 import subprocess
 import sys
@@ -97,6 +97,12 @@ import pytest
     ("io/validation.py", "def closure_bounds(): pass\n"),
     ("io/validation.py", "def resolve_parents(): pass\n"),
     ("models.py", "class UniversalScore: pass\n"),
+    ("io/validation.py", "def detect_cycles(): pass\n"),
+    ("io/validation.py", "def lineage_depth(): pass\n"),
+    ("io/validation.py", "import socket\n"),
+    ("models.py", "__import__('socket')\n"),
+    ("models.py", "eval('1')\n"),
+    ("models.py", "lambda: None\n"),
     ("utils/ordering.py", "def version_rank(): pass\n"),
     ("io/schema_mapping.py", "import os\n"),
     ("io/schema_mapping.py", "import socket\n"),

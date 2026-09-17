@@ -1,0 +1,10 @@
+{
+  "version_order": [
+    "archive",
+    "release"
+  ],
+  "version_rank": {
+    "archive": -5,
+    "release": 20
+  }
+}

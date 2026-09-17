@@ -2,17 +2,76 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://recursive-integrity-toolkit.example/schemas/version_order.schema.json",
   "title": "Recursive Integrity Toolkit Version Order",
-  "description": "Phase 2 structural contract for an explicit ordered list of dataset versions. Conflict resolution and alternative ordering evidence are validated in a later Phase 2 step.",
+  "description": "PR-007 Phase 2 Step 6. Explicit chronology declarations. Runtime additionally checks rank uniqueness, timestamp timezones and ties, loaded-version coverage, and agreement across sources. No filename inference.",
   "type": "object",
-  "required": ["version_order"],
   "properties": {
     "version_order": {
-      "type": "array",
-      "description": "Dataset versions in user-declared chronological order.",
-      "minItems": 1,
-      "uniqueItems": true,
-      "items": {"type": "string", "minLength": 1}
+      "$ref": "#/$defs/versionList"
+    },
+    "version_rank": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/versionName"
+      },
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "description": "Unique integer ranks; gaps and negative starting ranks are allowed. Booleans are rejected at runtime."
+    },
+    "version_timestamps": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/versionName"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "ISO 8601 timestamps with explicit timezones. Runtime compares instants after UTC conversion."
+    },
+    "timestamp_tiebreak": {
+      "$ref": "#/$defs/versionList"
     }
   },
-  "additionalProperties": false
+  "anyOf": [
+    {
+      "required": [
+        "version_order"
+      ]
+    },
+    {
+      "required": [
+        "version_rank"
+      ]
+    },
+    {
+      "required": [
+        "version_timestamps"
+      ]
+    }
+  ],
+  "dependentRequired": {
+    "timestamp_tiebreak": [
+      "version_timestamps"
+    ]
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "versionName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?![\\s\\S]*::)(?![\\s\\S]*\\u0000)\\S(?:[\\s\\S]*\\S)?$(?![\\s\\S])"
+    },
+    "versionList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/versionName"
+      }
+    }
+  }
 }

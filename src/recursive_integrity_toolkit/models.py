@@ -18,7 +18,7 @@ Limits:
     implemented here. These types carry validated metadata only.
 
 Current phase status:
-    Phase 2 Step 5 canonical-row and provenance-join contracts. Import-safe. No analytical behavior.
+    Phase 2 Step 6 chronology, parent-reference and generation contracts. Import-safe. No analytical behavior.
 """
 
 from __future__ import annotations
@@ -418,3 +418,83 @@ class ProvenanceJoinResult:
         """Expose retained errors; partial coverage never suppresses a failure."""
         return any(m.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)
                    for m in self.messages)
+
+
+@dataclass(frozen=True, slots=True)
+class VersionOrderResult:
+    """PR-007 chronology evidence only; no longitudinal result or filename inference.
+
+    declarations and invocation_order retain the input basis for revalidation.
+    order may include explicitly declared unloaded versions. loaded_versions is
+    a lexical inventory, never an inferred chronological ordering.
+    """
+
+    loaded_versions: tuple[str, ...]
+    order: tuple[str, ...]
+    order_source: str
+    source_orders: Mapping[str, tuple[str, ...]] = field(repr=False)
+    declarations: Mapping[str, object] = field(repr=False)
+    invocation_order: tuple[str, ...] | None = None
+    messages: tuple[ValidationMessage, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ParentReference:
+    """PR-008 one unique reference target, with original spellings retained.
+
+    An unresolved composite can have a parsed key without a loaded parent.
+    An unresolved bare reference has no canonical key or canonical spelling.
+    Neither supplies external-root evidence.
+    """
+
+    source_references: tuple[str, ...] = field(repr=False)
+    canonical_reference: str | None
+    parent_key: RecordKey | None
+    resolution_status: ParentResolutionStatus
+    temporal_status: str
+
+
+@dataclass(frozen=True, slots=True)
+class ParentValidationResult:
+    """PR-008 immediate-reference validation, never an ancestry graph.
+
+    graph_validation_deferred remains true for same-version references. A
+    successful reference lookup never certifies whole-lineage completeness.
+    """
+
+    child_key: RecordKey
+    declaration_state: str
+    references: tuple[ParentReference, ...] = field(repr=False)
+    graph_validation_deferred: bool
+    messages: tuple[ValidationMessage, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class GenerationAssessment:
+    """PR-009 declaration versus safely established non-grounding step count."""
+
+    record_key: RecordKey
+    declared_generation: int | None
+    expected_generation: int | None
+    reason_codes: tuple[str, ...]
+    mismatch: bool
+
+
+@dataclass(frozen=True, slots=True)
+class GenerationValidationResult:
+    """PR-009 validation basis. No depth, roots, ancestors, metrics or report.
+
+    Dependency failure retains an unavailable reason; it never diagnoses a
+    general cycle. Input warnings and errors remain visible in messages.
+    """
+
+    assessments: tuple[GenerationAssessment, ...]
+    parents: tuple[ParentValidationResult, ...] = field(repr=False)
+    messages: tuple[ValidationMessage, ...]
+    promoted_warning_codes: tuple[str, ...] = ()
+
+    @property
+    def has_errors(self) -> bool:
+        """Expose retained failures without changing the declarations."""
+        return any(message.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)
+                   for message in self.messages)
