@@ -324,3 +324,77 @@ Review roles remain the Theory Owner's approval and assistant self-review with
 actual executable evidence. No independent human review is claimed. There is
 no source-share, closure, tail, resampling, pair, graph, report or audit-CLI work.
 Stop after Step 4 acceptance; no main merge, publication or phase completion.
+
+## Phase 3 Step 5 authorization and execution contracts
+
+The Theory Owner explicitly instructed continuation of Step 5. Its accepted
+predecessor is `b943a9712ed1e5b64e09c2c394077fdeed78114f`, tree
+`e8f503b44cee0d3db059c03da6599fe44503f03b`. Actual Actions evidence confirms
+1714 core and 1717 real-Parquet tests passed, with all four workflows successful.
+The downloaded artifact's checksum and source root tree were verified. This
+closes the preceding Step 4 acceptance uncertainty; no further Step 4 runtime
+change or permission exception is required.
+
+Only `metrics/provenance.py` gains runtime behavior in this step. Its explicit
+`summarize_provenance` and `classify_direct_grounding` calls consume a Phase 2
+join plus an exact, single-version CalculationScope. All selected valid records
+remain in the denominator, named `all_valid_records_in_selected_dataset_scope`.
+Representation exclusions, mismatched key sets and empty scopes are rejected.
+Consumed provenance fields, flags, coverage and retained error/warning evidence
+are revalidated without a second join. Input validation errors survive regardless
+of whether an independently meaningful composition table can be calculated.
+
+Source counts use human/synthetic/mixed/sensor/unknown. Missing provenance has
+its own count/share and does not become unknown. Confidence has four category
+counts, with no numeric trust conversion. A missing/null field in a matched row
+makes only its own complete composition unavailable, with exact record keys,
+coverage and reason. It never creates a new category, changes denominator or
+silently normalizes a known subset. With no provenance rows, the declared counts
+are zero and the separately identified missing share is one.
+
+P3-D08 controls the direct partition: required-field-valid yes/no declarations
+supply known open/closed; all other records remain unresolved. Source class,
+human review and valid estimated/unknown confidence never substitute for or
+discount grounding. An incomplete required row remains unresolved even when its
+grounding cell contributes to Phase 2 grounding-field coverage. The three direct
+counts are observed facts under `toolkit_operationalization`, relative to supplied
+loop-grounding declarations. They do not certify source truth or independence,
+resolve parents, or calculate F-009/F-010 intervals.
+
+Explicit `WeightingOptions("weighted", "weight")` and a complete canonical-key
+map enable separately named source weight masses/shares. Missing-provenance
+records are included in the weight scope. Default counts/shares, confidence and
+the direct partition remain unchanged. A zero weight cannot hide an absent
+source declaration. Missing/extra identities, bools, negative/nonfinite values,
+nonempty total zero, finite-sum overflow and positive-share underflow fail.
+Deterministic canonical-key summation uses fsum. The denominator is explicitly
+`all_selected_record_weight_mass`; no confidence or grounding weight is invented.
+
+### Gate migrations and review record
+
+The PR-004, PR-005 and T3 owner tests retain their original identities. Their
+whole-module-placeholder assertion now checks the Step 5 boundary and explicit
+prohibitions on later functions. All Phase 2 validation tests remain intact.
+Step 4 permission tests retain their original identities and now query the frozen
+Step 4 allowlist; new tests separately cover Step 5. The previously exceptional
+`test_phase3_contracts.py` is unchanged. Original plan/oracle/authority bytes and
+all earlier runtime code remain protected.
+
+The new module has exact definition/import allowlists and a fixed reviewed AST
+fingerprint, using the accepted empty-type-params/full-field compatibility rule.
+Positive controls accept the reviewed source; mutations reject altered formulas,
+missing-to-unknown reassignment, I/O, callbacks and deferred feature owners. This
+change-control check is separate from the independent mathematical test oracles.
+The Step 4 distribution fingerprint is unchanged. Twenty modules remain pure
+placeholders. All four workflows explicitly select Step 5, with real Parquet,
+historical test identity checks and installed-wheel numerical smoke coverage.
+
+Technical, mathematical and security review roles are consolidated in the
+assistant's source inspection and executed automated checks. No independent
+human reviewer or truth certification is claimed. Three new synthetic fixtures
+contain authored rational/cross-product expectations; no implementation generated
+its own oracle. PR-005/F-007 owns source shares, PR-004/F-008 the inherited row
+coverage, PR-004 confidence/missing-row facts, and T3 the direct partition basis.
+
+Stop after Step 5 acceptance. No Step 6 calculation, Phase 3 completion, main
+merge, tag, publication, report, audit CLI, general graph or simulation is authorized.

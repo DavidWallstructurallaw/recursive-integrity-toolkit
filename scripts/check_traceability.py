@@ -1,4 +1,4 @@
-"""Check inherited Phase 2 rules and approved Phase 3 Step 4 boundaries.
+"""Check inherited Phase 2 rules and approved Phase 3 Step 5 boundaries.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
 approved Phase 2 step on 2026-09-16. Step 9 adds explicit local bundle orchestration only. Earlier
@@ -63,7 +63,7 @@ ALLOWED_CLASSES = {
     },
     "models.py": {
         "AuditBundle", "Capability", "CapabilityKey", "CapabilityStatus", "FileFormat",
-        "FileInventoryEntry", "FileRole", "InputSource", "LoadedTable",
+        "FileInventoryEntry", "InputSource", "LoadedTable", "FileRole",
         "ObservabilityAssessment", "ParentResolutionStatus", "PrivacyMode", "RawRow",
         "RecordKey", "ValidationCoverage", "ValidationMessage", "ValidationSeverity",
     },
@@ -206,7 +206,7 @@ FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.p
 
 
 # Phase 3 Step 1: declarations and validation contracts only.
-PHASE3_ACTIVE_STEP = 4
+PHASE3_ACTIVE_STEP = 5
 PHASE3_CONTRACT_CLASSES = {
     "CalculationEvidenceClass", "CalculationStatus", "CalculationReason", "NumericalPolicy",
     "RepresentationDescriptor", "RecordStateAssignment", "CalculationScope", "WeightingOptions",
@@ -442,6 +442,36 @@ def _phase3_distribution_boundary(tree: ast.Module) -> None:
         raise SystemExit("Unexpected distribution implementation outside the reviewed Step 4 body")
 
 
+# Step 5 opens only declared provenance composition and direct classification.
+PHASE3_PROVENANCE_MODULES = {"metrics/provenance.py"}
+ALLOWED_FUNCTIONS["metrics/provenance.py"] = set(['_checked_join', '_composition', '_direct', '_invalid', '_key', '_keys', '_messages', '_metadata', '_scalar', '_text', '_weighted', '_weights', 'classify_direct_grounding', 'summarize_provenance'])
+ALLOWED_CLASSES["metrics/provenance.py"] = set(['DeclaredComposition', 'DirectGroundingAssignment', 'DirectGroundingBasis', 'ProvenanceCompositionResult', 'WeightedSourceComposition'])
+ALLOWED_CORE_IMPORTS["metrics/provenance.py"] = {
+    "__future__", "dataclasses", "math", "types", "..errors", "..models", "..io.validation",
+}
+PROVENANCE_AST_SHA256 = "554e40896edf5c0e30432015ad357a82e3b3419b6f7529d4e22a09894b4569c2"
+
+
+def _phase3_provenance_boundary(tree: ast.Module) -> None:
+    """Pin the reviewed Step 5 body, never learn a new body at gate execution.
+
+    Independent rational tests cover mathematics; mutation tests cover change
+    control. Only empty Python-version type_params metadata is omitted.
+    """
+    import hashlib
+    for node in ast.walk(tree):
+        if "type_params" in node._fields:
+            if getattr(node, "type_params", []):
+                raise SystemExit("Unexpected generic declaration in provenance metrics")
+            node._fields = tuple(name for name in node._fields if name != "type_params")
+    try:
+        serialized = ast.dump(tree, include_attributes=False, show_empty=True)
+    except TypeError:
+        serialized = ast.dump(tree, include_attributes=False)
+    if hashlib.sha256(serialized.encode("utf-8")).hexdigest() != PROVENANCE_AST_SHA256:
+        raise SystemExit("Unexpected provenance implementation outside reviewed Step 5 body")
+
+
 def _phase3_contract_boundary(tree: ast.Module) -> None:
     """Reject calculation or execution inside the newly authorized declarations."""
     permitted = {"type", "len", "set", "any", "ValueError", "TypeError", "field", "dataclass",
@@ -497,7 +527,7 @@ def main() -> int:
     if len(paths) != 40:
         raise SystemExit(f"Expected 40 package modules, found {len(paths)}")
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
-    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES) - relative_paths
+    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES) - relative_paths
     if missing:
         raise SystemExit(f"Required startup or Step 8 modules missing: {sorted(missing)}")
 
@@ -518,11 +548,13 @@ def main() -> int:
             _phase3_exact_boundary(tree, relative)
         if relative in PHASE3_DISTRIBUTION_MODULES:
             _phase3_distribution_boundary(tree)
+        if relative in PHASE3_PROVENANCE_MODULES:
+            _phase3_provenance_boundary(tree)
         doc = ast.get_docstring(tree) or ""
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
 
-        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES:
+        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES:
             if not (
                 len(tree.body) == 1
                 and isinstance(tree.body[0], ast.Expr)
@@ -572,7 +604,7 @@ def main() -> int:
                         isinstance(node.func, ast.Attribute) and node.func.attr in blocked_methods
                     ):
                         raise SystemExit(f"Unexpected executable, write or network capability in {relative}")
-            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | {"models.py"}:
+            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | {"models.py"}:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
                 if isinstance(node, ast.Call):
@@ -616,7 +648,7 @@ def main() -> int:
                     )
                     if not lazy_parquet:
                         forbidden_locations.append(f"{relative}: {imported}")
-            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES:
+            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
                     raise SystemExit(f"Import outside Step 9 contracts in {relative}: {sorted(unexpected)}")
@@ -633,7 +665,7 @@ def main() -> int:
     print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Phase 3 Step 4 reviewed distribution and inherited definition/import boundaries: PASS")
+    print("Phase 3 Step 5 reviewed provenance and inherited definition/import boundaries: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 

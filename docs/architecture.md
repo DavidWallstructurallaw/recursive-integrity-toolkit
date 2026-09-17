@@ -124,3 +124,21 @@ test identities are retained. The new module has explicit symbol permissions
 and a reviewed, version-neutral AST-body fingerprint in addition to behavioral
 mathematical tests. Build checks also exercise the actual installed distribution
 kernel, separately from the no-dependency import and input-only checks.
+
+## Phase 3 Step 5: declared provenance calculations
+
+Only `metrics/provenance.py` gains runtime behavior. `summarize_provenance`
+consumes an existing exact Phase 2 join and its unfiltered single-version scope.
+`classify_direct_grounding` exposes the same direct partition independently.
+Neither function loads data, attaches rows, inspects content, resolves parents,
+opens files, writes reports or certifies source truth. `validate_bundle` does not
+invoke these functions automatically.
+
+Source categories and a separate missing-provenance share complete the declared
+partition. Confidence remains four counts. Missing fields in matched rows make
+their own complete composition unavailable, retaining errors and all three
+Phase 2 coverage measures. Explicit source weights have a separate mass denominator.
+The direct partition requires valid mandatory fields and yes/no grounding;
+otherwise it stays unresolved. Source class/review/confidence are independent.
+No closure interval is implemented until Step 6. Twenty pure runtime placeholders
+remain protected, together with all earlier formulas and input-layer behavior.

@@ -49,3 +49,24 @@ Additional rational, weighting, zero-state, invalid-input and metamorphic cases
 verify implementation behavior without extending the theory. Record-form
 support remains representation-specific. Distributional concentration alone
 never establishes functional failure or semantic completeness.
+
+## Phase 3 Step 5 traceability
+
+| Output | Owner and basis | Evidence and unit | Validation |
+|---|---|---|---|
+| Source counts | PR-005; Definitions 11.1 | observed_fact, records | Rational partial fixture and missing/unknown separation |
+| Source shares | PR-005; F-007 | derived_metric, ratio over full selected scope | Exact rational values and denominator reconciliation |
+| Confidence counts | PR-004; Definitions 3.3 | observed_fact, records | Missing field cases and no confidence discount |
+| Missing-row count/share | PR-004; Definitions 11.4 | observed count, derived ratio | Absence versus declared unknown |
+| Row/required/grounding coverage | PR-004; F-008 and Definitions 3.10-3.12 | Retained validation facts, named ratios | Reconciliation and forged-evidence rejection |
+| Source/confidence field coverage | PR-004; Definitions 3.13 | observed_fact, ratio | Incomplete matched fields |
+| Direct open/closed/unresolved counts | T3; Definitions 3.7-3.9; P3-D08 | observed_fact, records; toolkit_operationalization | Source/grounding/review/confidence cross-products |
+| Weighted source and missing masses/shares | PR-005; F-007 weighted variant; Definitions 19 | derived_metric, weight mass or ratio | Independent rational fixture, scaling and invalid-weight tests |
+
+Every numeric scalar/table carries scope, denominator basis, unit, method, owner,
+evidence class and defined formula identifier where applicable. Confidence does
+not become a truth score, source counts do not certify independence, and review
+never replaces grounding. Required-field-incomplete provenance stays unresolved
+in the direct partition while original grounding-field coverage retains its own
+meaning. No closure interval, ancestry concentration, effective roots or report
+is introduced. The original frozen Phase 3 mathematical oracles remain unchanged.

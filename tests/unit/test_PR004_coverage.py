@@ -1,20 +1,16 @@
-"""Phase 1 placeholder for PR-004.
+"""PR-004 Phase 3 Step 5 tests. Earlier Phase 2 checks are preserved.
 
-Planned scope:
-    Future coverage tests are deferred to Phase 3.
-
-Current Phase 1 scope:
-    Verify the approved owner ID and confirm that the target module remains a
-    docstring-only, import-safe placeholder.
-
-Limits:
-    No mathematical metric, data loading, graph operation, or report result is tested.
+Only declared composition, inherited coverage and direct classifications are
+active. No closure interval, confidence score or report is produced.
 """
 
 
-def test_PR004_coverage_owner_and_placeholder(owner_checker, placeholder_checker):
+def test_PR004_coverage_owner_and_placeholder(owner_checker, repo_root):
     owner_checker("metrics/provenance.py", "PR-004")
-    placeholder_checker("metrics/provenance.py")
+    text = (repo_root / "src/recursive_integrity_toolkit/metrics/provenance.py").read_text(encoding="utf-8")
+    assert "Phase 3 Step 5" in text
+    for name in ("closure_bounds", "ancestry_hhi", "confidence_score", "effective_source_diversity"):
+        assert "def " + name + "(" not in text
 
 
 # Step 4 row-field validation only. Joins and coverage remain unimplemented.
@@ -216,3 +212,121 @@ def test_PR004_header_only_provenance_cannot_bypass_schema(tmp_path):
         normalize_table(table)
     assert exc.value.code is ErrorCode.SCHEMA_REQUIRED_FIELD
     assert exc.value.field == "source_type"
+
+
+# Phase 3 Step 5 consumes existing validation evidence without changing it.
+from dataclasses import replace
+from types import MappingProxyType
+from recursive_integrity_toolkit.io.validation import assess_provenance_row, join_provenance
+from recursive_integrity_toolkit.metrics.provenance import summarize_provenance
+from recursive_integrity_toolkit.models import CalculationScope, RecordKey, ValidationCoverage, ValidationMessage, ValidationSeverity
+from recursive_integrity_toolkit.errors import WarningCode
+
+
+def _p5_join(**fields):
+    r=normalize_row({'dataset_version':'v1','record_id':'a','content':'synthetic'},kind='records')
+    p=assess_provenance_row({'dataset_version':'v1','record_id':'a','source_type':'unknown','provenance_confidence':'confirmed','external_grounding':'unknown',**fields})
+    j=join_provenance((r,),(p,));s=CalculationScope(('v1',),(r.record_key,),(),j.provenance_row_coverage.denominator_name,'coverage')
+    return j,s
+
+
+def test_PR004_step5_three_coverage_meanings_preserved():
+    j,s=_p5_join(provenance_confidence=None,external_grounding='yes');r=summarize_provenance(j,scope=s)
+    for name in ('provenance_row_coverage','provenance_required_field_coverage','grounding_field_coverage'):
+        assert getattr(r,name)==getattr(j,name)
+    assert (r.provenance_row_coverage.ratio,r.provenance_required_field_coverage.ratio,r.grounding_field_coverage.ratio)==(1,0,1)
+    assert r.direct_grounding.known_open_count.value==0 and r.direct_grounding.unresolved_grounding_count.value==1
+    assert r.validation_messages==j.messages and r.input_has_errors
+    assert tuple(m.owner_id for m in r.coverage_metadata)==('PR-004',)*3
+    assert tuple(m.formula_id for m in r.coverage_metadata)==('F-008',None,None)
+
+
+@pytest.mark.parametrize('name',['provenance_row_coverage','provenance_required_field_coverage','grounding_field_coverage'])
+@pytest.mark.parametrize('change',['numerator','denominator','denominator_name','bool'])
+def test_PR004_step5_coverage_forgery_rejected(name,change):
+    j,s=_p5_join();c=replace(getattr(j,name))
+    value=1-c.numerator if change=='numerator' else 2 if change=='denominator' else 'represented_records' if change=='denominator_name' else bool(c.numerator)
+    object.__setattr__(c,'numerator' if change=='bool' else change,value)
+    with pytest.raises(CanonicalValidationError):summarize_provenance(replace(j,**{name:c}),scope=s)
+
+
+@pytest.mark.parametrize('change',[{'source_type':'Human'},{'source_type':False},{'provenance_confidence':'invented'},
+    {'external_grounding':True},{'generation':-1},{'human_reviewed':1},{'parent_ids':['ok',1]}])
+def test_PR004_step5_invalid_fields_in_forged_assessment_fail(change):
+    j,s=_p5_join();m=j.matches[0];bad=replace(m.provenance,values=MappingProxyType({**m.provenance.values,**change}))
+    with pytest.raises(CanonicalValidationError):summarize_provenance(replace(j,matches=(replace(m,provenance=bad),)),scope=s)
+
+
+@pytest.mark.parametrize('change',[{'required_fields_valid':False},{'required_fields_valid':1},{'grounding_known':True},{'grounding_known':0},{'missing_required_fields':('source_type',)}])
+def test_PR004_step5_flags_do_not_override_evidence(change):
+    j,s=_p5_join();m=j.matches[0]
+    with pytest.raises(CanonicalValidationError):summarize_provenance(replace(j,matches=(replace(m,provenance=replace(m.provenance,**change)),)),scope=s)
+
+
+@pytest.mark.parametrize('change',['missing_error','downgraded_error','missing_warning'])
+def test_PR004_step5_failures_cannot_be_suppressed(change):
+    j,s=_p5_join(provenance_confidence=None) if 'error' in change else _p5_join()
+    if change=='missing_error':messages=tuple(m for m in j.messages if m.severity is not ValidationSeverity.ERROR)
+    elif change=='downgraded_error':messages=tuple(replace(m,severity=ValidationSeverity.WARNING) for m in j.messages)
+    else:messages=()
+    with pytest.raises(CanonicalValidationError):summarize_provenance(replace(j,messages=messages),scope=s)
+
+
+@pytest.mark.parametrize('change',[{'scope_record_keys':()},{'scope_record_keys':[]},{'selected_dataset_versions':('v2',)},
+    {'matches':()},{'matches':[]},{'provenance_supplied':1},{'provenance_supplied':False},
+    {'missing_record_keys':(RecordKey('v1','a'),)},{'promoted_warning_codes':('invented',)},{'messages':[]}])
+def test_PR004_step5_join_forgery_rejected(change):
+    j,s=_p5_join()
+    with pytest.raises(CanonicalValidationError):summarize_provenance(replace(j,**change),scope=s)
+
+
+def test_PR004_step5_duplicate_match_and_wrong_identity_fail():
+    j,s=_p5_join()
+    for matches in (j.matches*2,(replace(j.matches[0],record_key=RecordKey('v1','other')),)):
+        with pytest.raises(CanonicalValidationError):summarize_provenance(replace(j,matches=matches),scope=s)
+
+
+@pytest.mark.parametrize('change',[{'dataset_versions':('v1','v2')},{'included_record_keys':()},
+    {'excluded_record_keys':(RecordKey('v1','x'),)},{'denominator_basis':'representation_records'},{'scope_id':''}])
+def test_PR004_step5_scope_mismatch_fails(change):
+    j,s=_p5_join()
+    for name,value in change.items():object.__setattr__(s,name,value)
+    with pytest.raises(CanonicalValidationError):summarize_provenance(j,scope=s)
+
+
+def test_PR004_step5_selected_scope_keeps_outside_error():
+    rows=tuple(normalize_row({'dataset_version':v,'record_id':'a','content':'s'},kind='records') for v in ('v1','v2'))
+    prov=tuple(assess_provenance_row({'dataset_version':v,'record_id':'a','source_type':'human',
+        'provenance_confidence':None if v=='v1' else 'confirmed','external_grounding':'yes'}) for v in ('v1','v2'))
+    j=join_provenance(rows,prov,dataset_versions=('v2',));s=CalculationScope(('v2',),j.scope_record_keys,(),j.provenance_row_coverage.denominator_name,'selected')
+    r=summarize_provenance(j,scope=s)
+    assert r.provenance_required_field_coverage.ratio==1 and r.direct_grounding.known_open_count.value==1
+    assert r.input_has_errors and r.validation_messages==j.messages
+    assert r.validation_messages[0].record_key==RecordKey('v1','a')
+
+
+def test_PR004_step5_strict_promotion_does_not_discount_grounding():
+    row=normalize_row({'dataset_version':'v1','record_id':'a','content':'s'},kind='records')
+    p=assess_provenance_row({'dataset_version':'v1','record_id':'a','source_type':'synthetic','provenance_confidence':'estimated','external_grounding':'yes'})
+    j=join_provenance((row,),(p,),strict_mode=True,strict_warning_codes=(WarningCode.PROVENANCE_ESTIMATED.value,))
+    s=CalculationScope(('v1',),j.scope_record_keys,(),j.provenance_row_coverage.denominator_name,'strict')
+    r=summarize_provenance(j,scope=s)
+    assert r.input_has_errors and r.direct_grounding.known_open_count.value==1
+    assert r.promoted_warning_codes==j.promoted_warning_codes and r.validation_messages==j.messages
+
+
+def test_PR004_step5_hostile_object_hooks_never_execute():
+    class Hostile:
+        def __str__(self):raise AssertionError('str')
+        def __iter__(self):raise AssertionError('iter')
+        def __bool__(self):raise AssertionError('bool')
+        def __eq__(self,other):raise AssertionError('eq')
+        def __hash__(self):raise AssertionError('hash')
+    j,s=_p5_join()
+    for bad in (Hostile(),{},()):
+        with pytest.raises(CanonicalValidationError):summarize_provenance(bad,scope=s)
+        with pytest.raises(CanonicalValidationError):summarize_provenance(j,scope=bad)
+    for change in ({'selected_dataset_versions':(Hostile(),)},{'promoted_warning_codes':(Hostile(),)}):
+        with pytest.raises(CanonicalValidationError):summarize_provenance(replace(j,**change),scope=s)
+    key=RecordKey('v1','a');object.__setattr__(key,'dataset_version',Hostile())
+    with pytest.raises(CanonicalValidationError):summarize_provenance(replace(j,scope_record_keys=(key,)),scope=s)
