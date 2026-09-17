@@ -1,7 +1,7 @@
-"""Check module ownership and the approved Phase 2 Step 8 boundary.
+"""Check module ownership and the approved Phase 2 Step 9 boundary.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
-approved Phase 2 step on 2026-09-16. Step 8 adds evidence-bounded observability classification only. Earlier
+approved Phase 2 step on 2026-09-16. Step 9 adds explicit local bundle orchestration only. Earlier
 validation and explicit local content-read definitions stay intact.
 General graphs, cycles, roots, ancestors, metrics and later layers stay protected.
 
@@ -158,6 +158,44 @@ ALLOWED_CORE_IMPORTS["observability/levels.py"] = {
     "__future__", "math", "types", "..config", "..errors", "..io.validation", "..models",
 }
 
+
+# Step 9 delegates to existing input layers. Exact call sites keep all reads
+# within explicit invocation; no eager orchestration or later-layer permission.
+ALLOWED_FUNCTIONS["io/validation.py"].update({
+    "_bundle_source", "_bundle_source_key", "_bundle_control", "_bundle_plain",
+    "_bundle_document", "_bundle_setup", "_bundle_incomplete_provenance",
+    "_bundle_table", "_bundle_order", "_bundle_message_key", "_bundle_messages",
+    "_bundle_error_message", "validate_bundle", "_bundle_row_key", "_bundle_inventory_key",
+})
+ALLOWED_FUNCTIONS["models.py"].add("BundleValidationResult.has_errors")
+ALLOWED_CLASSES["models.py"].update({"RowMappingEvidence", "BundleValidationResult"})
+ALLOWED_CORE_IMPORTS["io/validation.py"].update({
+    "pathlib", "dataclasses", "tomllib", "..config", "..utils.paths", "..utils.hashing",
+    ".loaders", ".normalization", ".schema_mapping", "..observability.levels",
+})
+PIPELINE_CALL_SITES = {
+    "_read_source": {"_bundle_control"},
+    "load_table": {"_bundle_table"},
+    "inventory_source": {"validate_bundle"},
+    "load_content_reference": {"validate_bundle"},
+    "parse_mapping_json": {"validate_bundle"},
+    "map_row": {"_bundle_table"},
+    "normalize_row": {"_bundle_table"},
+    "classify_observability": {"validate_bundle"},
+    "_bundle_control": {"_bundle_setup", "validate_bundle"},
+    "_bundle_table": {"validate_bundle"},
+    "_bundle_setup": {"validate_bundle"},
+    "validate_bundle": set(),
+}
+PIPELINE_IMPORT_NAMES = {
+    ".loaders": {"_limits", "_read_source", "_select_format", "_text", "_check_depth",
+                 "_finite_float", "_reject_constant", "_unique_object", "load_table",
+                 "inventory_source", "load_content_reference"},
+    ".normalization": {"_field_value", "_input", "_policy", "_state", "normalize_row"},
+    ".schema_mapping": {"map_row", "parse_mapping_json"},
+    "..observability.levels": {"classify_observability"},
+}
+
 # Preserve every import and file restriction from the Phase 1 checker.
 FORBIDDEN_IMPORTS = {
     "numpy", "pandas", "pyarrow", "networkx", "scipy", "sklearn", "torch",
@@ -221,11 +259,25 @@ def main() -> int:
         else:
             functions, classes = _definitions(tree)
             if set(functions) != ALLOWED_FUNCTIONS[relative] or len(functions) != len(set(functions)):
-                raise SystemExit(f"Unexpected Step 8 functions in {relative}: {functions}")
+                raise SystemExit(f"Unexpected Step 9 functions in {relative}: {functions}")
             if set(classes) != ALLOWED_CLASSES.get(relative, set()) or len(classes) != len(set(classes)):
-                raise SystemExit(f"Unexpected Step 8 classes in {relative}: {classes}")
+                raise SystemExit(f"Unexpected Step 9 classes in {relative}: {classes}")
 
         for node in ast.walk(tree):
+            if relative == "io/validation.py":
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in PIPELINE_CALL_SITES:
+                    if not any(isinstance(fn, ast.FunctionDef) and fn.name in PIPELINE_CALL_SITES[node.func.id]
+                               and any(child is node for child in ast.walk(fn)) for fn in tree.body):
+                        raise SystemExit(f"Unexpected bundle read or orchestration call site: {node.func.id}")
+                if isinstance(node, ast.ImportFrom):
+                    imported_path = "." * node.level + (node.module or "")
+                    if imported_path in PIPELINE_IMPORT_NAMES:
+                        if any(alias.name not in PIPELINE_IMPORT_NAMES[imported_path] or alias.asname is not None for alias in node.names):
+                            raise SystemExit(f"Unexpected adjacent-layer import in {relative}")
+                        if not any(isinstance(fn, ast.FunctionDef) and fn.name in ALLOWED_FUNCTIONS["io/validation.py"]
+                                   and (fn.name.startswith("_bundle_") or fn.name == "validate_bundle")
+                                   and any(child is node for child in ast.walk(fn)) for fn in tree.body):
+                            raise SystemExit(f"Unexpected eager adjacent-layer import in {relative}")
             if relative in STEP8_OBSERVABILITY:
                 if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow, ast.MatMult)):
                     raise SystemExit(f"Unexpected analytical arithmetic in {relative}")
@@ -258,10 +310,13 @@ def main() -> int:
                     ):
                         raise SystemExit(f"Unexpected executable or IO capability in {relative}")
                     if isinstance(node.func, ast.Name) and node.func.id == "_read_source":
-                        if relative not in STEP3_MAPPING or not any(
+                        if not ((relative in STEP3_MAPPING and any(
                             isinstance(fn, ast.FunctionDef) and fn.name == "load_mapping"
                             and any(child is node for child in ast.walk(fn)) for fn in tree.body
-                        ):
+                        )) or (relative == "io/validation.py" and any(
+                            isinstance(fn, ast.FunctionDef) and fn.name == "_bundle_control"
+                            and any(child is node for child in ast.walk(fn)) for fn in tree.body
+                        ))):
                             raise SystemExit(f"Unexpected file read outside explicit mapping loader in {relative}")
             imports: set[str] = set()
             if isinstance(node, ast.Import):
@@ -289,7 +344,7 @@ def main() -> int:
             if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
-                    raise SystemExit(f"Import outside Step 8 contracts in {relative}: {sorted(unexpected)}")
+                    raise SystemExit(f"Import outside Step 9 contracts in {relative}: {sorted(unexpected)}")
 
     if forbidden_locations:
         raise SystemExit(f"Dependency outside the approved scope: {forbidden_locations}")
@@ -303,7 +358,7 @@ def main() -> int:
     print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Step 8 definition and import allowlists: PASS")
+    print("Step 9 definition and import allowlists: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 

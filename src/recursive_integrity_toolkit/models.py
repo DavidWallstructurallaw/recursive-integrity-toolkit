@@ -18,7 +18,7 @@ Limits:
     implemented here. These types carry validated metadata only.
 
 Current phase status:
-    Phase 2 Step 8 validation and observability contracts. Import-safe. No analytical behavior.
+    Phase 2 Step 9 validation and observability contracts. Import-safe. No analytical behavior.
 """
 
 from __future__ import annotations
@@ -190,6 +190,7 @@ class ValidationMessage:
     field: str | None = None
     record_key: RecordKey | None = None
     row_number: int | None = None
+    line_number: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -519,3 +520,42 @@ class ScenarioParameters:
     state_distribution: tuple[tuple[str, float], ...] | None = field(default=None, repr=False)
     external_input_distribution: tuple[tuple[str, float], ...] | None = field(default=None, repr=False)
     reopening_weight: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class RowMappingEvidence:
+    """Ordered row-transform metadata without source values or expression execution."""
+
+    record_key: RecordKey
+    location: RowLocation
+    mapping_sha256: str
+    source_fields: tuple[str, ...]
+    unmapped_fields: tuple[str, ...]
+    fields: tuple[tuple[str, str, tuple[str, ...], tuple[str, ...]], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class BundleValidationResult:
+    """Internal Phase 2 handoff, never a final report or a metric result.
+
+    Input data is hidden from repr and retained only for the explicit caller.
+    Family failures remain visible; generation can be unavailable after an
+    invalid parent declaration while independent dataset eligibility survives.
+    A nonzero maximum level does not clear has_errors.
+    """
+
+    inventory: tuple[FileInventoryEntry, ...] = field(repr=False)
+    records: tuple[CanonicalRow, ...] = field(repr=False)
+    provenance: tuple[CanonicalRow | ProvenanceAssessment, ...] | None = field(repr=False)
+    provenance_join: ProvenanceJoinResult = field(repr=False)
+    version_order: VersionOrderResult
+    generation: GenerationValidationResult | None = field(repr=False)
+    observability: ObservabilityAssessment
+    mapping_traces: tuple[RowMappingEvidence, ...] = field(repr=False)
+    content_read_keys: tuple[RecordKey, ...]
+    validation_messages: tuple[ValidationMessage, ...]
+
+    @property
+    def has_errors(self) -> bool:
+        return any(message.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)
+                   for message in self.validation_messages)

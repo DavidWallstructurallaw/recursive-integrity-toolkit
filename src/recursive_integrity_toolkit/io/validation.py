@@ -2,7 +2,8 @@
 
 Owner IDs:
     PR-001, PR-004 row validity, exact joins and validation coverage; PR-007 chronology;
-    PR-008 immediate-reference validation; PR-009 generation consistency.
+    PR-008 immediate-reference validation; PR-009 generation consistency;
+    PR-002, PR-003, PR-010, PR-011, PR-017 orchestration only.
 
 Inputs:
     Serialization-normalized fields, locations and explicit content mode; loaded
@@ -18,17 +19,20 @@ Assumptions:
 
 Limits:
     No source shares, closure bounds, lineage depth, general graph analysis, roots,
-    ancestors, metric, capability classification or report.
+    ancestors, metric or report. The explicit bundle entry point delegates
+    capability classification to the existing Step 8 classifier.
     A valid local_ref string does not certify a safe or existing referenced file.
 
 Current phase status:
-    Phase 2 Step 6 chronology, parent references and generation validation. No analytical behavior.
+    Phase 2 Step 9 input orchestration; prior validators retain their boundaries. No analytical behavior.
 """
 
 from __future__ import annotations
 
 import json
 import math
+from pathlib import Path
+from ..config import ResourceLimits
 from datetime import datetime, timezone
 from types import MappingProxyType
 
@@ -40,6 +44,7 @@ from ..models import (
     ValidationCoverage, ValidationMessage, ValidationSeverity, ParentResolutionStatus,
     VersionOrderResult, ParentReference, ParentValidationResult,
     GenerationAssessment, GenerationValidationResult,
+    AuditBundle, BundleValidationResult, NormalizationOptions, ScenarioParameters,
 )
 
 
@@ -775,3 +780,357 @@ def validate_generation_declarations(
         assessments.append(GenerationAssessment(key, declared, value, reasons.get(key, ()), mismatch))
     return GenerationValidationResult(tuple(assessments), tuple(parents[key] for key in sorted(parents)),
                                       tuple(messages), promoted)
+
+
+# Phase 2 Step 9: explicit local orchestration. Imports of adjacent layers are
+# delayed until invocation because normalization and classification reuse this
+# module's validators. Importing the package never opens a bundle.
+
+def _bundle_source(source, base_directory):
+    from pathlib import Path
+    from ..models import InputSource
+    from ..utils.paths import local_input_path
+
+    if type(source) is not InputSource or type(source.role) is not FileRole:
+        raise _fail(ErrorCode.CONFIG_INVALID, "bundle sources must use InputSource and FileRole", None, RowLocation())
+    if not isinstance(source.path, (str, Path)):
+        raise _fail(ErrorCode.CONFIG_INVALID, "bundle paths must be explicit local paths", None, RowLocation())
+    # Validate the original spelling before adding a base. No URI can be made
+    # local by prefixing it with a trusted directory.
+    checked = local_input_path(source.path)
+    if not Path(source.path).is_absolute():
+        if base_directory is None:
+            raise _fail(ErrorCode.CONFIG_INVALID, "relative bundle paths require an explicit base_directory", None, RowLocation())
+        checked = local_input_path(base_directory / source.path)
+    return InputSource(source.role, checked, source.declared_format)
+
+
+def _bundle_source_key(source):
+    return source.role.value, str(source.path)
+
+
+def _bundle_control(source, limits):
+    from ..models import FileInventoryEntry
+    from ..utils.hashing import sha256_bytes
+    from .loaders import _limits, _read_source, _select_format, _text
+
+    chosen = _select_format(source)
+    path, raw = _read_source(source, _limits(limits))
+    inventory = FileInventoryEntry(source.role, path, chosen, len(raw), sha256_bytes(raw))
+    return inventory, _text(source, raw)
+
+
+def _bundle_plain(value):
+    """Detach plain configuration data without invoking arbitrary object hooks."""
+    if value is None or type(value) in (str, bool, int):
+        return value
+    if type(value) is float and math.isfinite(value):
+        return value
+    if type(value) is list:
+        return [_bundle_plain(item) for item in value]
+    if type(value) is dict and all(type(key) is str for key in value):
+        return {key: _bundle_plain(item) for key, item in value.items()}
+    raise _fail(ErrorCode.CONFIG_INVALID, "configuration must contain plain finite data", None, RowLocation())
+
+
+def _bundle_document(text, source, limits):
+    import tomllib
+    from ..models import FileFormat
+    from .loaders import _check_depth, _finite_float, _reject_constant, _select_format, _unique_object
+
+    try:
+        if _select_format(source) is FileFormat.TOML:
+            document = tomllib.loads(text)
+            # Apply the same nesting policy to the decoded control object.
+            _check_depth(json.dumps(document), limits.max_json_depth)
+        else:
+            _check_depth(text, limits.max_json_depth)
+            document = json.loads(text, object_pairs_hook=_unique_object,
+                                  parse_constant=_reject_constant, parse_float=_finite_float)
+        if type(document) is not dict:
+            raise ValueError
+        return _bundle_plain(document)
+    except (ValueError, TypeError, RecursionError):
+        raise _fail(ErrorCode.FILE_PARSE, "control document must be a finite object with unique keys and valid syntax",
+                    None, RowLocation(source.role, "[redacted]")) from None
+
+
+def _bundle_setup(bundle, configuration, base_directory, limits):
+    from pathlib import Path
+    from ..config import ResourceLimits, resolve_config
+    from ..models import AuditBundle
+    from ..utils.paths import local_input_path
+    from .loaders import _limits
+
+    if type(bundle) is not AuditBundle or type(bundle.sources) is not tuple:
+        raise _fail(ErrorCode.CONFIG_INVALID, "bundle must use AuditBundle with an explicit source tuple", None, RowLocation())
+    base = None
+    if base_directory is not None:
+        if not isinstance(base_directory, (str, Path)) or not Path(base_directory).is_absolute():
+            raise _fail(ErrorCode.CONFIG_INVALID, "base_directory must be an explicit absolute local directory", None, RowLocation())
+        base = local_input_path(base_directory)
+    explicit = tuple(_bundle_source(source, base) for source in bundle.sources)
+    configs = tuple(source for source in explicit if source.role is FileRole.CONFIG)
+    if len(configs) > 1 or (configs and configuration is not None):
+        raise _fail(ErrorCode.CONFIG_INVALID, "supply one configuration source without competing overrides", None, RowLocation())
+    bounded = _limits(limits)
+    inventory = ()
+    config_base = base
+    if configs:
+        entry, text = _bundle_control(configs[0], bounded)
+        data = _bundle_document(text, configs[0], bounded)
+        inventory = (entry,)
+        config_base = entry.path.parent
+    else:
+        try:
+            data = {} if configuration is None else _bundle_plain(configuration)
+        except RecursionError:
+            raise _fail(ErrorCode.CONFIG_INVALID, "configuration nesting is invalid", None, RowLocation()) from None
+    if type(data) is not dict:
+        raise _fail(ErrorCode.CONFIG_INVALID, "configuration must be a plain object", None, RowLocation())
+    config = resolve_config(data)
+    default_limits = ResourceLimits()
+    if limits is not None and config.resource_limits != default_limits and config.resource_limits != bounded:
+        raise _fail(ErrorCode.CONFIG_INVALID, "invocation and configuration resource limits disagree", None, RowLocation())
+    effective = bounded if limits is not None else config.resource_limits
+    if configs:
+        if effective.max_file_bytes is not None and inventory[0].size_bytes > effective.max_file_bytes:
+            raise _fail(ErrorCode.FILE_PARSE, "configuration exceeds its declared max_file_bytes", None, RowLocation(FileRole.CONFIG, "[redacted]"))
+        _bundle_document(text, configs[0], effective)
+    if any(source.role is FileRole.CONFIG for source in config.inputs):
+        raise _fail(ErrorCode.CONFIG_INVALID, "recursive configuration inclusion is unsupported", None, RowLocation())
+    sources = explicit + tuple(_bundle_source(source, config_base) for source in config.inputs)
+    singleton = (FileRole.RECORDS_PRIMARY, FileRole.PROVENANCE_MANIFEST, FileRole.SCHEMA_MAPPING, FileRole.VERSION_ORDER, FileRole.CONFIG)
+    for role in singleton:
+        count = sum(source.role is role for source in sources)
+        if count > 1 or (role is FileRole.RECORDS_PRIMARY and count != 1):
+            raise _fail(ErrorCode.CONFIG_INVALID, "bundle role cardinality is invalid or declarations compete", None, RowLocation(role))
+    identities = tuple(_bundle_source_key(source) for source in sources)
+    if len(set(identities)) != len(identities):
+        raise _fail(ErrorCode.CONFIG_INVALID, "duplicate bundle source declaration", None, RowLocation())
+    return tuple(sorted(sources, key=_bundle_source_key)), config, effective, inventory
+
+
+def _bundle_incomplete_provenance(row, raw, file_format, options, limits, location):
+    """Reuse Step 4 serialization rules, without certifying an incomplete row.
+
+    Only absence/null in non-identity required fields can reach this path.
+    Nothing is filled with unknown or a fabricated valid value. Present invalid
+    fields still fail, and Step 5 retains the required-field error diagnostics.
+    """
+    from .normalization import _field_value, _input, _policy, _state
+    from ..models import FileFormat
+
+    options, limits = _policy(options, limits)
+    values, _, quoted = _input(row, file_format, raw, location)
+    typed = {}
+    for name in PROVENANCE_FIELDS:
+        if name in values:
+            state = _state(values[name], csv_mode=file_format is FileFormat.CSV and name in quoted,
+                           quoted=quoted.get(name, False), tokens=options.null_tokens)
+            typed[name] = _field_value(name, values[name], state, csv_mode=file_format is FileFormat.CSV,
+                                      options=options, limits=limits, location=location)
+    if "record_key" in values:
+        typed["record_key"] = values["record_key"]
+    return assess_provenance_row(typed, location=location)
+
+
+def _bundle_table(source, limits, options, mapping):
+    from ..models import RowMappingEvidence
+    from .loaders import load_table
+    from .normalization import normalize_row
+    from .schema_mapping import map_row
+
+    table = load_table(source, limits=limits)
+    kind = "provenance" if source.role is FileRole.PROVENANCE_MANIFEST else "records"
+    mapped_section = mapping is not None and kind in mapping.sections
+    if not table.rows:
+        fields = tuple(json.loads(mapping.document_json)[kind]["fields"]) if mapped_section else table.inventory.fields
+        for name in PROVENANCE_REQUIRED:
+            if name not in fields:
+                raise _fail(ErrorCode.SCHEMA_REQUIRED_FIELD, "empty provenance table lacks a required column",
+                            name, RowLocation(source.role, "[redacted]"))
+    rows, traces, messages = [], [], []
+    for raw in table.rows:
+        location = RowLocation(source.role, str(table.inventory.path), raw.row_number, raw.line_number)
+        candidate = map_row(raw, mapping, section=kind, preserve_extras=options.preserve_extras) if mapped_section else raw
+        try:
+            canonical = normalize_row(candidate, kind=kind, file_format=table.inventory.file_format,
+                                      source_row=raw, options=options, limits=limits, location=location)
+        except CanonicalValidationError as error:
+            if kind != "provenance" or error.code is not ErrorCode.SCHEMA_REQUIRED_FIELD or error.field not in PROVENANCE_REQUIRED[2:]:
+                raise
+            canonical = _bundle_incomplete_provenance(candidate, raw, table.inventory.file_format, options, limits, location)
+        rows.append(canonical)
+        if mapped_section:
+            fields = tuple((trace.target, trace.selector, trace.source_fields, trace.operations) for trace in candidate.field_traces)
+            traces.append(RowMappingEvidence(canonical.record_key, location, candidate.mapping_sha256,
+                                             candidate.source_fields, candidate.unmapped_fields, fields))
+            for notice in candidate.notices:
+                messages.append(ValidationMessage(notice.code, ValidationSeverity.WARNING,
+                    "mapping applied its explicit unmapped-value policy", source.role, "[redacted]",
+                    notice.field, canonical.record_key, raw.row_number, raw.line_number))
+    return table.inventory, tuple(rows), tuple(traces), tuple(messages)
+
+
+def _bundle_order(versions, document, config_order, invocation_order):
+    # Preserve the standalone file and config as independent constraints. Never
+    # let either silently override another explicitly supplied version_order.
+    combined = None if document is None else dict(document)
+    if config_order:
+        if combined is None:
+            combined = {"version_order": config_order}
+        elif "version_order" in combined and tuple(combined["version_order"]) != config_order:
+            raise _version_failure("config and standalone version_order declarations disagree")
+        else:
+            combined["version_order"] = config_order
+    return resolve_version_order(versions, document=combined, invocation_order=invocation_order)
+
+
+def _bundle_message_key(message):
+    return (message.file_role.value if message.file_role is not None else "",
+            message.file_path or "", message.row_number if message.row_number is not None else -1,
+            str(message.record_key) if message.record_key is not None else "",
+            message.field or "", message.code, message.severity.value, message.message,
+            message.line_number if message.line_number is not None else -1)
+
+
+def _bundle_messages(messages, promoted):
+    from dataclasses import replace
+
+    unique = {}
+    for message in messages:
+        sanitized = replace(message, file_path="[redacted]" if message.file_path is not None else None,
+                            severity=ValidationSeverity.ERROR if message.code in promoted else message.severity)
+        unique[_bundle_message_key(sanitized)] = sanitized
+    return tuple(unique[key] for key in sorted(unique))
+
+
+def _bundle_error_message(error, location, key=None):
+    # All message text is static. Error values, paths, notes and contents are not
+    # interpolated. Original row/line coordinates remain available to the caller.
+    return ValidationMessage(error.code.value, ValidationSeverity.ERROR, error.safe_message,
+                             location.file_role, "[redacted]", error.field, key,
+                             error.row_number if error.row_number is not None else location.row_number,
+                             error.line_number if error.line_number is not None else location.line_number)
+
+
+def validate_bundle(bundle: AuditBundle, *, configuration: dict[str, object] | None = None,
+                    base_directory: str | Path | None = None, limits: ResourceLimits | None = None,
+                    normalization_options: NormalizationOptions | None = None,
+                    resolve_local_content: bool = False, content_base_directory: str | Path | None = None,
+                    allow_absolute_content: bool = False, invocation_order: tuple[str, ...] | None = None,
+                    semantic_requested: bool = False, scenario_parameters: ScenarioParameters | None = None
+                    ) -> BundleValidationResult:
+    """Run the Phase 2 input workflow once and return an internal validation result.
+
+    Explicit source paths are absolute or relative to base_directory. Sources in
+    a config file are relative to that file. Competing singleton declarations and
+    config/argument overrides fail; no directory scan or recursive include occurs.
+    One explicit content mode applies to the run. Reading content references needs
+    resolve_local_content=True and LOCAL_REF mode. Every read uses Step 7 controls.
+    A content/parent-family failure preserves valid metadata and its diagnostics.
+    Identity, format, unsafe mapping and malformed present field failures raise.
+
+    No report is written. Output config is not executed. No metric, graph,
+    simulation, background worker or public CLI command is invoked.
+    """
+    from dataclasses import replace
+    from ..models import BundleValidationResult, NormalizationOptions
+    from ..observability.levels import classify_observability
+    from .loaders import inventory_source, load_content_reference
+    from .normalization import _policy
+    from .schema_mapping import parse_mapping_json
+
+    for flag in (resolve_local_content, allow_absolute_content, semantic_requested):
+        if type(flag) is not bool:
+            raise _fail(ErrorCode.CONFIG_INVALID, "pipeline flags must be explicit booleans", None, RowLocation())
+    options = NormalizationOptions() if normalization_options is None else normalization_options
+    options, _ = _policy(options, limits)
+    if options.content_mode is not ContentMode.LOCAL_REF and (resolve_local_content or allow_absolute_content or content_base_directory is not None):
+        raise _fail(ErrorCode.CONFIG_INVALID, "content-reference options require local_ref mode", None, RowLocation())
+    sources, config, effective, config_inventory = _bundle_setup(bundle, configuration, base_directory, limits)
+    options, effective = _policy(options, effective)
+    promoted = _join_options(None, config.strict_mode, config.strict_warning_codes)
+    inventory = list(config_inventory)
+    mapping, order_document = None, None
+    for source in sources:
+        if source.role in (FileRole.SCHEMA_MAPPING, FileRole.VERSION_ORDER):
+            entry, text = _bundle_control(source, effective)
+            inventory.append(entry)
+            if source.role is FileRole.SCHEMA_MAPPING:
+                mapping = parse_mapping_json(text, limits=effective)
+            else:
+                order_document = _bundle_document(text, source, effective)
+    records, provenance, traces, messages = [], [], [], []
+    source_by_key = {}
+    provenance_supplied = any(source.role is FileRole.PROVENANCE_MANIFEST for source in sources)
+    for source in sources:
+        if source.role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE, FileRole.PROVENANCE_MANIFEST):
+            entry, rows, row_traces, notices = _bundle_table(source, effective, options, mapping)
+            inventory.append(entry)
+            traces.extend(row_traces)
+            messages.extend(notices)
+            if source.role is FileRole.PROVENANCE_MANIFEST:
+                provenance.extend(rows)
+            else:
+                records.extend(rows)
+                for row in rows:
+                    source_by_key[row.record_key] = source.path
+        elif source.role in (FileRole.EMBEDDING_DATA, FileRole.EXTERNAL_REFERENCE):
+            inventory.append(inventory_source(source, limits=effective))
+    canonical_records = tuple(sorted(records, key=_bundle_row_key))
+    validate_unique_keys(canonical_records, kind="records")
+    canonical_provenance = tuple(sorted(provenance, key=_bundle_row_key)) if provenance_supplied else None
+    joined = join_provenance(canonical_records, canonical_provenance,
+                             strict_mode=config.strict_mode, strict_warning_codes=config.strict_warning_codes)
+    versions = tuple(sorted({row.record_key.dataset_version for row in canonical_records}))
+    order = _bundle_order(versions, order_document, config.version_order, invocation_order)
+    messages.extend(joined.messages)
+    messages.extend(order.messages)
+    generation = None
+    try:
+        generation = validate_generation_declarations(tuple(row.record_key for row in canonical_records),
+                     canonical_provenance or (), version_order=order,
+                     strict_mode=config.strict_mode, strict_warning_codes=config.strict_warning_codes)
+        messages.extend(generation.messages)
+    except CanonicalValidationError as error:
+        if error.code not in (ErrorCode.PARENT_FORMAT, ErrorCode.PARENT_AMBIGUOUS,
+                              ErrorCode.PARENT_FUTURE_VERSION, ErrorCode.LINEAGE_CYCLE):
+            raise
+        key = RecordKey.parse(error.record_key) if error.record_key is not None else None
+        messages.append(_bundle_error_message(error, RowLocation(FileRole.PROVENANCE_MANIFEST), key))
+    content = {} if options.content_mode is ContentMode.LOCAL_REF else None
+    if resolve_local_content:
+        for row in canonical_records:
+            try:
+                content[row.record_key] = load_content_reference(row.values["content"],
+                    records_path=source_by_key[row.record_key], base_directory=content_base_directory,
+                    allow_absolute=allow_absolute_content, limits=effective, location=row.location)
+            except CanonicalValidationError as error:
+                if error.code is ErrorCode.CONFIG_INVALID:
+                    raise
+                messages.append(_bundle_error_message(error, row.location, row.record_key))
+                messages.append(_join_message(WarningCode.CONTENT_ANALYSIS_UNAVAILABLE.value,
+                    ValidationSeverity.WARNING, "content validation failed; metadata is retained",
+                    row.record_key, row.location, "content"))
+    classification = classify_observability(canonical_records, provenance=canonical_provenance,
+        representation=config.representation, representation_compatibility=config.representation_compatibility,
+        version_order=order, content_mode=options.content_mode, resolved_content=content,
+        semantic_requested=semantic_requested, state_mapping_present=bool(config.state_mapping),
+        scenario=config.simulation, scenario_parameters=scenario_parameters,
+        strict_mode=config.strict_mode, strict_warning_codes=config.strict_warning_codes)
+    messages.extend(classification.validation_messages)
+    final_messages = _bundle_messages(tuple(messages), promoted)
+    classification = replace(classification, validation_messages=final_messages)
+    return BundleValidationResult(tuple(sorted(inventory, key=_bundle_inventory_key)), canonical_records,
+        canonical_provenance, joined, order, generation, classification, tuple(traces),
+        tuple(sorted(content or {})), final_messages)
+
+
+def _bundle_row_key(row):
+    return row.record_key
+
+
+def _bundle_inventory_key(entry):
+    return entry.role.value, str(entry.path)

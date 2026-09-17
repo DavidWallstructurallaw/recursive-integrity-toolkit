@@ -1,4 +1,4 @@
-"""Protect Phase 2 Step 8 from premature analytical implementation."""
+"""Protect Phase 2 Step 9 from premature analytical implementation."""
 
 import ast
 from pathlib import Path
@@ -73,6 +73,17 @@ import pytest
 
 
 @pytest.mark.parametrize("relative,injected", [
+    ("io/validation.py", '_read_source(None, None)\n'),
+    ("io/validation.py", 'load_table(None)\n'),
+    ("io/validation.py", 'inventory_source(None)\n'),
+    ("io/validation.py", "load_content_reference('x')\n"),
+    ("io/validation.py", 'validate_bundle(None)\n'),
+    ("io/validation.py", '_bundle_control(None, None)\n'),
+    ("io/validation.py", 'from .loaders import load_table\n'),
+    ("io/validation.py", 'from .normalization import normalize_row\n'),
+    ("io/validation.py", 'from .loaders import _parse_csv\n'),
+    ("io/validation.py", "Path('x').write_text('data')\n"),
+
     ("observability/levels.py", "import socket\n"),
     ("observability/levels.py", "from ..metrics import diversity\n"),
     ("observability/levels.py", "from ..lineage import graph\n"),
