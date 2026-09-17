@@ -1,4 +1,4 @@
-"""Define input metadata and Phase 3 Step 1 calculation contracts.
+"""Define input metadata and Phase 3 Step 2 supporting contracts.
 
 Owner IDs:
     PR-001, PR-002, PR-004, PR-007, PR-008, PR-009, PR-010, PR-011, PR-016, PR-017
@@ -19,7 +19,7 @@ Limits:
     implemented here. These types carry validated metadata only.
 
 Current phase status:
-    Phase 3 Step 1 contracts; Phase 2 behavior preserved. Import-safe. No metrics.
+    Phase 3 Step 2 contracts; Phase 2 behavior preserved. Import-safe. No metrics.
 """
 
 from __future__ import annotations
@@ -678,7 +678,10 @@ class RecordStateAssignment:
             if type(self.exclusion_reason) is not CalculationReason:
                 raise ValueError("excluded assignment needs a recorded reason")
         else:
-            _calculation_text(self.state_id)
+            # Canonical empty strings remain different from null. Metadata and
+            # explicit missing-state IDs still require nonempty declarations.
+            if type(self.state_id) is not str or "\x00" in self.state_id:
+                raise ValueError("assigned state must be literal text without NUL")
             if self.exclusion_reason is not None:
                 raise ValueError("assigned state cannot simultaneously be excluded")
 

@@ -206,7 +206,7 @@ FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.p
 
 
 # Phase 3 Step 1: declarations and validation contracts only.
-PHASE3_ACTIVE_STEP = 1
+PHASE3_ACTIVE_STEP = 2
 PHASE3_CONTRACT_CLASSES = {
     "CalculationEvidenceClass", "CalculationStatus", "CalculationReason", "NumericalPolicy",
     "RepresentationDescriptor", "RecordStateAssignment", "CalculationScope", "WeightingOptions",
@@ -224,6 +224,95 @@ PHASE3_CONTRACT_FUNCTIONS = {
 ALLOWED_FUNCTIONS["models.py"].update(PHASE3_CONTRACT_FUNCTIONS)
 ALLOWED_CLASSES["models.py"].update(PHASE3_CONTRACT_CLASSES)
 ALLOWED_CORE_IMPORTS["models.py"].add("math")
+
+
+# Step 2 opens only literal-field representation, not any mathematical metric.
+PHASE3_FIELD_MODULES = {"representations/base.py", "representations/field.py"}
+ALLOWED_FUNCTIONS["representations/base.py"] = {
+    "RepresentationResult.selected_count", "RepresentationResult.included_count",
+    "RepresentationResult.excluded_count", "RepresentationProtocol.__call__",
+    "_representation_error", "_literal_text", "_selected_records", "_selected_key",
+}
+ALLOWED_CLASSES["representations/base.py"] = {
+    "RepresentationSelection", "RepresentationResult", "RepresentationProtocol",
+}
+ALLOWED_FUNCTIONS["representations/field.py"] = {
+    "_selection", "select_field_representation", "assign_field_states",
+}
+REPRESENTATION_IMPORT_NAMES = {
+    "representations/base.py": {
+        "__future__": {"annotations"}, "dataclasses": {"dataclass", "field"},
+        "types": {"MappingProxyType"}, "typing": {"Protocol"}, "..config": {"RepresentationConfig"},
+        "..errors": {"CanonicalValidationError", "ErrorCode"}, "..io.validation": {"validate_canonical_values"},
+        "..models": {"CalculationReason", "CalculationScope", "CalculationStatus", "CanonicalRow",
+                     "FileRole", "RecordKey", "RecordStateAssignment", "RepresentationDescriptor",
+                     "RowLocation", "ValidationCoverage", "ValidationMessage"},
+    },
+    "representations/field.py": {
+        "__future__": {"annotations"}, "..config": {"RepresentationConfig"},
+        "..errors": {"ErrorCode", "WarningCode"},
+        "..models": {"CalculationReason", "CalculationScope", "CalculationStatus", "CanonicalRow",
+                     "RecordKey", "RecordStateAssignment", "RepresentationDescriptor",
+                     "ValidationCoverage", "ValidationMessage", "ValidationSeverity"},
+        ".base": {"RepresentationResult", "RepresentationSelection", "_literal_text",
+                  "_representation_error", "_selected_records"},
+    },
+}
+ALLOWED_CORE_IMPORTS["representations/base.py"] = set(REPRESENTATION_IMPORT_NAMES["representations/base.py"])
+ALLOWED_CORE_IMPORTS["representations/field.py"] = set(REPRESENTATION_IMPORT_NAMES["representations/field.py"])
+
+
+def _phase3_representation_boundary(tree: ast.Module, relative: str) -> None:
+    """Reject hidden computation, I/O, aliases and user callback execution."""
+    direct_calls = {
+        "representations/base.py": {
+            "dataclass", "field", "len", "type", "bool", "any", "set", "tuple", "dict", "sorted", "str",
+            "CanonicalValidationError", "RowLocation", "_representation_error", "_literal_text",
+            "validate_canonical_values",
+        },
+        "representations/field.py": {
+            "type", "any", "len", "tuple", "sorted", "_representation_error", "_literal_text",
+            "_selected_records", "_selection", "RepresentationDescriptor", "RepresentationSelection",
+            "ValidationMessage", "RecordStateAssignment", "CalculationScope",
+            "RepresentationResult", "ValidationCoverage",
+        },
+    }
+    method_calls = {
+        "representations/base.py": {("value", "encode"), ("version", "strip"),
+                                    ("seen", "add"), ("loaded", "add"), ("selected", "append")},
+        "representations/field.py": {("values", "get"), ("value", "encode"),
+                                     ("assignments", "append"), ("states", "append"),
+                                     ("included", "append"), ("excluded", "append")},
+    }
+    for top in tree.body:
+        doc = (isinstance(top, ast.Expr) and isinstance(top.value, ast.Constant)
+               and isinstance(top.value.value, str))
+        if not doc and not isinstance(top, (ast.ImportFrom, ast.FunctionDef, ast.ClassDef)):
+            raise SystemExit("Unexpected eager representation operation")
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Lambda, ast.AsyncFunctionDef, ast.Await, ast.Yield, ast.YieldFrom)):
+            raise SystemExit("Unexpected callback in field representations")
+        if isinstance(node, ast.Import):
+            raise SystemExit("Import must use exact representation symbols")
+        if isinstance(node, ast.ImportFrom):
+            module = "." * node.level + (node.module or "")
+            allowed = REPRESENTATION_IMPORT_NAMES[relative].get(module, set())
+            if any(a.name not in allowed or a.asname is not None for a in node.names):
+                raise SystemExit("Import symbol outside representation scope")
+        if isinstance(node, ast.BinOp):
+            difference = (relative == "representations/base.py" and isinstance(node.op, ast.Sub)
+                          and isinstance(node.left, ast.Call) and isinstance(node.left.func, ast.Name)
+                          and node.left.func.id == "set" and len(node.left.args) == 1
+                          and isinstance(node.left.args[0], ast.Name) and node.left.args[0].id == "dataset_versions"
+                          and isinstance(node.right, ast.Name) and node.right.id == "loaded")
+            if not isinstance(node.op, ast.BitOr) and not difference:
+                raise SystemExit("Unexpected metric arithmetic in representations")
+        if isinstance(node, ast.Call):
+            direct = isinstance(node.func, ast.Name) and node.func.id in direct_calls[relative]
+            method = (isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name)
+                      and (node.func.value.id, node.func.attr) in method_calls[relative])
+            if not direct and not method:
+                raise SystemExit("Unexpected call in pure field representations")
 
 
 def _phase3_contract_boundary(tree: ast.Module) -> None:
@@ -281,7 +370,7 @@ def main() -> int:
     if len(paths) != 40:
         raise SystemExit(f"Expected 40 package modules, found {len(paths)}")
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
-    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY) - relative_paths
+    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES) - relative_paths
     if missing:
         raise SystemExit(f"Required startup or Step 8 modules missing: {sorted(missing)}")
 
@@ -296,11 +385,13 @@ def main() -> int:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         if relative == "models.py":
             _phase3_contract_boundary(tree)
+        if relative in PHASE3_FIELD_MODULES:
+            _phase3_representation_boundary(tree, relative)
         doc = ast.get_docstring(tree) or ""
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
 
-        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY:
+        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES:
             if not (
                 len(tree.body) == 1
                 and isinstance(tree.body[0], ast.Expr)
@@ -350,7 +441,7 @@ def main() -> int:
                         isinstance(node.func, ast.Attribute) and node.func.attr in blocked_methods
                     ):
                         raise SystemExit(f"Unexpected executable, write or network capability in {relative}")
-            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | {"models.py"}:
+            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | {"models.py"}:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
                 if isinstance(node, ast.Call):
@@ -394,7 +485,7 @@ def main() -> int:
                     )
                     if not lazy_parquet:
                         forbidden_locations.append(f"{relative}: {imported}")
-            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY:
+            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
                     raise SystemExit(f"Import outside Step 9 contracts in {relative}: {sorted(unexpected)}")
@@ -411,7 +502,7 @@ def main() -> int:
     print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Phase 3 Step 1 contract and inherited definition/import boundaries: PASS")
+    print("Phase 3 Step 2 field and inherited definition/import boundaries: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 

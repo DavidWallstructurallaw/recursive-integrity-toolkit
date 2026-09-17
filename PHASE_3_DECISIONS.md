@@ -95,3 +95,76 @@ All original no-algorithm negative tests remain. The checker adds exact new cont
 ## Build and stop
 
 The current candidate workflow builds and installs the development package, tests the existing input-only Hero and archives a byte-verified Step 1 snapshot plus actual test evidence. It cannot generate final Phase 3 completion reports, call final delivery, publish a package, create a tag or merge main. The Phase 2 records remain historical and unchanged. Stop after Step 1 acceptance and wait for an explicit Step 2 instruction.
+
+
+## Step 2 authorization and contracts
+
+The Theory Owner explicitly instructed Phase 3 Step 2 and subsequently approved
+the single-file exception for `tests/unit/test_phase3_contracts.py`. That exception
+changes only `control[key]=2` to `control[key]+=1` in the forged-stage negative
+test. The exact byte transition is enforced by the release checker. Test names,
+parameterization, numerical expectations and other assertions are retained.
+
+The accepted previous checkpoint is commit
+`20487e356239d5b5642b6fff595b381d0faa2a4e`, tree
+`7d9867fb7543bfd50a9b01bb48530a3411121d31`. The original Phase 2 root/test trees,
+source hashes and inherited test identities remain frozen. The cumulative diff
+is checked against Phase 2 and the incremental diff against Step 1. All previous
+Step 1 test identities must also remain collected in both optional-input modes.
+
+`representations/base.py` defines a static typing protocol, immutable selection
+and assignment-result containers, and pure canonical scope validation.
+`representations/field.py` implements `select_field_representation` and
+`assign_field_states`. No user callback, plugin or representation code is run.
+The only reused input-layer function is the existing pure canonical validator.
+
+The caller explicitly selects versions and a scope ID. Multiple versions are
+pooled only when explicitly named. Identity ordering is deterministic, included
+and excluded keys remain separate, and coverage uses `selected_valid_records`.
+The future representation denominator is `included_representation_records`.
+Unselected records and the full provenance audit scope remain unchanged.
+
+An explicit RepresentationConfig supplies name, supported source, canonical
+field, taxonomy version and missing policy, and takes precedence over optional
+fallback. Only topic/label and their field-source declarations are supported.
+Custom upstream columns require prior mapping. No taxonomy version is invented.
+Invalid explicit configuration blocks rather than silently selecting another mode.
+
+Fallback requires explicit activation, a fallback version and a missing policy.
+Presence of a field in the selected scope determines the first available entry
+in topic-then-label order. The choice records considered fields and emits
+W_REPRESENTATION_FALLBACK. No per-record or quality-driven substitution occurs.
+A wholly absent configured column in nonempty input is a schema error; a present
+all-null column can yield ALL_EXCLUDED.
+
+The rule is literal_field_value. Case, whitespace and Unicode forms are preserved.
+Absent, null and literal unknown stay distinct. Canonical empty strings remain
+literal states as required by plan section 5.2. The in-scope RecordStateAssignment
+constructor now permits these empty strings, while nonempty metadata/missing-ID,
+NUL/type and contradictory exclusion checks remain intact. No Phase 2 parsing,
+normalization or conservative input-capability behavior has changed.
+
+The three missing policies are implemented. Error blocks missing cells. Exclude
+retains explicit no-state assignments and exclusion reasons. Explicit missing
+state requires a separate nonempty ID and rejects exact collisions anywhere in
+the selected scope, even when no cell needs filling. Empty and all-excluded inputs
+carry their existing reason codes. No numerical diversity value is fabricated.
+
+### Step 2 boundary maintenance and reviews
+
+The existing placeholder test identities now admit exactly the two field modules;
+24 other modules remain docstring-only, within the unchanged forty-module layout.
+Exact function, class, import-symbol, call and operation checks reject unauthorized
+code. Additional negative tests cover hidden mathematics, file/network access,
+callbacks, new paths and widening the single-file exception. Historical Phase 2
+restoration tests are unchanged.
+
+All four workflows identify Step 2 and preserve read-only permissions, full core
+and real-Parquet regression, failed-command propagation, original logs and JUnit.
+Build output is only an intermediate Step 2 candidate. Technical and security
+review remains consolidated in the assistant, with Theory Owner approvals; no
+independent human review or security certification is asserted.
+
+No state frequencies, support, diversity, content hashing, tail calculation,
+weighted calculation, sampling, pair comparison, graph or report is implemented.
+Stop after Step 2 verification. Step 3, main merge and publication are not authorized.

@@ -60,3 +60,19 @@ Fatal parsing, identity, unsafe mapping and invalid present fields raise. Incomp
 Generation uses flat indexes and bounded monotone scans. Some same-version chains have quadratic worst case. No 100,000-row performance claim or independent security certification is made. Content containment assumes a trusted stable directory; see docs/privacy.md.
 
 No protected metric, representation-execution, lineage or report module is opened. The conceptual dependency direction remains utilities/contracts, input boundaries, observability, later metrics/lineage, assembly, renderers and CLI. Phase 3 is not authorized.
+
+
+## Phase 3 Step 2 active boundary
+
+Earlier Phase 2 sections remain historical input-layer documentation. Current
+field-only behavior resides in representations/base.py and representations/field.py.
+It reuses the existing pure canonical validator, never ingestion or bundle
+orchestration. Results contain immutable selection metadata, assignments,
+exclusions and named coverage. Metrics, hashing, comparison, graph, sampling and
+report/CLI integration remain deferred.
+
+There are still forty modules, with twenty-four protected placeholders. Exact
+function, class, named-import, call and operation-family checks apply to the new
+modules. Original Phase 2 file/test anchors remain frozen; accepted Step 1 is an
+additional checkpoint for incremental scope and regression identities. Ordinary
+validate_bundle calls retain input-only behavior.

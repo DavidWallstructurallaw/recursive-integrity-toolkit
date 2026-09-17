@@ -1,7 +1,7 @@
 """Audit explicit phase boundaries and retain tested intermediate artifacts.
 
 Maintainer tooling only. Phase 2 authority and restoration guards stay frozen.
-Phase 3 Step 1 cannot publish, merge, mark completion, or implement metrics.
+Phase 3 Step 2 cannot publish, merge, mark completion, or implement metrics.
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ PHASE2_FINAL = "78554993febb01609cb90814cc24cce2012bf7d7"
 PHASE2_TREE = "706b99e27c2d284a7435ae03e2eb2376214bfa46"
 PHASE2_TEST_TREE = "d787d9b06c41a91f8587f6b57a8af710419d114f"
 PLAN_SHA256 = "e1c9a6776e3cd2511d37a6bbbdb4a9d5a33b66ff6b00bc00bf3e08a01e6576f1"
-ACTIVE_PHASE, ACTIVE_STEP = 3, 1
+ACTIVE_PHASE, ACTIVE_STEP = 3, 2
 STEP10_ALLOWED = {
     "README.md", "CHANGELOG.md", "docs/architecture.md", "docs/data_schema.md",
     "docs/privacy.md", ".github/workflows/ci.yml", ".github/workflows/security.yml",
@@ -52,6 +52,20 @@ STEP1_NEW = {"PHASE_3_PLAN.md", "PHASE_3_DECISIONS.md", "PHASE_3_BASELINE.json",
              "tests/unit/test_phase3_contracts.py", "tests/golden/phase3_math_cases.json", "tests/golden/phase3_math_cases.md"}
 STEP1_ALLOWED = PHASE3_G | STEP1_NEW | {
     "src/recursive_integrity_toolkit/models.py", "src/recursive_integrity_toolkit/errors.py"}
+STEP1_FINAL = "20487e356239d5b5642b6fff595b381d0faa2a4e"
+STEP1_TREE = "7d9867fb7543bfd50a9b01bb48530a3411121d31"
+STEP2_NEW = {"tests/unit/test_T1_representation.py",
+             "tests/fixtures/minimal_valid/phase3_field_records.jsonl",
+             "tests/fixtures/invalid_schema/phase3_representation_cases.json"}
+STEP2_EXCEPTION = "tests/unit/test_phase3_contracts.py"
+STEP2_ALLOWED = PHASE3_G | STEP2_NEW | {
+    "src/recursive_integrity_toolkit/representations/base.py",
+    "src/recursive_integrity_toolkit/representations/field.py",
+    "src/recursive_integrity_toolkit/models.py", "src/recursive_integrity_toolkit/errors.py",
+    "docs/data_schema.md", STEP2_EXCEPTION,
+}
+CUMULATIVE_ALLOWED = STEP1_ALLOWED | STEP2_ALLOWED
+CUMULATIVE_NEW = STEP1_NEW | STEP2_NEW
 COMPLETION = {"PHASE_2_COMPLETION.md", "PHASE_2_VALIDATION_REPORT.md", "PHASE_2_ARCHITECTURE_COMPLIANCE_REPORT.md"}
 PROHIBITED = {"server", "webapp", "cloud", "telemetry", "plugins", "agents", "llm", "auth", "database", "policy_enforcement"}
 PARQUET_CASES = {"test_PR002_parquet_real_roundtrip", "test_PR002_parquet_real_row_limit", "test_PR002_parquet_real_invalid_file"}
@@ -76,12 +90,15 @@ def git(*args: str) -> bytes:
     return subprocess.check_output(["git", "-C", str(ROOT), *args])
 
 
-def verify_phase3_control(control: dict, step: int = 1) -> None:
-    expected = {"active_phase": 3, "active_step": 1, "baseline_commit": PHASE2_FINAL,
+def verify_phase3_control(control: dict, step: int = ACTIVE_STEP) -> None:
+    expected = {"active_phase": 3, "active_step": ACTIVE_STEP, "baseline_commit": PHASE2_FINAL,
                 "baseline_tree": PHASE2_TREE, "baseline_test_tree": PHASE2_TEST_TREE,
                 "approved_plan_sha256": PLAN_SHA256, "baseline_core_tests": 1159, "baseline_parquet_tests": 1162,
-                "permitted_paths": sorted(STEP1_ALLOWED), "approved_decisions": [f"P3-D{i:02d}" for i in range(1, 11)],
-                "phase_complete": False, "next_step_authorized": False}
+                "permitted_paths": sorted(STEP2_ALLOWED), "approved_decisions": [f"P3-D{i:02d}" for i in range(1, 11)],
+                "phase_complete": False, "next_step_authorized": False,
+                "previous_step_commit": STEP1_FINAL, "previous_step_tree": STEP1_TREE,
+                "new_files_permitted": sorted(STEP2_NEW), "main_merge_authorized": False,
+                "publication_authorized": False}
     if type(control) is not dict or type(step) is not int or step != ACTIVE_STEP:
         raise ValueError("Unsupported active phase or step")
     for key, value in expected.items():
@@ -89,18 +106,29 @@ def verify_phase3_control(control: dict, step: int = 1) -> None:
             raise ValueError(f"Frozen Phase 3 control mismatch: {key}")
 
 
-def verify_phase3_changes(changes: list[tuple[str, str]]) -> None:
+def verify_phase3_changes(changes: list[tuple[str, str]], *, incremental: bool = False) -> None:
+    allowed = STEP2_ALLOWED if incremental else CUMULATIVE_ALLOWED
+    new_files = STEP2_NEW if incremental else CUMULATIVE_NEW
     for status, path in changes:
-        if path not in STEP1_ALLOWED or status not in ("M", "A"):
-            raise ValueError(f"Unauthorized Step 1 change: {status} {path}")
-        if status == "A" and path not in STEP1_NEW:
+        if path not in allowed or status not in ("M", "A"):
+            raise ValueError(f"Unauthorized active-stage change: {status} {path}")
+        if status == "A" and path not in new_files:
             raise ValueError(f"Unapproved new file: {path}")
 
 
-def audit(phase: int = 2, step: int = 1) -> dict:
+def verify_step2_contract_test_migration(before: bytes, after: bytes) -> None:
+    """Only the explicitly authorized forged-stage expression may change."""
+    old = b'if key in ("active_phase","active_step"): control[key]=2'
+    new = b'if key in ("active_phase","active_step"): control[key]+=1'
+    if (type(before) is not bytes or type(after) is not bytes
+            or before.count(old) != 1 or after != before.replace(old, new, 1)):
+        raise ValueError("Step 2 contract-test exception exceeded its exact approved edit")
+
+
+def audit(phase: int = 2, step: int = ACTIVE_STEP) -> dict:
     required = {"LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "THEORY_SOURCES.md"} | COMPLETION
     if phase == 3:
-        required |= STEP1_NEW
+        required |= CUMULATIVE_NEW
     elif phase != 2:
         raise ValueError("Unsupported audit phase")
     for name in required:
@@ -161,7 +189,7 @@ def audit_step10_diff() -> dict:
     return {"changes": changes, "approved_exact_restorations": restorations}
 
 
-def audit_phase3_diff(step: int = 1) -> dict:
+def audit_phase3_diff(step: int = ACTIVE_STEP) -> dict:
     audit(3, step)
     if git("rev-parse", PHASE2_FINAL + "^{tree}").decode().strip() != PHASE2_TREE:
         raise ValueError("Baseline tree mismatch")
@@ -170,6 +198,14 @@ def audit_phase3_diff(step: int = 1) -> dict:
     subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", PHASE2_FINAL, "HEAD"], check=True)
     changes = [tuple(line.split("\t", 1)) for line in git("diff", "--name-status", "--no-renames", PHASE2_FINAL, "HEAD").decode().splitlines()]
     verify_phase3_changes(changes)
+    if git("rev-parse", STEP1_FINAL + "^{tree}").decode().strip() != STEP1_TREE:
+        raise ValueError("Previous accepted Step 1 tree mismatch")
+    subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", STEP1_FINAL, "HEAD"], check=True)
+    incremental = [tuple(line.split("\t", 1)) for line in
+                   git("diff", "--name-status", "--no-renames", STEP1_FINAL, "HEAD").decode().splitlines()]
+    verify_phase3_changes(incremental, incremental=True)
+    verify_step2_contract_test_migration(git("show", f"{STEP1_FINAL}:{STEP2_EXCEPTION}"),
+                                         (ROOT / STEP2_EXCEPTION).read_bytes())
     if git("diff", "--name-only", "HEAD", "--"):
         raise ValueError("Tracked checkout differs from tested commit")
     for path in ("src/recursive_integrity_toolkit/models.py", "src/recursive_integrity_toolkit/errors.py"):
@@ -179,7 +215,8 @@ def audit_phase3_diff(step: int = 1) -> dict:
             if isinstance(node, (ast.ClassDef, ast.FunctionDef)) and definitions.get(node.name) != ast.dump(node, include_attributes=False):
                 raise ValueError(f"Inherited contract changed: {path}:{node.name}")
     result = {"baseline": PHASE2_FINAL, "head": git("rev-parse", "HEAD").decode().strip(),
-              "changes": changes, "old_runtime_definitions": "UNCHANGED", "active_step": step}
+              "changes": changes, "incremental_changes": incremental, "previous_step": STEP1_FINAL,
+              "old_runtime_definitions": "UNCHANGED", "active_step": step}
     print(json.dumps(result, indent=2))
     return result
 
@@ -229,15 +266,26 @@ def baseline_evidence(output: Path) -> dict:
             files[path] = {"mode": mode, "git_blob": blob, "sha256": hashlib.sha256(raw).hexdigest()}
         old, old_log = _collect(root)
     new, new_log = _collect(ROOT)
+    import io
+    with tempfile.TemporaryDirectory(prefix="rit-p3-step1-tests-") as temp:
+        prior_root = Path(temp)
+        with zipfile.ZipFile(io.BytesIO(git("archive", "--format=zip", STEP1_FINAL))) as archive:
+            archive.extractall(prior_root)
+        prior, prior_log = _collect(prior_root)
+    expected_prior = 1273 if os.environ.get("RIT_TEST_PARQUET") == "1" else 1270
+    if len(prior) != expected_prior or set(prior) - set(new):
+        raise ValueError("Accepted Step 1 test identities were lost")
+    (output / "step1-collection.log").write_text(prior_log, encoding="utf-8")
     expected = 1162 if os.environ.get("RIT_TEST_PARQUET") == "1" else 1159
     if len(files) != 197 or len(old) != expected or set(old) - set(new):
         raise ValueError(f"Frozen file/test identities do not reconcile: {len(files)} files, {len(old)} baseline tests, {len(set(old)-set(new))} missing")
     payload = {"baseline_commit": PHASE2_FINAL, "files": files, "baseline_nodeids": old, "current_nodeids": new,
+               "previous_step_commit": STEP1_FINAL, "previous_step_nodeids": prior,
                "missing_nodeids": [], "nodeids_sha256": hashlib.sha256(("\n".join(old)+"\n").encode()).hexdigest()}
     (output / "baseline-identities.json").write_text(json.dumps(payload, indent=2)+"\n", encoding="utf-8")
     (output / "baseline-collection.log").write_text(old_log, encoding="utf-8")
     (output / "current-collection.log").write_text(new_log, encoding="utf-8")
-    summary = {"baseline_files": len(files), "inherited_tests": len(old), "current_tests": len(new), "missing_tests": 0,
+    summary = {"baseline_files": len(files), "inherited_tests": len(old), "current_tests": len(new), "missing_tests": 0, "previous_step_tests": len(prior),
                "nodeids_sha256": payload["nodeids_sha256"]}
     print(json.dumps(summary, indent=2))
     return summary
@@ -300,6 +348,13 @@ for name in names: importlib.import_module(name)
 from recursive_integrity_toolkit.models import AuditBundle,InputSource,FileRole,CapabilityKey,CapabilityStatus,NumericalPolicy
 from recursive_integrity_toolkit.io.validation import validate_bundle
 assert NumericalPolicy().absolute_tolerance==1e-12
+from recursive_integrity_toolkit.io.normalization import normalize_row
+from recursive_integrity_toolkit.config import RepresentationConfig
+from recursive_integrity_toolkit.representations.field import assign_field_states
+row=normalize_row({"dataset_version":"v1","record_id":"literal","content":"synthetic","topic":""},kind="records")
+field_result=assign_field_states((row,),dataset_versions=("v1",),scope_id="installed-field-check",
+    config=RepresentationConfig("topic","topic_field","topic","smoke-v1","exclude"))
+assert field_result.included_count==1 and field_result.assignments[0].state_id==""
 hero=Path(sys.argv[1])/'examples'/'hero'
 files=('records_v1.csv','records_v2.csv','provenance.csv','config.json','version_order.json','EXPECTED_OUTPUTS.md')
 before={n:hashlib.sha256((hero/n).read_bytes()).hexdigest() for n in files}
@@ -309,7 +364,7 @@ assert result.observability.maximum_level==4 and not result.has_errors
 assert result.observability.capabilities[CapabilityKey.MODEL_LONGITUDINAL].status is CapabilityStatus.UNAVAILABLE
 assert before=={n:hashlib.sha256((hero/n).read_bytes()).hexdigest() for n in files}
 assert not {'numpy','pandas','pyarrow'} & set(sys.modules)
-print('installed: 40 imports, Step 1 contracts, input-only Hero Level 4, no dependencies/network: PASS')
+print('installed: 40 imports, Step 2 field assignment, input-only Hero Level 4, no dependencies/network: PASS')
 '''
         subprocess.run([str(python), "-I", "-c", program, str(ROOT)], cwd=work, check=True)
         for arg in ("--help", "version"):
@@ -318,14 +373,14 @@ print('installed: 40 imports, Step 1 contracts, input-only Hero Level 4, no depe
             subprocess.run([str(bindir / (name+".exe" if os.name == "nt" else name)), arg], cwd=work, check=True)
 
 
-def candidate(output: Path, step: int = 1) -> None:
+def candidate(output: Path, step: int = ACTIVE_STEP) -> None:
     result = {"audit": audit_phase3_diff(step), "phase_complete": False, "next_step_authorized": False}
     output.mkdir(parents=True, exist_ok=True)
-    result["core"] = verify_junit(output / "core.xml", minimum=1159)
-    result["parquet"] = verify_junit(output / "parquet.xml", require_parquet=True, minimum=1162)
+    result["core"] = verify_junit(output / "core.xml", minimum=1270)
+    result["parquet"] = verify_junit(output / "parquet.xml", require_parquet=True, minimum=1273)
     result["identities"] = baseline_evidence(output)
     verify_distributions(output / "dist")
-    archive = output / "recursive-integrity-toolkit-phase3-step1-candidate.zip"
+    archive = output / "recursive-integrity-toolkit-phase3-step2-candidate.zip"
     subprocess.run(["git", "-C", str(ROOT), "archive", "--format=zip", "--prefix=recursive-integrity-toolkit/", "HEAD", "-o", str(archive.resolve())], check=True)
     tracked = {n for n in git("ls-files", "-z").decode().split("\0") if n}
     with zipfile.ZipFile(archive) as zipped:
@@ -343,16 +398,16 @@ def candidate(output: Path, step: int = 1) -> None:
             result["versions"][name] = importlib.metadata.version(name)
         except importlib.metadata.PackageNotFoundError:
             result["versions"][name] = None
-    (output / "phase3_step1_execution.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
+    (output / "phase3_step2_execution.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
     files = sorted(p for p in output.rglob("*") if p.is_file() and p.name != "phase3_artifacts.sha256")
     (output / "phase3_artifacts.sha256").write_text("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(output).as_posix()}\n" for p in files), encoding="utf-8")
-    print(f"Step 1 candidate: {len(tracked)} tracked files verified. No Phase 3 completion or publication.")
+    print(f"Step 2 candidate: {len(tracked)} tracked files verified. No Phase 3 completion or publication.")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", type=int, choices=(2, 3), default=2)
-    parser.add_argument("--step", type=int, default=1)
+    parser.add_argument("--step", type=int, default=ACTIVE_STEP)
     parser.add_argument("--diff", action="store_true")
     parser.add_argument("--junit", type=Path)
     parser.add_argument("--require-parquet", action="store_true")
@@ -364,7 +419,7 @@ def main() -> int:
     parser.add_argument("--delivery", type=Path)
     args = parser.parse_args()
     if args.delivery is not None:
-        raise ValueError("Final Phase 3 delivery is not authorized in Step 1")
+        raise ValueError("Final Phase 3 delivery is not authorized in Step 2")
     if args.junit is not None:
         verify_junit(args.junit, require_parquet=args.require_parquet, minimum=args.minimum_tests)
     elif args.baseline_evidence is not None:

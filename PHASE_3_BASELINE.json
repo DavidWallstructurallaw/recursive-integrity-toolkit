@@ -1,7 +1,7 @@
 {
   "control_version": "1.0",
   "active_phase": 3,
-  "active_step": 1,
+  "active_step": 2,
   "baseline_commit": "78554993febb01609cb90814cc24cce2012bf7d7",
   "baseline_tree": "706b99e27c2d284a7435ae03e2eb2376214bfa46",
   "baseline_test_tree": "d787d9b06c41a91f8587f6b57a8af710419d114f",
@@ -53,17 +53,19 @@
     ".github/workflows/security.yml",
     "PHASE_3_BASELINE.json",
     "PHASE_3_DECISIONS.md",
-    "PHASE_3_PLAN.md",
     "docs/architecture.md",
+    "docs/data_schema.md",
     "docs/theory_traceability.md",
     "scripts/check_spec_consistency.py",
     "scripts/check_traceability.py",
     "scripts/release_check.py",
     "src/recursive_integrity_toolkit/errors.py",
     "src/recursive_integrity_toolkit/models.py",
+    "src/recursive_integrity_toolkit/representations/base.py",
+    "src/recursive_integrity_toolkit/representations/field.py",
     "tests/conftest.py",
-    "tests/golden/phase3_math_cases.json",
-    "tests/golden/phase3_math_cases.md",
+    "tests/fixtures/invalid_schema/phase3_representation_cases.json",
+    "tests/fixtures/minimal_valid/phase3_field_records.jsonl",
     "tests/integration/test_ci_workflows.py",
     "tests/integration/test_no_algorithms.py",
     "tests/integration/test_no_network.py",
@@ -73,15 +75,13 @@
     "tests/integration/test_package_install.py",
     "tests/integration/test_repository_structure.py",
     "tests/unit/test_PR016_determinism.py",
+    "tests/unit/test_T1_representation.py",
     "tests/unit/test_phase3_contracts.py"
   ],
   "new_files_permitted": [
-    "PHASE_3_BASELINE.json",
-    "PHASE_3_DECISIONS.md",
-    "PHASE_3_PLAN.md",
-    "tests/golden/phase3_math_cases.json",
-    "tests/golden/phase3_math_cases.md",
-    "tests/unit/test_phase3_contracts.py"
+    "tests/fixtures/invalid_schema/phase3_representation_cases.json",
+    "tests/fixtures/minimal_valid/phase3_field_records.jsonl",
+    "tests/unit/test_T1_representation.py"
   ],
   "file_identity_rule": "The immutable Git root tree commits every original filename, mode and blob. The baseline-evidence command materializes each of the 197 baseline blob and SHA-256 identities into retained execution evidence.",
   "inherited_test_identity_rule": "Collection runs against an isolated copy of the exact pinned baseline, in each explicit optional-dependency mode. Store the complete original/current node-ID lists and their digest. Every inherited node ID must remain collected; active-stage assertion changes have a migration record in PHASE_3_DECISIONS.md.",
@@ -95,5 +95,12 @@
   "phase_complete": false,
   "next_step_authorized": false,
   "main_merge_authorized": false,
-  "publication_authorized": false
+  "publication_authorized": false,
+  "previous_step_commit": "20487e356239d5b5642b6fff595b381d0faa2a4e",
+  "previous_step_tree": "7d9867fb7543bfd50a9b01bb48530a3411121d31",
+  "step2_authorization": "Theory Owner explicitly instructed Phase 3 Step 2 and approved the single-test-file exception in the project conversation.",
+  "step2_exception": {
+    "path": "tests/unit/test_phase3_contracts.py",
+    "edit": "Only the forged-stage value changes from control[key]=2 to control[key]+=1."
+  }
 }

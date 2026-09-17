@@ -8,6 +8,7 @@ STEP1_EXECUTABLE = {"__init__.py", "__main__.py", "cli.py", "config.py", "errors
 STEP2_EXECUTABLE = {"io/loaders.py", "utils/hashing.py", "utils/paths.py"}
 STEP3_EXECUTABLE = {"io/schema_mapping.py"}
 STEP8_EXECUTABLE = {"observability/levels.py"}
+PHASE3_FIELD_EXECUTABLE = {"representations/base.py", "representations/field.py"}
 STEP4_EXECUTABLE = {"io/normalization.py", "io/validation.py", "utils/ordering.py"}
 PROTECTED_PREFIXES = {"io", "lineage", "metrics", "observability", "reports", "representations", "utils"}
 FORBIDDEN_ANALYTICAL_IMPORT_ROOTS = {"networkx", "scipy", "sklearn", "torch", "tensorflow", "transformers"}
@@ -22,7 +23,7 @@ def _is_docstring_only(path: Path) -> bool:
 def test_only_step8_authorized_modules_gain_behavior(package_root) -> None:
     for path in sorted(package_root.rglob("*.py")):
         relative = path.relative_to(package_root)
-        if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
+        if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
             continue
         assert _is_docstring_only(path), f"Premature executable body: {relative}"
 
@@ -30,7 +31,7 @@ def test_only_step8_authorized_modules_gain_behavior(package_root) -> None:
 def test_protected_phase3_plus_modules_remain_placeholders(package_root) -> None:
     for prefix in PROTECTED_PREFIXES:
         for path in sorted((package_root / prefix).rglob("*.py")):
-            if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE:
+            if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE:
                 continue
             assert _is_docstring_only(path), f"Protected module changed after Step 8: {path}"
     assert _is_docstring_only(package_root / "result.py")
@@ -62,7 +63,7 @@ def test_PR003_traceability_script_enforces_step8_scope(repo_root) -> None:
     result = subprocess.run([sys.executable, "scripts/check_traceability.py"],
                             cwd=repo_root, capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "protected docstring-only modules: 26" in result.stdout
+    assert "protected docstring-only modules: 24" in result.stdout
 
 
 # The checker itself must reject new work outside the current Step 8 boundary.
@@ -155,3 +156,62 @@ def test_PR002_checker_rejects_unauthorized_mutations(repo_root, package_root, t
     result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, check=False)
     assert result.returncode != 0, f"Unauthorized implementation accepted: {relative}"
     assert any(word in result.stderr for word in ("Protected", "Unexpected", "Dependency", "Import")), result.stderr
+
+
+# Phase 3 Step 2: retain all prior negative identities and add pure-field gates.
+@pytest.mark.parametrize("relative", ["representations/base.py", "representations/field.py"])
+@pytest.mark.parametrize("injection", [
+    "import socket\n", "from ..metrics import diversity\n", "from ..models import __builtins__\n",
+    "from ..config import RepresentationConfig as eval\n", "value = 1\n",
+    "open('private')\n", "eval('1')\n", "lambda: None\n",
+    "def support_size(): return 1\n", "from ..io.loaders import load_table\n",
+])
+def test_phase3_step2_injected_later_feature_is_rejected(repo_root, tmp_path, relative, injection):
+    target = tmp_path / "gate"
+    shutil.copytree(repo_root / "src", target / "src", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    (target / "scripts").mkdir()
+    shutil.copy2(repo_root / "scripts/check_traceability.py", target / "scripts/check_traceability.py")
+    file = target / "src/recursive_integrity_toolkit" / relative
+    file.write_text(file.read_text(encoding="utf-8") + "\n" + injection, encoding="utf-8")
+    result = subprocess.run([sys.executable, str(target / "scripts/check_traceability.py")],
+                            cwd=target, text=True, capture_output=True)
+    assert result.returncode != 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("body", [
+    "return sum(values)", "return values ** 2", "return value / 2", "return value * value",
+    "return open(value)", "return values.pop()", "return callback(values)",
+    "return __import__('numpy')", "return (lambda: value)()", "return value.lower()",
+])
+def test_phase3_step2_hidden_computation_is_rejected(repo_root, body):
+    import runpy
+    checker = runpy.run_path(str(repo_root / "scripts/check_traceability.py"), run_name="field_gate")
+    with pytest.raises(SystemExit):
+        checker["_phase3_representation_boundary"](
+            ast.parse("def _selection():\n    " + body + "\n"), "representations/field.py")
+
+
+@pytest.mark.parametrize("path", ["PHASE_3_PLAN.md", "tests/golden/phase3_math_cases.json",
+    "src/recursive_integrity_toolkit/metrics/diversity.py", "src/recursive_integrity_toolkit/io/validation.py",
+    "VALIDATION_PLAN.md", "pyproject.toml"])
+def test_phase3_step2_incremental_scope_rejects_unapproved_edits(repo_root, path):
+    import runpy
+    checker = runpy.run_path(str(repo_root / "scripts/release_check.py"), run_name="step2_paths")
+    with pytest.raises(ValueError):
+        checker["verify_phase3_changes"]([("M", path)], incremental=True)
+
+
+@pytest.mark.parametrize("change", ["none", "extra_newline", "skip", "numeric_expectation", "wrong_type"])
+def test_phase3_step2_contract_test_exception_is_exact(repo_root, change):
+    import runpy
+    checker = runpy.run_path(str(repo_root / "scripts/release_check.py"), run_name="step2_exception")
+    after = (repo_root / "tests/unit/test_phase3_contracts.py").read_bytes()
+    before = after.replace(b"control[key]+=1", b"control[key]=2", 1)
+    checker["verify_step2_contract_test_migration"](before, after)
+    if change == "none": bad = before
+    elif change == "extra_newline": bad = after + b"\n"
+    elif change == "skip": bad = b"# skipped\n" + after
+    elif change == "numeric_expectation": bad = after.replace(b'=="5/8"', b'=="1/2"')
+    else: bad = after.decode()
+    with pytest.raises(ValueError):
+        checker["verify_step2_contract_test_migration"](before, bad)

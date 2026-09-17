@@ -88,3 +88,50 @@ Content is read only by explicit LOCAL_REF requests through PR-017 containment a
 The bundle returns inventory, records, optional provenance, join evidence, chronology, generation when available, capability classification, mapping evidence, resolved-content identities and diagnostics. It writes no report. Check has_errors independently of maximum level. Content/parent-family failures can coexist with independent valid metadata; fatal structural input errors raise.
 
 Hero qualifies as Level 4 without metric calculation. Model longitudinal remains unavailable. Scenario declarations may establish experimental eligibility without execution. State assignment, analytical shares/bounds/deltas, general lineage, ancestry, simulation and rendering remain deferred. All five schemas remain unchanged in Step 10. Phase 3 is not authorized.
+
+
+## Phase 3 Step 2: literal field representations
+
+The preceding Phase 2 text documents the preserved input layer. This internal
+interface adds scoped state assignments after canonical normalization:
+
+```python
+from recursive_integrity_toolkit.config import RepresentationConfig
+from recursive_integrity_toolkit.representations.field import assign_field_states
+
+representation = assign_field_states(
+    validated_records,
+    dataset_versions=("v1",),
+    scope_id="v1-topic-audit",
+    config=RepresentationConfig(
+        name="topic", source="topic_field", field="topic",
+        version="declared-topic-taxonomy-v1", missing_value_policy="exclude",
+    ),
+)
+```
+
+Every declaration is explicit, including taxonomy version. Topic and label are
+supported; custom upstream columns require prior mapping. State labels preserve
+case, whitespace and Unicode spelling. Empty strings surviving normalization are
+literal states, distinct from absent fields, null and explicit missing-state IDs.
+Labels supply no independent proof of semantics, truth or source independence.
+
+The three policies are error, exclude and explicit_missing_state. The last needs
+a separately supplied nonempty missing_state_id and rejects collisions with any
+selected observed value, even without missing cells. No serialized config field
+is added. Excluded records remain in the audit. A wholly absent configured column
+is an error; present all-null columns may yield ALL_EXCLUDED. Empty explicit
+input with complete config yields EMPTY_SCOPE, not a zero diversity value.
+
+Fallback requires no explicit config plus allow_fallback=True, fallback_version
+and fallback_missing_policy. It selects field presence in topic-then-label order,
+records the choice and emits W_REPRESENTATION_FALLBACK. Explicit config wins;
+invalid config fails. No per-row substitution, embedding or hashing occurs.
+
+The immutable result retains selection metadata, ordered assignments, source
+field states, included/excluded identities and coverage. Coverage uses all
+selected_valid_records. Future representation calculations use only
+included_representation_records; provenance scope is unchanged. There are no
+state-frequency, support, diversity or tail calculations in this interface.
+Payload-bearing result fields are hidden from repr; errors retain coordinates
+without echoing raw contents or unredacted paths. Inputs are never mutated.

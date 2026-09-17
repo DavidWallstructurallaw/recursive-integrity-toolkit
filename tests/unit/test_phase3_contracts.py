@@ -228,7 +228,7 @@ def test_phase3_approved_plan_and_baseline_control():
                                  "active_phase","active_step","permitted_paths","approved_decisions","phase_complete"])
 def test_phase3_forged_manifest_does_not_authorize_a_change(key):
     control=deepcopy(json.loads((ROOT/"PHASE_3_BASELINE.json").read_text(encoding="utf-8")))
-    if key in ("active_phase","active_step"): control[key]=2
+    if key in ("active_phase","active_step"): control[key]+=1
     elif key=="phase_complete": control[key]=True
     elif key=="permitted_paths": control[key].append("src/recursive_integrity_toolkit/metrics/diversity.py")
     elif key=="approved_decisions": control[key].pop()
