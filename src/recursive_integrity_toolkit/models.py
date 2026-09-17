@@ -18,7 +18,7 @@ Limits:
     implemented here. These types carry validated metadata only.
 
 Current phase status:
-    Phase 2 Step 6 chronology, parent-reference and generation contracts. Import-safe. No analytical behavior.
+    Phase 2 Step 8 validation and observability contracts. Import-safe. No analytical behavior.
 """
 
 from __future__ import annotations
@@ -225,6 +225,7 @@ class Capability:
     requirements_missing: tuple[str, ...] = ()
     reason_codes: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()
+    coverage_details: Mapping[str, ValidationCoverage] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,6 +236,7 @@ class ObservabilityAssessment:
     capabilities: Mapping[CapabilityKey, Capability] = field(default_factory=dict)
     basis: tuple[str, ...] = ()
     limitations: tuple[str, ...] = ()
+    validation_messages: tuple[ValidationMessage, ...] = ()
 
     def __post_init__(self) -> None:
         if isinstance(self.maximum_level, bool) or not isinstance(self.maximum_level, int):
@@ -498,3 +500,22 @@ class GenerationValidationResult:
         """Expose retained failures without changing the declarations."""
         return any(message.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)
                    for message in self.messages)
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioParameters:
+    """PR-010/PR-011 explicit internal scenario inputs, never simulated results.
+
+    Canonical parameter names come from DEFINITIONS_AND_UNITS sections 12-13.
+    Distributions contain explicit (state, mass) pairs and are never estimated,
+    mixed or renormalized. This does not extend the run-config JSON schema or
+    enable a simulator. Activation and recorded seed still use ScenarioConfig.
+    """
+
+    model_name: str
+    resample_size: int | None = None
+    simulation_horizon: int | None = None
+    simulation_replicates: int | None = None
+    state_distribution: tuple[tuple[str, float], ...] | None = field(default=None, repr=False)
+    external_input_distribution: tuple[tuple[str, float], ...] | None = field(default=None, repr=False)
+    reopening_weight: float | None = None

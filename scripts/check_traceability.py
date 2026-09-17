@@ -1,8 +1,8 @@
-"""Check module ownership and the approved Phase 2 Step 7 boundary.
+"""Check module ownership and the approved Phase 2 Step 8 boundary.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
-approved Phase 2 step on 2026-09-16. Step 7 adds contained local content paths
-and explicitly requested UTF-8 reads. Earlier validation definitions stay intact.
+approved Phase 2 step on 2026-09-16. Step 8 adds evidence-bounded observability classification only. Earlier
+validation and explicit local content-read definitions stay intact.
 General graphs, cycles, roots, ancestors, metrics and later layers stay protected.
 
 This script inspects source syntax without importing the package or loading
@@ -22,6 +22,7 @@ BOOTSTRAP = {"__init__.py", "__main__.py", "cli.py"}
 STEP1_CORE = {"models.py", "errors.py", "config.py"}
 STEP2_IO = {"io/loaders.py", "utils/hashing.py", "utils/paths.py"}
 STEP3_MAPPING = {"io/schema_mapping.py"}
+STEP8_OBSERVABILITY = {"observability/levels.py"}
 ALLOWED_FUNCTIONS = {
     "__init__.py": set(),
     "__main__.py": set(),
@@ -145,6 +146,18 @@ ALLOWED_FUNCTIONS["utils/paths.py"].update({
 ALLOWED_FUNCTIONS["io/loaders.py"].add("load_content_reference")
 ALLOWED_CORE_IMPORTS["utils/paths.py"].add("stat")
 
+# Step 8 opens exactly one classifier. No analytical or IO permission is added.
+ALLOWED_FUNCTIONS["observability/levels.py"] = {
+    "_invalid", "_cap", "_records", "_row_key", "_content_keys", "_representation",
+    "_content_capability", "_provenance_capability", "_lineage_capability",
+    "_compatibility", "_longitudinal_capability", "_distribution",
+    "_scenario_capability", "classify_observability",
+}
+ALLOWED_CLASSES["models.py"].add("ScenarioParameters")
+ALLOWED_CORE_IMPORTS["observability/levels.py"] = {
+    "__future__", "math", "types", "..config", "..errors", "..io.validation", "..models",
+}
+
 # Preserve every import and file restriction from the Phase 1 checker.
 FORBIDDEN_IMPORTS = {
     "numpy", "pandas", "pyarrow", "networkx", "scipy", "sklearn", "torch",
@@ -162,7 +175,7 @@ def _definitions(tree: ast.AST, prefix: str = "") -> tuple[list[str], list[str]]
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             name = f"{prefix}.{node.name}" if prefix else node.name
             if isinstance(node, ast.AsyncFunctionDef):
-                raise SystemExit(f"Async implementation is outside Step 7: {name}")
+                raise SystemExit(f"Async implementation is outside Step 8: {name}")
             if isinstance(node, ast.ClassDef):
                 classes.append(name)
             else:
@@ -179,9 +192,9 @@ def main() -> int:
     if len(paths) != 40:
         raise SystemExit(f"Expected 40 package modules, found {len(paths)}")
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
-    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS) - relative_paths
+    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY) - relative_paths
     if missing:
-        raise SystemExit(f"Required startup or Step 7 modules missing: {sorted(missing)}")
+        raise SystemExit(f"Required startup or Step 8 modules missing: {sorted(missing)}")
 
     imported_roots: set[str] = set()
     forbidden_locations: list[str] = []
@@ -196,23 +209,32 @@ def main() -> int:
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
 
-        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS:
+        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY:
             if not (
                 len(tree.body) == 1
                 and isinstance(tree.body[0], ast.Expr)
                 and isinstance(tree.body[0].value, ast.Constant)
                 and isinstance(tree.body[0].value.value, str)
             ):
-                raise SystemExit(f"Protected non-Step-7 executable body found: {path}")
+                raise SystemExit(f"Protected non-Step-8 executable body found: {path}")
             placeholder_count += 1
         else:
             functions, classes = _definitions(tree)
             if set(functions) != ALLOWED_FUNCTIONS[relative] or len(functions) != len(set(functions)):
-                raise SystemExit(f"Unexpected Step 7 functions in {relative}: {functions}")
+                raise SystemExit(f"Unexpected Step 8 functions in {relative}: {functions}")
             if set(classes) != ALLOWED_CLASSES.get(relative, set()) or len(classes) != len(set(classes)):
-                raise SystemExit(f"Unexpected Step 7 classes in {relative}: {classes}")
+                raise SystemExit(f"Unexpected Step 8 classes in {relative}: {classes}")
 
         for node in ast.walk(tree):
+            if relative in STEP8_OBSERVABILITY:
+                if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow, ast.MatMult)):
+                    raise SystemExit(f"Unexpected analytical arithmetic in {relative}")
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == "math":
+                    if node.func.attr not in {"isfinite", "fsum", "isclose"} or not any(
+                        isinstance(fn, ast.FunctionDef) and fn.name == "_distribution"
+                        and any(child is node for child in ast.walk(fn)) for fn in tree.body
+                    ):
+                        raise SystemExit(f"Unexpected math use outside input validation in {relative}")
             if relative in STEP2_IO:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
@@ -223,7 +245,7 @@ def main() -> int:
                         isinstance(node.func, ast.Attribute) and node.func.attr in blocked_methods
                     ):
                         raise SystemExit(f"Unexpected executable, write or network capability in {relative}")
-            if relative in STEP3_MAPPING | STEP4_ROWS | {"models.py"}:
+            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | {"models.py"}:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
                 if isinstance(node, ast.Call):
@@ -264,10 +286,10 @@ def main() -> int:
                     )
                     if not lazy_parquet:
                         forbidden_locations.append(f"{relative}: {imported}")
-            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS:
+            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
-                    raise SystemExit(f"Import outside Step 7 contracts in {relative}: {sorted(unexpected)}")
+                    raise SystemExit(f"Import outside Step 8 contracts in {relative}: {sorted(unexpected)}")
 
     if forbidden_locations:
         raise SystemExit(f"Dependency outside the approved scope: {forbidden_locations}")
@@ -278,9 +300,10 @@ def main() -> int:
     print(f"authorized Step 2 file modules: {sorted(STEP2_IO)}")
     print(f"authorized Step 3 mapping modules: {sorted(STEP3_MAPPING)}")
     print(f"authorized Step 4 row modules: {sorted(STEP4_ROWS)}")
+    print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Step 7 definition and import allowlists: PASS")
+    print("Step 8 definition and import allowlists: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 

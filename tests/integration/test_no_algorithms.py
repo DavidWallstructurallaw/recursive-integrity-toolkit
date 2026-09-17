@@ -1,4 +1,4 @@
-"""Protect Phase 2 Step 7 from premature analytical implementation."""
+"""Protect Phase 2 Step 8 from premature analytical implementation."""
 
 import ast
 from pathlib import Path
@@ -7,6 +7,7 @@ from pathlib import Path
 STEP1_EXECUTABLE = {"__init__.py", "__main__.py", "cli.py", "config.py", "errors.py", "models.py"}
 STEP2_EXECUTABLE = {"io/loaders.py", "utils/hashing.py", "utils/paths.py"}
 STEP3_EXECUTABLE = {"io/schema_mapping.py"}
+STEP8_EXECUTABLE = {"observability/levels.py"}
 STEP4_EXECUTABLE = {"io/normalization.py", "io/validation.py", "utils/ordering.py"}
 PROTECTED_PREFIXES = {"io", "lineage", "metrics", "observability", "reports", "representations", "utils"}
 FORBIDDEN_ANALYTICAL_IMPORT_ROOTS = {"networkx", "scipy", "sklearn", "torch", "tensorflow", "transformers"}
@@ -18,10 +19,10 @@ def _is_docstring_only(path: Path) -> bool:
     return len(tree.body) == 1 and isinstance(tree.body[0], ast.Expr) and isinstance(tree.body[0].value, ast.Constant) and isinstance(tree.body[0].value.value, str)
 
 
-def test_only_step7_authorized_modules_gain_behavior(package_root) -> None:
+def test_only_step8_authorized_modules_gain_behavior(package_root) -> None:
     for path in sorted(package_root.rglob("*.py")):
         relative = path.relative_to(package_root)
-        if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
+        if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
             continue
         assert _is_docstring_only(path), f"Premature executable body: {relative}"
 
@@ -29,9 +30,9 @@ def test_only_step7_authorized_modules_gain_behavior(package_root) -> None:
 def test_protected_phase3_plus_modules_remain_placeholders(package_root) -> None:
     for prefix in PROTECTED_PREFIXES:
         for path in sorted((package_root / prefix).rglob("*.py")):
-            if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE:
+            if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE:
                 continue
-            assert _is_docstring_only(path), f"Protected module changed after Step 7: {path}"
+            assert _is_docstring_only(path), f"Protected module changed after Step 8: {path}"
     assert _is_docstring_only(package_root / "result.py")
 
 
@@ -55,16 +56,16 @@ def test_no_analytical_function_names_exist(package_root) -> None:
     assert not (names & FORBIDDEN_ANALYTICAL_NAMES)
 
 
-def test_PR003_traceability_script_enforces_step7_scope(repo_root) -> None:
+def test_PR003_traceability_script_enforces_step8_scope(repo_root) -> None:
     import subprocess
     import sys
     result = subprocess.run([sys.executable, "scripts/check_traceability.py"],
                             cwd=repo_root, capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "protected docstring-only modules: 27" in result.stdout
+    assert "protected docstring-only modules: 26" in result.stdout
 
 
-# The checker itself must reject new work outside the current Step 7 boundary.
+# The checker itself must reject new work outside the current Step 8 boundary.
 import shutil
 import subprocess
 import sys
@@ -72,6 +73,19 @@ import pytest
 
 
 @pytest.mark.parametrize("relative,injected", [
+    ("observability/levels.py", "import socket\n"),
+    ("observability/levels.py", "from ..metrics import diversity\n"),
+    ("observability/levels.py", "from ..lineage import graph\n"),
+    ("observability/levels.py", "from ..io.loaders import load_table\n"),
+    ("observability/levels.py", "eval('1')\n"),
+    ("observability/levels.py", "open('unexpected')\n"),
+    ("observability/levels.py", "lambda: None\n"),
+    ("observability/levels.py", "math.sqrt(4)\n"),
+    ("observability/levels.py", "math.fsum((0.5, 0.5))\n"),
+    ("observability/levels.py", "1 - 0.5 ** 2\n"),
+    ("observability/levels.py", "1 / 2\n"),
+    ("observability/levels.py", "def universal_score(): pass\n"),
+
     ("utils/paths.py", "import socket\n"),
     ("utils/paths.py", "eval('1')\n"),
     ("utils/paths.py", "os.system('unapproved')\n"),
