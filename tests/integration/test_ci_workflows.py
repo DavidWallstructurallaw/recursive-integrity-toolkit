@@ -176,3 +176,45 @@ def test_phase2_runtime_gates_remain_exact_allowlists(repo_root):
     for term in ("numpy", "pandas", "networkx", "transformers"):
         assert term in script
     assert "protected docstring-only modules" in script
+
+
+# Explicitly authorized, digest-bounded restoration. Original hash gate above
+# remains unchanged. Mutation cases must fail instead of widening authority.
+def _restoration_bytes(repo_root):
+    after = (repo_root / "VALIDATION_PLAN.md").read_bytes()
+    before = after.replace(b"| Status | APPROVED PHASE 0 BASELINE |",
+                           b"| Status | DRAFT VALIDATION BASELINE |", 1)
+    before = before.replace(b"Definitions marked `APPROVED DECISION`",
+                            b"Definitions marked `PENDING DECISION`", 1)
+    return before, after
+
+
+def test_phase2_restoration_accepts_only_original_approved_transition(repo_root):
+    tools = _release_tools(repo_root)
+    before, after = _restoration_bytes(repo_root)
+    result = tools["verify_approved_restoration"]("VALIDATION_PLAN.md", "M", before, after)
+    assert result["after_sha256"] == "16f5fe539da2b3cff1c3e0a2854208bd7fbc1e4c5b332684265b06a03a90cf2f"
+    assert "VALIDATION_PLAN.md" not in tools["STEP10_ALLOWED"]
+
+
+@pytest.mark.parametrize("change", ["path", "added", "deleted", "before", "after", "unchanged", "type"])
+def test_phase2_restoration_rejects_wider_changes(repo_root, change):
+    verify = _release_tools(repo_root)["verify_approved_restoration"]
+    before, after = _restoration_bytes(repo_root)
+    path, status = "VALIDATION_PLAN.md", "M"
+    if change == "path":
+        path = "DEFINITIONS_AND_UNITS.md"
+    elif change == "added":
+        status = "A"
+    elif change == "deleted":
+        status = "D"
+    elif change == "before":
+        before += b"\n"
+    elif change == "after":
+        after += b"\n"
+    elif change == "unchanged":
+        after = before
+    elif change == "type":
+        after = after.decode("utf-8")
+    with pytest.raises(ValueError):
+        verify(path, status, before, after)

@@ -41,6 +41,23 @@ PROHIBITED = {"server", "webapp", "cloud", "telemetry", "plugins", "agents", "ll
               "auth", "database", "policy_enforcement"}
 PARQUET_CASES = {"test_PR002_parquet_real_roundtrip", "test_PR002_parquet_real_row_limit",
                  "test_PR002_parquet_real_invalid_file"}
+# Theory Owner authorized exactly this restoration after the Step 10 hash gate
+# exposed a pre-Phase-2 draft-state copy. This is not a general allowlist entry.
+RESTORATION_PATH = "VALIDATION_PLAN.md"
+RESTORATION_BEFORE_SHA256 = "564abf56c91141d0cd8ca09024f1cf6dda63bf4ba12acf6563bb7cbc158a84f7"
+RESTORATION_AFTER_SHA256 = "16f5fe539da2b3cff1c3e0a2854208bd7fbc1e4c5b332684265b06a03a90cf2f"
+
+
+def verify_approved_restoration(path: str, status: str, before: bytes, after: bytes) -> dict:
+    """Allow only the approved path, modified status, and exact before/after bytes."""
+    if path != RESTORATION_PATH or status != "M":
+        raise ValueError("Restoration exception does not authorize this path or change kind")
+    if (type(before) is not bytes or type(after) is not bytes
+            or hashlib.sha256(before).hexdigest() != RESTORATION_BEFORE_SHA256
+            or hashlib.sha256(after).hexdigest() != RESTORATION_AFTER_SHA256):
+        raise ValueError("Restoration exception requires the exact approved byte transition")
+    return {"path": path, "before_sha256": RESTORATION_BEFORE_SHA256,
+            "after_sha256": RESTORATION_AFTER_SHA256, "authorization": "Theory Owner exact restoration"}
 
 
 def git(*args: str) -> bytes:
@@ -98,9 +115,13 @@ def audit() -> dict:
 def audit_step10_diff() -> dict:
     """Compare to the approved Step 9 Git object; no file-list inference."""
     changes = []
+    restorations = []
     for line in git("diff", "--name-status", "--no-renames", STEP9_BASELINE, "HEAD").decode().splitlines():
         status, path = line.split("\t", 1)
-        if path not in STEP10_ALLOWED or status not in ("M", "A"):
+        if path == RESTORATION_PATH:
+            restorations.append(verify_approved_restoration(
+                path, status, git("show", f"{STEP9_BASELINE}:{path}"), git("show", f"HEAD:{path}")))
+        elif path not in STEP10_ALLOWED or status not in ("M", "A"):
             raise ValueError(f"Out-of-scope Step 10 change: {status} {path}")
         if status == "A" and path not in COMPLETION:
             raise ValueError(f"Unapproved new repository file: {path}")
@@ -114,7 +135,8 @@ def audit_step10_diff() -> dict:
     if baseline_project != current_project:
         raise ValueError("This milestone retains its approved dependency and version declarations")
     result = {"baseline": STEP9_BASELINE, "head": git("rev-parse", "HEAD").decode().strip(),
-              "changes": changes, "all_40_package_modules_unchanged": True,
+              "changes": changes, "approved_exact_restorations": restorations,
+              "all_40_package_modules_unchanged": True,
               "all_five_schemas_unchanged": True, "all_six_hero_files_unchanged": True}
     print(json.dumps(result, indent=2))
     return result
