@@ -98,3 +98,29 @@ source hashes and the Step 2 test exception remain frozen. Current-stage functio
 import, call, arithmetic and path gates are explicit. Installed validation includes
 both the inherited no-dependency input check and a separate exact-count check with
 NumPy/pandas present. Intermediate artifacts do not declare phase completion.
+
+## Phase 3 Step 4: single-scope distribution calculations
+
+`metrics/diversity.py` exposes `calculate_state_distribution`,
+`distribution_from_counts` and `distribution_from_probabilities`. These are
+pure in-memory calls for one explicitly selected version and representation.
+The input-only `validate_bundle` workflow remains unchanged and does not call
+metrics. No loader, CLI, report, graph or simulator is imported by this module.
+
+Each result binds counts, frequencies, positive support, Gini-Simpson diversity
+and Simpson concentration to its declared scope and denominator. Optional
+weighted results require an explicit included-key map and remain alongside the
+unweighted output. Supplying probabilities does not create empirical counts.
+Their original total and permitted rounding residual remain visible.
+
+Assignments, exclusions, summary flags and scope identities are revalidated.
+A point-mass diversity of zero is available; an empty or all-excluded
+representation has unavailable scalar values and reasons. No result certifies
+semantic completeness, independent provenance or functional failure. Later
+metric families and the formal report workflow remain deferred.
+
+Twenty-one modules remain protected placeholders. All prior source anchors and
+test identities are retained. The new module has explicit symbol permissions
+and a reviewed, version-neutral AST-body fingerprint in addition to behavioral
+mathematical tests. Build checks also exercise the actual installed distribution
+kernel, separately from the no-dependency import and input-only checks.

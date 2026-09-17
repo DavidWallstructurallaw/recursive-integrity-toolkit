@@ -26,3 +26,26 @@ absent, exact grouping, source preservation, explicit payload selection, collisi
 private repr, unavailable versus zero, and rejection of premature capabilities.
 No new F-number, theorem, entropy measure or semantic-support claim is introduced.
 Report redaction remains a separate unimplemented PR-015/Phase 4 responsibility.
+
+## Phase 3 Step 4 traceability
+
+| Output | Owner and source | Computation |
+|---|---|---|
+| state_count | T1; Definitions 7.1 | Integer count of included assignments, or explicitly supplied aggregate |
+| state_frequency | T1; F-001; Definitions 7.3 | State count divided by the included-record denominator |
+| support_size | T1; F-002; Definitions 7.4-7.6 | Number of strictly positive frequency components |
+| gini_simpson_diversity | T1; F-003; Definitions 9.2 | One minus sum of squared frequencies |
+| simpson_concentration | T1; F-004; Definitions 9.3 | Sum of squared frequencies, without ancestry interpretation |
+| Explicit weighted companions | T1; UD-021; Definitions 9.5 and 19 | State weight mass divided by total included weight; unweighted output preserved |
+
+The supplied-vector entry point does not apply F-001 or fabricate record counts.
+The vector's empirical relationship to its named scope remains caller-declared.
+Calculated scalar fields use derived_metric evidence; supplied vectors and
+integer record counts are labelled observed facts under their declared method.
+Probability acceptance uses P3-D07 with no clipping or normalization.
+
+Tests consume unchanged F001/F002 hand cases and frozen F003-A through F003-D.
+Additional rational, weighting, zero-state, invalid-input and metamorphic cases
+verify implementation behavior without extending the theory. Record-form
+support remains representation-specific. Distributional concentration alone
+never establishes functional failure or semantic completeness.

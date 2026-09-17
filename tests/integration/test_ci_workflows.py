@@ -1,4 +1,4 @@
-"""Preserve workflow guarantees while moving active gates to Phase 3 Step 3."""
+"""Preserve workflow guarantees while moving active gates to Phase 3 Step 4."""
 
 from pathlib import Path
 
@@ -26,7 +26,7 @@ def test_workflows_preserve_phase_boundary(repo_root: Path) -> None:
     assert "test_no_network.py" in combined
     assert "python -m build" in combined
     assert "rit version" in combined
-    assert "--phase 3 --step 3" in combined
+    assert "--phase 3 --step 4" in combined
     assert "release_check.py --diff" not in combined
 
 
@@ -75,7 +75,7 @@ def test_phase2_delivery_builds_both_formats_and_tests_installed_wheel(repo_root
     assert "--delivery" not in text and "twine upload" not in text and "git push" not in text
     script = (repo_root / "scripts/release_check.py").read_text(encoding="utf-8")
     for required in ('"--no-index", "--no-deps"', '"-I"', '"--prefix=recursive-integrity-toolkit/"',
-                     '"recursive-integrity-toolkit-phase3-step3-candidate.zip"', '"phase3_artifacts.sha256"'):
+                     '"recursive-integrity-toolkit-phase3-step4-candidate.zip"', '"phase3_artifacts.sha256"'):
         assert required in script
 
 

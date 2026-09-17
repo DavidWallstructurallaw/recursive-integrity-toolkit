@@ -242,3 +242,85 @@ exception is requested. No main merge, publication, Step 4 or final phase comple
 Theory decisions: Theory Owner approval already recorded above and in P3-D05.
 Implementation, numerical-definition, privacy and boundary review: assistant
 self-review plus executable tests. No independent reviewer sign-off is claimed.
+
+## Phase 3 Step 4 authorization and implementation contract
+
+The Theory Owner explicitly requested Phase 3 Step 4 after accepting Step 3.
+The prior checkpoint is `d2651ca755c82af2e2fec3963bcb6fe270a23be6`, tree
+`7871e6253d770d1561d9f732dd5c0b0f842a4138`. Original Phase 2 authority,
+approved plan bytes, P3-D01 through P3-D10 and all mathematical oracles remain
+unchanged. This section authorizes only the current step, not Step 5.
+
+### Single-scope calculation contract
+
+The only runtime module opened is `metrics/diversity.py`. Its explicit entry
+points are `calculate_state_distribution`, `distribution_from_counts` and
+`distribution_from_probabilities`. The first consumes a structurally revalidated
+RepresentationResult for exactly one selected version. The count entry point
+requires nonnegative strict integers whose positive total matches the included
+record denominator. The supplied-vector entry point preserves explicit
+probabilities without inventing record counts or claiming to have computed
+empirical frequencies. It therefore does not attach F-001 to those supplied
+values. F-002, F-003 and F-004 remain separate derived results.
+
+Every calculated scalar retains its T1 owner, formula ID, units, method, scope,
+representation, weighting, assumptions and limitations. Literal state identities
+including canonical empty strings remain distinct. Explicit zero components
+stay in the state table but do not enlarge positive support. Empty/all-excluded
+representation scopes return unavailable values and reasons, not a fabricated
+zero diversity. Malformed explicit empty or zero-total distributions fail.
+
+Weighting requires `WeightingOptions("weighted", "weight")` plus a plain map
+covering exactly the included canonical record keys. Weighted results accompany
+an unchanged unweighted result. Confidence is never converted into weights.
+Excluded records remain in the original input and provenance scope. Missing or
+extra keys, booleans, negative/nonfinite weights, a nonempty all-zero basis,
+finite-sum overflow and positive-mass frequency underflow fail explicitly.
+No sample size is inferred from weight mass.
+
+Counts are exact integers. Frequencies and moments use binary64 arithmetic,
+with deterministic state/record ordering and math.fsum for float totals and
+Simpson moments. Components are checked before the approved absolute mass
+tolerance of 1e-12. Accepted totals and residuals are disclosed without clipping,
+normalization, smoothing or repair. A tiny positive component remains in support
+even when finite-precision cancellation rounds diversity to zero. No random
+sampling, Shannon entropy or functional-failure inference is performed.
+
+### Step 4 gate and test migrations
+
+The inherited support/diversity owner tests retain their original node IDs.
+Their whole-module-placeholder assertion is replaced by the implemented formula
+boundary and later-function prohibitions. New rational, invalid-input,
+weighting, deterministic and independent-oracle tests check actual arithmetic.
+
+`test_phase3_unauthorized_path_change_fails` retains all parameter identities and
+now explicitly checks the historical Step 1 permission set. The Step 2 and
+Step 3 incremental negative tests likewise retain their identities and check
+their own historical permission sets. New tests separately verify the current
+Step 4 permission set. `tests/unit/test_phase3_contracts.py` is already included
+in Step 4's approved allowlist; no additional file exception is required.
+The exact earlier Step 2 one-expression exception remains verified between its
+frozen Step 1 and Step 2 Git objects. It is not treated as a permanent ban on
+later expressly authorized edits to the same test file.
+
+The checker admits the exact new function, class and import lists and adds a
+literal fingerprint of the reviewed module AST. Existing checks still run.
+Only empty type_params AST metadata added in Python 3.12 is omitted when
+fingerprinting; nonempty parameters are rejected. The digest is never generated
+from current runtime source during gate execution. In-body formula changes,
+new executable symbols, I/O, dynamic execution and later layers are rejected.
+This is a change-control guard, not mathematical proof. Independent rational,
+frozen-golden and invariant tests provide numerical verification. Twenty-one
+package modules remain docstring-only.
+
+All workflows explicitly select `--phase 3 --step 4`. Full core and real-Parquet
+regression, historical test identities, security, unchanged Hero, build and
+installed-wheel checks remain required. Baseline evidence now includes the
+accepted Step 3 node IDs (1575 core and 1578 real-Parquet). Installed checks keep
+no-dependency import/input verification separate from exact-duplicate and
+F-001 through F-004 calculation checks with approved dependencies present.
+
+Review roles remain the Theory Owner's approval and assistant self-review with
+actual executable evidence. No independent human review is claimed. There is
+no source-share, closure, tail, resampling, pair, graph, report or audit-CLI work.
+Stop after Step 4 acceptance; no main merge, publication or phase completion.

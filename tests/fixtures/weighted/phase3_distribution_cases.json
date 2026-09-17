@@ -1,0 +1,53 @@
+{
+  "status": "authored_step4_rational_oracles",
+  "basis": "Definitions 9.5 and 19; hand-derived rational expectations",
+  "cases": [
+    {
+      "labels": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "weights": [
+        1,
+        1,
+        0,
+        2
+      ],
+      "unweighted_diversity": "5/8",
+      "weighted_diversity": "1/2",
+      "weighted_support": 2
+    },
+    {
+      "labels": [
+        "a",
+        "b",
+        "c"
+      ],
+      "weights": [
+        1,
+        2,
+        3
+      ],
+      "unweighted_diversity": "2/3",
+      "weighted_diversity": "11/18",
+      "weighted_support": 3
+    },
+    {
+      "labels": [
+        "a",
+        "b",
+        "c"
+      ],
+      "weights": [
+        0,
+        5,
+        0
+      ],
+      "unweighted_diversity": "2/3",
+      "weighted_diversity": "0",
+      "weighted_support": 1
+    }
+  ]
+}

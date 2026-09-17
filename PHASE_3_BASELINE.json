@@ -1,7 +1,7 @@
 {
   "control_version": "1.0",
   "active_phase": 3,
-  "active_step": 3,
+  "active_step": 4,
   "baseline_commit": "78554993febb01609cb90814cc24cce2012bf7d7",
   "baseline_tree": "706b99e27c2d284a7435ae03e2eb2376214bfa46",
   "baseline_test_tree": "d787d9b06c41a91f8587f6b57a8af710419d114f",
@@ -54,18 +54,15 @@
     "PHASE_3_BASELINE.json",
     "PHASE_3_DECISIONS.md",
     "docs/architecture.md",
-    "docs/data_schema.md",
-    "docs/privacy.md",
     "docs/theory_traceability.md",
     "scripts/check_spec_consistency.py",
     "scripts/check_traceability.py",
     "scripts/release_check.py",
     "src/recursive_integrity_toolkit/errors.py",
-    "src/recursive_integrity_toolkit/metrics/duplicates.py",
+    "src/recursive_integrity_toolkit/metrics/diversity.py",
     "src/recursive_integrity_toolkit/models.py",
-    "src/recursive_integrity_toolkit/representations/content_hash.py",
     "tests/conftest.py",
-    "tests/fixtures/minimal_valid/phase3_exact_content.jsonl",
+    "tests/fixtures/weighted/phase3_distribution_cases.json",
     "tests/integration/test_ci_workflows.py",
     "tests/integration/test_no_algorithms.py",
     "tests/integration/test_no_network.py",
@@ -74,12 +71,13 @@
     "tests/integration/test_package_import.py",
     "tests/integration/test_package_install.py",
     "tests/integration/test_repository_structure.py",
-    "tests/unit/test_PR006_duplicates.py",
     "tests/unit/test_PR016_determinism.py",
-    "tests/unit/test_T1_representation.py"
+    "tests/unit/test_T1_diversity.py",
+    "tests/unit/test_T1_support.py",
+    "tests/unit/test_phase3_contracts.py"
   ],
   "new_files_permitted": [
-    "tests/fixtures/minimal_valid/phase3_exact_content.jsonl"
+    "tests/fixtures/weighted/phase3_distribution_cases.json"
   ],
   "file_identity_rule": "The immutable Git root tree commits every original filename, mode and blob. The baseline-evidence command materializes each of the 197 baseline blob and SHA-256 identities into retained execution evidence.",
   "inherited_test_identity_rule": "Collection runs against an isolated copy of the exact pinned baseline, in each explicit optional-dependency mode. Store the complete original/current node-ID lists and their digest. Every inherited node ID must remain collected; active-stage assertion changes have a migration record in PHASE_3_DECISIONS.md.",
@@ -94,12 +92,13 @@
   "next_step_authorized": false,
   "main_merge_authorized": false,
   "publication_authorized": false,
-  "previous_step_commit": "9e5d4c4f38834c42a5b7c19de4e67f471ab9bbca",
-  "previous_step_tree": "096e038145bced4b01f2c0059659082a72501112",
+  "previous_step_commit": "d2651ca755c82af2e2fec3963bcb6fe270a23be6",
+  "previous_step_tree": "7871e6253d770d1561d9f732dd5c0b0f842a4138",
   "step2_authorization": "Theory Owner explicitly instructed Phase 3 Step 2 and approved the single-test-file exception in the project conversation.",
   "step2_exception": {
     "path": "tests/unit/test_phase3_contracts.py",
     "edit": "Only the forged-stage value changes from control[key]=2 to control[key]+=1."
   },
-  "step3_authorization": "Theory Owner accepted Step 2 and explicitly instructed Phase 3 Step 3 in the project conversation."
+  "step3_authorization": "Theory Owner accepted Step 2 and explicitly instructed Phase 3 Step 3 in the project conversation.",
+  "step4_authorization": "Theory Owner explicitly instructed Phase 3 Step 4 in the project conversation."
 }

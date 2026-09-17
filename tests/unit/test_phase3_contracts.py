@@ -242,7 +242,7 @@ def test_phase3_forged_manifest_does_not_authorize_a_change(key):
     ("A","tests/unit/test_arbitrary.py"), ("D","tests/conftest.py"), ("M","pyproject.toml"),
 ])
 def test_phase3_unauthorized_path_change_fails(status,path):
-    with pytest.raises(ValueError): tools()["verify_phase3_changes"]([(status,path)])
+    with pytest.raises(ValueError): tools()["verify_prior_step_changes"]([(status,path)], step=1)
 
 
 def test_phase3_exact_new_file_set():

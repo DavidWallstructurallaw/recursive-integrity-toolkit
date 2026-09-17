@@ -1,4 +1,4 @@
-"""Check inherited Phase 2 rules and approved Phase 3 Step 3 boundaries.
+"""Check inherited Phase 2 rules and approved Phase 3 Step 4 boundaries.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
 approved Phase 2 step on 2026-09-16. Step 9 adds explicit local bundle orchestration only. Earlier
@@ -206,7 +206,7 @@ FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.p
 
 
 # Phase 3 Step 1: declarations and validation contracts only.
-PHASE3_ACTIVE_STEP = 3
+PHASE3_ACTIVE_STEP = 4
 PHASE3_CONTRACT_CLASSES = {
     "CalculationEvidenceClass", "CalculationStatus", "CalculationReason", "NumericalPolicy",
     "RepresentationDescriptor", "RecordStateAssignment", "CalculationScope", "WeightingOptions",
@@ -404,6 +404,40 @@ def _phase3_exact_boundary(tree: ast.Module, relative: str) -> None:
                 raise SystemExit("Unexpected call in pure exact-content scope")
 
 
+
+# Step 4 opens only the reviewed single-scope F-001 through F-004 kernels.
+PHASE3_DISTRIBUTION_MODULES = {"metrics/diversity.py"}
+ALLOWED_FUNCTIONS["metrics/diversity.py"] = {
+    "_invalid", "_text", "_key", "_context", "_number", "_pairs", "_probabilities",
+    "_metadata", "_metrics", "distribution_from_counts", "distribution_from_probabilities",
+    "_assignments", "_weights", "calculate_state_distribution",
+}
+ALLOWED_CLASSES["metrics/diversity.py"] = {"StateFrequency", "DistributionMetrics", "StateDistributionResult"}
+ALLOWED_CORE_IMPORTS["metrics/diversity.py"] = {
+    "__future__", "dataclasses", "math", "types", "..errors", "..models", "..representations.base",
+}
+DISTRIBUTION_AST_SHA256 = "fee11548d6d14e15f71bc3a8f2a1c4c2b124d8d7a7605524fa37f80efdee3ece95e"
+
+
+def _phase3_distribution_boundary(tree: ast.Module) -> None:
+    """Pin the reviewed executable body in addition to inherited symbol checks.
+
+    The digest is a reviewed literal, never generated from current source at
+    gate execution. Python 3.12 adds empty type_params fields: omit only those
+    empty AST metadata fields so the same code is checked on 3.11 and 3.12.
+    Nonempty generic parameters are not authorized by this migration.
+    """
+    import hashlib
+    for node in ast.walk(tree):
+        if "type_params" in node._fields:
+            if getattr(node, "type_params", []):
+                raise SystemExit("Unexpected generic declaration in distribution metrics")
+            node._fields = tuple(name for name in node._fields if name != "type_params")
+    digest = hashlib.sha256(ast.dump(tree, include_attributes=False).encode("utf-8")).hexdigest()
+    if digest != DISTRIBUTION_AST_SHA256:
+        raise SystemExit("Unexpected distribution implementation outside the reviewed Step 4 body")
+
+
 def _phase3_contract_boundary(tree: ast.Module) -> None:
     """Reject calculation or execution inside the newly authorized declarations."""
     permitted = {"type", "len", "set", "any", "ValueError", "TypeError", "field", "dataclass",
@@ -459,7 +493,7 @@ def main() -> int:
     if len(paths) != 40:
         raise SystemExit(f"Expected 40 package modules, found {len(paths)}")
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
-    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES) - relative_paths
+    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES) - relative_paths
     if missing:
         raise SystemExit(f"Required startup or Step 8 modules missing: {sorted(missing)}")
 
@@ -478,11 +512,13 @@ def main() -> int:
             _phase3_representation_boundary(tree, relative)
         if relative in PHASE3_EXACT_MODULES:
             _phase3_exact_boundary(tree, relative)
+        if relative in PHASE3_DISTRIBUTION_MODULES:
+            _phase3_distribution_boundary(tree)
         doc = ast.get_docstring(tree) or ""
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
 
-        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES:
+        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES:
             if not (
                 len(tree.body) == 1
                 and isinstance(tree.body[0], ast.Expr)
@@ -532,7 +568,7 @@ def main() -> int:
                         isinstance(node.func, ast.Attribute) and node.func.attr in blocked_methods
                     ):
                         raise SystemExit(f"Unexpected executable, write or network capability in {relative}")
-            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | {"models.py"}:
+            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | {"models.py"}:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
                 if isinstance(node, ast.Call):
@@ -576,7 +612,7 @@ def main() -> int:
                     )
                     if not lazy_parquet:
                         forbidden_locations.append(f"{relative}: {imported}")
-            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES:
+            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
                     raise SystemExit(f"Import outside Step 9 contracts in {relative}: {sorted(unexpected)}")
@@ -593,7 +629,7 @@ def main() -> int:
     print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Phase 3 Step 3 exact counts, field and inherited definition/import boundaries: PASS")
+    print("Phase 3 Step 4 reviewed distribution and inherited definition/import boundaries: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 
