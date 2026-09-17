@@ -1,4 +1,4 @@
-"""Check module ownership and the approved Phase 2 Step 9 boundary.
+"""Check inherited Phase 2 rules and approved Phase 3 Step 1 contracts.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
 approved Phase 2 step on 2026-09-16. Step 9 adds explicit local bundle orchestration only. Earlier
@@ -204,6 +204,57 @@ FORBIDDEN_IMPORTS = {
 FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.py"}
 
 
+
+# Phase 3 Step 1: declarations and validation contracts only.
+PHASE3_ACTIVE_STEP = 1
+PHASE3_CONTRACT_CLASSES = {
+    "CalculationEvidenceClass", "CalculationStatus", "CalculationReason", "NumericalPolicy",
+    "RepresentationDescriptor", "RecordStateAssignment", "CalculationScope", "WeightingOptions",
+    "TailSelectionOptions", "CalculationMetadata", "ScalarCalculation", "ExplicitPairContext",
+    "ClosedResamplingMetadata",
+}
+PHASE3_CONTRACT_FUNCTIONS = {
+    "_calculation_text", "_calculation_strings", "_calculation_integer", "_calculation_number",
+    "NumericalPolicy.__post_init__", "RepresentationDescriptor.__post_init__",
+    "RecordStateAssignment.__post_init__", "CalculationScope.__post_init__",
+    "WeightingOptions.__post_init__", "TailSelectionOptions.__post_init__",
+    "CalculationMetadata.__post_init__", "ScalarCalculation.__post_init__",
+    "ExplicitPairContext.__post_init__", "ClosedResamplingMetadata.__post_init__",
+}
+ALLOWED_FUNCTIONS["models.py"].update(PHASE3_CONTRACT_FUNCTIONS)
+ALLOWED_CLASSES["models.py"].update(PHASE3_CONTRACT_CLASSES)
+ALLOWED_CORE_IMPORTS["models.py"].add("math")
+
+
+def _phase3_contract_boundary(tree: ast.Module) -> None:
+    """Reject calculation or execution inside the newly authorized declarations."""
+    permitted = {"type", "len", "set", "any", "ValueError", "TypeError", "field", "dataclass",
+                 "WeightingOptions", "_calculation_text", "_calculation_strings",
+                 "_calculation_integer", "_calculation_number"}
+    roots = {name.split(".")[0] for name in PHASE3_CONTRACT_FUNCTIONS} | PHASE3_CONTRACT_CLASSES
+    for top in tree.body:
+        if not isinstance(top, (ast.FunctionDef, ast.ClassDef)) or top.name not in roots:
+            continue
+        for node in ast.walk(top):
+            if isinstance(node, (ast.Lambda, ast.AsyncFunctionDef, ast.Await, ast.Yield, ast.YieldFrom)):
+                raise SystemExit("Unexpected callback in Phase 3 contracts")
+            if isinstance(node, ast.BinOp) and not isinstance(node.op, (ast.BitOr, ast.BitAnd)):
+                raise SystemExit("Unexpected metric arithmetic in Phase 3 contracts")
+            if isinstance(node, ast.Call):
+                direct = isinstance(node.func, ast.Name) and node.func.id in permitted
+                finite = (isinstance(node.func, ast.Attribute) and node.func.attr == "isfinite"
+                          and isinstance(node.func.value, ast.Name) and node.func.value.id == "math"
+                          and isinstance(top, ast.FunctionDef) and top.name == "_calculation_number")
+                if not (direct or finite):
+                    raise SystemExit("Unexpected call in Phase 3 contracts")
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import) and any(alias.name == "math" for alias in node.names):
+            if len(node.names) != 1 or node.names[0].asname is not None or not any(
+                    isinstance(fn, ast.FunctionDef) and fn.name == "_calculation_number"
+                    and any(child is node for child in ast.walk(fn)) for fn in tree.body):
+                raise SystemExit("Unexpected math import outside finite-type validation")
+
+
 def _definitions(tree: ast.AST, prefix: str = "") -> tuple[list[str], list[str]]:
     """Collect qualified definitions without executing inspected source."""
     functions: list[str] = []
@@ -243,6 +294,8 @@ def main() -> int:
         if path.name in FORBIDDEN_FILES:
             raise SystemExit(f"Forbidden module found: {path}")
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        if relative == "models.py":
+            _phase3_contract_boundary(tree)
         doc = ast.get_docstring(tree) or ""
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
@@ -358,7 +411,7 @@ def main() -> int:
     print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Step 9 definition and import allowlists: PASS")
+    print("Phase 3 Step 1 contract and inherited definition/import boundaries: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 

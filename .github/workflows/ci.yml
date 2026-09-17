@@ -1,4 +1,4 @@
-name: Phase 2 CI
+name: Phase 3 Step 1 CI
 
 on:
   push:
@@ -37,25 +37,28 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install package and approved test tools
+      - name: Install approved test tools
         run: python -m pip install ".[test]"
       - name: Verify actual optional dependency absence
         run: python -c "import importlib.util; assert importlib.util.find_spec('pyarrow') is None"
-      - name: Run complete core suite
+      - name: Run the complete core suite
         run: |
+          set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-core"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" | tee "$RUNNER_TEMP/rit-core/phase2_test_results.log"
-          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 1131
-      - name: Check specifications and exact Phase 2 boundaries
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" | tee "$RUNNER_TEMP/rit-core/phase3_test_results.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 1159
+      - name: Check explicit current step and frozen inherited identities
         run: |
+          set -euo pipefail
           python scripts/check_spec_consistency.py
           python scripts/check_traceability.py
-          python scripts/release_check.py --diff
-      - name: Retain actual core test evidence
+          python scripts/release_check.py --phase 3 --step 1 --diff
+          python scripts/release_check.py --baseline-evidence "$RUNNER_TEMP/rit-core"
+      - name: Retain core evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase2-core-${{ matrix.os }}-${{ matrix.python-version }}
+          name: phase3-step1-core-${{ matrix.os }}-${{ matrix.python-version }}
           path: ${{ runner.temp }}/rit-core/
           if-no-files-found: error
           retention-days: 30
@@ -71,6 +74,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -78,17 +82,19 @@ jobs:
           python-version: "3.12"
       - name: Install approved real Parquet extra
         run: python -m pip install ".[test,parquet]"
-      - name: Verify real PyArrow and run the whole extra-enabled suite
+      - name: Run the complete extra-enabled suite
         run: |
+          set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-parquet"
           python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" | tee "$RUNNER_TEMP/rit-parquet/phase2_parquet_results.log"
-          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 1134
-      - name: Retain actual Parquet test evidence
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" | tee "$RUNNER_TEMP/rit-parquet/phase3_parquet_results.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 1162
+          python scripts/release_check.py --baseline-evidence "$RUNNER_TEMP/rit-parquet"
+      - name: Retain Parquet evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase2-real-parquet
+          name: phase3-step1-real-parquet
           path: ${{ runner.temp }}/rit-parquet/
           if-no-files-found: error
           retention-days: 30

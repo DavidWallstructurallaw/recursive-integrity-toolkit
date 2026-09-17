@@ -1,7 +1,8 @@
-"""Define Phase 2 core contracts for validated input metadata.
+"""Define input metadata and Phase 3 Step 1 calculation contracts.
 
 Owner IDs:
     PR-001, PR-002, PR-004, PR-007, PR-008, PR-009, PR-010, PR-011, PR-016, PR-017
+    T1, T2, T3 direct branch, PR-005, PR-006: supporting contracts only.
 
 Inputs:
     Explicit identifiers, file metadata, validation metadata, and capability declarations.
@@ -18,7 +19,7 @@ Limits:
     implemented here. These types carry validated metadata only.
 
 Current phase status:
-    Phase 2 Step 9 validation and observability contracts. Import-safe. No analytical behavior.
+    Phase 3 Step 1 contracts; Phase 2 behavior preserved. Import-safe. No metrics.
 """
 
 from __future__ import annotations
@@ -559,3 +560,332 @@ class BundleValidationResult:
     def has_errors(self) -> bool:
         return any(message.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)
                    for message in self.validation_messages)
+
+
+# Phase 3 Step 1: supporting contracts only. Constructors check declarations;
+# they do not assign states, compute metrics, certify evidence, or run scenarios.
+# Owners: T1, T2, T3 direct branch, PR-004/005/006/007/011/016 supporting basis.
+
+class CalculationEvidenceClass(StrEnum):
+    OBSERVED_FACT = "observed_fact"
+    DERIVED_METRIC = "derived_metric"
+    SIMULATION = "simulation"
+
+
+class CalculationStatus(StrEnum):
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+
+
+class CalculationReason(StrEnum):
+    EMPTY_SCOPE = "R_CALC_EMPTY_SCOPE"
+    ALL_EXCLUDED = "R_CALC_ALL_EXCLUDED"
+    REPRESENTATION_MISSING = "R_CALC_REPRESENTATION_MISSING"
+    REPRESENTATION_INCOMPATIBLE = "R_CALC_REPRESENTATION_INCOMPATIBLE"
+    ORDER_MISSING = "R_CALC_ORDER_MISSING"
+    PROVENANCE_FIELD_UNAVAILABLE = "R_CALC_PROVENANCE_FIELD_UNAVAILABLE"
+    WEIGHT_BASIS_INVALID = "R_CALC_WEIGHT_BASIS_INVALID"
+    NUMERICAL_INPUT_INVALID = "R_CALC_NUMERICAL_INPUT_INVALID"
+    UNSUPPORTED_OPTION = "R_CALC_UNSUPPORTED_OPTION"
+    CONTENT_UNAVAILABLE = "R_CALC_CONTENT_UNAVAILABLE"
+
+
+def _calculation_text(value: object) -> None:
+    if type(value) is not str or not value or "\x00" in value:
+        raise ValueError("calculation metadata requires nonempty literal text")
+
+
+def _calculation_strings(value: object) -> None:
+    if type(value) is not tuple:
+        raise TypeError("calculation declarations require immutable tuples")
+    for item in value:
+        _calculation_text(item)
+
+
+def _calculation_integer(value: object, *, positive: bool = False) -> None:
+    if type(value) is not int or value < 0 or (positive and value == 0):
+        raise ValueError("calculation parameter requires an explicit integer in range")
+
+
+def _calculation_number(value: object) -> None:
+    # Range/type validation only. No metric arithmetic or probability repair.
+    import math
+    if type(value) not in (int, float):
+        raise TypeError("calculation scalar must be a built-in number")
+    try:
+        valid = math.isfinite(value)
+    except OverflowError:
+        valid = False
+    if not valid:
+        raise ValueError("calculation scalar must be finite")
+
+
+@dataclass(frozen=True, slots=True)
+class NumericalPolicy:
+    """Approved tolerances as declarations; no numerical function is executed."""
+
+    absolute_tolerance: float = 1e-12
+    relative_tolerance: float = 1e-12
+    probability_mass_tolerance: float = 1e-12
+
+    def __post_init__(self) -> None:
+        for value in (self.absolute_tolerance, self.relative_tolerance, self.probability_mass_tolerance):
+            if type(value) is not float or value != 1e-12:
+                raise ValueError("Phase 3 uses its explicitly approved numerical policy")
+
+
+@dataclass(frozen=True, slots=True)
+class RepresentationDescriptor:
+    """Declared identity and rules. This object does not validate empirical meaning."""
+
+    representation_name: str
+    representation_source: str
+    representation_version: str
+    binning_or_mapping_rule: str
+    field_name: str | None = None
+    missing_value_policy: str = "error"
+    missing_state_id: str | None = field(default=None, repr=False)
+    normalization_profile: str | None = None
+
+    def __post_init__(self) -> None:
+        for value in (self.representation_name, self.representation_source,
+                      self.representation_version, self.binning_or_mapping_rule):
+            _calculation_text(value)
+        for value in (self.field_name, self.missing_state_id, self.normalization_profile):
+            if value is not None:
+                _calculation_text(value)
+        if type(self.missing_value_policy) is not str or self.missing_value_policy not in (
+                "error", "exclude", "explicit_missing_state"):
+            raise ValueError("representation missing policy must be explicit and approved")
+        if (self.missing_value_policy == "explicit_missing_state") != (self.missing_state_id is not None):
+            raise ValueError("explicit missing policy requires its own literal state ID")
+        if self.normalization_profile not in (None, "exact_utf8_v1"):
+            raise ValueError("normalization profile has no approved Phase 3 definition")
+
+
+@dataclass(frozen=True, slots=True)
+class RecordStateAssignment:
+    """One explicitly supplied assignment or exclusion; no assignment algorithm."""
+
+    record_key: RecordKey
+    state_id: str | None = field(repr=False)
+    exclusion_reason: CalculationReason | None = None
+
+    def __post_init__(self) -> None:
+        if type(self.record_key) is not RecordKey:
+            raise TypeError("state assignment needs a canonical record key")
+        if self.state_id is None:
+            if type(self.exclusion_reason) is not CalculationReason:
+                raise ValueError("excluded assignment needs a recorded reason")
+        else:
+            _calculation_text(self.state_id)
+            if self.exclusion_reason is not None:
+                raise ValueError("assigned state cannot simultaneously be excluded")
+
+
+@dataclass(frozen=True, slots=True)
+class CalculationScope:
+    """Caller-selected scope, with explicit included/excluded identities.
+
+    Membership is checked, not inferred. An empty included set remains possible
+    for an unavailable calculation. Provenance and representation scopes retain
+    separate denominator_basis declarations.
+    """
+
+    dataset_versions: tuple[str, ...]
+    included_record_keys: tuple[RecordKey, ...] = field(repr=False)
+    excluded_record_keys: tuple[RecordKey, ...] = field(repr=False)
+    denominator_basis: str
+    scope_id: str
+
+    def __post_init__(self) -> None:
+        _calculation_strings(self.dataset_versions)
+        if not self.dataset_versions or len(set(self.dataset_versions)) != len(self.dataset_versions):
+            raise ValueError("calculation scope requires unique explicitly selected versions")
+        _calculation_text(self.denominator_basis)
+        _calculation_text(self.scope_id)
+        for values in (self.included_record_keys, self.excluded_record_keys):
+            if type(values) is not tuple or any(type(key) is not RecordKey for key in values):
+                raise TypeError("scope identities must be an immutable canonical tuple")
+            if len(set(values)) != len(values):
+                raise ValueError("scope identities must be unique")
+            if any(key.dataset_version not in self.dataset_versions for key in values):
+                raise ValueError("scope identity belongs to an undeclared version")
+        if set(self.included_record_keys) & set(self.excluded_record_keys):
+            raise ValueError("included and excluded scope identities overlap")
+
+
+@dataclass(frozen=True, slots=True)
+class WeightingOptions:
+    """Explicit opt-in only; record weights are validated by later kernels."""
+
+    weighting_mode: str = "unweighted"
+    weight_field: str | None = None
+
+    def __post_init__(self) -> None:
+        if type(self.weighting_mode) is not str or self.weighting_mode not in ("unweighted", "weighted"):
+            raise ValueError("weighting mode must be approved")
+        if self.weighting_mode == "unweighted" and self.weight_field is not None:
+            raise ValueError("unweighted calculation cannot select a weight field")
+        if self.weighting_mode == "weighted" and (type(self.weight_field) is not str or self.weight_field != "weight"):
+            raise ValueError("weighted calculation requires the explicit canonical weight field")
+
+
+@dataclass(frozen=True, slots=True)
+class TailSelectionOptions:
+    """P3-D06 declaration only; no rarity ranking or tail membership calculation."""
+
+    rule: str
+    count_threshold: int | None = None
+    frequency_threshold: float | None = None
+    state_ids: tuple[str, ...] = field(default=(), repr=False)
+
+    def __post_init__(self) -> None:
+        if type(self.rule) is not str or self.rule not in (
+                "singleton_count", "count_at_or_below", "frequency_at_or_below", "state_list"):
+            raise ValueError("tail rule has no approved Phase 3 implementation contract")
+        _calculation_strings(self.state_ids)
+        if len(set(self.state_ids)) != len(self.state_ids):
+            raise ValueError("tail state list must be unique")
+        if self.rule == "count_at_or_below":
+            _calculation_integer(self.count_threshold)
+        elif self.count_threshold is not None:
+            raise ValueError("count threshold does not match the selected rule")
+        if self.rule == "frequency_at_or_below":
+            _calculation_number(self.frequency_threshold)
+            if not 0 <= self.frequency_threshold <= 1:
+                raise ValueError("frequency threshold must lie in the unit interval")
+        elif self.frequency_threshold is not None:
+            raise ValueError("frequency threshold does not match the selected rule")
+        if self.rule == "state_list":
+            if not self.state_ids:
+                raise ValueError("explicit tail state list must be nonempty")
+        elif self.state_ids:
+            raise ValueError("state list does not match the selected rule")
+
+
+@dataclass(frozen=True, slots=True)
+class CalculationMetadata:
+    """Numerical-field trace metadata; not a report schema or evidence certificate."""
+
+    metric_name: str
+    owner_id: str
+    formula_id: str | None
+    evidence_class: CalculationEvidenceClass
+    unit: str
+    method: str
+    scope: CalculationScope
+    representation: RepresentationDescriptor | None
+    weighting: WeightingOptions = WeightingOptions()
+    assumptions: tuple[str, ...] = ()
+    limitations: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        for value in (self.metric_name, self.owner_id, self.unit, self.method):
+            _calculation_text(value)
+        if self.formula_id is not None:
+            _calculation_text(self.formula_id)
+        if type(self.evidence_class) is not CalculationEvidenceClass or type(self.scope) is not CalculationScope:
+            raise TypeError("calculation metadata requires explicit evidence and scope types")
+        if self.representation is not None and type(self.representation) is not RepresentationDescriptor:
+            raise TypeError("calculation representation must use its descriptor contract")
+        if type(self.weighting) is not WeightingOptions:
+            raise TypeError("calculation weighting must use WeightingOptions")
+        _calculation_strings(self.assumptions)
+        _calculation_strings(self.limitations)
+
+
+@dataclass(frozen=True, slots=True)
+class ScalarCalculation:
+    """Already supplied scalar or unavailable marker. Never computes a result."""
+
+    metadata: CalculationMetadata
+    status: CalculationStatus
+    value: int | float | None = field(repr=False)
+    reason_codes: tuple[CalculationReason, ...] = ()
+
+    def __post_init__(self) -> None:
+        if type(self.metadata) is not CalculationMetadata or type(self.status) is not CalculationStatus:
+            raise TypeError("scalar result requires explicit metadata and status contracts")
+        if type(self.reason_codes) is not tuple or any(type(code) is not CalculationReason for code in self.reason_codes):
+            raise TypeError("calculation reasons must use the frozen reason registry")
+        if self.status is CalculationStatus.UNAVAILABLE:
+            if self.value is not None or not self.reason_codes:
+                raise ValueError("unavailable calculation requires no value and an explicit reason")
+        else:
+            _calculation_number(self.value)
+            if self.reason_codes:
+                raise ValueError("available calculation cannot carry an unavailable reason")
+
+
+@dataclass(frozen=True, slots=True)
+class ExplicitPairContext:
+    """Pair declarations only. Later compatibility checks must validate all evidence."""
+
+    earlier_scope: CalculationScope
+    later_scope: CalculationScope
+    earlier_representation: RepresentationDescriptor
+    later_representation: RepresentationDescriptor
+    version_order: VersionOrderResult = field(repr=False)
+
+    def __post_init__(self) -> None:
+        if type(self.earlier_scope) is not CalculationScope or type(self.later_scope) is not CalculationScope:
+            raise TypeError("pair context needs explicit scope contracts")
+        if type(self.earlier_representation) is not RepresentationDescriptor or type(self.later_representation) is not RepresentationDescriptor:
+            raise TypeError("pair context needs explicit representation descriptors")
+        if type(self.version_order) is not VersionOrderResult:
+            raise TypeError("pair context needs retained version-order evidence")
+
+
+@dataclass(frozen=True, slots=True)
+class ClosedResamplingMetadata:
+    """Closed-model method declarations only. No RNG or formula is called.
+
+    Analytic methods carry no fabricated seed. Sampled paths require named PCG64
+    and NumPy identity. State order and replicate scheduling remain explicit.
+    No external distribution, reopening weight or experiment scheduler is accepted.
+    """
+
+    method: str
+    resample_size: int
+    simulation_horizon: int
+    representation: RepresentationDescriptor
+    state_order: tuple[str, ...] = field(repr=False)
+    assumptions: tuple[str, ...]
+    random_seed: int | None = None
+    simulation_replicates: int | None = None
+    rng_name: str | None = None
+    numpy_version: str | None = None
+    replicate_schedule: str | None = None
+    model_name: str = "closed_resampling"
+    evidence_class: CalculationEvidenceClass = CalculationEvidenceClass.SIMULATION
+    experimental: bool = True
+
+    def __post_init__(self) -> None:
+        if type(self.model_name) is not str or self.model_name != "closed_resampling":
+            raise ValueError("only the finite closed model is selected")
+        if self.evidence_class is not CalculationEvidenceClass.SIMULATION or self.experimental is not True:
+            raise ValueError("scenario declarations must remain experimental simulation evidence")
+        _calculation_integer(self.resample_size, positive=True)
+        _calculation_integer(self.simulation_horizon)
+        if type(self.representation) is not RepresentationDescriptor:
+            raise TypeError("scenario requires an explicit representation descriptor")
+        _calculation_strings(self.state_order)
+        if not self.state_order or len(set(self.state_order)) != len(self.state_order):
+            raise ValueError("scenario state order must be explicit and unique")
+        _calculation_strings(self.assumptions)
+        if not self.assumptions:
+            raise ValueError("scenario assumptions must be recorded")
+        if type(self.method) is not str or self.method not in ("analytic_expectation", "analytic_extinction", "sampled_path"):
+            raise ValueError("scenario method must be explicitly selected")
+        if self.method == "sampled_path":
+            _calculation_integer(self.random_seed)
+            _calculation_integer(self.simulation_replicates, positive=True)
+            if type(self.rng_name) is not str or self.rng_name != "numpy.random.Generator(PCG64)":
+                raise ValueError("sampled paths require the approved named generator")
+            _calculation_text(self.numpy_version)
+            if type(self.replicate_schedule) is not str or self.replicate_schedule != "replicate_major_step_major":
+                raise ValueError("sampled paths require explicit replicate-major scheduling")
+        elif any(value is not None for value in (self.random_seed, self.simulation_replicates,
+                                                self.rng_name, self.numpy_version, self.replicate_schedule)):
+            raise ValueError("analytic method must not claim a random realization")

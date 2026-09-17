@@ -1,17 +1,9 @@
-"""Check approved workflow contracts and Phase 2 final-gate evidence."""
+"""Preserve workflow guarantees while moving active gates to Phase 3 Step 1."""
 
 from pathlib import Path
 
-
 EXPECTED = {"ci.yml", "golden.yml", "security.yml", "release.yml"}
-FORBIDDEN_WORKFLOW_TERMS = {
-    "services:",
-    "docker run",
-    "fastapi",
-    "streamlit",
-    "telemetry",
-    "publish-package",
-}
+FORBIDDEN_WORKFLOW_TERMS = {"services:", "docker run", "fastapi", "streamlit", "telemetry", "publish-package"}
 
 
 def test_workflow_file_set_and_basic_contract(repo_root: Path) -> None:
@@ -27,20 +19,16 @@ def test_workflow_file_set_and_basic_contract(repo_root: Path) -> None:
 
 
 def test_workflows_preserve_phase_boundary(repo_root: Path) -> None:
-    workflow_root = repo_root / ".github" / "workflows"
-    combined = "\n".join(
-        path.read_text(encoding="utf-8").lower()
-        for path in workflow_root.glob("*.yml")
-    )
+    combined = "\n".join(p.read_text(encoding="utf-8").lower() for p in (repo_root / ".github/workflows").glob("*.yml"))
     for term in FORBIDDEN_WORKFLOW_TERMS:
         assert term not in combined
     assert "test_no_algorithms.py" in combined
     assert "test_no_network.py" in combined
     assert "python -m build" in combined
     assert "rit version" in combined
+    assert "--phase 3 --step 1" in combined
 
 
-# Phase 2 Step 10 adds evidence gates without removing original checks.
 import ast
 import hashlib
 import re
@@ -77,15 +65,16 @@ def test_phase2_core_and_real_parquet_have_independent_complete_runs(repo_root):
 
 
 def test_phase2_delivery_builds_both_formats_and_tests_installed_wheel(repo_root):
+    # Same identity and safety guarantees; only the active artifact stage changes.
     text = (repo_root / ".github/workflows/release.yml").read_text(encoding="utf-8")
-    for required in ("python -m build", "python -m twine check --strict", "--dist", "--delivery",
+    for required in ("python -m build", "python -m twine check --strict", "--dist", "--candidate",
                      "--require-parquet", "actions/upload-artifact@v4", "retention-days: 90",
-                     "if-no-files-found: error", "phase2_test_results.log", "phase2_build_results.log"):
+                     "if-no-files-found: error", "phase3_test_results.log", "phase3_build_results.log"):
         assert required in text
-    assert "twine upload" not in text and "git push" not in text
+    assert "--delivery" not in text and "twine upload" not in text and "git push" not in text
     script = (repo_root / "scripts/release_check.py").read_text(encoding="utf-8")
     for required in ('"--no-index", "--no-deps"', '"-I"', '"--prefix=recursive-integrity-toolkit/"',
-                     '"recursive-integrity-toolkit-phase2.zip"', '"phase2_artifacts.sha256"'):
+                     '"recursive-integrity-toolkit-phase3-step1-candidate.zip"', '"phase3_artifacts.sha256"'):
         assert required in script
 
 
@@ -103,8 +92,7 @@ def test_phase2_completion_records_exist_and_do_not_authorize_phase3(repo_root):
 
 
 def test_phase2_approved_phase0_hashes_match_current_sources(repo_root):
-    text = (repo_root / "PHASE_0_APPROVAL.md").read_text(encoding="utf-8")
-    entries = re.findall(r"\| `([^`]+\.md)` \| `([0-9a-f]{64})` \|", text)
+    entries = re.findall(r"\| `([^`]+\.md)` \| `([0-9a-f]{64})` \|", (repo_root / "PHASE_0_APPROVAL.md").read_text(encoding="utf-8"))
     assert len(entries) == 16
     for name, expected in entries:
         assert hashlib.sha256((repo_root / name).read_bytes()).hexdigest() == expected, name
@@ -126,8 +114,7 @@ def _junit(tmp_path, body, counts='tests="1" errors="0" failures="0" skipped="0"
 
 
 def test_phase2_junit_gate_counts_passes(repo_root, tmp_path):
-    verify = _release_tools(repo_root)["verify_junit"]
-    result = verify(_junit(tmp_path, '<testcase classname="unit" name="valid"/>'))
+    result = _release_tools(repo_root)["verify_junit"](_junit(tmp_path, '<testcase classname="unit" name="valid"/>'))
     assert result == {"tests": 1, "passed": 1, "failed": 0, "skipped": 0, "real_parquet_cases": 0}
 
 
@@ -178,14 +165,10 @@ def test_phase2_runtime_gates_remain_exact_allowlists(repo_root):
     assert "protected docstring-only modules" in script
 
 
-# Explicitly authorized, digest-bounded restoration. Original hash gate above
-# remains unchanged. Mutation cases must fail instead of widening authority.
 def _restoration_bytes(repo_root):
     after = (repo_root / "VALIDATION_PLAN.md").read_bytes()
-    before = after.replace(b"| Status | APPROVED PHASE 0 BASELINE |",
-                           b"| Status | DRAFT VALIDATION BASELINE |", 1)
-    before = before.replace(b"Definitions marked `APPROVED DECISION`",
-                            b"Definitions marked `PENDING DECISION`", 1)
+    before = after.replace(b"| Status | APPROVED PHASE 0 BASELINE |", b"| Status | DRAFT VALIDATION BASELINE |", 1)
+    before = before.replace(b"Definitions marked `APPROVED DECISION`", b"Definitions marked `PENDING DECISION`", 1)
     return before, after
 
 
@@ -202,19 +185,12 @@ def test_phase2_restoration_rejects_wider_changes(repo_root, change):
     verify = _release_tools(repo_root)["verify_approved_restoration"]
     before, after = _restoration_bytes(repo_root)
     path, status = "VALIDATION_PLAN.md", "M"
-    if change == "path":
-        path = "DEFINITIONS_AND_UNITS.md"
-    elif change == "added":
-        status = "A"
-    elif change == "deleted":
-        status = "D"
-    elif change == "before":
-        before += b"\n"
-    elif change == "after":
-        after += b"\n"
-    elif change == "unchanged":
-        after = before
-    elif change == "type":
-        after = after.decode("utf-8")
+    if change == "path": path = "DEFINITIONS_AND_UNITS.md"
+    elif change == "added": status = "A"
+    elif change == "deleted": status = "D"
+    elif change == "before": before += b"\n"
+    elif change == "after": after += b"\n"
+    elif change == "unchanged": after = before
+    elif change == "type": after = after.decode("utf-8")
     with pytest.raises(ValueError):
         verify(path, status, before, after)
