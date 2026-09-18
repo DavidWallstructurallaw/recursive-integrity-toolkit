@@ -1,4 +1,4 @@
-name: Phase 3 Step 10 CI
+name: Phase 3 Step 11 CI
 
 on:
   push:
@@ -14,7 +14,7 @@ defaults:
 
 jobs:
   core:
-    name: Core on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    name: Core (${{ matrix.dependencies }}) on ${{ matrix.os }} with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -22,6 +22,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ["3.11", "3.12"]
+        dependencies: [current, minimum]
     env:
       PYTHONDONTWRITEBYTECODE: "1"
       RIT_TEST_PARQUET: "0"
@@ -37,8 +38,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install approved test tools
+      - name: Install current compatible dependencies
+        if: matrix.dependencies == 'current'
         run: python -m pip install ".[test]"
+      - name: Install minimum jointly compatible direct dependencies
+        if: matrix.dependencies == 'minimum'
+        run: python -m pip install ".[test]" "numpy==2.0.0" "pandas==2.2.2"
+      - name: Record resolved versions and dependency consistency
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rit-core"
+          python -m pip freeze > "$RUNNER_TEMP/rit-core/dependencies.txt"
+          python -m pip check
+          python -c "import platform,numpy,pandas; print(platform.platform(),platform.python_version(),numpy.__version__,pandas.__version__)"
       - name: Verify actual optional dependency absence
         run: python -c "import importlib.util; assert importlib.util.find_spec('pyarrow') is None"
       - name: Run the complete core suite
@@ -46,19 +58,19 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-core"
           python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" | tee "$RUNNER_TEMP/rit-core/phase3_test_results.log"
-          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 2404
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 2472
       - name: Check explicit current step and frozen inherited identities
         run: |
           set -euo pipefail
           python scripts/check_spec_consistency.py
           python scripts/check_traceability.py
-          python scripts/release_check.py --phase 3 --step 10 --diff
+          python scripts/release_check.py --phase 3 --step 11 --diff
           python scripts/release_check.py --baseline-evidence "$RUNNER_TEMP/rit-core"
       - name: Retain core evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase3-step10-core-${{ matrix.os }}-${{ matrix.python-version }}
+          name: phase3-step11-core-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.dependencies }}
           path: ${{ runner.temp }}/rit-core/
           if-no-files-found: error
           retention-days: 30
@@ -86,15 +98,17 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-parquet"
+          python -m pip freeze > "$RUNNER_TEMP/rit-parquet/dependencies.txt"
+          python -m pip check
           python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
           python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" | tee "$RUNNER_TEMP/rit-parquet/phase3_parquet_results.log"
-          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 2407
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 2475
           python scripts/release_check.py --baseline-evidence "$RUNNER_TEMP/rit-parquet"
       - name: Retain Parquet evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase3-step10-real-parquet
+          name: phase3-step11-real-parquet
           path: ${{ runner.temp }}/rit-parquet/
           if-no-files-found: error
           retention-days: 30

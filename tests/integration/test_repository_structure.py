@@ -10,6 +10,7 @@ def test_required_repository_directories_exist(repo_root: Path) -> None:
 
 def test_required_root_schema_documentation_and_script_files_exist(repo_root: Path) -> None:
     required = [
+        "PHASE_3_COMPLETION.md", "PHASE_3_VALIDATION_REPORT.md", "PHASE_3_ARCHITECTURE_COMPLIANCE_REPORT.md",
         "README.md", "LICENSE", "NOTICE", "pyproject.toml", "PHASE_0_APPROVAL.md", "PHASE_1_PLAN.md", "PHASE_1_COMPLETION.md", "ARCHITECTURE_COMPLIANCE_REPORT.md",
         "schemas/report.schema.json", "schemas/config.schema.json", "schemas/schema_mapping.schema.json", "schemas/version_order.schema.json", "schemas/normalized_manifest.schema.json",
         "docs/architecture.md", "docs/cli.md", "docs/report_schema.md", "docs/data_schema.md", "docs/theory_traceability.md", "docs/privacy.md", "docs/release_process.md",

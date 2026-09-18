@@ -1,7 +1,7 @@
 {
   "control_version": "1.0",
   "active_phase": 3,
-  "active_step": 10,
+  "active_step": 11,
   "baseline_commit": "78554993febb01609cb90814cc24cce2012bf7d7",
   "baseline_tree": "706b99e27c2d284a7435ae03e2eb2376214bfa46",
   "baseline_test_tree": "d787d9b06c41a91f8587f6b57a8af710419d114f",
@@ -51,18 +51,27 @@
     ".github/workflows/golden.yml",
     ".github/workflows/release.yml",
     ".github/workflows/security.yml",
+    "CHANGELOG.md",
+    "PHASE_3_ARCHITECTURE_COMPLIANCE_REPORT.md",
     "PHASE_3_BASELINE.json",
+    "PHASE_3_COMPLETION.md",
     "PHASE_3_DECISIONS.md",
+    "PHASE_3_VALIDATION_REPORT.md",
+    "README.md",
     "docs/architecture.md",
+    "docs/data_schema.md",
+    "docs/privacy.md",
+    "docs/release_process.md",
     "docs/theory_traceability.md",
+    "pyproject.toml",
     "scripts/check_spec_consistency.py",
     "scripts/check_traceability.py",
     "scripts/release_check.py",
+    "src/recursive_integrity_toolkit/__init__.py",
     "tests/conftest.py",
-    "tests/golden/phase3_math_cases.json",
-    "tests/golden/phase3_math_cases.md",
-    "tests/golden/test_phase3_math.py",
     "tests/integration/test_ci_workflows.py",
+    "tests/integration/test_cli_validation.py",
+    "tests/integration/test_license_notices.py",
     "tests/integration/test_no_algorithms.py",
     "tests/integration/test_no_network.py",
     "tests/integration/test_optional_dependency.py",
@@ -70,14 +79,15 @@
     "tests/integration/test_package_import.py",
     "tests/integration/test_package_install.py",
     "tests/integration/test_phase3_metric_pipeline.py",
+    "tests/integration/test_prohibited_structure.py",
     "tests/integration/test_repository_structure.py",
-    "tests/performance/test_hero_runtime.py",
-    "tests/performance/test_metadata_100k.py",
-    "tests/unit/test_PR016_determinism.py"
+    "tests/unit/test_PR016_determinism.py",
+    "tests/unit/test_phase3_contracts.py"
   ],
   "new_files_permitted": [
-    "tests/golden/test_phase3_math.py",
-    "tests/integration/test_phase3_metric_pipeline.py"
+    "PHASE_3_ARCHITECTURE_COMPLIANCE_REPORT.md",
+    "PHASE_3_COMPLETION.md",
+    "PHASE_3_VALIDATION_REPORT.md"
   ],
   "file_identity_rule": "The immutable Git root tree commits every original filename, mode and blob. The baseline-evidence command materializes each of the 197 baseline blob and SHA-256 identities into retained execution evidence.",
   "inherited_test_identity_rule": "Collection runs against an isolated copy of the exact pinned baseline, in each explicit optional-dependency mode. Store the complete original/current node-ID lists and their digest. Every inherited node ID must remain collected; active-stage assertion changes have a migration record in PHASE_3_DECISIONS.md.",
@@ -92,8 +102,8 @@
   "next_step_authorized": false,
   "main_merge_authorized": false,
   "publication_authorized": false,
-  "previous_step_commit": "03fe1e7e99c8170e6be7714649ab0d926e01b6d6",
-  "previous_step_tree": "765d28e6ff4715fa6d59f44760f1a937489d7120",
+  "previous_step_commit": "150a2a105e01883672ef0c2300b41b0de3be352e",
+  "previous_step_tree": "b609cb75913fc6352729086819a24795caae1dd8",
   "step2_authorization": "Theory Owner explicitly instructed Phase 3 Step 2 and approved the single-test-file exception in the project conversation.",
   "step2_exception": {
     "path": "tests/unit/test_phase3_contracts.py",
@@ -106,5 +116,11 @@
   "step7_authorization": "Theory Owner accepted Step 6 and explicitly instructed Phase 3 Step 7 in the project conversation.",
   "step8_authorization": "Theory Owner accepted Step 7 and explicitly instructed Phase 3 Step 8 in the project conversation.",
   "step9_authorization": "Theory Owner explicitly requested Phase 3 Step 9 in the project conversation; no merge or next step authorized.",
-  "step10_authorization": "Theory Owner accepted Step 9 and explicitly requested Phase 3 Step 10. Test-only integration, fixed oracles and performance; no runtime repair, merge, publication or Step 11 authorized."
+  "step10_authorization": "Theory Owner accepted Step 9 and explicitly requested Phase 3 Step 10. Test-only integration, fixed oracles and performance; no runtime repair, merge, publication or Step 11 authorized.",
+  "step11_authorization": "Theory Owner explicitly requested Phase 3 Step 11, then approved the two proposed stage-test maintenance exceptions by instructing continuation on 2026-09-18. Final dev2 milestone only; no main merge, publication or later phase.",
+  "step11_test_exceptions": {
+    "tests/unit/test_phase3_contracts.py": "Flip the actual phase_complete value in the forged-manifest test; additionally, under the subsequent explicit approval, bind only the historical final-report-absence test to the immutable Step 10 snapshot. Preserve both test names and all absence assertions.",
+    "tests/integration/test_phase3_metric_pipeline.py": "Bind three historical Step 10 scope/snapshot tests to the immutable Step 10 commit; append Step 11 gate tests. Preserve inherited numeric assertions and node identities."
+  },
+  "step11_additional_authorization": "Theory Owner explicitly replied 批准 to the precise proposal to migrate test_phase3_final_completion_records_not_created to the frozen Step 10 snapshot. Its current-stage report-presence counterpart remains in the authorized repository-structure test."
 }

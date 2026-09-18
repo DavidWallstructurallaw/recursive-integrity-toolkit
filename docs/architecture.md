@@ -1,8 +1,10 @@
 # Architecture
 
-Status: Phase 2 input workflow. Actual milestone acceptance is recorded in `PHASE_2_COMPLETION.md`.
+Status: Phase 3 Step 11 development milestone. Actual acceptance is recorded in `PHASE_3_COMPLETION.md`.
 
-`REPOSITORY_ARCHITECTURE.md` remains authoritative. Forty package modules are retained, including twenty-six docstring-only later-layer placeholders. Step 10 changes no package module.
+The input-layer sections below describe the preserved Phase 2 implementation. Subsequent step sections retain the boundary at their historical stage. The current boundary is summarized here and in the final Step 11 section.
+
+`REPOSITORY_ARCHITECTURE.md` remains authoritative. Forty package modules are retained, including sixteen protected docstring-only placeholders. Step 11 changes only the root version literal in runtime source.
 
 ## Ownership and flow
 
@@ -17,19 +19,7 @@ Status: Phase 2 input workflow. Actual milestone acceptance is recorded in `PHAS
 
 Implemented owners are PR-001, PR-002, PR-003, PR-004 input basis, PR-007, PR-008 input basis, PR-009 validation, PR-010, PR-011 and PR-017. PR-016 supports input determinism and hashing. Similar terminology does not authorize later analytical owners.
 
-```text
-explicit AuditBundle
--> source roles and local paths
--> inventory and strict control parsing
--> table loading
--> explicit mapping
--> canonical normalization and identity
--> provenance attachment and validation coverage
--> explicit chronology and immediate dependencies
--> optional explicit PR-017 content reads
--> independent capability classification
--> BundleValidationResult in memory
-```
+An explicit `AuditBundle` drives local source loading, declared mapping, canonical normalization, validation, optional content reads and capability classification. It returns an in-memory `BundleValidationResult`. Every calculation is separately invoked with explicit scope and metadata.
 
 Adjacent-layer imports in the orchestrator occur only at invocation, because normalization/classification reuse validators. The checker authorizes exact import and IO-call sites; the validation module is not broadly exempted. Existing validators retain their earlier no-IO boundaries. Output configuration is not executed. No directory scan, report, cache, worker or public audit CLI is created.
 
@@ -59,7 +49,7 @@ Fatal parsing, identity, unsafe mapping and invalid present fields raise. Incomp
 
 Generation uses flat indexes and bounded monotone scans. Some same-version chains have quadratic worst case. No 100,000-row performance claim or independent security certification is made. Content containment assumes a trusted stable directory; see docs/privacy.md.
 
-No protected metric, representation-execution, lineage or report module is opened. The conceptual dependency direction remains utilities/contracts, input boundaries, observability, later metrics/lineage, assembly, renderers and CLI. Phase 3 is not authorized.
+At the historical Phase 2 checkpoint, metrics and representations were unopened. The following Phase 3 sections record their subsequently approved boundaries. General lineage and reports remain protected.
 
 
 ## Phase 3 Step 2 active boundary
@@ -211,3 +201,23 @@ The performance tests measure synthetic 100000-record metadata, exact duplicates
 and the current Hero input-plus-calculation path. JUnit retains elapsed times and
 per-call tracemalloc peaks with environment and scope. These observations do not
 certify the future complete-report latency target. Step 11 has not started.
+
+## Phase 3 Step 11 current boundary
+
+Ten previously reserved runtime modules now implement the approved Phase 3 subset: four representations (`base`, `field`, `content_hash`, `compatibility`) and six metrics (`duplicates`, `diversity`, `provenance`, `bounds`, `tail`, `resampling`). Forty modules remain in total. Sixteen later-layer modules retain their exact protected docstring-only bodies. Runtime AST/import checks retain the accepted Step 9 mathematical definitions; Step 10 added test integration, and Step 11 changes only the package version literal.
+
+| Layer | Explicit entry points | Current boundary |
+|---|---|---|
+| Representation | `assign_field_states`, `assign_content_states`, `validate_representation_compatibility` | Caller-selected scope, declared field/profile, exact states or directed map; no embedded classifier |
+| Record form | `detect_exact_duplicates` | Exact UTF-8 grouping and two counts; caller-owned data unchanged |
+| Distribution | `calculate_state_distribution`, `distribution_from_counts`, `distribution_from_probabilities` | Support, diversity, concentration; explicit weighted companion only |
+| Provenance | `summarize_provenance`, `direct_closure_exposure`, `closure_exposure_bounds` | Full selected scope, separate missingness/coverage, direct declaration-based exposure |
+| Tail | `select_tail`, `one_step_extinction_probability` | Explicit approved rule or explicit closed-model marginal |
+| Closed model | `expected_diversity_after_steps`, `simulate_closed_resampling` | Explicit n/horizon, sampled-only seed/replicates and lazy NumPy |
+| Explicit pair | `compare_support` | Exactly two validated compatible ordered scopes; original and harmonized bases retained |
+
+The ordinary bundle validator never dispatches any of these calls. Metrics may reuse approved pure canonical/provenance/order validators at their exact reviewed call sites, but cannot invoke input loaders or report/CLI orchestration. Imports perform no numerical work, sampling, user file reads or network calls. Explicit invocation tests separately enforce the no-I/O/no-network boundary with numerical dependencies present.
+
+Shared modules retain owner-specific gates. T3 direct bounds do not open lineage bounds; closed sampling does not open T5 reopening; explicit pair operations do not open Phase 6A orchestration. Reports, renderers, embeddings, general lineage, external-reference metrics and reserved logging/result assembly remain protected. No function ownership, source formula, dependency, backend, CLI command or serialized schema changes in Step 11.
+
+Step 11 stage guards pin the original source/runtime digest after undoing exactly the two approved version literals. Historical tests use immutable Step 10 source and preserve all node identities. The two maintenance exceptions are narrow, explicitly approved and checked against exact original bytes. Build/install/archive tools operate as maintainer processes outside user-data flows. Final acceptance is bound to actual CI for the final source commit.

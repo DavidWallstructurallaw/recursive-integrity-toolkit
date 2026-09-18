@@ -1,6 +1,6 @@
 # Privacy and Local Input Boundaries
 
-Status: Phase 2. `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
+Status: Phase 3 development milestone. `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
 
 Package import does not contact a network, open user audit files, require optional PyArrow or start a service. Runtime operates on explicitly supplied local files and declarations. No telemetry, background worker, plugin, cloud client, database, model download or LLM service exists. CI/package installation acquire dependencies separately; CI uses synthetic fixtures only.
 
@@ -30,7 +30,7 @@ Internal results retain records, provenance, file inventory and private source l
 
 Tests use synthetic data and verify offline behavior, unchanged sources, rejected mapping execution and contained reference access. A clean installed-wheel check blocks network plus NumPy/pandas/PyArrow, imports all forty modules and runs Hero validation.
 
-Delivery archives contain tracked public source, project wheel/sdist and synthetic test evidence. Git internals, environments, caches, private data and full theory PDFs are excluded. No third-party source, datasets, models or fonts are bundled. Metadata lists actual installed tool versions and their declared license metadata; this is not an independent vulnerability or legal audit.
+Delivery bundles contain separate tracked-source archives, project wheel/sdist and synthetic test evidence. Git internals, environments, caches, private data and full theory PDFs are excluded. No third-party source, datasets, models or fonts are bundled. Metadata lists actual installed tool versions and their declared license metadata; this is not an independent vulnerability or legal audit.
 
 The completion record reports failures, repairs and unexecuted checks separately. No production security certification is claimed. Only explicitly authorized Phase 3 steps may add bounded calculation behavior.
 
@@ -53,3 +53,11 @@ Tests use synthetic text, independent copies, supplied local-reference payloads,
 Unicode and newline variants, artificial digest collisions, and no-I/O/no-logging
 checks. Errors use static messages; collision failures do not echo the conflicting
 text. Public report serialization and redaction remain deferred to Phase 4.
+
+## Explicit mathematical invocation
+
+Representation and metric calls operate on supplied immutable memory and do not read user files, environment variables, content references, network resources or user code. Static operation/import gates and fail-on-call runtime tests protect these boundaries. Ordinary input validation never invokes metrics, including when a simulation configuration is present. All forty imports and input-only smoke tests retain numerical/optional import blockers; a separate numerical smoke uses the installed wheel with dependencies present and network blocked.
+
+Sampled closed resampling creates one explicitly seeded local PCG64 generator per call after domain/resource checks. It does not read or alter the global random stream. No auto-installation or remote RNG exists. Declared operation/state/horizon/replicate bounds limit allocation; they do not provide an OS memory sandbox or certify full-report performance.
+
+Scopes, state IDs, source declarations, weights, content digests and original distributions can be sensitive. Default repr suppression and static errors reduce accidental disclosure, but deliberate serialization or inspection of these internal objects can expose caller data. They are not redacted public reports. Missing provenance and errors remain visible; no inference of authorship, external truth, semantic independence or safe deployment is performed. Evidence bundles use only repository-owned synthetic fixtures.

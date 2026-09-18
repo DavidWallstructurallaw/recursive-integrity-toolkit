@@ -167,3 +167,19 @@ def phase3_measure(request):
         assert elapsed >= 0 and peak >= current >= 0
         return value
     return measure
+
+
+@pytest.fixture(scope="session")
+def phase3_step10_snapshot(repo_root, tmp_path_factory):
+    """Materialize immutable Step 10 source for its historical stage assertions."""
+    import io
+    import subprocess
+    import zipfile
+    root = tmp_path_factory.mktemp("phase3-step10")
+    commit = "150a2a105e01883672ef0c2300b41b0de3be352e"
+    tree = subprocess.check_output(["git", "-C", str(repo_root), "rev-parse", commit+"^{tree}"], text=True).strip()
+    assert tree == "b609cb75913fc6352729086819a24795caae1dd8"
+    raw = subprocess.check_output(["git", "-C", str(repo_root), "archive", "--format=zip", commit])
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        archive.extractall(root)
+    return root

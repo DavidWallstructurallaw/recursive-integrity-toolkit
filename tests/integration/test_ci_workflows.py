@@ -1,4 +1,4 @@
-"""Preserve workflow guarantees while moving active gates to Phase 3 Step 10."""
+"""Preserve workflow guarantees while moving active gates to Phase 3 Step 11."""
 
 from pathlib import Path
 
@@ -26,7 +26,7 @@ def test_workflows_preserve_phase_boundary(repo_root: Path) -> None:
     assert "test_no_network.py" in combined
     assert "python -m build" in combined
     assert "rit version" in combined
-    assert "--phase 3 --step 10" in combined
+    assert "--phase 3 --step 11" in combined
     assert "release_check.py --diff" not in combined
 
 
@@ -63,19 +63,23 @@ def test_phase2_core_and_real_parquet_have_independent_complete_runs(repo_root):
     assert "find_spec('pyarrow') is None" in text
     assert text.count("python -m pytest -p no:cacheprovider -q --junitxml=") == 2
     assert " -k " not in text
+    assert 'dependencies: [current, minimum]' in text
+    assert '"numpy==2.0.0" "pandas==2.2.2"' in text
+    assert 'python -m pip check' in text
+    assert 'dependencies.txt' in text
 
 
 def test_phase2_delivery_builds_both_formats_and_tests_installed_wheel(repo_root):
     # Same identity and safety guarantees; only the active artifact stage changes.
     text = (repo_root / ".github/workflows/release.yml").read_text(encoding="utf-8")
-    for required in ("python -m build", "python -m twine check --strict", "--dist", "--candidate",
+    for required in ("python -m build", "python -m twine check --strict", "--dist", "--delivery",
                      "--require-parquet", "actions/upload-artifact@v4", "retention-days: 90",
                      "if-no-files-found: error", "phase3_test_results.log", "phase3_build_results.log"):
         assert required in text
-    assert "--delivery" not in text and "twine upload" not in text and "git push" not in text
+    assert "twine upload" not in text and "git push" not in text
     script = (repo_root / "scripts/release_check.py").read_text(encoding="utf-8")
     for required in ('"--no-index", "--no-deps"', '"-I"', '"--prefix=recursive-integrity-toolkit/"',
-                     '"recursive-integrity-toolkit-phase3-step10-candidate.zip"', '"phase3_artifacts.sha256"'):
+                     '"recursive-integrity-toolkit-phase3.zip"', '"phase3_artifacts.sha256"'):
         assert required in script
 
 

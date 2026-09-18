@@ -229,7 +229,7 @@ def test_phase3_approved_plan_and_baseline_control():
 def test_phase3_forged_manifest_does_not_authorize_a_change(key):
     control=deepcopy(json.loads((ROOT/"PHASE_3_BASELINE.json").read_text(encoding="utf-8")))
     if key in ("active_phase","active_step"): control[key]+=1
-    elif key=="phase_complete": control[key]=True
+    elif key=="phase_complete": control[key]=not control[key]
     elif key=="permitted_paths": control[key].append("src/recursive_integrity_toolkit/metrics/diversity.py")
     elif key=="approved_decisions": control[key].pop()
     else: control[key]="0"*40
@@ -280,6 +280,6 @@ def test_phase3_current_model_passes_restricted_contract_gate():
     checker["_phase3_contract_boundary"](ast.parse((ROOT/"src/recursive_integrity_toolkit/models.py").read_text(encoding="utf-8")))
 
 
-def test_phase3_final_completion_records_not_created():
+def test_phase3_final_completion_records_not_created(phase3_step10_snapshot):
     for name in ("PHASE_3_COMPLETION.md","PHASE_3_VALIDATION_REPORT.md","PHASE_3_ARCHITECTURE_COMPLIANCE_REPORT.md"):
-        assert not (ROOT/name).exists()
+        assert not (phase3_step10_snapshot/name).exists()

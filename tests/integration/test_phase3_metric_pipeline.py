@@ -240,34 +240,34 @@ def test_phase3_later_implementations_remain_empty(package_root,module):
 def test_phase3_step10_rejects_unopened_file_changes(repo_root,path):
     gate = runpy.run_path(str(repo_root/"scripts/release_check.py"))
     with pytest.raises(ValueError):
-        gate["verify_phase3_changes"]([("M",path)],incremental=True)
+        gate["verify_prior_step_changes"]([("M",path)],step=10)
 
 
-def test_phase3_step10_scope_is_fixed_not_self_authorized(repo_root):
+def test_phase3_step10_scope_is_fixed_not_self_authorized(repo_root,phase3_step10_snapshot):
     gate = runpy.run_path(str(repo_root/"scripts/release_check.py"))
-    control = json.loads((repo_root/"PHASE_3_BASELINE.json").read_bytes())
-    gate["verify_phase3_control"](control,10)
+    control = json.loads((phase3_step10_snapshot/"PHASE_3_BASELINE.json").read_bytes())
+    gate["verify_step10_control"](control)
     assert gate["PHASE3_STEP10_NEW"] == {"tests/integration/test_phase3_metric_pipeline.py","tests/golden/test_phase3_math.py"}
     assert not any(p.startswith("src/") for p in gate["PHASE3_STEP10_ALLOWED"])
     for key,value in (("active_step",11),("previous_step_commit","0"*40),("phase_complete",True),("main_merge_authorized",True)):
         altered = dict(control,**{key:value})
         with pytest.raises(ValueError):
-            gate["verify_phase3_control"](altered,10)
+            gate["verify_step10_control"](altered)
     altered = dict(control,permitted_paths=control["permitted_paths"]+["src/new.py"])
     with pytest.raises(ValueError):
-        gate["verify_phase3_control"](altered,10)
-    assert gate["verify_step10_snapshot"]()["runtime_modules_unchanged"] == 40
+        gate["verify_step10_control"](altered)
+    assert gate["verify_step10_snapshot"](phase3_step10_snapshot)["runtime_modules_unchanged"] == 40
 
 
 @pytest.mark.parametrize("path",["src/recursive_integrity_toolkit/metrics/diversity.py","tests/golden/phase3_math_cases.json","examples/hero/records_v2.csv","pyproject.toml"])
-def test_phase3_step10_snapshot_rejects_byte_changes(repo_root,tmp_path,path):
+def test_phase3_step10_snapshot_rejects_byte_changes(repo_root,tmp_path,path,phase3_step10_snapshot):
     import shutil
     gate = runpy.run_path(str(repo_root/"scripts/release_check.py"))
-    shutil.copytree(repo_root/"src/recursive_integrity_toolkit",tmp_path/"src/recursive_integrity_toolkit",ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(phase3_step10_snapshot/"src/recursive_integrity_toolkit",tmp_path/"src/recursive_integrity_toolkit",ignore=shutil.ignore_patterns("__pycache__"))
     for name in gate["STEP10_FROZEN_FILES"]:
         target = tmp_path/name
         target.parent.mkdir(parents=True,exist_ok=True)
-        target.write_bytes((repo_root/name).read_bytes())
+        target.write_bytes((phase3_step10_snapshot/name).read_bytes())
     gate["verify_step10_snapshot"](tmp_path)
     target = tmp_path/path
     target.write_bytes(target.read_bytes()+b"\n")
@@ -325,3 +325,76 @@ def test_phase3_step10_evidence_requires_executed_cases_and_all_measurements(rep
     tree.write(path)
     with pytest.raises(ValueError):
         gate["verify_step10_evidence"](path)
+
+
+@pytest.mark.parametrize("path",[
+    "src/recursive_integrity_toolkit/metrics/diversity.py",
+    "src/recursive_integrity_toolkit/models.py",
+    "src/recursive_integrity_toolkit/io/validation.py",
+    "src/recursive_integrity_toolkit/cli.py",
+    "tests/unit/test_T1_compatibility.py",
+    "tests/golden/phase3_math_cases.json",
+    "tests/golden/phase3_math_cases.md",
+    "PHASE_3_PLAN.md","PHASE_2_COMPLETION.md",
+    "schemas/report.schema.json","examples/hero/EXPECTED_OUTPUTS.md",
+])
+def test_phase3_step11_rejects_unopened_changes(repo_root,path):
+    gate = runpy.run_path(str(repo_root/"scripts/release_check.py"))
+    with pytest.raises(ValueError):
+        gate["verify_phase3_changes"]([("M",path)],incremental=True)
+
+
+def test_phase3_step11_control_and_new_files_are_fixed(repo_root):
+    gate = runpy.run_path(str(repo_root/"scripts/release_check.py"))
+    control = json.loads((repo_root/"PHASE_3_BASELINE.json").read_bytes())
+    gate["verify_phase3_control"](control,11)
+    assert gate["PHASE3_STEP11_NEW"] == {"PHASE_3_COMPLETION.md","PHASE_3_VALIDATION_REPORT.md","PHASE_3_ARCHITECTURE_COMPLIANCE_REPORT.md"}
+    assert gate["STEP11_TEST_EXCEPTIONS"] == {"tests/unit/test_phase3_contracts.py","tests/integration/test_phase3_metric_pipeline.py"}
+    for key,value in (("active_step",12),("phase_complete",not control["phase_complete"]),
+                      ("previous_step_commit","0"*40),("next_step_authorized",True),
+                      ("main_merge_authorized",True),("publication_authorized",True)):
+        with pytest.raises(ValueError):
+            gate["verify_phase3_control"](dict(control,**{key:value}),11)
+    for status,path in (("A","src/new.py"),("A","tests/unit/test_phase3_contracts.py"),
+                        ("D","README.md"),("R100","docs/privacy.md")):
+        with pytest.raises(ValueError):
+            gate["verify_phase3_changes"]([(status,path)],incremental=True)
+
+
+@pytest.mark.parametrize("path",[
+    "src/recursive_integrity_toolkit/__init__.py",
+    "src/recursive_integrity_toolkit/metrics/resampling.py",
+    "pyproject.toml","tests/golden/phase3_math_cases.json",
+])
+def test_phase3_step11_rejects_changes_beyond_version_literals(repo_root,tmp_path,path):
+    import shutil
+    gate = runpy.run_path(str(repo_root/"scripts/release_check.py"))
+    shutil.copytree(repo_root/"src/recursive_integrity_toolkit",tmp_path/"src/recursive_integrity_toolkit",ignore=shutil.ignore_patterns("__pycache__"))
+    for name in gate["STEP10_FROZEN_FILES"]:
+        target = tmp_path/name
+        target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_bytes((repo_root/name).read_bytes())
+    assert gate["verify_step11_snapshot"](tmp_path)["approved_version_literals"] == 2
+    target = tmp_path/path
+    original = target.read_bytes()
+    for altered in (original+b"\n", original.replace(b"0.1.0.dev2",b"0.1.0.dev3")):
+        if altered == original:
+            continue
+        target.write_bytes(altered)
+        with pytest.raises(ValueError):
+            gate["verify_step11_snapshot"](tmp_path)
+
+
+def test_phase3_step11_test_exceptions_are_exact(repo_root,phase3_step10_snapshot):
+    gate = runpy.run_path(str(repo_root/"scripts/release_check.py"))
+    unit = "tests/unit/test_phase3_contracts.py"
+    pipeline = "tests/integration/test_phase3_metric_pipeline.py"
+    for name,verify in ((unit,gate["verify_step11_contract_test_migration"]),
+                        (pipeline,gate["verify_step11_pipeline_test_migration"])):
+        before = (phase3_step10_snapshot/name).read_bytes()
+        current = (repo_root/name).read_bytes()
+        verify(before,current)
+        with pytest.raises(ValueError):
+            verify(before,b"# unauthorized inherited edit\n"+current)
+        with pytest.raises(ValueError):
+            verify(before,current+b"\nFORGED_TEST = True\n")

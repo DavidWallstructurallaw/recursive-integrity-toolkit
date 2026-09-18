@@ -1,7 +1,52 @@
-# Release Process
+# Phase 3 Development Milestone Process
 
-Status: Phase 1 scaffold.
+`0.1.0.dev2` is the approved Step 11 development milestone under P3-D10. It does not authorize stable v0.1 publication, a tag, main merge or later-phase implementation. The frozen Phase 2 completion records remain historical evidence.
 
-A Phase 1 release candidate must pass package build, clean installation, safe import, CLI startup, schema, ownership, hero-format, license, no-network, prohibited-structure, and no-algorithm checks.
+## Source and scope
 
-Publishing and Phase 2 implementation require separate authorization.
+The immutable Phase 2 commit is `78554993febb01609cb90814cc24cce2012bf7d7`. Step 11 starts from accepted Step 10 commit `150a2a105e01883672ef0c2300b41b0de3be352e`, tree `b609cb75913fc6352729086819a24795caae1dd8` on `phase3-metrics`.
+
+`release_check.py --phase 3 --step 11 --diff` checks fixed stage allowlists, ancestor/tree identities, a clean tracked checkout, the sixteen approved hashes, unchanged runtime bytes except two exact version literals, five unchanged schemas, six Hero files, frozen oracles and both approved test migrations. The active JSON manifest cannot broaden these fixed permissions. Only the three Phase 3 milestone reports are new files.
+
+Historical Step 10 tests read an isolated archive of that exact accepted commit. They retain their original names, parameters and numerical assertions. The completion-forgery test flips the actual current flag. Under the subsequent explicit approval, the inherited final-report-absence test also checks the immutable Step 10 snapshot; the current Step 11 structure test requires all three reports. The release gate checks exact migration bytes and only allows new Step 11 tests to be appended. Baseline evidence retains complete original/current node lists from immutable Phase 2 and all ten accepted steps. A full Git history is needed to reproduce those checks.
+
+## Required execution profiles
+
+| Profile | OS / Python | Dependencies and evidence |
+|---|---|---|
+| Core, current | Ubuntu and Windows / 3.11 and 3.12 | Full suite; resolved dependency versions retained; PyArrow genuinely absent |
+| Core, minimum compatible | Ubuntu and Windows / 3.11 and 3.12 | Full suite with NumPy 2.0.0 and pandas 2.2.2; PyArrow absent |
+| Real Parquet | Ubuntu / 3.12 | Full suite with real PyArrow and three original real-input tests |
+| Security boundary | Ubuntu / 3.12 | Import/no-network, mapping, content, protected-owner and explicit-calculation boundary tests |
+| Hero and mathematics | Ubuntu / 3.12 | Unchanged Hero contract, twenty frozen mathematical cases and integration tests |
+| Build and delivery | Ubuntu / 3.12 | Repeated complete core/Parquet runs, isolated builds, strict metadata check, outside-checkout installed smoke and tracked-source archive |
+
+The literal pair NumPy 2.0.0 / pandas 2.2.0 cannot resolve: pandas 2.2.0 requires NumPy below 2. The original package declarations stay unchanged. NumPy 2.0.0 / pandas 2.2.2 is the lowest jointly compatible direct-dependency pair, supported by the [pandas 2.2.2 release notes](https://pandas.pydata.org/docs/whatsnew/v2.2.2.html). The failed resolver command and successful compatible runs are retained separately. This is not a claim that pandas 2.2.0 was tested with NumPy 2, or that every intermediate version has been tested. Optional PyArrow minimums are not part of the two direct-runtime-dependency minimum profile; real Parquet uses its recorded resolved version.
+
+Current profiles resolve the existing dependency declarations at execution time. `pip freeze`, `pip check`, Python/platform details and workflow logs identify actual environments. Repeated jobs and subsets are never summed into a fictitious distinct-test count. A targeted subset cannot replace a complete suite. JUnit verification rejects failures, errors, skips, duplicate identities and missing real-Parquet tests.
+
+## Build and archive
+
+Use a clean tested checkout. Example commands below match the workflow sequence; the reports retain actual paths, versions, results and exit codes.
+
+```bash
+python scripts/check_spec_consistency.py
+python scripts/check_traceability.py
+python scripts/release_check.py --phase 3 --step 11 --diff
+python -m build --outdir /absolute/evidence/dist
+python -m twine check --strict /absolute/evidence/dist/*
+python scripts/release_check.py --phase 3 --step 11 --dist /absolute/evidence/dist
+python scripts/release_check.py --phase 3 --step 11 --delivery /absolute/evidence
+```
+
+The delivery directory must already contain successful complete `core.xml` and `parquet.xml` files and both distributions. The installed check creates fresh environments outside the checkout, installs the wheel with `--no-index --no-deps`, blocks network and numerical/optional imports for all forty module imports and input-only Hero validation, then separately runs installed mathematical calls with approved numerical dependencies available. No test substitutes checkout modules for installed package code.
+
+`recursive-integrity-toolkit-phase3.zip` contains one `recursive-integrity-toolkit/` root and the complete tracked tree. Every archived member is compared to the tested checkout. No Git internals, environment, cache, generated bytecode, private input or full theory PDF is included. Wheel/sdist package scope is documented separately. `phase3_repository_files.sha256` identifies tracked files; `phase3_artifacts.sha256` identifies retained execution artifacts. Performance evidence records actual time/traced allocations and never certifies whole-product report targets.
+
+## Acceptance and finalization
+
+A successful build job produces source and distribution evidence; overall acceptance also requires all four workflow roles on the same source commit. Candidate reports keep the phase pending until those jobs pass. Required reviews are recorded with their actual roles and limits.
+
+Once implementation acceptance is established, record its commit and workflow results. Finalize the reports and the explicit completion flag, leaving runtime/formulas/oracles unchanged. This acceptance-record commit must rerun all four workflows and regenerate the final archive/distributions. Its current commit ID is supplied by Git and the execution manifest, so committed documents do not claim to contain their own eventual hash.
+
+The final external receipt binds the implementation-acceptance commit, finalization commit, exact workflow runs, artifact identities and retained limitations. Hosted artifacts have finite retention: 30 days for ordinary CI/security/math evidence and 90 days for delivery. Record actual expiry if available. If a binary download cannot be verified, disclose that limitation and distinguish independently reproduced local bytes from hosted binary bytes.

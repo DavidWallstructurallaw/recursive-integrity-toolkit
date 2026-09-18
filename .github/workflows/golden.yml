@@ -1,4 +1,4 @@
-name: Phase 3 Step 10 Hero Scaffold Contract
+name: Phase 3 Step 11 Hero and Mathematical Contract
 
 on:
   push:
@@ -32,7 +32,18 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rit-math"
           python scripts/check_spec_consistency.py
-          python -m pytest -p no:cacheprovider -q tests/integration/test_hero_structure.py tests/integration/test_phase3_metric_pipeline.py tests/golden/test_phase3_math.py
-          python scripts/release_check.py --phase 3 --step 10 --diff
+          python -m pytest -p no:cacheprovider -q tests/integration/test_hero_structure.py tests/integration/test_phase3_metric_pipeline.py tests/golden/test_phase3_math.py --junitxml="$RUNNER_TEMP/rit-math/math.xml" | tee "$RUNNER_TEMP/rit-math/phase3_math_validation.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-math/math.xml"
+          python scripts/release_check.py --phase 3 --step 11 --diff
+      - name: Retain actual Hero and mathematical evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase3-step11-hero-mathematical
+          path: ${{ runner.temp }}/rit-math/
+          if-no-files-found: error
+          retention-days: 30
 # No build_golden.py, normalize_golden.py or analytical report is executed.

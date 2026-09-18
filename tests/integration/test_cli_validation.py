@@ -27,4 +27,4 @@ def test_cli_version_runs(subprocess_env) -> None:
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "recursive-integrity-toolkit 0.1.0.dev1"
+    assert result.stdout.strip() == "recursive-integrity-toolkit 0.1.0.dev2"

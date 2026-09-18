@@ -1,4 +1,4 @@
-# Data Schema and Phase 2 Workflow
+# Data Schema and Phase 3 Call Contracts
 
 Canonical field meanings remain governed by `DATA_AND_PROVENANCE_SPEC.md` and `DEFINITIONS_AND_UNITS.md`. This guide describes implemented interfaces and their boundaries. Actual final acceptance is recorded separately.
 
@@ -87,7 +87,7 @@ Content is read only by explicit LOCAL_REF requests through PR-017 containment a
 
 The bundle returns inventory, records, optional provenance, join evidence, chronology, generation when available, capability classification, mapping evidence, resolved-content identities and diagnostics. It writes no report. Check has_errors independently of maximum level. Content/parent-family failures can coexist with independent valid metadata; fatal structural input errors raise.
 
-Hero qualifies as Level 4 without metric calculation. Model longitudinal remains unavailable. Scenario declarations may establish experimental eligibility without execution. State assignment, analytical shares/bounds/deltas, general lineage, ancestry, simulation and rendering remain deferred. All five schemas remain unchanged in Step 10. Phase 3 is not authorized.
+Hero input validation qualifies as Level 4 without metric calculation. Model longitudinal remains unavailable. Scenario declarations may establish experimental eligibility without execution. The separately invoked Phase 3 calls below calculate approved fields; general lineage, ancestry and rendering remain deferred. All five serialized schemas remain unchanged.
 
 
 ## Phase 3 Step 2: literal field representations
@@ -190,3 +190,30 @@ Exact record form establishes no semantic equivalence, independent origin,
 authorship or provenance. No record/provenance is edited, removed or reweighted.
 Support/diversity, near-duplicates, longitudinal grouping and public reports remain
 outside this step.
+
+## Phase 3 mathematical call contracts
+
+These are internal Python result containers, with no new serialized report/config schema. `CalculationScope` supplies selected versions, included/excluded canonical keys, denominator basis and scope ID. Every representation-bound result retains name, source, version and mapping rule. Constructors alone do not certify that a caller's supplied data has the claimed empirical meaning; each kernel validates its own prerequisites.
+
+| Call / result | Input and denominator | Output contract |
+|---|---|---|
+| `calculate_state_distribution` / `StateDistributionResult` | Included representation records; optional explicit valid record weights | Always an unweighted distribution; a separate weighted companion when requested; retained excluded assignments and coverage |
+| `distribution_from_counts` | Explicit nonnegative integer counts consistent with selected scope | Exact counts and F-001 frequencies over the count total |
+| `distribution_from_probabilities` | Explicit finite vector with total one within 1e-12 | No invented counts/masses/empirical sample size; supplied total/residual retained |
+| `summarize_provenance` / `ProvenanceCompositionResult` | Explicit unweighted single-version audit scope, independent of representation exclusions | Five source categories, four confidence count categories, missing-row inventory, separate coverage and direct classes |
+| `direct_closure_exposure` / `DirectClosureExposureBounds` | Full selected scope N; known closed C and unresolved U | F-009 C/N, F-010 (C+U)/N, width U/N, preserved coverage/errors and classification basis |
+| `select_tail` / `TailSelectionResult` | Unweighted count-backed distribution; explicit `TailSelectionOptions` | Selected positive states, ordinal ranks, tail support and tail count share |
+| `one_step_extinction_probability` | Explicit state marginal p and positive integer resample size n | F-014 (1-p)^n, one-step simulation, analytic method, no invented seed |
+| `expected_diversity_after_steps` | Explicit vector, n and horizon | F-015 analytic sequence including t=0; method/underflow disclosure |
+| `simulate_closed_resampling` | Explicit vector, n, horizon, seed and replicates | Ordered sampled paths; t=0 has no invented counts; each later generation has integer counts, frequencies, support and diversity |
+| `compare_support` / `SupportComparison` | Two distributions, `ExplicitPairContext`, explicit state semantics and optional validated directed map | F-005/F-006/F-018, lost/added/retained state sets and counts; retained original and harmonized distributions |
+
+Weights must be finite, nonnegative and explicitly aligned to canonical record keys. Zero-weight states do not enter weighted positive support; a nonpositive total cannot supply a weighted distribution. Weighted and unweighted values remain distinct. Counts and cardinalities are exact; scalar checks use the fixed absolute/relative 1e-12 policy.
+
+Matched provenance with unavailable required fields retains its original errors and unresolved direct class. Missing rows never become a sixth source category or a confidence value. Explicit unknown remains a valid declaration. Source/grounding/review/confidence are never substituted for each other. A dataset with no usable required provenance yields unavailable bound scalars; explicit valid unknown grounding can support the full [0,1] interval. Confidence counts are not trust scores or weights.
+
+Tail options are `singleton_count`, `count_at_or_below`, `frequency_at_or_below` and `state_list`. Their required threshold/state declarations are explicit. Ranks use frequency, count and Unicode state ID for deterministic ties. Weighted tails and undeclared quantiles remain unsupported.
+
+Scenario results retain `simulation` evidence even for analytically evaluated probabilities or expectations. Only sampled input permits the P3-D07 bounded, disclosed within-tolerance correction; larger mass errors fail. Negative probabilities are never clipped. Sampled calls record PCG64, actual NumPy version, canonical state order and replicate-major/step-major schedule. Resource limits are checked before allocation/RNG creation. Analytic methods have no random seed. Numerical underflow is distinct from model extinction.
+
+The pair context revalidates chronology and representation declarations. Both sides must share weighting/denominator families and compatible state semantics. A complete directed many-to-one map may aggregate the source side; mapping collisions and before/after support sizes remain visible. Empty/unavailable sides propagate unavailability without erasing the individually valid side. This interface performs one caller-selected comparison and makes no automatic temporal, causal or model-performance inference.

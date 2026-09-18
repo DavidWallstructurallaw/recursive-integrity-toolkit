@@ -1,13 +1,13 @@
 # Theory Traceability
 
-Status: Phase 1 scaffold.
+Status: Phase 3 mathematical development milestone. Final acceptance is recorded in the three Phase 3 milestone reports.
 
 The controlling maps are:
 
 - `THEORY_SOURCE_MAP.md`
 - `THEORY_TO_CODE_TRACEABILITY.md`
 
-Every Python module identifies its Trace IDs or Product Rule IDs in the module docstring. Phase 1 does not implement the theory-derived formulas.
+Every Python module identifies its Trace IDs or Product Rule IDs in its docstring. The step records retain their historical boundaries; the final field index describes the complete approved Phase 3 subset. Some frozen runtime docstrings retain earlier-step statements; current ownership and implementation are established by this index, exact source gates and executed tests.
 
 
 ## Phase 3 Step 3 implemented trace
@@ -148,3 +148,72 @@ The 100000-record performance oracle is independently determined by its document
 synthetic construction (100 equal topic states, 1000 repeated forms, two equal
 source classes). Timing and traced allocations are engineering observations only.
 No new entropy, quality, integrity, lineage or universal failure score is added.
+
+## Phase 3 final field index
+
+This index complements the historical step records above. `Definitions` refers to the unchanged `DEFINITIONS_AND_UNITS.md`; formula IDs refer to `THEORY_TO_CODE_TRACEABILITY.md`. Every scalar's `CalculationMetadata` carries its owner, formula or product-only method, units, scope/denominator, evidence, representation where applicable, assumptions and limits. Table/path values retain the corresponding table or trajectory metadata. All objects remain internal Python results; Phase 4 report fields and serialization remain deferred.
+
+### Representation, counts and distribution
+
+| Field(s) | Definition / owner / module | Unit and evidence | Tests and limit |
+|---|---|---|---|
+| `selected_count`, `included_count`, `excluded_count`; coverage numerator/denominator/ratio | P3-D06; Definitions 6; T1 supporting / representations/base, field | records and observed coverage ratio over selected valid records | `test_T1_representation.py`; declared literal states, no semantic certification |
+| Exact-content assignments, duplicate group membership and group `record_count` | P3-D05; Definitions 6.10, 20.2; PR-006 / representations/content_hash | deterministic record-form identity and exact group cardinality / observed_fact | `test_PR006_duplicates.py`, `test_T1_representation.py`; hashes are linkable, paths are not content |
+| `duplicate_record_count` | Definitions 8.3; PR-006 / metrics/duplicates; sum(group size - 1) | records / observed_fact | `test_PR006_duplicates.py`; no deduplication or semantic equivalence |
+| `duplicate_group_count` | Definitions 8.4; PR-006 / metrics/duplicates | groups / observed_fact | Same tests; exact groups of at least two |
+| `analyzed_record_count`, `state_count` | Definitions 7.1; T1 / metrics/diversity | records / observed_fact | `test_T1_support.py`, `test_T1_diversity.py`; probability-only inputs do not invent state counts |
+| `state_mass`, weighted `frequency_denominator` | Definitions 19, UD-021; T1 / metrics/diversity | explicit weight mass / derived_metric | Same tests; supplied nonnegative weights, preserved unweighted values |
+| `state_frequency`, unweighted `frequency_denominator` | F-001; Definitions 7.3; T1 / metrics/diversity | ratio over included count or explicit weight mass / derived_metric | Same tests and F001-A; explicit vector mode retains supplied observations without pretending F-001 counted records |
+| `support`, `support_size` | F-002; Definitions 7.4-7.6; T1 / metrics/diversity | positive-mass states and cardinality / derived_metric | `test_T1_support.py`, frozen F002 cases; representation-specific |
+| `gini_simpson_diversity` | F-003; Definitions 9.2; T1 / metrics/diversity | dimensionless, 1 - sum(p²) / derived_metric | `test_T1_diversity.py`, F003-A through D; no functional-failure claim |
+| `simpson_concentration` | F-004; Definitions 9.3; T1 / metrics/diversity | dimensionless, sum(p²) / derived_metric | Same unit tests; distributional concentration only |
+| `supplied_probability_total`, `probability_residual` | P3-D07; T1/PR-016 / metrics/diversity | mass and total-minus-one / numerical input diagnostics | Probability/roundoff tests in `test_T1_support.py`; no clipping or repair |
+
+### Provenance and direct exposure
+
+| Field(s) | Definition / owner / module | Unit and evidence | Tests and limit |
+|---|---|---|---|
+| `analyzed_record_count`, `records_with_matching_rows`, `missing_provenance_count` | Definitions 11.4; PR-004 / metrics/provenance | records / observed_fact | `test_PR004_coverage.py`; full selected scope, missing distinct from unknown |
+| `missing_provenance_share` | Definitions 11.4; PR-004 / metrics/provenance | missing rows / full selected records / derived_metric | Same tests; no invented source bucket |
+| `source.counts`, `source.shares` | Definitions 11.1, F-007; PR-005 / metrics/provenance | records / observed_fact; ratios / derived_metric | `test_PR005_source_shares.py`; five exact declared source categories |
+| `confidence.counts` | Definitions 3.3; PR-004 / metrics/provenance | records / observed_fact | `test_T3_provenance.py`; no confidence-share metric, trust score or discount |
+| Row, required-field and grounding coverage numerator/denominator/ratio | F-008; Definitions 3.10-3.12; PR-004 / preserved validation and metrics/provenance | records and observed coverage ratios | `test_PR004_coverage.py`, `test_T3_provenance.py`; three distinct evidence bases |
+| Source/confidence field coverage numerator/denominator/ratio | Definitions 3.13; PR-004 / metrics/provenance | records and observed coverage ratios | Same tests; incomplete matched fields remain unavailable |
+| `known_open_count`, `known_closed_count`, `unresolved_grounding_count` | Definitions 3.7-3.9; P3-D08; T3 / metrics/provenance | records / observed_fact under toolkit_operationalization | `test_T3_provenance.py`; declarations do not prove external truth/independence |
+| `weighted_source_type_masses`, `total_weight`, `missing_provenance_weight` | Definitions 19, UD-021; PR-005 / metrics/provenance | weight mass / derived_metric | `test_PR005_source_shares.py`; declared weights, no confidence weighting |
+| `weighted_source_type_shares`, `weighted_missing_provenance_share` | Weighted F-007 variant; PR-005 / metrics/provenance | ratio over all selected weight / derived_metric | Same tests; full weight denominator, distinct missingness |
+| Bounds `denominator` and retained partition counts | Definitions 3.7-3.9, 11.4; T3 / metrics/bounds | records / retained observed basis | `test_T3_bounds.py`; one unweighted full selected scope |
+| `lower_bound`, `upper_bound`, `interval_width` | F-009 C/N; F-010 (C+U)/N; width U/N; T3 / metrics/bounds | ratios / derived_metric, toolkit_operationalization | `test_T3_bounds.py`, DIRECT-A, Hero; direct evidence only, no lineage or universal risk |
+| Bounds coverage/confidence counts and errors | Same PR-004 basis above, retained by T3 adapter | unchanged observed evidence | `test_T3_bounds.py`; missingness/errors cannot be erased by the interval |
+
+### Tail and closed model
+
+| Field(s) | Definition / owner / module | Unit and evidence | Tests and limit |
+|---|---|---|---|
+| Tail denominator and ranking `state_count`, `state_frequency` | F-001 and Definitions 10; T2 / metrics/tail, retained T1 basis | records / observed_fact; ratios / derived_metric | `test_T2_tail.py`; unweighted count-backed input only |
+| `tail_membership`, `tail_support_size` | Definitions 10.1-10.4, P3-D06; T2 / metrics/tail | state set/cardinality / derived_metric | Same tests; four explicit rules, positive states only |
+| `tail_record_share` | Definitions 10.5; T2 / metrics/tail | selected counts / included record count / derived_metric | Same tests; no quantile/weighted-tail invention |
+| `rarity_rank` | Definitions 10.6; T2 / metrics/tail | 1-based ordinal / derived_metric | Same tests; frequency, count, Unicode tie order |
+| `one_step_extinction_probability` | F-014, Definitions 10.7; T2 / metrics/tail | probability / simulation, analytic_extinction | Same tests, frozen F014/Hero cases; closed multinomial assumption, explicit p and n |
+| `initial_gini_simpson_diversity`, `contraction_factor`, `expected_diversity` | F-003 and F-015, Definitions 12.1-12.5; T1 / metrics/resampling | ratios / simulation, analytic_expectation | `test_T1_resampling.py`, frozen F015/Hero cases; fixed n and explicit horizon, no seed |
+| Sampled `state_counts`, `state_frequencies` | Finite multinomial model and F-001; T1 / metrics/resampling | sampled records / simulation; ratios / simulation | Same tests; counts total n at t>0; initial counts absent |
+| Sampled `support`, `support_size`, `gini_simpson_diversity` | F-002/F-003 applied to sampled path; T1 / metrics/resampling | states/cardinality/ratio / simulation | Same tests; scenario trajectories retain simulation classification |
+| `step`, `replicate_index`, n, horizon, replicates and seed | Definitions 12; P3-D02/P3-D07; T1/PR-016 / metrics/resampling | explicit integer indices/parameters | Same tests and `test_PR016_determinism.py`; local PCG64, schedule/version retained |
+| Supplied/effective vectors and totals, residual, divisor, corrections | P3-D07; T1/PR-016 / metrics/resampling | numerical execution diagnostics, not empirical metrics | Roundoff tests in `test_T1_resampling.py`; sampled-only correction within 1e-12, positive support preserved |
+| `numerical_underflow`, `numerical_underflow_steps` | P3-D07; T2/T1 / tail, resampling | bool / step indices, numerical diagnostics | Underflow tests in the same modules; distinguishes numeric zero from model absorption |
+
+The sampler's independent checks include exact finite multinomial enumeration, n=1 absorption, absorbing/extinct states, count conservation, seed determinism, input permutation and a predeclared Monte Carlo check: p=(1/2,1/2), n=4, t=1..3, 8000 replicates, seed 812, absolute mean-diversity tolerance 0.025. Expected values use rational (1/2)(3/4)^t, independent of the implementation. Fixed-seed outcomes are checked within each recorded environment; cross-version NumPy path identity is not required.
+
+### Explicit pair and metadata
+
+| Field(s) | Definition / owner / module | Unit and evidence | Tests and limit |
+|---|---|---|---|
+| `support_delta` | F-005; T1 / metrics/diversity | later support minus earlier support, states / derived_metric | `test_T1_support.py`, `test_T1_compatibility.py`, HERO-PAIR |
+| `support_loss_count`, `support_added_count`; extinct/added/retained state sets | Definitions 7.9-7.12; T1 / metrics/diversity | cardinalities/state sets / derived_metric | Same tests; observed/supplied pair only, no permanent extinction inference |
+| `support_retention_ratio`, `retention_denominator` | F-006; T1 / metrics/diversity | intersection / earlier positive support; states denominator / derived basis | Same tests; common harmonized representation |
+| `gini_simpson_diversity_delta` | F-018; T1 / metrics/diversity | dimensionless, later D minus earlier D / derived_metric | `test_T1_diversity.py`, HERO-PAIR; compatible weighting and scope families |
+| Original/harmonized distribution fields | F-001 through F-004 as indexed above; T1 | retained original or explicitly aggregated derived basis | `test_T1_compatibility.py`; complete directed maps only |
+| `mapping_effect` support sizes, `collision_groups`, map direction and state semantics | P3-D03, Definitions 6/7; PR-011 / representations/compatibility; T1 / diversity | disclosed transformation diagnostics | Same tests; cannot recover distinctions collapsed by a map |
+| Units, methods, evidence, status, reasons, assumptions, representation, scope and weighting | Definitions 6/19; approved Step 1 contracts; PR-016 supporting / models and result owners | metadata, no additional numerical claim | `test_phase3_contracts.py`, each family above; unavailable scalars carry None, not invented zero |
+
+F-001 through F-010, F-014/F-015 and F-018 cover this approved subset. F-011 through F-013 ancestry-related work and F-016 external-reference loss and F-017 reopening work remain unimplemented. T4/T6, lineage bounds, T5, public report/CLI fields and complete temporal workflows retain their separate phase gates. Twenty frozen cases run without changing their JSON/source-note bytes. The final integration runner also checks evidence labels, scope separation and fail-on-call input-only behavior. No universal integrity, entropy, collapse or causal-failure score is introduced.

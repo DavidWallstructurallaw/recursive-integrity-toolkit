@@ -206,7 +206,7 @@ FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.p
 
 
 # Phase 3 Step 1: declarations and validation contracts only.
-PHASE3_ACTIVE_STEP = 9
+PHASE3_ACTIVE_STEP = 11
 PHASE3_CONTRACT_CLASSES = {
     "CalculationEvidenceClass", "CalculationStatus", "CalculationReason", "NumericalPolicy",
     "RepresentationDescriptor", "RecordStateAssignment", "CalculationScope", "WeightingOptions",
@@ -750,7 +750,7 @@ def main() -> int:
     print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Phase 3 Step 9 reviewed explicit-pair and inherited definition/import boundaries: PASS")
+    print("Phase 3 Step 11: retained Step 9 explicit-pair and inherited definition/import boundaries: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 

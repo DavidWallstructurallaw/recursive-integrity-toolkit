@@ -1,5 +1,7 @@
 # PHASE_3_DECISIONS
 
+Current work: Phase 3 Step 11. Earlier approval/contract/build sections below are historical step records. Current authority and the subsequent precise test-maintenance approval are recorded in the Step 11 sections at the end. Actual final acceptance is tracked in the three Phase 3 milestone reports.
+
 ## Approval record
 
 Theory Owner: Xiangyu Guo. Approval date: 2026-09-17. The user approved PHASE_3_PLAN.md without exceptions and explicitly instructed Phase 3 Step 1. P3-D01 through P3-D10 are adopted. No later step, main merge, tag or publication is authorized.
@@ -741,3 +743,37 @@ checker refactor is not performed. No protected runtime file is opened to make
 integration pass. Technical review is by this assistant and executed tests; no
 independent human review or general security certification is claimed. Stop after
 Step 10 acceptance and evidence delivery, before Step 11.
+
+## Step 11 authorization and finalization boundary
+
+On 2026-09-18 the Theory Owner explicitly requested Phase 3 Step 11. After the assistant identified two stage-test files absent from the planned Step 11 list and proposed precise maintenance exceptions, the Theory Owner instructed continuation: `很好，继续phase 3 step 11`. This approves the stated exceptions. No additional runtime repair, dependency change, main merge, publication or later-phase work is authorized.
+
+The accepted Step 10 commit is `150a2a105e01883672ef0c2300b41b0de3be352e`, tree `b609cb75913fc6352729086819a24795caae1dd8`. It contains 219 tracked files, 2472 core test identities and 2475 real-Parquet identities. The Step 11 gate preserves that full baseline, all prior step identities and the original Phase 2 root/test identities.
+
+| Approved exception | Exact change | Retained guarantee |
+|---|---|---|
+| `tests/unit/test_phase3_contracts.py` | Change only completion-forgery assignment from unconditional True to `not control[key]` | A forged completion flag is rejected in both pending and completed stages; exact byte transition enforced |
+| `tests/integration/test_phase3_metric_pipeline.py` | Bind three historical Step 10 scope/control/snapshot tests to immutable Step 10 bytes; append Step 11 gate tests | Every inherited name, parameter and numerical assertion retained; transformed inherited prefix checked byte-for-byte |
+
+The `tests/conftest.py` historical fixture extracts the exact pinned Step 10 commit after verifying its tree. The fixed historical control digest and historical file allowlist remain independent of current manifest permissions. The Step 11 runtime digest normalizes only the two authorized dev2-to-dev1 version literals before comparison; every other runtime/dependency/backend/CLI/schema/Hero/oracle byte remains frozen.
+
+Active workflow/version assertions in the already authorized maintenance files move to Step 11/dev2. Both distributions, all forty installed imports, input-only validation, no-network/no-execution boundaries, actual real-Parquet tests and strict JUnit checks remain mandatory. The source ZIP is renamed to the planned final Phase 3 filename. Four workflow roles remain; none publishes or merges.
+
+The direct-dependency minimum declarations cannot be installed literally together: pandas 2.2.0 requires NumPy below 2, while this package requires NumPy at least 2.0. The recorded minimum profile therefore uses the lowest jointly compatible pair, NumPy 2.0.0 / pandas 2.2.2, without changing declarations. The rejected literal resolver command is retained. Current-compatible profiles and real PyArrow are separately recorded. This interpretation tests actual compatibility and makes no claim that the impossible pair passed.
+
+The assistant performs implementation, mathematical-transcription/traceability and security-boundary reviews with consolidated roles allowed by governance. The user is the Theory Owner and approval authority. No new independent reviewer or certification is claimed. Review findings, real failures/repairs and final workflow evidence belong in the milestone reports and external receipt.
+
+The implementation-acceptance commit will be recorded only after all four workflow roles pass. Final acceptance-record changes require a second complete run on the exact final source commit. A pending candidate does not certify Phase 3 completion. After verified final delivery, stop before Phase 4, main merge, tag or publication.
+
+
+### Additional final-report historical-test approval
+
+After the initial complete run (2488 passed, one failed), the assistant identified
+`test_phase3_final_completion_records_not_created` as a second stale stage assertion
+in the already excepted unit file. The Theory Owner explicitly replied `批准` to
+the proposed narrow migration. The historical test now reads `phase3_step10_snapshot`
+and preserves its name and three original absence assertions. The current Step 11
+repository-structure test requires all three reports to exist. The byte-transition
+guard permits only this signature/root binding and the previously approved
+completion-forgery expression. No numerical expectation or security assertion is
+changed. The original failed run remains retained and does not count as acceptance.
