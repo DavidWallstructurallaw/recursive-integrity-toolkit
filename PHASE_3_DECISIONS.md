@@ -777,3 +777,21 @@ repository-structure test requires all three reports to exist. The byte-transiti
 guard permits only this signature/root binding and the previously approved
 completion-forgery expression. No numerical expectation or security assertion is
 changed. The original failed run remains retained and does not count as acceptance.
+
+
+### Step 11 implementation acceptance and final record
+
+All four workflow roles and twelve jobs passed on `9dc321c6997a231209653a0f86d0476824e96e3a` (tree `a1086ca95075aff3ea8a83afae548806b2079dc9`).
+The CI core matrix passed 2489 cases in each of eight environments; real Parquet
+passed 2492; security passed 1678; Hero/math passed 83. Build/delivery repeated
+complete suites, verified installed behavior and archived 222 tracked source files.
+Actual run IDs are recorded in the milestone reports. The source implementation is
+technically accepted; the completion flag and immutable acceptance anchors now
+record that observed result. No main merge, publication or later phase follows.
+
+The acceptance-record commit changes the three reports, these decision/control
+records and the maintainer's acceptance constants/check. It changes no runtime or
+oracle. Its own complete four-workflow rerun and regenerated artifacts are mandatory
+before final handoff. Final HEAD and hashes are recorded by execution metadata and
+the external receipt rather than a circular in-document self-hash. Consolidated
+assistant review roles and the hosted-binary download limitation remain disclosed.

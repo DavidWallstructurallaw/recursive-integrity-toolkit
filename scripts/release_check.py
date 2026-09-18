@@ -30,7 +30,9 @@ PHASE2_TREE = "706b99e27c2d284a7435ae03e2eb2376214bfa46"
 PHASE2_TEST_TREE = "d787d9b06c41a91f8587f6b57a8af710419d114f"
 PLAN_SHA256 = "e1c9a6776e3cd2511d37a6bbbdb4a9d5a33b66ff6b00bc00bf3e08a01e6576f1"
 ACTIVE_PHASE, ACTIVE_STEP = 3, 11
-PHASE3_COMPLETE = False  # Final acceptance is recorded only after all workflow roles pass.
+PHASE3_COMPLETE = True  # Accepted implementation below; final handoff still requires all roles on HEAD.
+PHASE3_IMPLEMENTATION_ACCEPTANCE = "9dc321c6997a231209653a0f86d0476824e96e3a"
+PHASE3_IMPLEMENTATION_TREE = "a1086ca95075aff3ea8a83afae548806b2079dc9"
 STEP10_ALLOWED = {
     "README.md", "CHANGELOG.md", "docs/architecture.md", "docs/data_schema.md",
     "docs/privacy.md", ".github/workflows/ci.yml", ".github/workflows/security.yml",
@@ -201,7 +203,9 @@ def verify_phase3_control(control: dict, step: int = ACTIVE_STEP) -> None:
                 "phase_complete": PHASE3_COMPLETE, "next_step_authorized": False,
                 "previous_step_commit": STEP10_FINAL, "previous_step_tree": STEP10_TREE,
                 "new_files_permitted": sorted(PHASE3_STEP11_NEW), "main_merge_authorized": False,
-                "publication_authorized": False}
+                "publication_authorized": False,
+                "implementation_acceptance_commit": PHASE3_IMPLEMENTATION_ACCEPTANCE,
+                "implementation_acceptance_tree": PHASE3_IMPLEMENTATION_TREE}
     if type(control) is not dict or type(step) is not int or step != ACTIVE_STEP:
         raise ValueError("Unsupported active phase or step")
     for key, value in expected.items():
@@ -416,6 +420,9 @@ def audit_step10_diff() -> dict:
 
 def audit_phase3_diff(step: int = ACTIVE_STEP) -> dict:
     audit(3, step)
+    if git("rev-parse", PHASE3_IMPLEMENTATION_ACCEPTANCE + "^{tree}").decode().strip() != PHASE3_IMPLEMENTATION_TREE:
+        raise ValueError("Accepted Phase 3 implementation tree mismatch")
+    subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", PHASE3_IMPLEMENTATION_ACCEPTANCE, "HEAD"], check=True)
     if git("rev-parse", PHASE2_FINAL + "^{tree}").decode().strip() != PHASE2_TREE:
         raise ValueError("Baseline tree mismatch")
     if git("rev-parse", PHASE2_FINAL + ":tests").decode().strip() != PHASE2_TEST_TREE:
