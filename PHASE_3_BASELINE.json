@@ -1,7 +1,7 @@
 {
   "control_version": "1.0",
   "active_phase": 3,
-  "active_step": 9,
+  "active_step": 10,
   "baseline_commit": "78554993febb01609cb90814cc24cce2012bf7d7",
   "baseline_tree": "706b99e27c2d284a7435ae03e2eb2376214bfa46",
   "baseline_test_tree": "d787d9b06c41a91f8587f6b57a8af710419d114f",
@@ -58,14 +58,10 @@
     "scripts/check_spec_consistency.py",
     "scripts/check_traceability.py",
     "scripts/release_check.py",
-    "src/recursive_integrity_toolkit/errors.py",
-    "src/recursive_integrity_toolkit/metrics/diversity.py",
-    "src/recursive_integrity_toolkit/models.py",
-    "src/recursive_integrity_toolkit/representations/compatibility.py",
-    "src/recursive_integrity_toolkit/representations/field.py",
     "tests/conftest.py",
-    "tests/fixtures/representation_compatible/phase3_pair.json",
-    "tests/fixtures/representation_incompatible/phase3_pair.json",
+    "tests/golden/phase3_math_cases.json",
+    "tests/golden/phase3_math_cases.md",
+    "tests/golden/test_phase3_math.py",
     "tests/integration/test_ci_workflows.py",
     "tests/integration/test_no_algorithms.py",
     "tests/integration/test_no_network.py",
@@ -73,17 +69,15 @@
     "tests/integration/test_owner_ids.py",
     "tests/integration/test_package_import.py",
     "tests/integration/test_package_install.py",
+    "tests/integration/test_phase3_metric_pipeline.py",
     "tests/integration/test_repository_structure.py",
-    "tests/unit/test_PR016_determinism.py",
-    "tests/unit/test_T1_compatibility.py",
-    "tests/unit/test_T1_diversity.py",
-    "tests/unit/test_T1_representation.py",
-    "tests/unit/test_T1_support.py"
+    "tests/performance/test_hero_runtime.py",
+    "tests/performance/test_metadata_100k.py",
+    "tests/unit/test_PR016_determinism.py"
   ],
   "new_files_permitted": [
-    "tests/fixtures/representation_compatible/phase3_pair.json",
-    "tests/fixtures/representation_incompatible/phase3_pair.json",
-    "tests/unit/test_T1_compatibility.py"
+    "tests/golden/test_phase3_math.py",
+    "tests/integration/test_phase3_metric_pipeline.py"
   ],
   "file_identity_rule": "The immutable Git root tree commits every original filename, mode and blob. The baseline-evidence command materializes each of the 197 baseline blob and SHA-256 identities into retained execution evidence.",
   "inherited_test_identity_rule": "Collection runs against an isolated copy of the exact pinned baseline, in each explicit optional-dependency mode. Store the complete original/current node-ID lists and their digest. Every inherited node ID must remain collected; active-stage assertion changes have a migration record in PHASE_3_DECISIONS.md.",
@@ -98,8 +92,8 @@
   "next_step_authorized": false,
   "main_merge_authorized": false,
   "publication_authorized": false,
-  "previous_step_commit": "a43cba0e81fd89c3b20a64737bfa89cd2bac4de9",
-  "previous_step_tree": "f7ecf2326770b362b51ba67357ec450e311a086a",
+  "previous_step_commit": "03fe1e7e99c8170e6be7714649ab0d926e01b6d6",
+  "previous_step_tree": "765d28e6ff4715fa6d59f44760f1a937489d7120",
   "step2_authorization": "Theory Owner explicitly instructed Phase 3 Step 2 and approved the single-test-file exception in the project conversation.",
   "step2_exception": {
     "path": "tests/unit/test_phase3_contracts.py",
@@ -111,5 +105,6 @@
   "step6_authorization": "Theory Owner explicitly instructed Phase 3 Step 6 after accepting the Step 5 delivery.",
   "step7_authorization": "Theory Owner accepted Step 6 and explicitly instructed Phase 3 Step 7 in the project conversation.",
   "step8_authorization": "Theory Owner accepted Step 7 and explicitly instructed Phase 3 Step 8 in the project conversation.",
-  "step9_authorization": "Theory Owner explicitly requested Phase 3 Step 9 in the project conversation; no merge or next step authorized."
+  "step9_authorization": "Theory Owner explicitly requested Phase 3 Step 9 in the project conversation; no merge or next step authorized.",
+  "step10_authorization": "Theory Owner accepted Step 9 and explicitly requested Phase 3 Step 10. Test-only integration, fixed oracles and performance; no runtime repair, merge, publication or Step 11 authorized."
 }

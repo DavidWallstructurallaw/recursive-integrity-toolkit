@@ -591,14 +591,14 @@ def test_phase3_step9_rejects_formula_or_scope_bypass(repo_root,old,new):
 def test_phase3_step9_prohibits_unlisted_modifications(repo_root,path):
     import runpy
     gate=runpy.run_path(str(repo_root/'scripts/release_check.py'))
-    with pytest.raises(ValueError):gate['verify_phase3_changes']([('M',path)],incremental=True)
+    with pytest.raises(ValueError):gate['verify_prior_step_changes']([('M',path)],step=9)
 
 
 def test_phase3_step9_current_scope_does_not_change_step8_scope(repo_root):
     import runpy
     gate=runpy.run_path(str(repo_root/'scripts/release_check.py'))
     path='src/recursive_integrity_toolkit/representations/compatibility.py'
-    gate['verify_phase3_changes']([('M',path)],incremental=True)
+    gate['verify_prior_step_changes']([('M',path)],step=9)
     with pytest.raises(ValueError):gate['verify_prior_step_changes']([('M',path)],step=8)
     assert gate['STEP9_NEW']=={
         'tests/unit/test_T1_compatibility.py','tests/fixtures/representation_compatible/phase3_pair.json',

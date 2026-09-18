@@ -197,3 +197,17 @@ rejected. Source labels never become an independently validated ontology. Pair
 metadata preserves both selected scopes; unavailable input does not become a zero
 or a false total-loss result. Weighted and supplied-probability inputs retain
 their distinct bases and cannot be mixed with incompatible denominator families.
+
+## Phase 3 Step 10 test-only integration
+
+All runtime implementations remain frozen at the accepted Step 9 revision.
+`tests/integration/test_phase3_metric_pipeline.py` composes validation and explicit
+calculation calls; `tests/golden/test_phase3_math.py` executes all twenty frozen
+oracles. The shared pytest callable is not a runtime audit entry point.
+`validate_bundle(...)` remains input-only. Public reports, lineage, external
+reopening and longitudinal dispatch remain protected later work.
+
+The performance tests measure synthetic 100000-record metadata, exact duplicates,
+and the current Hero input-plus-calculation path. JUnit retains elapsed times and
+per-call tracemalloc peaks with environment and scope. These observations do not
+certify the future complete-report latency target. Step 11 has not started.

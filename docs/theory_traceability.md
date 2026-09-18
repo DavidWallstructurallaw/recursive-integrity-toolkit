@@ -134,3 +134,17 @@ exact directed mapping and collapsed groups remain visible. The derived results
 make no lineage, causal, model-performance or permanent process-extinction claim.
 Tests use the frozen HERO-PAIR oracle and independent rational fixtures. Existing
 F-001 through F-004 source definitions and their numerical tests remain unchanged.
+
+## Phase 3 Step 10 integration and mathematical evidence
+
+The frozen `phase3_math_cases.json` and its source notes retain their original
+bytes. `test_phase3_math.py` explicitly executes all twenty source-indexed cases,
+including Hero single-version, F-005/F-006/F-018 pair values and the separately
+invoked F-014/F-015 scenarios. Inherited mathematical unit tests remain intact.
+The test-only pipeline preserves observed facts, derived metrics, simulation
+labels, confidence/missingness, denominators and original validation errors.
+
+The 100000-record performance oracle is independently determined by its documented
+synthetic construction (100 equal topic states, 1000 repeated forms, two equal
+source classes). Timing and traced allocations are engineering observations only.
+No new entropy, quality, integrity, lineage or universal failure score is added.

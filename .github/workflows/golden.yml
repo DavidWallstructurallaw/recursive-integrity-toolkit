@@ -1,4 +1,4 @@
-name: Phase 3 Step 9 Hero Scaffold Contract
+name: Phase 3 Step 10 Hero Scaffold Contract
 
 on:
   push:
@@ -28,11 +28,11 @@ jobs:
           python-version: "3.12"
       - name: Install approved test tools
         run: python -m pip install ".[test]"
-      - name: Validate unchanged Hero contract without analytical golden generation
+      - name: Verify Hero and frozen calculation oracles without generating a report
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: |
           python scripts/check_spec_consistency.py
-          python -m pytest -p no:cacheprovider -q tests/integration/test_hero_structure.py
-          python scripts/release_check.py --phase 3 --step 9 --diff
+          python -m pytest -p no:cacheprovider -q tests/integration/test_hero_structure.py tests/integration/test_phase3_metric_pipeline.py tests/golden/test_phase3_math.py
+          python scripts/release_check.py --phase 3 --step 10 --diff
 # No build_golden.py, normalize_golden.py or analytical report is executed.

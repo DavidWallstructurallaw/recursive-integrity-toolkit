@@ -668,3 +668,76 @@ The new compatibility module reduces the protected placeholder count from 17 to
 Review roles for technical, mathematical and security checks are consolidated in
 this AI assistant and executed tests. No independent human review or broad
 security certification is claimed. Stop after Step 9 acceptance, before Step 10.
+
+## Phase 3 Step 10 authorization and integration record
+
+The Theory Owner accepted the Step 9 delivery and explicitly requested Phase 3
+Step 10 in the project conversation. The starting commit is
+`03fe1e7e99c8170e6be7714649ab0d926e01b6d6`, tree
+`765d28e6ff4715fa6d59f44760f1a937489d7120`. Its 2404 core and 2407 real-Parquet
+identities remain required. No new theory decision, runtime repair exception,
+merge, publication, or Step 11 execution is authorized.
+
+### Test-only composition and frozen expectations
+
+A callable pytest fixture explicitly loads the unchanged Hero through the Phase 2
+validator, then calls field representation, single-version distributions,
+provenance composition, direct bounds, duplicates, tail selection and one ordered
+pair comparison. It is test infrastructure only. The importable package gains no
+orchestrator, report object or audit CLI. Separate calls test analytic extinction,
+F-015 expectations and explicitly seeded closed paths. Default Hero validation
+still executes no metrics or simulations, including when scenario eligibility is
+otherwise satisfied. Partial required-provenance errors remain visible beside
+independently usable calculations; missingness and representation exclusions keep
+separate denominators. Synthetic mapped inputs exercise the full schema-mapping
+handoff while preserving original source files and leading-zero identities.
+
+The new golden runner executes every one of the twenty cases frozen in Step 1.
+Neither golden manifest nor its notes are changed. For F-015 cases specifying
+only initial diversity, explicit equal-state probability vectors are mathematical
+witnesses of that diversity; they do not invent empirical record frequencies.
+Source-derived numerical targets retain their original owner, formula, rational
+value and source section. New metamorphic and performance cases are authored
+validation design, not additional claims attributed to the source articles.
+Newly provided theory articles do not alter the frozen approved product scope.
+
+### Performance measurement contract
+
+The synthetic case contains 100000 records, 100 equiprobable topic states and
+1000 exact text forms, each repeated 100 times. Source classes alternate between
+human and synthetic with valid required provenance. These construction rules
+independently determine support 100, diversity 99/100, source shares 1/2 each,
+1000 duplicate groups and 99000 duplicate records.
+
+Setup, field representation, distribution metrics, provenance join, composition
+and exact duplicates are measured separately. The Hero measurement covers input
+plus explicitly invoked calculations. Each actual test attaches elapsed wall time,
+Python/platform/dependency versions and traced allocation peaks to its JUnit
+record. Timing uses perf_counter with tracemalloc(1) enabled. Per-call traced peaks
+exclude preexisting inputs and untracked native allocations; setup is measured
+separately. They are not process RSS or measurements of a completed public report.
+There is no hardware-dependent pass/fail speed threshold and no best-of-run
+selection. JSON/Markdown reporting is not present, so the complete under-five-second
+product target is not certified. Duplicate-path line-event growth is separately
+checked for repeated, unique and mixed forms to guard against an accidental
+quadratic comparison pass without relying on timing ratios.
+
+### Gates and preservation
+
+All forty runtime modules remain byte-for-byte identical to Step 9. The existing
+Step 9 source/AST checker is intentionally retained unchanged as the frozen
+runtime boundary. The Step 10 release audit additionally verifies the full runtime
+byte digest, unchanged Hero, schemas, dependency declaration, approved plan and
+both mathematical oracle files. Exact Step 10 allowed paths contain no src entry.
+The historical Step 9 path tests are routed to the fixed Step 9 permission set;
+all names and rejection conditions are retained. New Step 10 tests reject runtime
+edits, forged authorizations, oracle changes and missing/invalid measurement
+records. Workflow labels and explicit phase/step arguments advance together;
+read-only tokens, failure propagation, complete matrix, real Parquet, installed
+wheel checks and immutable historical identities remain required.
+
+This is a narrow active-stage synchronization. The earlier proposed general
+checker refactor is not performed. No protected runtime file is opened to make
+integration pass. Technical review is by this assistant and executed tests; no
+independent human review or general security certification is claimed. Stop after
+Step 10 acceptance and evidence delivery, before Step 11.
