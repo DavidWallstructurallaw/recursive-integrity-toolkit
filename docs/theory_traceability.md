@@ -70,3 +70,18 @@ never replaces grounding. Required-field-incomplete provenance stays unresolved
 in the direct partition while original grounding-field coverage retains its own
 meaning. No closure interval, ancestry concentration, effective roots or report
 is introduced. The original frozen Phase 3 mathematical oracles remain unchanged.
+
+
+## Phase 3 Step 6: direct closure-exposure interval
+
+`metrics/bounds.py` now exposes explicit pure `closure_exposure_bounds(...)` and
+`direct_closure_exposure(...)`. Both use the full unweighted single-version scope.
+T3 F-009 = C/N, F-010 = (C+U)/N, width = U/N. Results are derived metrics labeled
+`toolkit_operationalization`, not a lineage measure or a universal risk score.
+
+The dataset adapter consumes Step 5 results, preserves input errors and independent
+coverage/confidence disclosure, and rejects inconsistent partitions or altered
+availability summaries. No usable required provenance means unavailable dataset
+scalars; valid explicit unknown grounding can support [0,1]. No confidence weighting,
+midpoint, graph, file access, or automatic input-pipeline invocation is introduced.
+All later-stage boundaries and immutable earlier implementations remain.

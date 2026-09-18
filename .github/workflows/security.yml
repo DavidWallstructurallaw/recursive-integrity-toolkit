@@ -1,4 +1,4 @@
-name: Phase 3 Step 5 Security Boundary
+name: Phase 3 Step 6 Security Boundary
 
 on:
   push:
@@ -51,15 +51,16 @@ jobs:
             tests/unit/test_PR004_coverage.py \
             tests/unit/test_PR005_source_shares.py \
             tests/unit/test_T3_provenance.py \
-            --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/phase3_step5_security_results.log"
+            tests/unit/test_T3_bounds.py \
+            --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/phase3_step6_security_results.log"
           python scripts/release_check.py --junit "$RUNNER_TEMP/rit-security/security.xml"
           python scripts/check_traceability.py
-          python scripts/release_check.py --phase 3 --step 5
+          python scripts/release_check.py --phase 3 --step 6
       - name: Retain actual security test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase3-step5-security-boundary
+          name: phase3-step6-security-boundary
           path: ${{ runner.temp }}/rit-security/
           if-no-files-found: error
           retention-days: 30

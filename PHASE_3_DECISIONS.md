@@ -398,3 +398,35 @@ coverage, PR-004 confidence/missing-row facts, and T3 the direct partition basis
 
 Stop after Step 5 acceptance. No Step 6 calculation, Phase 3 completion, main
 merge, tag, publication, report, audit CLI, general graph or simulation is authorized.
+
+
+## Phase 3 Step 6 execution contract
+
+Theory Owner authorization: explicit instruction to continue Phase 3 Step 6.
+Accepted predecessor: `4611f897d054b352733cc90543eef6f6d71cd811`, tree
+`faffd5717dc1bf99e0081a122a338c65a68a13a7`; 1888 core / 1891 extra-enabled
+historical test identities must remain. Original authority and oracle bytes stay frozen.
+
+Only `metrics/bounds.py` gains runtime behavior. F-009 is C/N; F-010 is
+(C+U)/N; width is U/N, without clipping or midpoint substitution. The pure count
+kernel is `closure_exposure_bounds`; `direct_closure_exposure` consumes the Step 5
+composition with its unfiltered single-version record denominator. Original errors,
+row/required-field/grounding coverage, confidence counts or unavailable confidence
+status are retained. Confidence never discounts a grounding declaration.
+
+The Step 6 plan already distinguishes count envelopes from dataset validity:
+all-unresolved counts permit [0,1], but absence of every complete valid required
+provenance row leaves dataset-facing scalars unavailable. A valid unknown grounding
+row may support [0,1]. Internal consistency checks do not independently verify the
+truth of supplied declarations and do not reconstruct provenance or lineage.
+
+Test migrations preserve identities: `test_T3_bounds_owner_and_placeholder` keeps
+its name and owner check, replaces whole-module emptiness with a direct-only boundary;
+Step 5 permission tests use their frozen historical permission set after advancement;
+workflow names and the placeholder count advance to Step 6 and 19 respectively.
+Prior positive checks and mutation rejection remain. The new bounds guard pins
+reviewed source bytes and compares ASTs inside the same interpreter, avoiding
+cross-version serialized-AST assumptions without accepting arbitrary edits.
+
+No Phase 4 report/CLI, Phase 5 lineage, Step 7 tail, resampling or publication is
+authorized. Stop after Step 6 tests/build/installed-candidate checks and delivery.

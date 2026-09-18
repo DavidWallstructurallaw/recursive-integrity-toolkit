@@ -1,4 +1,4 @@
-name: Phase 3 Step 5 Hero Scaffold Contract
+name: Phase 3 Step 6 Hero Scaffold Contract
 
 on:
   push:
@@ -34,5 +34,5 @@ jobs:
         run: |
           python scripts/check_spec_consistency.py
           python -m pytest -p no:cacheprovider -q tests/integration/test_hero_structure.py
-          python scripts/release_check.py --phase 3 --step 5 --diff
+          python scripts/release_check.py --phase 3 --step 6 --diff
 # No build_golden.py, normalize_golden.py or analytical report is executed.

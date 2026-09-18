@@ -74,3 +74,28 @@ def test_T3_step5_independent_crossed_fixture(repo_root):
                 r,_,_=_t5_basis({'source_type':source,'external_grounding':grounding,'human_reviewed':review})
                 assert r.assignments[0].classification==expected
     assert p.read_bytes()==raw
+
+
+# Step 6 bridge only; all previous classification tests remain unchanged.
+def test_T3_step6_grounding_declarations_alone_restore_stronger_bounds():
+    from recursive_integrity_toolkit.metrics.bounds import direct_closure_exposure
+    for source in ('human','synthetic','mixed','sensor','unknown'):
+        for review in (True,False,None):
+            for grounding,expected in (('yes',(0,0)),('no',(1,1)),('unknown',(0,1))):
+                _,j,s=_t5_basis({'source_type':source,'human_reviewed':review,'external_grounding':grounding})
+                x=direct_closure_exposure(summarize_provenance(j,scope=s))
+                assert (x.lower_bound.value,x.upper_bound.value)==expected
+
+
+def test_T3_step6_input_workflow_does_not_invoke_bounds(repo_root,monkeypatch):
+    from recursive_integrity_toolkit.io.validation import validate_bundle
+    from recursive_integrity_toolkit.models import AuditBundle,InputSource,FileRole
+    import recursive_integrity_toolkit.metrics.bounds as bounds
+    def blocked(*args,**kwargs):raise AssertionError('input layer called direct bounds')
+    monkeypatch.setattr(bounds,'direct_closure_exposure',blocked)
+    monkeypatch.setattr(bounds,'closure_exposure_bounds',blocked)
+    roles=(FileRole.RECORDS_PRIMARY,FileRole.RECORDS_COMPARE,FileRole.PROVENANCE_MANIFEST,FileRole.CONFIG,FileRole.VERSION_ORDER)
+    names=('records_v1.csv','records_v2.csv','provenance.csv','config.json','version_order.json')
+    h=repo_root/'examples/hero'
+    x=validate_bundle(AuditBundle(tuple(InputSource(role,h/name) for role,name in zip(roles,names))))
+    assert x.observability.maximum_level==4 and not x.has_errors

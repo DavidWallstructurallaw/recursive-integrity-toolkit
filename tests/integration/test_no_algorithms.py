@@ -1,4 +1,4 @@
-"""Protect Phase 3 Step 5 scoped metrics from premature analytical implementation."""
+"""Protect Phase 3 Step 6 scoped metrics from premature analytical implementation."""
 
 import ast
 from pathlib import Path
@@ -11,6 +11,7 @@ STEP8_EXECUTABLE = {"observability/levels.py"}
 PHASE3_FIELD_EXECUTABLE = {"representations/base.py", "representations/field.py"}
 PHASE3_DISTRIBUTION_EXECUTABLE = {"metrics/diversity.py"}
 PHASE3_PROVENANCE_EXECUTABLE = {"metrics/provenance.py"}
+PHASE3_BOUNDS_EXECUTABLE = {"metrics/bounds.py"}
 PHASE3_EXACT_EXECUTABLE = {"representations/content_hash.py", "metrics/duplicates.py"}
 STEP4_EXECUTABLE = {"io/normalization.py", "io/validation.py", "utils/ordering.py"}
 PROTECTED_PREFIXES = {"io", "lineage", "metrics", "observability", "reports", "representations", "utils"}
@@ -26,7 +27,7 @@ def _is_docstring_only(path: Path) -> bool:
 def test_only_step8_authorized_modules_gain_behavior(package_root) -> None:
     for path in sorted(package_root.rglob("*.py")):
         relative = path.relative_to(package_root)
-        if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE | PHASE3_EXACT_EXECUTABLE | PHASE3_DISTRIBUTION_EXECUTABLE | PHASE3_PROVENANCE_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
+        if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE | PHASE3_EXACT_EXECUTABLE | PHASE3_DISTRIBUTION_EXECUTABLE | PHASE3_PROVENANCE_EXECUTABLE | PHASE3_BOUNDS_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
             continue
         assert _is_docstring_only(path), f"Premature executable body: {relative}"
 
@@ -34,7 +35,7 @@ def test_only_step8_authorized_modules_gain_behavior(package_root) -> None:
 def test_protected_phase3_plus_modules_remain_placeholders(package_root) -> None:
     for prefix in PROTECTED_PREFIXES:
         for path in sorted((package_root / prefix).rglob("*.py")):
-            if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE | PHASE3_EXACT_EXECUTABLE | PHASE3_DISTRIBUTION_EXECUTABLE | PHASE3_PROVENANCE_EXECUTABLE:
+            if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE | PHASE3_EXACT_EXECUTABLE | PHASE3_DISTRIBUTION_EXECUTABLE | PHASE3_PROVENANCE_EXECUTABLE | PHASE3_BOUNDS_EXECUTABLE:
                 continue
             assert _is_docstring_only(path), f"Protected module changed after Step 8: {path}"
     assert _is_docstring_only(package_root / "result.py")
@@ -66,7 +67,7 @@ def test_PR003_traceability_script_enforces_step8_scope(repo_root) -> None:
     result = subprocess.run([sys.executable, "scripts/check_traceability.py"],
                             cwd=repo_root, capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "protected docstring-only modules: 20" in result.stdout
+    assert "protected docstring-only modules: 19" in result.stdout
 
 
 # The checker itself must reject new work outside the current Step 8 boundary.
@@ -360,17 +361,65 @@ def test_phase3_step5_rejects_in_body_changes(repo_root,old,new):
 def test_phase3_step5_unapproved_paths_rejected(repo_root,path):
     import runpy
     gate=runpy.run_path(str(repo_root/'scripts/release_check.py'),run_name='step5-path')
-    with pytest.raises(ValueError):gate['verify_phase3_changes']([('M',path)],incremental=True)
+    with pytest.raises(ValueError):gate['verify_prior_step_changes']([('M',path)],step=5)
 
 
 def test_phase3_step5_permissions_keep_prior_boundaries(repo_root):
     import runpy
     gate=runpy.run_path(str(repo_root/'scripts/release_check.py'),run_name='step5-permissions')
     path='src/recursive_integrity_toolkit/metrics/provenance.py'
-    gate['verify_phase3_changes']([('M',path)],incremental=True)
+    gate['verify_prior_step_changes']([('M',path)],step=5)
     for step in (1,2,3,4):
         with pytest.raises(ValueError):gate['verify_prior_step_changes']([('M',path)],step=step)
     assert gate['STEP5_NEW']=={
         'tests/fixtures/provenance_partial/phase3_composition.json',
         'tests/fixtures/provenance_unknown/phase3_grounding_crossed.json',
         'tests/fixtures/weighted/phase3_source_weights.json'}
+
+
+# Step 6 historical gates remain; only direct interval computation is newly opened.
+@pytest.mark.parametrize('injection',[
+    'import socket','from ..lineage import graph','from .resampling import resample',
+    'open("private")','x = 1','def midpoint(): return 0.5','def risk_score(): return 1',
+    'def classify_lineage_grounding(): return 1','def ancestry_hhi(): return 1',
+])
+def test_phase3_step6_rejects_later_bounds_features(repo_root,injection):
+    import runpy
+    gate=runpy.run_path(str(repo_root/'scripts/check_traceability.py'))
+    source=(repo_root/'src/recursive_integrity_toolkit/metrics/bounds.py').read_text()
+    gate['_phase3_bounds_boundary'](ast.parse(source))
+    with pytest.raises(SystemExit):gate['_phase3_bounds_boundary'](ast.parse(source+'\n'+injection+'\n'))
+
+
+@pytest.mark.parametrize('old,new',[
+    ('lower = known_closed / total','lower = 0.0'),
+    ('upper = (known_closed + unresolved) / total','upper = known_closed / total'),
+    ('width = unresolved / total','width = 0.0'),
+    ('required_cov.numerator == 0','False'),
+])
+def test_phase3_step6_rejects_formula_and_availability_edits(repo_root,old,new):
+    import runpy
+    gate=runpy.run_path(str(repo_root/'scripts/check_traceability.py'))
+    source=(repo_root/'src/recursive_integrity_toolkit/metrics/bounds.py').read_text()
+    assert old in source
+    with pytest.raises(SystemExit):gate['_phase3_bounds_boundary'](ast.parse(source.replace(old,new,1)))
+
+
+@pytest.mark.parametrize('path',[
+    'src/recursive_integrity_toolkit/metrics/provenance.py','src/recursive_integrity_toolkit/metrics/diversity.py',
+    'src/recursive_integrity_toolkit/metrics/resampling.py','src/recursive_integrity_toolkit/lineage/graph.py',
+    'tests/unit/test_phase3_contracts.py','docs/data_schema.md','docs/privacy.md','PHASE_3_PLAN.md','pyproject.toml',
+])
+def test_phase3_step6_unapproved_file_changes_fail(repo_root,path):
+    import runpy
+    gate=runpy.run_path(str(repo_root/'scripts/release_check.py'))
+    with pytest.raises(ValueError):gate['verify_phase3_changes']([('M',path)],incremental=True)
+
+
+def test_phase3_step6_requires_reviewed_source_bytes(repo_root,tmp_path):
+    import runpy
+    gate=runpy.run_path(str(repo_root/'scripts/check_traceability.py'))
+    source=(repo_root/'src/recursive_integrity_toolkit/metrics/bounds.py').read_text()
+    (tmp_path/'metrics').mkdir();(tmp_path/'metrics/bounds.py').write_text(source+'\nx = 1\n')
+    gate['_phase3_bounds_boundary'].__globals__['PACKAGE']=tmp_path
+    with pytest.raises(SystemExit):gate['_phase3_bounds_boundary'](ast.parse(source+'\nx = 1\n'))

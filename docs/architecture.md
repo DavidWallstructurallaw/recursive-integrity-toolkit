@@ -142,3 +142,18 @@ The direct partition requires valid mandatory fields and yes/no grounding;
 otherwise it stays unresolved. Source class/review/confidence are independent.
 No closure interval is implemented until Step 6. Twenty pure runtime placeholders
 remain protected, together with all earlier formulas and input-layer behavior.
+
+
+## Phase 3 Step 6: direct closure-exposure interval
+
+`metrics/bounds.py` now exposes explicit pure `closure_exposure_bounds(...)` and
+`direct_closure_exposure(...)`. Both use the full unweighted single-version scope.
+T3 F-009 = C/N, F-010 = (C+U)/N, width = U/N. Results are derived metrics labeled
+`toolkit_operationalization`, not a lineage measure or a universal risk score.
+
+The dataset adapter consumes Step 5 results, preserves input errors and independent
+coverage/confidence disclosure, and rejects inconsistent partitions or altered
+availability summaries. No usable required provenance means unavailable dataset
+scalars; valid explicit unknown grounding can support [0,1]. No confidence weighting,
+midpoint, graph, file access, or automatic input-pipeline invocation is introduced.
+All later-stage boundaries and immutable earlier implementations remain.
