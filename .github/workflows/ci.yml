@@ -1,4 +1,4 @@
-name: Phase 3 Step 8 CI
+name: Phase 3 Step 9 CI
 
 on:
   push:
@@ -52,13 +52,13 @@ jobs:
           set -euo pipefail
           python scripts/check_spec_consistency.py
           python scripts/check_traceability.py
-          python scripts/release_check.py --phase 3 --step 8 --diff
+          python scripts/release_check.py --phase 3 --step 9 --diff
           python scripts/release_check.py --baseline-evidence "$RUNNER_TEMP/rit-core"
       - name: Retain core evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase3-step8-core-${{ matrix.os }}-${{ matrix.python-version }}
+          name: phase3-step9-core-${{ matrix.os }}-${{ matrix.python-version }}
           path: ${{ runner.temp }}/rit-core/
           if-no-files-found: error
           retention-days: 30
@@ -94,7 +94,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase3-step8-real-parquet
+          name: phase3-step9-real-parquet
           path: ${{ runner.temp }}/rit-parquet/
           if-no-files-found: error
           retention-days: 30

@@ -1,7 +1,7 @@
 {
   "control_version": "1.0",
   "active_phase": 3,
-  "active_step": 8,
+  "active_step": 9,
   "baseline_commit": "78554993febb01609cb90814cc24cce2012bf7d7",
   "baseline_tree": "706b99e27c2d284a7435ae03e2eb2376214bfa46",
   "baseline_test_tree": "d787d9b06c41a91f8587f6b57a8af710419d114f",
@@ -59,10 +59,13 @@
     "scripts/check_traceability.py",
     "scripts/release_check.py",
     "src/recursive_integrity_toolkit/errors.py",
-    "src/recursive_integrity_toolkit/metrics/resampling.py",
+    "src/recursive_integrity_toolkit/metrics/diversity.py",
     "src/recursive_integrity_toolkit/models.py",
+    "src/recursive_integrity_toolkit/representations/compatibility.py",
+    "src/recursive_integrity_toolkit/representations/field.py",
     "tests/conftest.py",
-    "tests/fixtures/resampling/phase3_closed_cases.json",
+    "tests/fixtures/representation_compatible/phase3_pair.json",
+    "tests/fixtures/representation_incompatible/phase3_pair.json",
     "tests/integration/test_ci_workflows.py",
     "tests/integration/test_no_algorithms.py",
     "tests/integration/test_no_network.py",
@@ -72,12 +75,15 @@
     "tests/integration/test_package_install.py",
     "tests/integration/test_repository_structure.py",
     "tests/unit/test_PR016_determinism.py",
-    "tests/unit/test_T1_resampling.py",
-    "tests/unit/test_T5_reopening.py",
-    "tests/unit/test_phase3_contracts.py"
+    "tests/unit/test_T1_compatibility.py",
+    "tests/unit/test_T1_diversity.py",
+    "tests/unit/test_T1_representation.py",
+    "tests/unit/test_T1_support.py"
   ],
   "new_files_permitted": [
-    "tests/fixtures/resampling/phase3_closed_cases.json"
+    "tests/fixtures/representation_compatible/phase3_pair.json",
+    "tests/fixtures/representation_incompatible/phase3_pair.json",
+    "tests/unit/test_T1_compatibility.py"
   ],
   "file_identity_rule": "The immutable Git root tree commits every original filename, mode and blob. The baseline-evidence command materializes each of the 197 baseline blob and SHA-256 identities into retained execution evidence.",
   "inherited_test_identity_rule": "Collection runs against an isolated copy of the exact pinned baseline, in each explicit optional-dependency mode. Store the complete original/current node-ID lists and their digest. Every inherited node ID must remain collected; active-stage assertion changes have a migration record in PHASE_3_DECISIONS.md.",
@@ -92,8 +98,8 @@
   "next_step_authorized": false,
   "main_merge_authorized": false,
   "publication_authorized": false,
-  "previous_step_commit": "d3d95bde50762e60b4dd03cb2bd988618c9a10fe",
-  "previous_step_tree": "5cb81772542ebfa87c634572068dbf9ee49f41d0",
+  "previous_step_commit": "a43cba0e81fd89c3b20a64737bfa89cd2bac4de9",
+  "previous_step_tree": "f7ecf2326770b362b51ba67357ec450e311a086a",
   "step2_authorization": "Theory Owner explicitly instructed Phase 3 Step 2 and approved the single-test-file exception in the project conversation.",
   "step2_exception": {
     "path": "tests/unit/test_phase3_contracts.py",
@@ -104,5 +110,6 @@
   "step5_authorization": "Theory Owner explicitly instructed Phase 3 Step 5. Actual final Step 4 acceptance was verified before Step 5 implementation.",
   "step6_authorization": "Theory Owner explicitly instructed Phase 3 Step 6 after accepting the Step 5 delivery.",
   "step7_authorization": "Theory Owner accepted Step 6 and explicitly instructed Phase 3 Step 7 in the project conversation.",
-  "step8_authorization": "Theory Owner accepted Step 7 and explicitly instructed Phase 3 Step 8 in the project conversation."
+  "step8_authorization": "Theory Owner accepted Step 7 and explicitly instructed Phase 3 Step 8 in the project conversation.",
+  "step9_authorization": "Theory Owner explicitly requested Phase 3 Step 9 in the project conversation; no merge or next step authorized."
 }

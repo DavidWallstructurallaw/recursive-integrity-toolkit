@@ -179,3 +179,21 @@ automatic invocation or parameter inference is introduced. Existing input-only
 validation remains unchanged. T5 loss/reopening and experiment orchestration are
 still deferred. Numerical corrections, deterministic replay limits and resource
 bounds are documented in PHASE_3_DECISIONS.md.
+
+## Phase 3 Step 9: explicit pair comparison boundary
+
+The input pipeline remains unchanged. Callers explicitly select two distribution
+results and provide `ExplicitPairContext`, state-meaning declarations and optional
+`StateMappingDeclaration`. `representations/compatibility.py` revalidates ordering
+and declaration compatibility. `metrics/diversity.py::compare_support` validates
+the consumed numerical basis, applies only a fully declared directed literal map,
+and returns F-005/F-006/F-018 with loss/addition sets. No bundle dispatcher,
+trajectory, report, lineage analysis or model-performance comparison exists here.
+
+Mapping coarsening is disclosed through exact source/target descriptors and state
+meanings, direction, dictionary, collision groups, original distributions and
+harmonized distributions. Missing-policy changes and one-to-many allocation are
+rejected. Source labels never become an independently validated ontology. Pair
+metadata preserves both selected scopes; unavailable input does not become a zero
+or a false total-loss result. Weighted and supplied-probability inputs retain
+their distinct bases and cannot be mixed with incompatible denominator families.

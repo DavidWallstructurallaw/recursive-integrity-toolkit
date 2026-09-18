@@ -206,7 +206,7 @@ FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.p
 
 
 # Phase 3 Step 1: declarations and validation contracts only.
-PHASE3_ACTIVE_STEP = 8
+PHASE3_ACTIVE_STEP = 9
 PHASE3_CONTRACT_CLASSES = {
     "CalculationEvidenceClass", "CalculationStatus", "CalculationReason", "NumericalPolicy",
     "RepresentationDescriptor", "RecordStateAssignment", "CalculationScope", "WeightingOptions",
@@ -416,30 +416,22 @@ ALLOWED_CLASSES["metrics/diversity.py"] = {"StateFrequency", "DistributionMetric
 ALLOWED_CORE_IMPORTS["metrics/diversity.py"] = {
     "__future__", "dataclasses", "math", "types", "..errors", "..models", "..representations.base",
 }
-DISTRIBUTION_AST_SHA256 = "4d9d3da261a7ab7d5d66e82db65b37f8cd3e385b941c55694d1dea1cf8943c68"
+DISTRIBUTION_SOURCE_SHA256 = "34b1b77d00b9a2169aa7680d0edf77b05d5aec0bdc26b3bd141d38853f9728a9"
 
 
 def _phase3_distribution_boundary(tree: ast.Module) -> None:
-    """Pin the reviewed executable body in addition to inherited symbol checks.
-
-    Omit only empty type_params metadata introduced in Python 3.12. Request
-    full-field dumps on Python 3.13+, whose default otherwise omits empty lists;
-    older interpreters already emit those fields. No executable node is removed.
-    Nonempty generic parameters are not authorized by this migration.
-    """
+    """Pin the Step 9 additive body and compare in this interpreter, not across AST formats."""
     import hashlib
-    for node in ast.walk(tree):
-        if "type_params" in node._fields:
-            if getattr(node, "type_params", []):
-                raise SystemExit("Unexpected generic declaration in distribution metrics")
-            node._fields = tuple(name for name in node._fields if name != "type_params")
-    try:
-        serialized = ast.dump(tree, include_attributes=False, show_empty=True)
-    except TypeError:
-        serialized = ast.dump(tree, include_attributes=False)
-    digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
-    if digest != DISTRIBUTION_AST_SHA256:
-        raise SystemExit("Unexpected distribution implementation outside the reviewed Step 4 body")
+    raw = (PACKAGE / "metrics/diversity.py").read_bytes()
+    if hashlib.sha256(raw).hexdigest() != DISTRIBUTION_SOURCE_SHA256:
+        raise SystemExit("Unexpected distribution source outside the reviewed Step 9 body")
+    if ast.dump(tree, include_attributes=False) != ast.dump(ast.parse(raw), include_attributes=False):
+        raise SystemExit("Unexpected distribution AST outside the reviewed Step 9 body")
+
+
+ALLOWED_FUNCTIONS["metrics/diversity.py"].update({'_pair_distribution', '_pair_scalar_check', 'compare_support', '_pair_metadata_check', '_pair_metadata', '_harmonize_distribution'})
+ALLOWED_CLASSES["metrics/diversity.py"].update({'SupportComparison'})
+ALLOWED_CORE_IMPORTS["metrics/diversity.py"].add("..representations.compatibility")
 
 
 # Step 5 opens only declared provenance composition and direct classification.
@@ -582,12 +574,30 @@ def _definitions(tree: ast.AST, prefix: str = "") -> tuple[list[str], list[str]]
     return functions, classes
 
 
+# Step 9 opens only explicit pair compatibility; no metric dispatch here.
+PHASE3_PAIR_MODULES = {"representations/compatibility.py"}
+ALLOWED_FUNCTIONS["representations/compatibility.py"] = {'_scope', '_mapping', '_descriptor', 'validate_representation_compatibility', '_invalid', '_context', '_text'}
+ALLOWED_CLASSES["representations/compatibility.py"] = {'StateMappingDeclaration', 'RepresentationCompatibility'}
+ALLOWED_CORE_IMPORTS["representations/compatibility.py"] = {'..models', 'types', '..io.validation', '..errors', '__future__', 'dataclasses'}
+PAIR_SOURCE_SHA256 = "c4ce8e30d8026dd7ac1e10ac09e7b70a23ae2c4fc451f2e37890b919965d4509"
+
+
+def _phase3_pair_boundary(tree: ast.Module) -> None:
+    """Exact reviewed declaration checks; reject source changes and injected bodies."""
+    import hashlib
+    raw = (PACKAGE / "representations/compatibility.py").read_bytes()
+    if hashlib.sha256(raw).hexdigest() != PAIR_SOURCE_SHA256:
+        raise SystemExit("Unexpected compatibility source outside reviewed Step 9")
+    if ast.dump(tree, include_attributes=False) != ast.dump(ast.parse(raw), include_attributes=False):
+        raise SystemExit("Unexpected compatibility AST outside reviewed Step 9")
+
+
 def main() -> int:
     paths = sorted(PACKAGE.rglob("*.py"))
     if len(paths) != 40:
         raise SystemExit(f"Expected 40 package modules, found {len(paths)}")
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
-    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES) - relative_paths
+    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES | PHASE3_PAIR_MODULES) - relative_paths
     if missing:
         raise SystemExit(f"Required startup or Step 8 modules missing: {sorted(missing)}")
 
@@ -616,11 +626,13 @@ def main() -> int:
             _phase3_tail_boundary(tree)
         if relative in PHASE3_RESAMPLING_MODULES:
             _phase3_resampling_boundary(tree)
+        if relative in PHASE3_PAIR_MODULES:
+            _phase3_pair_boundary(tree)
         doc = ast.get_docstring(tree) or ""
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
 
-        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES:
+        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES | PHASE3_PAIR_MODULES:
             if not (
                 len(tree.body) == 1
                 and isinstance(tree.body[0], ast.Expr)
@@ -670,7 +682,7 @@ def main() -> int:
                         isinstance(node.func, ast.Attribute) and node.func.attr in blocked_methods
                     ):
                         raise SystemExit(f"Unexpected executable, write or network capability in {relative}")
-            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES | {"models.py"}:
+            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES | PHASE3_PAIR_MODULES | {"models.py"}:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
                 if isinstance(node, ast.Call):
@@ -721,7 +733,7 @@ def main() -> int:
                     )
                     if not (lazy_parquet or lazy_numpy):
                         forbidden_locations.append(f"{relative}: {imported}")
-            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES:
+            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES | PHASE3_PAIR_MODULES:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
                     raise SystemExit(f"Import outside Step 9 contracts in {relative}: {sorted(unexpected)}")
@@ -738,7 +750,7 @@ def main() -> int:
     print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Phase 3 Step 8 reviewed closed-resampling and inherited definition/import boundaries: PASS")
+    print("Phase 3 Step 9 reviewed explicit-pair and inherited definition/import boundaries: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 

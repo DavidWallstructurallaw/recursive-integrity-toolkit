@@ -116,3 +116,21 @@ explicit PCG64 seed, replicate schedule and same-environment repeatability.
 T2 remains in tail.py; T5 is reserved and unimplemented. Source authority is
 unchanged. Tests in test_T1_resampling.py use frozen rational expectations,
 finite enumeration and distributional checks independent of implementation.
+
+## Phase 3 Step 9 traceability
+
+T1 now includes the explicitly selected ordered pair kernel in
+`metrics/diversity.py::compare_support`: F-005 support delta, F-006 support
+retention and F-018 Gini-Simpson diversity delta, plus Definitions 7.9-7.12
+loss/addition counts and state sets. PR-007 ordering evidence is revalidated by the
+existing input validator; PR-011 compatibility checks live in
+`representations/compatibility.py::validate_representation_compatibility`.
+P3-D03 restricts these computations to one explicitly supplied pair. Phase 6A
+automatic longitudinal orchestration remains deferred.
+
+The comparison basis includes representation identity, rule, missing policy and
+explicit state semantics. A many-to-one map changes that basis; original results,
+exact directed mapping and collapsed groups remain visible. The derived results
+make no lineage, causal, model-performance or permanent process-extinction claim.
+Tests use the frozen HERO-PAIR oracle and independent rational fixtures. Existing
+F-001 through F-004 source definitions and their numerical tests remain unchanged.

@@ -1,7 +1,8 @@
 """Compute single-scope frequencies, positive support and named diversity.
 
 Owner IDs:
-    T1: F-001, F-002, F-003, F-004. PR-016 deterministic ordering.
+    T1: F-001, F-002, F-003, F-004, F-005, F-006, F-018. PR-016 deterministic ordering.
+    PR-007, PR-011: explicit pair chronology and representation compatibility.
     UD-021: explicitly requested weighted variants (Definitions sections 9.5, 19).
 
 Inputs:
@@ -20,12 +21,12 @@ Assumptions:
     probability residuals are retained, never clipped, smoothed or normalized.
 
 Limits:
-    No I/O, inference, randomness, pair comparison, tail, source-share, closure,
+    No I/O, inference, randomness, automatic pair selection, tail, source-share, closure,
     lineage, Shannon entropy, functional-failure verdict, report or orchestration.
     A structurally valid supplied assignment does not certify its empirical origin.
 
 Current phase status:
-    Phase 3 Step 4 single-scope F-001 through F-004 only.
+    Phase 3 Step 4 F-001 through F-004 preserved; Phase 3 Step 9 explicit F-005/F-006/F-018 pair kernels.
 """
 from __future__ import annotations
 
@@ -443,3 +444,313 @@ def calculate_state_distribution(
     return StateDistributionResult(unweighted, weighted,
         ValidationCoverage(len(scope.included_record_keys), len(assignments), "selected_valid_records"),
         represented.selection.selection_basis, tuple(represented.selection.messages), tuple(exclusions))
+
+
+# Phase 3 Step 9: pure pairwise mathematics. All earlier single-scope definitions
+# above are retained unchanged. No version discovery or longitudinal dispatcher.
+from ..models import ExplicitPairContext
+from ..representations.compatibility import (
+    RepresentationCompatibility, StateMappingDeclaration, validate_representation_compatibility,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class SupportComparison:
+    """F-005/F-006/F-018 over one explicit pair in a declared common basis.
+
+    Original and harmonized distributions are separately visible. Mapping
+    coarsening is never described as observed recovery of an original state.
+    None in a state set means comparison unavailable, not a measured empty set.
+    """
+
+    compatibility: RepresentationCompatibility
+    original_earlier: DistributionMetrics = field(repr=False)
+    original_later: DistributionMetrics = field(repr=False)
+    harmonized_earlier: DistributionMetrics = field(repr=False)
+    harmonized_later: DistributionMetrics = field(repr=False)
+    status: CalculationStatus
+    reason_codes: tuple[CalculationReason, ...]
+    support_delta: ScalarCalculation
+    support_loss_count: ScalarCalculation
+    support_added_count: ScalarCalculation
+    support_retention_ratio: ScalarCalculation
+    gini_simpson_diversity_delta: ScalarCalculation
+    extinct_states: tuple[str, ...] | None = field(repr=False)
+    added_states: tuple[str, ...] | None = field(repr=False)
+    retained_states: tuple[str, ...] | None = field(repr=False)
+    retention_denominator: int | None
+    retention_denominator_basis: str
+    set_metadata: tuple[CalculationMetadata, ...]
+    mapping_effect: tuple[tuple[str, int | None, int | None], ...]
+    limitations: tuple[str, ...] = (
+        "One explicitly selected earlier/later pair only; no trajectory or automatic adjacent comparison.",
+        "Extinct means absent from the supplied later support in the harmonized representation.",
+        "No permanent process extinction, causality, model-performance or source-independence claim follows.",
+        "Supplied probability vectors remain mathematical inputs, not empirical record-frequency observations.",
+        "Many-to-one mapping can conceal original distinctions; original inputs remain separately visible.",
+        "Weighted support is positive weight mass, not unweighted record presence.",
+    )
+
+
+def _pair_metadata_check(actual: object, expected: CalculationMetadata | None) -> CalculationMetadata | None:
+    """Validate trace identities for consumed numerical fields without object hooks."""
+    if expected is None:
+        if actual is not None:
+            raise _invalid("pair input contains incompatible count or mass trace metadata")
+        return
+    if type(actual) is not CalculationMetadata:
+        raise _invalid("pair input lacks typed numerical trace metadata")
+    scope, representation = _context(actual.scope, actual.representation)
+    if type(actual.weighting) is not WeightingOptions:
+        raise _invalid("pair input metadata has invalid weighting")
+    try:
+        weighting = replace(actual.weighting)
+    except (ValueError, TypeError):
+        raise _invalid("pair metadata weighting failed validation") from None
+    for text in (actual.metric_name, actual.owner_id, actual.unit, actual.method):
+        _text(text)
+    if actual.formula_id is not None:
+        _text(actual.formula_id)
+    for values in (actual.assumptions, actual.limitations):
+        if type(values) is not tuple:
+            raise _invalid("pair trace assumptions and limits must be literal tuples")
+        for text in values:
+            _text(text)
+    if (actual.metric_name != expected.metric_name or actual.owner_id != expected.owner_id
+            or actual.formula_id != expected.formula_id or actual.unit != expected.unit
+            or actual.evidence_class is not expected.evidence_class
+            or scope != expected.scope or representation != expected.representation or weighting != expected.weighting):
+        raise _invalid("pair input numerical trace disagrees with its distribution basis")
+    return replace(actual, scope=scope, representation=representation, weighting=weighting)
+
+
+def _pair_scalar_check(actual: object, expected: ScalarCalculation) -> ScalarCalculation:
+    if type(actual) is not ScalarCalculation or actual.status is not expected.status:
+        raise _invalid("pair input scalar status disagrees with its distribution")
+    if type(actual.reason_codes) is not tuple or any(type(code) is not CalculationReason for code in actual.reason_codes):
+        raise _invalid("pair scalar reasons must use the approved registry")
+    if actual.reason_codes != expected.reason_codes:
+        raise _invalid("pair scalar unavailable reasons disagree with the record scope")
+    if type(actual.value) is not type(expected.value) or actual.value != expected.value:
+        raise _invalid("pair input scalar differs from its recomputed count or mass basis")
+    metadata = _pair_metadata_check(actual.metadata, expected.metadata)
+    return replace(actual, metadata=metadata)
+
+
+def _pair_distribution(value: object) -> DistributionMetrics:
+    """Revalidate raw table evidence and every consumed summary; never trust a flag."""
+    if type(value) is not DistributionMetrics:
+        raise _invalid("pair comparison requires typed DistributionMetrics inputs")
+    scope, representation = _context(value.scope, value.representation)
+    if type(value.weighting) is not WeightingOptions:
+        raise _invalid("pair weighting requires its explicit declaration contract")
+    try:
+        weighting = replace(value.weighting)
+    except (ValueError, TypeError):
+        raise _invalid("invalid pair weighting declaration") from None
+    bases = ("empirical_assignments", "explicit_counts_divided_by_included_records",
+             "explicit_probability_vector", "weighted_record_mass")
+    if type(value.input_basis) is not str or value.input_basis not in bases:
+        raise _invalid("pair distribution has no approved input basis")
+    weighted = value.input_basis == "weighted_record_mass"
+    supplied = value.input_basis == "explicit_probability_vector"
+    if weighted != (weighting.weighting_mode == "weighted"):
+        raise _invalid("pair input basis and weighting disagree")
+    total = len(scope.included_record_keys)
+    if (type(value.analyzed_record_count) is not int or value.analyzed_record_count != total
+            or type(value.states) is not tuple or type(value.support) is not tuple
+            or type(value.reason_codes) is not tuple or type(value.status) is not CalculationStatus
+            or type(value.numerical_policy) is not NumericalPolicy):
+        raise _invalid("pair input summary is structurally invalid")
+    try:
+        replace(value.numerical_policy)
+    except (ValueError, TypeError):
+        raise _invalid("pair input numerical policy differs from the approved policy") from None
+    for reason in value.reason_codes:
+        if type(reason) is not CalculationReason:
+            raise _invalid("pair input uses an unregistered reason")
+    support = tuple(_text(state, empty=True) for state in value.support)
+    if len(set(support)) != len(support):
+        raise _invalid("pair input support contains duplicates")
+    counts, masses, frequencies = (None if supplied else {}), ({} if weighted else None), {}
+    for row in value.states:
+        if type(row) is not StateFrequency:
+            raise _invalid("pair input state table requires typed rows")
+        state = _text(row.state_id, empty=True)
+        if state in frequencies:
+            raise _invalid("pair input state table contains duplicates")
+        p = _number(row.state_frequency)
+        if p > 1:
+            raise _invalid("pair input frequency exceeds one")
+        frequencies[state] = p
+        if supplied:
+            if row.state_count is not None or row.state_mass is not None:
+                raise _invalid("probability-only input cannot claim record counts or weight mass")
+        else:
+            if type(row.state_count) is not int or not 0 <= row.state_count <= total:
+                raise _invalid("pair state count must be an integer within the selected scope")
+            counts[state] = row.state_count
+            if weighted:
+                masses[state] = _number(row.state_mass, weight=True)
+                if row.state_count == 0 and row.state_mass != 0:
+                    raise _invalid("zero records cannot carry positive state weight mass")
+            elif row.state_mass is not None:
+                raise _invalid("unweighted pair input cannot contain state weight mass")
+    reason = None
+    if total == 0:
+        if supplied or value.states:
+            raise _invalid("empty record scope cannot certify a supplied distribution")
+        reason = CalculationReason.ALL_EXCLUDED if scope.excluded_record_keys else CalculationReason.EMPTY_SCOPE
+        denominator = None
+    elif supplied:
+        denominator = None
+    elif weighted:
+        denominator = _number(value.frequency_denominator, weight=True)
+        if denominator <= 0:
+            raise _invalid("weighted pair requires positive total weight", weight=True)
+        try:
+            mass_total = fsum(masses.values())
+        except OverflowError:
+            raise _invalid("pair weight mass exceeds the finite range", weight=True) from None
+        if abs(mass_total - denominator) > NumericalPolicy().probability_mass_tolerance * max(1.0, denominator):
+            raise _invalid("pair state masses do not reconcile to declared total weight", weight=True)
+    else:
+        denominator = total
+    expected_basis = "included_record_weight_mass" if weighted else "explicit_probability_mass" if supplied else scope.denominator_basis
+    if (type(value.denominator_basis) is not str or value.denominator_basis != expected_basis
+            or type(value.frequency_denominator) is not type(denominator) or value.frequency_denominator != denominator):
+        raise _invalid("pair denominator disagrees with its explicit input basis")
+    if counts is not None and sum(counts.values()) != total:
+        raise _invalid("pair state counts do not sum to the included record count")
+    if reason is None and not supplied:
+        for state, p in frequencies.items():
+            numerator = masses[state] if weighted else counts[state]
+            if p != numerator / denominator or (numerator > 0 and p == 0):
+                raise _invalid("pair frequency disagrees with its count or weight denominator")
+    rebuilt = _metrics(tuple(sorted(frequencies.items())), counts, masses,
+        scope=scope, representation=representation, weighting=weighting, basis=value.input_basis,
+        denominator=denominator, denominator_basis=expected_basis, reason=reason)
+    if value.status is not rebuilt.status or value.reason_codes != rebuilt.reason_codes or tuple(sorted(support)) != rebuilt.support:
+        raise _invalid("pair input availability or support disagrees with revalidated evidence")
+    for actual, expected in ((value.supplied_probability_total, rebuilt.supplied_probability_total),
+                             (value.probability_residual, rebuilt.probability_residual)):
+        if type(actual) is not type(expected) or actual != expected:
+            raise _invalid("pair probability total or residual disagrees with the state table")
+    scalars = tuple(_pair_scalar_check(actual, expected) for actual, expected in (
+        (value.support_size, rebuilt.support_size),
+        (value.gini_simpson_diversity, rebuilt.gini_simpson_diversity),
+        (value.simpson_concentration, rebuilt.simpson_concentration)))
+    metadata = tuple(_pair_metadata_check(actual, expected) for actual, expected in (
+        (value.frequency_metadata, rebuilt.frequency_metadata),
+        (value.count_metadata, rebuilt.count_metadata), (value.mass_metadata, rebuilt.mass_metadata)))
+    if type(value.limitations) is not tuple:
+        raise _invalid("pair input limitations must be a literal tuple")
+    for limitation in value.limitations:
+        _text(limitation)
+    return replace(rebuilt, support_size=scalars[0], gini_simpson_diversity=scalars[1],
+                   simpson_concentration=scalars[2], frequency_metadata=metadata[0],
+                   count_metadata=metadata[1], mass_metadata=metadata[2], limitations=value.limitations)
+
+
+def _harmonize_distribution(value: DistributionMetrics, declaration: StateMappingDeclaration) -> DistributionMetrics:
+    """Aggregate only explicitly mapped existing states; never add missing data."""
+    mapping = declaration.state_mapping
+    if any(row.state_id not in mapping for row in value.states):
+        raise _invalid("directed state map does not cover every supplied source-state entry")
+    count_backed = value.count_metadata is not None
+    weighted = value.weighting.weighting_mode == "weighted"
+    groups = {}
+    for row in value.states:
+        groups.setdefault(mapping[row.state_id], []).append(row)
+    counts = {state: sum(row.state_count for row in rows) for state, rows in groups.items()} if count_backed else None
+    masses = {state: fsum(row.state_mass for row in rows) for state, rows in groups.items()} if weighted else None
+    if value.status is CalculationStatus.UNAVAILABLE:
+        pairs = ()
+    elif weighted:
+        pairs = tuple((state, masses[state] / value.frequency_denominator) for state in sorted(groups))
+    elif count_backed:
+        pairs = tuple((state, counts[state] / value.frequency_denominator) for state in sorted(groups))
+    else:
+        pairs = tuple((state, fsum(row.state_frequency for row in groups[state])) for state in sorted(groups))
+    harmonized = _metrics(pairs, counts, masses, scope=value.scope,
+        representation=declaration.target_representation, weighting=value.weighting, basis=value.input_basis,
+        denominator=value.frequency_denominator, denominator_basis=value.denominator_basis,
+        reason=value.reason_codes[0] if value.status is CalculationStatus.UNAVAILABLE else None)
+    return replace(harmonized, limitations=value.limitations + (
+        "Explicit directed state aggregation changes this basis; inspect original distributions separately.",))
+
+
+def _pair_metadata(name: str, formula: str | None, unit: str, compatibility: RepresentationCompatibility,
+                   weighting: WeightingOptions, method: str) -> CalculationMetadata:
+    a, b = compatibility.context.earlier_scope, compatibility.context.later_scope
+    scope = CalculationScope(a.dataset_versions + b.dataset_versions,
+        a.included_record_keys + b.included_record_keys, a.excluded_record_keys + b.excluded_record_keys,
+        "separate_ordered_representation_scopes", a.scope_id + " -> " + b.scope_id)
+    return CalculationMetadata(name, "T1", formula, CalculationEvidenceClass.DERIVED_METRIC,
+        unit, method, scope, compatibility.harmonized_representation, weighting,
+        assumptions=("Earlier and later scopes explicitly selected and independently validated.",
+                     "State identity uses the declared common basis, including any disclosed map.",),
+        limitations=("Observed/supplied support only; no permanent extinction or causal/model-performance verdict.",
+                     "A coarsened comparison cannot recover distinctions lost through its mapping.",))
+
+
+def compare_support(
+    earlier: DistributionMetrics, later: DistributionMetrics, *, context: ExplicitPairContext,
+    earlier_state_semantics: str, later_state_semantics: str,
+    state_mapping: StateMappingDeclaration | None = None,
+) -> SupportComparison:
+    """Compare exactly two explicit inputs: F-005/F-006/F-018 and state sets.
+
+    Both sides must use the same weighting and compatible denominator families.
+    Count-backed inputs and supplied probability-only inputs are not mixed. All
+    consumed summaries are revalidated. A failed side yields unavailable pair
+    values, preserving the individually valid side. No automatic bundle dispatch.
+    """
+    compatibility = validate_representation_compatibility(context,
+        earlier_state_semantics=earlier_state_semantics, later_state_semantics=later_state_semantics,
+        state_mapping=state_mapping)
+    a, b = _pair_distribution(earlier), _pair_distribution(later)
+    context = compatibility.context
+    if (a.scope != context.earlier_scope or b.scope != context.later_scope
+            or a.representation != context.earlier_representation or b.representation != context.later_representation):
+        raise _invalid("comparison distributions do not match their explicit pair context")
+    if (a.weighting != b.weighting or a.denominator_basis != b.denominator_basis
+            or (a.input_basis == "explicit_probability_vector") != (b.input_basis == "explicit_probability_vector")):
+        raise _invalid("comparison requires compatible weighting and denominator families")
+    original_a, original_b = a, b
+    if compatibility.mapping is not None:
+        if compatibility.mapping.direction == "earlier_to_later":
+            a = _harmonize_distribution(a, compatibility.mapping)
+        else:
+            b = _harmonize_distribution(b, compatibility.mapping)
+    reasons = tuple(sorted(set(a.reason_codes + b.reason_codes), key=str))
+    available = a.status is CalculationStatus.AVAILABLE and b.status is CalculationStatus.AVAILABLE
+    status = CalculationStatus.AVAILABLE if available else CalculationStatus.UNAVAILABLE
+    left, right = set(a.support), set(b.support)
+    lost = tuple(sorted(left - right)) if available else None
+    added = tuple(sorted(right - left)) if available else None
+    retained = tuple(sorted(left & right)) if available else None
+    values = (
+        len(right) - len(left), len(left - right), len(right - left),
+        len(left & right) / len(left) if left else None,
+        b.gini_simpson_diversity.value - a.gini_simpson_diversity.value if available else None,
+    )
+    descriptions = (
+        ("support_delta", "F-005", "states", "later support_size minus earlier support_size"),
+        ("support_loss_count", None, "states", "cardinality of earlier support minus later support"),
+        ("support_added_count", None, "states", "cardinality of later support minus earlier support"),
+        ("support_retention_ratio", "F-006", "ratio", "intersection support size / earlier positive-mass support size"),
+        ("gini_simpson_diversity_delta", "F-018", "dimensionless", "later Gini-Simpson diversity minus earlier diversity"),
+    )
+    scalars = tuple(ScalarCalculation(_pair_metadata(name, formula, unit, compatibility, a.weighting, method),
+                                     status, value if available else None, reasons)
+                    for value, (name, formula, unit, method) in zip(values, descriptions))
+    sets = tuple(_pair_metadata(name, None, "set_of_states", compatibility, a.weighting, method)
+                 for name, method in (("extinct_states", "earlier support minus later support"),
+                                      ("added_states", "later support minus earlier support"),
+                                      ("retained_states", "earlier support intersect later support")))
+    effects = (("earlier", original_a.support_size.value, a.support_size.value),
+               ("later", original_b.support_size.value, b.support_size.value))
+    return SupportComparison(compatibility, original_a, original_b, a, b, status, reasons,
+        *scalars, lost, added, retained, len(left) if available else None,
+        "earlier_positive_mass_support_in_harmonized_representation", sets, effects)

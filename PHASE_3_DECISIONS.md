@@ -576,3 +576,95 @@ source/AST boundary, while retaining the lexical-order assertions and both repor
 placeholders. Its original test identity is preserved. This test file is in G;
 no additional file exception is needed. The first full local run exposed this
 stale assertion (2267 passed, one failed); it is not hidden or skipped.
+
+## Phase 3 Step 9 authorization and implementation record
+
+The Theory Owner requested Phase 3 Step 9 after the accepted Step 8 delivery.
+The immutable starting commit is `a43cba0e81fd89c3b20a64737bfa89cd2bac4de9`,
+root tree `f7ecf2326770b362b51ba67357ec450e311a086a`. Its 2268 core and 2271
+real-Parquet test identities remain required. Original Phase 0 authority, the
+approved plan bytes, previous decisions, and prior test identities are retained.
+No new theory decision, file exception, merge, publication or next-step execution
+is authorized. This record implements P3-D03 and Step 9, without rewriting them.
+
+### Explicit comparison contracts
+
+`validate_representation_compatibility(...)` consumes `ExplicitPairContext`,
+explicit earlier/later state-meaning declarations and optionally a
+`StateMappingDeclaration`. Identical representation name, source, version, rule,
+field, normalization profile, missing policy and missing-state ID plus identical
+state-meaning declarations establish the identity comparison basis. These are
+caller declarations, not semantic certification. Version strings alone cannot
+establish compatibility. Retained Phase 2 ordering declarations are revalidated;
+cached order flags, filenames, lexical order and capability labels do not select
+or authorize a pair. A full loaded chronology may include intermediate versions;
+only the two explicitly selected scopes are compared.
+
+A directed literal map requires the source and target descriptors, source and
+target state meanings, and `earlier_to_later` or `later_to_earlier`. Its plain
+string-to-string dictionary is copied into immutable evidence. Multiple source
+states may intentionally map to one target; collision groups are recorded rather
+than overwritten. Every supplied source-state entry, including explicit zeros,
+requires a map entry. Extra declared but unobserved keys add no records or mass.
+No implicit identity mapping, inferred equivalence, one-to-many allocation,
+callable, or bare global `state_mapping` is executed. A map cannot change row
+inclusion/missing policy. An explicit missing marker must map to the target
+missing marker, and ordinary states cannot collide with that marker.
+
+`compare_support(...)` consumes two Step 4 `DistributionMetrics` objects and the
+explicit compatibility context. Consumed scopes, counts, masses, frequencies,
+status, support, scalar values, numerical policy and trace identities are checked
+again. The original independently useful single-version calculations are
+preserved. Original and harmonized distributions remain separate in the result.
+Any coarsening's before/after support sizes, exact mapping and collision groups
+are retained. Support/difference sets use positive mass only and deterministic
+Unicode ordering. Explicit probability vectors retain their supplied-input label;
+they are not mixed with count-backed inputs or promoted to empirical records.
+Both sides must use the same weighting and denominator family. Weighted pairs
+are possible only when both explicitly supplied distributions are the previously
+opted-in weighted companions. Their mass support never substitutes for the
+unweighted record-presence result.
+
+F-005 uses later support size minus earlier support size. F-006 divides the
+intersection by earlier positive-mass support. F-018 uses later minus earlier
+Gini-Simpson diversity. Loss and added counts/sets remain separately visible even
+when the support delta is zero. Pair trace metadata identifies both ordered
+scopes, the harmonized representation, evidence class `derived_metric`, units,
+methods and limitations. Earlier/later empty or all-excluded input makes the pair
+unavailable; affected values and sets are None with retained reasons. An empty
+later input never fabricates measured extinction of every earlier state. Real
+zero changes on valid distributions remain available numerical zeros.
+
+This is a pure explicitly invoked pair kernel, not Phase 6A longitudinal
+orchestration. No version discovery, trajectory, automatic adjacent pairing,
+relative-change calculation, provenance/lineage change, model-performance claim,
+report, audit CLI or runtime network access is introduced. Observed absence in
+the later declared representation does not certify permanent production-process
+extinction. `validate_bundle(...)` remains input-only, even when it declares
+`dataset_longitudinal` available.
+
+### Tests, preservation and gate migrations
+
+Frozen Hero pair expectations are unchanged: support delta -3, retention 5/8,
+diversity delta -1/8, lost battery/lizard/turtle and no added states. Independent
+rational mapping fixtures and edge cases test identity, chronology, incompatible
+versions/meaning, mapping direction and aggregation, missing-marker collision,
+scope exhaustion, weighted separation, original assignment preservation,
+forged summaries, determinism and no I/O/automatic dispatch.
+
+The runtime change is restricted to the approved compatibility module plus
+additive functions/types/imports in diversity.py. All preexisting diversity
+functions and classes are retained exactly and verified against Step 8 Git source
+in the release audit. Models, errors and field representation need no changes.
+The current full-source digest plus same-interpreter AST guard protects the
+additive implementation without cross-Python AST serialization dependence.
+Historical Step 4 numerical-injection tests remain unchanged and still fail on
+altered formulas. The Step 8 file-permission tests are routed to the frozen Step 8
+allowlist; their identities and original rejection conditions are retained.
+New negative tests enforce the Step 9 scope and reject later-layer behavior.
+The new compatibility module reduces the protected placeholder count from 17 to
+16, without changing the total of 40 package modules.
+
+Review roles for technical, mathematical and security checks are consolidated in
+this AI assistant and executed tests. No independent human review or broad
+security certification is claimed. Stop after Step 9 acceptance, before Step 10.

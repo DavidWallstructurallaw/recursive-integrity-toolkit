@@ -1,0 +1,8 @@
+{
+  "basis": "Same labels do not establish equivalent representation versions without a directed declaration",
+  "earlier_version": "taxonomy-v1",
+  "later_version": "taxonomy-v2",
+  "earlier_counts": {"a": 2, "b": 2},
+  "later_counts": {"a": 2, "b": 2},
+  "expected_error": "E_REPRESENTATION_INCOMPATIBLE"
+}

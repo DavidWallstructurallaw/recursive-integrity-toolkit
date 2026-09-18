@@ -1,4 +1,4 @@
-name: Phase 3 Step 8 Security Boundary
+name: Phase 3 Step 9 Security Boundary
 
 on:
   push:
@@ -54,15 +54,16 @@ jobs:
             tests/unit/test_T3_bounds.py \
             tests/unit/test_T2_tail.py \
             tests/unit/test_T1_resampling.py \
-            --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/phase3_step8_security_results.log"
+            tests/unit/test_T1_compatibility.py \
+            --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/phase3_step9_security_results.log"
           python scripts/release_check.py --junit "$RUNNER_TEMP/rit-security/security.xml"
           python scripts/check_traceability.py
-          python scripts/release_check.py --phase 3 --step 8
+          python scripts/release_check.py --phase 3 --step 9
       - name: Retain actual security test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase3-step8-security-boundary
+          name: phase3-step9-security-boundary
           path: ${{ runner.temp }}/rit-security/
           if-no-files-found: error
           retention-days: 30
