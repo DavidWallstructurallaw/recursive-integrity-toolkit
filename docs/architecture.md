@@ -157,3 +157,12 @@ availability summaries. No usable required provenance means unavailable dataset
 scalars; valid explicit unknown grounding can support [0,1]. No confidence weighting,
 midpoint, graph, file access, or automatic input-pipeline invocation is introduced.
 All later-stage boundaries and immutable earlier implementations remain.
+
+## Phase 3 Step 7: explicit tail and analytic extinction
+
+`metrics/tail.py` adds `select_tail` over unweighted count-backed Step 4 results,
+with explicit rule, positive-support membership, deterministic rarity ordering,
+record denominator and unavailable scope handling. `one_step_extinction_probability`
+is a separate explicit analytic closed-multinomial call. No RNG, weighted tail,
+quantile, inference of thresholds, input-pipeline dispatch or later-phase workflow
+is introduced. The other 39 package modules remain unchanged in this step.

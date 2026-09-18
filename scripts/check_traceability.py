@@ -1,4 +1,4 @@
-"""Check inherited Phase 2 rules and approved Phase 3 Step 6 boundaries.
+"""Check inherited Phase 2 rules and approved Phase 3 Step 7 boundaries.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
 approved Phase 2 step on 2026-09-16. Step 9 adds explicit local bundle orchestration only. Earlier
@@ -206,7 +206,7 @@ FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.p
 
 
 # Phase 3 Step 1: declarations and validation contracts only.
-PHASE3_ACTIVE_STEP = 6
+PHASE3_ACTIVE_STEP = 7
 PHASE3_CONTRACT_CLASSES = {
     "CalculationEvidenceClass", "CalculationStatus", "CalculationReason", "NumericalPolicy",
     "RepresentationDescriptor", "RecordStateAssignment", "CalculationScope", "WeightingOptions",
@@ -496,6 +496,24 @@ def _phase3_bounds_boundary(tree: ast.Module) -> None:
         raise SystemExit("Unexpected direct bounds executable syntax outside Step 6")
 
 
+# Step 7 opens only explicit observed-tail diagnostics and analytic F-014.
+PHASE3_TAIL_MODULES = {"metrics/tail.py"}
+ALLOWED_FUNCTIONS["metrics/tail.py"] = {'_state', '_metadata', 'select_tail', '_distribution', 'one_step_extinction_probability', '_rarity_key', '_invalid', '_options'}
+ALLOWED_CLASSES["metrics/tail.py"] = {'TailSelectionResult', 'RarityEntry', 'ExtinctionProbabilityResult'}
+ALLOWED_CORE_IMPORTS["metrics/tail.py"] = {"__future__", "dataclasses", "math", "..errors", "..models", ".diversity"}
+TAIL_SOURCE_SHA256 = "b7618dea6a28fd69aa951d7ae5170c772bc2bea2999906ed61bca9079b8d5cf7"
+
+
+def _phase3_tail_boundary(tree: ast.Module) -> None:
+    """Fixed reviewed bytes and same-interpreter syntax; no later T2 behaviors."""
+    import hashlib
+    raw = (PACKAGE / "metrics/tail.py").read_bytes()
+    if hashlib.sha256(raw).hexdigest() != TAIL_SOURCE_SHA256:
+        raise SystemExit("Tail source differs from the reviewed Step 7 body")
+    if ast.dump(tree, include_attributes=False) != ast.dump(ast.parse(raw), include_attributes=False):
+        raise SystemExit("Unexpected tail/scenario executable syntax outside Step 7")
+
+
 def _phase3_contract_boundary(tree: ast.Module) -> None:
     """Reject calculation or execution inside the newly authorized declarations."""
     permitted = {"type", "len", "set", "any", "ValueError", "TypeError", "field", "dataclass",
@@ -551,7 +569,7 @@ def main() -> int:
     if len(paths) != 40:
         raise SystemExit(f"Expected 40 package modules, found {len(paths)}")
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
-    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES) - relative_paths
+    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES) - relative_paths
     if missing:
         raise SystemExit(f"Required startup or Step 8 modules missing: {sorted(missing)}")
 
@@ -576,11 +594,13 @@ def main() -> int:
             _phase3_provenance_boundary(tree)
         if relative in PHASE3_BOUNDS_MODULES:
             _phase3_bounds_boundary(tree)
+        if relative in PHASE3_TAIL_MODULES:
+            _phase3_tail_boundary(tree)
         doc = ast.get_docstring(tree) or ""
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
 
-        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES:
+        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES:
             if not (
                 len(tree.body) == 1
                 and isinstance(tree.body[0], ast.Expr)
@@ -630,7 +650,7 @@ def main() -> int:
                         isinstance(node.func, ast.Attribute) and node.func.attr in blocked_methods
                     ):
                         raise SystemExit(f"Unexpected executable, write or network capability in {relative}")
-            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | {"models.py"}:
+            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | {"models.py"}:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
                 if isinstance(node, ast.Call):
@@ -674,7 +694,7 @@ def main() -> int:
                     )
                     if not lazy_parquet:
                         forbidden_locations.append(f"{relative}: {imported}")
-            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES:
+            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
                     raise SystemExit(f"Import outside Step 9 contracts in {relative}: {sorted(unexpected)}")
@@ -691,7 +711,7 @@ def main() -> int:
     print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Phase 3 Step 6 reviewed direct bounds and inherited definition/import boundaries: PASS")
+    print("Phase 3 Step 7 reviewed tail/scenario and inherited definition/import boundaries: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 

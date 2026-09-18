@@ -1,7 +1,7 @@
 {
   "control_version": "1.0",
   "active_phase": 3,
-  "active_step": 6,
+  "active_step": 7,
   "baseline_commit": "78554993febb01609cb90814cc24cce2012bf7d7",
   "baseline_tree": "706b99e27c2d284a7435ae03e2eb2376214bfa46",
   "baseline_test_tree": "d787d9b06c41a91f8587f6b57a8af710419d114f",
@@ -59,10 +59,10 @@
     "scripts/check_traceability.py",
     "scripts/release_check.py",
     "src/recursive_integrity_toolkit/errors.py",
-    "src/recursive_integrity_toolkit/metrics/bounds.py",
+    "src/recursive_integrity_toolkit/metrics/tail.py",
     "src/recursive_integrity_toolkit/models.py",
     "tests/conftest.py",
-    "tests/fixtures/provenance_unknown/phase3_direct_bounds.json",
+    "tests/fixtures/minimal_valid/phase3_tail_cases.json",
     "tests/integration/test_ci_workflows.py",
     "tests/integration/test_no_algorithms.py",
     "tests/integration/test_no_network.py",
@@ -72,11 +72,11 @@
     "tests/integration/test_package_install.py",
     "tests/integration/test_repository_structure.py",
     "tests/unit/test_PR016_determinism.py",
-    "tests/unit/test_T3_bounds.py",
-    "tests/unit/test_T3_provenance.py"
+    "tests/unit/test_T2_tail.py",
+    "tests/unit/test_phase3_contracts.py"
   ],
   "new_files_permitted": [
-    "tests/fixtures/provenance_unknown/phase3_direct_bounds.json"
+    "tests/fixtures/minimal_valid/phase3_tail_cases.json"
   ],
   "file_identity_rule": "The immutable Git root tree commits every original filename, mode and blob. The baseline-evidence command materializes each of the 197 baseline blob and SHA-256 identities into retained execution evidence.",
   "inherited_test_identity_rule": "Collection runs against an isolated copy of the exact pinned baseline, in each explicit optional-dependency mode. Store the complete original/current node-ID lists and their digest. Every inherited node ID must remain collected; active-stage assertion changes have a migration record in PHASE_3_DECISIONS.md.",
@@ -91,8 +91,8 @@
   "next_step_authorized": false,
   "main_merge_authorized": false,
   "publication_authorized": false,
-  "previous_step_commit": "4611f897d054b352733cc90543eef6f6d71cd811",
-  "previous_step_tree": "faffd5717dc1bf99e0081a122a338c65a68a13a7",
+  "previous_step_commit": "c7d5ceed2f154bd2ccffbe49961dbf1b65b9df63",
+  "previous_step_tree": "bc1878e10a9fd056afd196e85126af7ddb9555e5",
   "step2_authorization": "Theory Owner explicitly instructed Phase 3 Step 2 and approved the single-test-file exception in the project conversation.",
   "step2_exception": {
     "path": "tests/unit/test_phase3_contracts.py",
@@ -101,5 +101,6 @@
   "step3_authorization": "Theory Owner accepted Step 2 and explicitly instructed Phase 3 Step 3 in the project conversation.",
   "step4_authorization": "Theory Owner explicitly instructed Phase 3 Step 4 in the project conversation.",
   "step5_authorization": "Theory Owner explicitly instructed Phase 3 Step 5. Actual final Step 4 acceptance was verified before Step 5 implementation.",
-  "step6_authorization": "Theory Owner explicitly instructed Phase 3 Step 6 after accepting the Step 5 delivery."
+  "step6_authorization": "Theory Owner explicitly instructed Phase 3 Step 6 after accepting the Step 5 delivery.",
+  "step7_authorization": "Theory Owner accepted Step 6 and explicitly instructed Phase 3 Step 7 in the project conversation."
 }

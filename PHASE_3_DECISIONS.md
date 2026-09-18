@@ -430,3 +430,50 @@ cross-version serialized-AST assumptions without accepting arbitrary edits.
 
 No Phase 4 report/CLI, Phase 5 lineage, Step 7 tail, resampling or publication is
 authorized. Stop after Step 6 tests/build/installed-candidate checks and delivery.
+
+## Phase 3 Step 7 execution contract
+
+Theory Owner instruction: continue Phase 3 Step 7 after the Step 6 delivery.
+Accepted predecessor `c7d5ceed2f154bd2ccffbe49961dbf1b65b9df63`, tree
+`bc1878e10a9fd056afd196e85126af7ddb9555e5`; retain 1987 core / 1990
+extra-enabled identities and all earlier approved sources and implementations.
+
+Only `metrics/tail.py` gains runtime behavior. `select_tail` consumes a Step 4
+unweighted count-backed distribution and explicit TailSelectionOptions. It does
+not reconstruct records or turn probability-only vectors into record shares.
+The four P3-D06 rules are singleton_count, count_at_or_below,
+frequency_at_or_below and state_list. Thresholds are inclusive; zero counts are
+outside observed support. List requests must name positive observed states.
+Membership uses Unicode order. Rarity uses ascending frequency, then count, then
+Unicode state ID, with ordinal ranks starting at one. There is no weighted-tail
+or bottom-quantile implementation. Existing option contracts remain unchanged.
+
+The selected count sum divided by the included record denominator is the tail
+record share. A nonempty dataset with an empty tail returns zero; an empty or
+all-excluded representation returns unavailable scalars and inherited reasons.
+Representation exclusions remain visible and do not affect provenance scope.
+Tail metadata carries the rule, representation, scope, denominator, evidence,
+units and limits. No importance, risk severity or permanent loss is inferred.
+
+`one_step_extinction_probability` separately evaluates F-014 using an explicit
+selected-state marginal p and positive integer n. It is `simulation`, experimental,
+method analytic_extinction, horizon one, with no seed or random realization.
+The numeric evaluation uses exp(n*log1p(-p)), with exact p=0/1 branches to avoid
+cancellation for small p. Interior underflow is disclosed and does not assert an
+impossible event. Out-of-range numeric inputs fail without clipping, probability
+repair, inferred n, external input or random sampling. This changes no formula.
+
+The independent fixture and tests use approved rational F-014 targets; added
+boundary/metamorphic checks are test design. The original golden files are frozen.
+Only the old T2 placeholder assertion migrates to its implemented boundary. Step 6
+permission negatives now explicitly test the frozen Step 6 allowlist; their test
+identities and rejection guarantees remain. Step 7 has separate path, formula,
+evidence-class, I/O and later-owner injection negatives. Prior protected runtime
+hashes are unchanged. The new tail source digest is fixed after review, never
+learned by a running gate from edited code. All four workflow roles are retained.
+
+Technical, mathematical and security review work is performed by the same AI
+assistant with execution evidence and source-based oracles; no independent human
+reviewer or security certification is claimed. No new theory decision, dependency,
+report schema, audit command, Phase 3 completion, main merge or release is authorized.
+Stop before Step 8.

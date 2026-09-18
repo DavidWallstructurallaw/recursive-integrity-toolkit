@@ -85,3 +85,21 @@ availability summaries. No usable required provenance means unavailable dataset
 scalars; valid explicit unknown grounding can support [0,1]. No confidence weighting,
 midpoint, graph, file access, or automatic input-pipeline invocation is introduced.
 All later-stage boundaries and immutable earlier implementations remain.
+
+## Phase 3 Step 7: T2 direct implementation mapping
+
+| Output | Basis | Unit / evidence | Tests |
+|---|---|---|---|
+| tail_membership | Definitions 10.1-10.3; P3-D06 four explicit rules | state set / derived_metric | T2 rule, threshold, absent-state, positive-support cases |
+| tail_support_size | Definitions 10.4; selected positive-state cardinality | states / derived_metric | T2 empty/nonempty tails and fixture |
+| tail_record_share | Definitions 10.5; selected counts / included record total | ratio / derived_metric | T2 rational, replication, exclusion cases |
+| rarity_rank | Definitions 10.6; frequency/count/Unicode, 1-based ordinal | ordinal_rank / derived_metric | T2 tie and permutation cases |
+| one_step_extinction_probability | F-014; Definitions 10.7; Validation 15 | probability / simulation | T2 exact rationals, endpoints, monotonicity, tiny-p and underflow cases |
+
+Every output retains representation, scope, rule or model assumptions and limits.
+Scenario n is explicit; horizon is one; analytic evaluation draws no random sample.
+The selected-state marginal is disclosed without claiming a complete empirical
+probability vector. Count/frequency metadata in ranking entries remains the Step 4
+basis. Numeric underflow is disclosed separately from the exact zero endpoint.
+No calibrated failure forecast, tail severity narrative, reopening or temporal
+workflow is supplied. Original input validation continues to call no metric.

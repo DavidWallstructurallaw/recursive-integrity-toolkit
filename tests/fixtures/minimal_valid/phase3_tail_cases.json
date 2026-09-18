@@ -1,0 +1,10 @@
+{
+  "owner": "T2",
+  "basis": "Definitions 10; Validation 15; P3-D06. Hand-authored rational test design; no implementation-generated expectations.",
+  "tail_cases": [
+    {"counts":{"cat":3,"dog":2,"bird":1,"fish":1,"refund":1},"options":{"rule":"singleton_count"},"membership":["bird","fish","refund"],"share":"3/8"},
+    {"counts":{"a":2,"b":1,"c":1,"z":0},"options":{"rule":"frequency_at_or_below","frequency_threshold":0.25},"membership":["b","c"],"share":"1/2"},
+    {"counts":{"a":2,"b":2},"options":{"rule":"singleton_count"},"membership":[],"share":"0"},
+    {"counts":{"a":1,"b":2},"options":{"rule":"state_list","state_ids":["b"]},"membership":["b"],"share":"2/3"}
+  ]
+}
