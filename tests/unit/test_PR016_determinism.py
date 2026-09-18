@@ -1,4 +1,4 @@
-"""PR-016 Step 4 lexical row order only. Analytical-output determinism is deferred."""
+"""PR-016 lexical order retained; Step 8 seeded determinism has explicit boundaries."""
 
 import ast
 from itertools import permutations
@@ -18,8 +18,13 @@ def test_PR016_ordering_owner_and_no_later_behavior(owner_checker, package_root,
     tree = ast.parse((package_root / "utils/ordering.py").read_text())
     names = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
     assert names == {"_record_order_key", "stable_record_order"}
-    for path in ["reports/json_report.py", "reports/markdown_report.py", "metrics/resampling.py"]:
+    for path in ["reports/json_report.py", "reports/markdown_report.py"]:
         placeholder_checker(path)
+    # The authorized shared module is checked against its exact reviewed body.
+    import runpy
+    checker = runpy.run_path(str(package_root.parents[1] / "scripts/check_traceability.py"))
+    source = (package_root / "metrics/resampling.py").read_text(encoding="utf-8")
+    checker["_phase3_resampling_boundary"](ast.parse(source))
 
 
 def test_PR016_stable_exact_lexical_order_is_not_version_chronology():

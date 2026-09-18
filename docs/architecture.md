@@ -166,3 +166,16 @@ record denominator and unavailable scope handling. `one_step_extinction_probabil
 is a separate explicit analytic closed-multinomial call. No RNG, weighted tail,
 quantile, inference of thresholds, input-pipeline dispatch or later-phase workflow
 is introduced. The other 39 package modules remain unchanged in this step.
+
+## Phase 3 Step 8: explicit closed mathematical kernels
+
+`metrics/resampling.py` implements `expected_diversity_after_steps` and
+`simulate_closed_resampling`. Both require a declared probability vector, scope,
+representation, n and horizon; sampling additionally requires seed and replicates.
+Analytic expectations and sampled paths remain distinct simulation outputs.
+Only the explicit sampler lazily imports NumPy, constructs PCG64 and records its
+version and scheduling. Work limits apply before allocation; no global RNG,
+automatic invocation or parameter inference is introduced. Existing input-only
+validation remains unchanged. T5 loss/reopening and experiment orchestration are
+still deferred. Numerical corrections, deterministic replay limits and resource
+bounds are documented in PHASE_3_DECISIONS.md.

@@ -103,3 +103,16 @@ probability vector. Count/frequency metadata in ranking entries remains the Step
 basis. Numeric underflow is disclosed separately from the exact zero endpoint.
 No calibrated failure forecast, tail severity narrative, reopening or temporal
 workflow is supplied. Original input validation continues to call no metric.
+
+## Phase 3 Step 8 traceability
+
+T1 F-015: `expected_diversity_after_steps` evaluates D0*(1-1/n)**t under the
+fixed finite closed multinomial model. T1's sampled counterpart is
+`simulate_closed_resampling`, implemented by sequential conditional binomials.
+All output evidence is simulation, including sampled counts and support, with
+method/parameter/representation/scope records. P3-D07 permits only disclosed
+within-tolerance sampler correction. PR-016 governs canonical state order,
+explicit PCG64 seed, replicate schedule and same-environment repeatability.
+T2 remains in tail.py; T5 is reserved and unimplemented. Source authority is
+unchanged. Tests in test_T1_resampling.py use frozen rational expectations,
+finite enumeration and distributional checks independent of implementation.

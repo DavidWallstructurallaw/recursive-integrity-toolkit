@@ -477,3 +477,102 @@ assistant with execution evidence and source-based oracles; no independent human
 reviewer or security certification is claimed. No new theory decision, dependency,
 report schema, audit command, Phase 3 completion, main merge or release is authorized.
 Stop before Step 8.
+
+
+## Phase 3 Step 8 execution contract
+
+Theory Owner authorization: accept Step 7 and continue Phase 3 Step 8. Accepted
+predecessor: `d3d95bde50762e60b4dd03cb2bd988618c9a10fe`, tree
+`5cb81772542ebfa87c634572068dbf9ee49f41d0`. Preserve all 2117 core / 2120
+real-Parquet historical test identities and the original Phase 0 authority hashes.
+
+Only `metrics/resampling.py` gains runtime behavior. The T1 mathematical source
+is the fixed finite multinomial model in Definitions 12.1-12.5 and the approved
+P3-D02/D04/D07 resolutions. Public interfaces require a complete explicit
+state/probability vector, scope, representation, resample_size and steps.
+`expected_diversity_after_steps` returns the F-015 analytic sequence from t=0
+through the requested horizon. Its fixed-n iteration is D0*(1-1/n)**t.
+`simulate_closed_resampling` additionally requires explicit seed and replicates.
+It returns each replicate and each generation separately; initial counts are
+None, because an arbitrary initial probability vector does not supply record
+counts. There is no scalar-diversity overload that could omit the distribution
+basis, no default sampler seed/size/horizon/replicates, and no q/r/lambda input.
+
+Both branches are `simulation`, experimental, and bound to their supplied scope
+and representation. Analytic and sampled results are separate types. An analytic
+expectation contains no fabricated seed or RNG. Sampled results record actual
+NumPy version, named `numpy.random.Generator(PCG64)`, method version
+`closed_categorical_v1`, canonical ascending Unicode state order and
+`replicate_major_step_major`. One generator is constructed per explicit call.
+No global RNG state is used. Replicate index starts at zero, as does the initial
+model-time step. Simulation time has no mapping to dataset generation or epoch.
+
+### Numerical implementation and resource bounds
+
+Probability components must be built-in finite int/float values in [0,1], with
+no bools, duplicate state IDs or negative components. State IDs remain literal,
+including an existing empty-string state; their Unicode order is deterministic.
+Total mass must be positive and within the approved absolute 1e-12 tolerance.
+Analytic inputs retain the supplied near-unit vector and disclose its residual.
+The sampled branch, and only that branch, divides by the validated total when it
+differs from one. Both original and effective vectors, total, residual, divisor,
+component corrections and correction flag remain available. Exact zero states
+stay zero. Material mass errors fail; no arbitrary count-vector repair exists.
+
+The closed multinomial transition is implemented by its sequential conditional
+binomial factorization, `sequential_binomial_complement_v1`. States are visited
+in canonical Unicode order, skipping zeros. The smaller binomial side is sampled
+to avoid cancellation of a tiny complementary tail. The last positive state
+receives the remaining count. Zero states never receive a floating residual.
+After generation one, exact integer counts supply the next transition's relative
+masses and exact suffix sums, equivalent to sampling from counts/n. Exposed
+frequencies are counts/n. The initial float suffix sums use fsum. No external
+state or smoothing mass is introduced. This is an implementation of the approved
+multinomial transition, not a new stochastic model. Same-environment replay is
+required; cross-version bit identity is not promised. NumPy's official binomial
+and random-compatibility documentation informed API usage, not product scope.
+
+Engineering limits are explicit: maximum 4096 states, 10000 steps, 10000
+replicates, 1000000 state-by-time-by-replicate cells (including t=0), resample
+size 2147483647 and seed bit length 4096. All work/domain checks precede path
+allocation and lazy NumPy import. These bounds are operational safeguards, not
+model constants or inferred parameter defaults. Excess requests fail with the
+existing E_CONFIG_INVALID rather than being truncated. Numerical domain errors
+use the existing E_SCHEMA_TYPE. No enum or serialized config extension is made.
+Analytic positive values that underflow are explicitly listed by step; no exact
+finite-time absorption is inferred from floating zero.
+
+### Tests and stage maintenance
+
+The original T1 and T5 test identities remain. Their shared-module placeholder
+assertions migrate to exact implemented-scope and no-reopening checks. T5 tests
+only protect the deferred branch; no T5 scenario is implemented. Step 7 path
+negative tests now target the frozen Step 7 allowlist, retaining their rejection
+guarantee; new negatives target the current Step 8 scope. Original runtime
+sources, numeric oracles and previously authorized exceptions remain untouched.
+
+New T1 tests use the frozen F015 targets, independent rational fixture values,
+exact finite multinomial enumeration, Monte Carlo sanity checks, integer totals,
+zero absorption, constant state identities, repeatability and global-state
+isolation. Individual diversity paths may increase, so no false pathwise theorem
+is asserted. Probability correction, invalid inputs, object hooks, explicit
+parameters and bounded resource failure are tested separately. Default and
+explicitly enabled eligible `validate_bundle` scenarios still never execute
+kernels. Imports and analytic calls remain possible with numerical dependencies
+blocked; sampled calls fail clearly when NumPy is unavailable. Separate installed
+wheel checks exercise actual sampling with NumPy present and I/O/network blocked.
+
+The exact reviewed source digest and same-interpreter AST comparison protect the
+new module. NumPy is authorized only as the lazy `import numpy as np` inside
+`simulate_closed_resampling`. All other prior import restrictions are preserved.
+Technical, mathematical and security review roles are consolidated in this AI
+assistant's inspection and executed tests; no independent human review or security
+certification is claimed. No external loss/reopening, graph, report, audit CLI,
+Phase 3 completion, publication or main merge is authorized. Stop before Step 9.
+
+The inherited PR-016 lexical-order test also contained a resampling placeholder
+assertion. Step 8 migrates that one assertion to the exact reviewed resampling
+source/AST boundary, while retaining the lexical-order assertions and both report
+placeholders. Its original test identity is preserved. This test file is in G;
+no additional file exception is needed. The first full local run exposed this
+stale assertion (2267 passed, one failed); it is not hidden or skipped.

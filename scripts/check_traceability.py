@@ -1,4 +1,4 @@
-"""Check inherited Phase 2 rules and approved Phase 3 Step 7 boundaries.
+"""Check inherited Phase 2 rules and approved Phase 3 Step 8 boundaries.
 
 The Theory Owner authorized synchronized checker maintenance for each explicitly
 approved Phase 2 step on 2026-09-16. Step 9 adds explicit local bundle orchestration only. Earlier
@@ -206,7 +206,7 @@ FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.p
 
 
 # Phase 3 Step 1: declarations and validation contracts only.
-PHASE3_ACTIVE_STEP = 7
+PHASE3_ACTIVE_STEP = 8
 PHASE3_CONTRACT_CLASSES = {
     "CalculationEvidenceClass", "CalculationStatus", "CalculationReason", "NumericalPolicy",
     "RepresentationDescriptor", "RecordStateAssignment", "CalculationScope", "WeightingOptions",
@@ -514,6 +514,24 @@ def _phase3_tail_boundary(tree: ast.Module) -> None:
         raise SystemExit("Unexpected tail/scenario executable syntax outside Step 7")
 
 
+# Step 8 opens only explicit closed resampling, never T5 reopening.
+PHASE3_RESAMPLING_MODULES = {"metrics/resampling.py"}
+ALLOWED_FUNCTIONS["metrics/resampling.py"] = set(['_diversity', '_generation', '_inputs', '_integer', '_invalid', '_metadata', '_resources', '_sample_counts', '_state', 'expected_diversity_after_steps', 'simulate_closed_resampling'])
+ALLOWED_CLASSES["metrics/resampling.py"] = set(['ExpectedDiversityResult', 'ResamplingInput', 'ResamplingReplicate', 'ResamplingSimulation', 'SampledGeneration'])
+ALLOWED_CORE_IMPORTS["metrics/resampling.py"] = {"__future__", "dataclasses", "math", "types", "..errors", "..models", ".diversity", "numpy"}
+RESAMPLING_SOURCE_SHA256 = "0896b80c26ad0b9865e24957202b54c2ab9217921d1c19e84ab22d84928f2e40"
+
+
+def _phase3_resampling_boundary(tree: ast.Module) -> None:
+    """Fixed reviewed source and exact AST; lazy NumPy only in the sampler."""
+    import hashlib
+    raw = (PACKAGE / "metrics/resampling.py").read_bytes()
+    if hashlib.sha256(raw).hexdigest() != RESAMPLING_SOURCE_SHA256:
+        raise SystemExit("Resampling source differs from the reviewed Step 8 body")
+    if ast.dump(tree, include_attributes=False) != ast.dump(ast.parse(raw), include_attributes=False):
+        raise SystemExit("Unexpected resampling syntax outside Step 8")
+
+
 def _phase3_contract_boundary(tree: ast.Module) -> None:
     """Reject calculation or execution inside the newly authorized declarations."""
     permitted = {"type", "len", "set", "any", "ValueError", "TypeError", "field", "dataclass",
@@ -569,7 +587,7 @@ def main() -> int:
     if len(paths) != 40:
         raise SystemExit(f"Expected 40 package modules, found {len(paths)}")
     relative_paths = {path.relative_to(PACKAGE).as_posix() for path in paths}
-    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES) - relative_paths
+    missing = (BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES) - relative_paths
     if missing:
         raise SystemExit(f"Required startup or Step 8 modules missing: {sorted(missing)}")
 
@@ -596,11 +614,13 @@ def main() -> int:
             _phase3_bounds_boundary(tree)
         if relative in PHASE3_TAIL_MODULES:
             _phase3_tail_boundary(tree)
+        if relative in PHASE3_RESAMPLING_MODULES:
+            _phase3_resampling_boundary(tree)
         doc = ast.get_docstring(tree) or ""
         if "Owner IDs:" not in doc or "Current phase status:" not in doc:
             raise SystemExit(f"Owner or phase metadata missing: {path}")
 
-        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES:
+        if relative not in BOOTSTRAP | STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES:
             if not (
                 len(tree.body) == 1
                 and isinstance(tree.body[0], ast.Expr)
@@ -650,7 +670,7 @@ def main() -> int:
                         isinstance(node.func, ast.Attribute) and node.func.attr in blocked_methods
                     ):
                         raise SystemExit(f"Unexpected executable, write or network capability in {relative}")
-            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | {"models.py"}:
+            if relative in STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES | {"models.py"}:
                 if isinstance(node, ast.Lambda):
                     raise SystemExit(f"Unexpected dynamic callback in {relative}")
                 if isinstance(node, ast.Call):
@@ -692,9 +712,16 @@ def main() -> int:
                             for function in tree.body
                         )
                     )
-                    if not lazy_parquet:
+                    lazy_numpy = (
+                        relative == "metrics/resampling.py" and imported == "numpy"
+                        and isinstance(node, ast.Import)
+                        and len(node.names) == 1 and node.names[0].name == "numpy" and node.names[0].asname == "np"
+                        and any(isinstance(fn, ast.FunctionDef) and fn.name == "simulate_closed_resampling"
+                                and any(child is node for child in ast.walk(fn)) for fn in tree.body)
+                    )
+                    if not (lazy_parquet or lazy_numpy):
                         forbidden_locations.append(f"{relative}: {imported}")
-            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES:
+            if relative in STEP1_CORE | STEP2_IO | STEP3_MAPPING | STEP4_ROWS | STEP8_OBSERVABILITY | PHASE3_FIELD_MODULES | PHASE3_EXACT_MODULES | PHASE3_DISTRIBUTION_MODULES | PHASE3_PROVENANCE_MODULES | PHASE3_BOUNDS_MODULES | PHASE3_TAIL_MODULES | PHASE3_RESAMPLING_MODULES:
                 unexpected = imports - ALLOWED_CORE_IMPORTS[relative]
                 if unexpected:
                     raise SystemExit(f"Import outside Step 9 contracts in {relative}: {sorted(unexpected)}")
@@ -711,7 +738,7 @@ def main() -> int:
     print(f"authorized Step 8 observability modules: {sorted(STEP8_OBSERVABILITY)}")
     print(f"protected docstring-only modules: {placeholder_count}")
     print("owner metadata: PASS")
-    print("Phase 3 Step 7 reviewed tail/scenario and inherited definition/import boundaries: PASS")
+    print("Phase 3 Step 8 reviewed closed-resampling and inherited definition/import boundaries: PASS")
     print("no-algorithm phase boundary: PASS")
     return 0
 
