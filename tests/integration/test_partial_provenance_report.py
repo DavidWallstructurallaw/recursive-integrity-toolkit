@@ -385,3 +385,275 @@ def test_PR004_pipeline_incomplete_assessment_preserves_failure_evidence(repo_ro
     assert result.provenance_required_field_coverage.ratio == 0.0
     assert result.grounding_field_coverage.ratio == 1.0
     assert path.read_bytes() == before
+
+
+# Phase 4 Step 3: independently authored report assembly expectations.
+def phase4_step3_run():
+    return {
+        "run_id": "step3-independent-case", "toolkit_version": "0.1.0.dev2",
+        "report_schema_version": "1.0", "started_at": None, "completed_at": None,
+        "duration_seconds": None, "python_version": None, "platform": None,
+        "command": None, "config_hash": None, "random_seed": None,
+        "strict_mode": False, "redacted_mode": False, "network_call_count": 0,
+        "deterministic": True, "privacy_mode": "standard", "run_status": "complete",
+        "null_reasons": {
+            "started_at": "Pure assembly does not start a clock.",
+            "completed_at": "Pure assembly does not start a clock.",
+            "duration_seconds": "Pure assembly does not measure execution.",
+            "python_version": "No execution environment is asserted.",
+            "platform": "No execution environment is asserted.",
+            "command": "Direct Python API, no command invoked.",
+            "config_hash": "No resolved configuration hash was supplied.",
+            "random_seed": "No run-wide random generator was requested.",
+        },
+    }
+
+
+def phase4_step3_bundle(tmp_path, labels=("a", "a", "b", "c"), *,
+                        provenance_rows=None, versions=None, representation=True):
+    import json
+    from recursive_integrity_toolkit.io.validation import validate_bundle
+    from recursive_integrity_toolkit.models import AuditBundle, FileRole, InputSource
+
+    if not labels:
+        from recursive_integrity_toolkit.models import (
+            BundleValidationResult, Capability, CapabilityKey, CapabilityStatus,
+            ObservabilityAssessment, ProvenanceJoinResult, ValidationCoverage, VersionOrderResult,
+        )
+        coverage = ValidationCoverage(0, 0, "selected_valid_records")
+        joined = ProvenanceJoinResult((), (), False, (), (), coverage, coverage, coverage, ())
+        order = VersionOrderResult((), (), "unavailable", {}, {})
+        assessment = ObservabilityAssessment(0, {
+            key: Capability(CapabilityStatus.UNAVAILABLE, coverage,
+                            requirements_missing=("valid records",), reason_codes=("R_EMPTY_SCOPE",))
+            for key in CapabilityKey
+        }, limitations=("No records were supplied.",))
+        return BundleValidationResult((), (), None, joined, order, None, assessment, (), (), ())
+    versions = ("v1",) * len(labels) if versions is None else versions
+    records = [dict(dataset_version=version, record_id="r" + str(index),
+                    content="synthetic public fixture", topic=label)
+               for index, (version, label) in enumerate(zip(versions, labels))]
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    path = tmp_path / "records.jsonl"
+    path.write_text("".join(json.dumps(row) + "\n" for row in records), encoding="utf-8")
+    sources = [InputSource(FileRole.RECORDS_PRIMARY, path)]
+    if provenance_rows is not None:
+        path = tmp_path / "provenance.jsonl"
+        path.write_text("".join(json.dumps(row) + "\n" for row in provenance_rows), encoding="utf-8")
+        sources.append(InputSource(FileRole.PROVENANCE_MANIFEST, path))
+    config = {}
+    if representation:
+        config["representation"] = {
+            "name": "topic", "source": "topic_field", "field": "topic",
+            "version": "taxonomy-v1", "missing_value_policy": "exclude",
+        }
+    if len(set(versions)) > 1:
+        config["version_order"] = list(dict.fromkeys(versions))
+    return validate_bundle(AuditBundle(tuple(sources)), configuration=config)
+
+
+def phase4_step3_distribution(bundle, version="v1", *, weights=None):
+    from recursive_integrity_toolkit.config import RepresentationConfig
+    from recursive_integrity_toolkit.metrics.diversity import calculate_state_distribution
+    from recursive_integrity_toolkit.models import WeightingOptions
+    from recursive_integrity_toolkit.representations.field import assign_field_states
+
+    represented = assign_field_states(
+        bundle.records, dataset_versions=(version,), scope_id="report-" + version,
+        config=RepresentationConfig("topic", "topic_field", "topic", "taxonomy-v1", "exclude"),
+    )
+    if weights is None:
+        return calculate_state_distribution(represented)
+    return calculate_state_distribution(represented, weighting=WeightingOptions("weighted", "weight"),
+                                        weights=weights)
+
+
+def phase4_step3_provenance(bundle, *, weights=None):
+    from recursive_integrity_toolkit.metrics.provenance import summarize_provenance
+    from recursive_integrity_toolkit.models import CalculationScope, WeightingOptions
+
+    joined = bundle.provenance_join
+    scope = CalculationScope(("v1",), joined.scope_record_keys, (),
+                             joined.provenance_row_coverage.denominator_name, "provenance-v1")
+    if weights is None:
+        return summarize_provenance(joined, scope=scope)
+    return summarize_provenance(joined, scope=scope,
+                                weighting=WeightingOptions("weighted", "weight"), weights=weights)
+
+
+def phase4_step3_schema(report, repo_root):
+    import json
+    from jsonschema import Draft202012Validator
+
+    payload = report.to_dict()
+    schema = json.loads((repo_root / "schemas/report.schema.json").read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(payload)
+    assert tuple(payload) == (
+        "run", "inputs", "observability", "capabilities", "observed_facts",
+        "derived_metrics", "proxy_signals", "simulations", "unavailable_conclusions",
+        "recommended_next_metadata", "warnings", "errors",
+    )
+    assert payload["observability"]["capabilities"] == payload["capabilities"]
+    return payload
+
+
+def phase4_step3_provenance_rows():
+    return [
+        {"dataset_version": "v1", "record_id": "r0", "source_type": "human",
+         "provenance_confidence": "confirmed", "external_grounding": "yes"},
+        {"dataset_version": "v1", "record_id": "r1", "source_type": "synthetic",
+         "provenance_confidence": "confirmed", "external_grounding": "no"},
+        {"dataset_version": "v1", "record_id": "r2", "source_type": "unknown",
+         "provenance_confidence": "unknown", "external_grounding": "unknown"},
+        {"dataset_version": "v1", "record_id": "r3", "source_type": "sensor",
+         "provenance_confidence": "estimated", "external_grounding": "yes"},
+    ]
+
+
+def test_phase4_step3_full_provenance_keeps_three_independent_coverage_measures(tmp_path, repo_root):
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, provenance_rows=phase4_step3_provenance_rows())
+    provenance = phase4_step3_provenance(bundle)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), provenance=provenance), repo_root)
+    facts = report["observed_facts"]["provenance"]
+    assert facts["provenance_row_coverage"]["value"] == 1
+    assert facts["provenance_required_field_coverage"]["value"] == 1
+    assert facts["grounding_field_coverage"]["value"] == 3 / 4
+    assert facts["source_type_counts"]["value"] == {"human": 1, "synthetic": 1, "mixed": 0, "sensor": 1, "unknown": 1}
+    assert facts["missing_provenance_count"]["value"] == 0
+    shares = report["derived_metrics"]["provenance"]["source_type_shares"]
+    assert shares["value"] == {"human": 1 / 4, "synthetic": 1 / 4, "mixed": 0, "sensor": 1 / 4, "unknown": 1 / 4}
+    assert shares["denominator"] == 4 and shares["evidence_class"] == "derived_metric"
+
+
+def test_phase4_step3_partial_provenance_distinguishes_missing_row_unknown_and_missing_field(tmp_path, repo_root):
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    rows = phase4_step3_provenance_rows()[:3]
+    del rows[1]["provenance_confidence"]
+    bundle = phase4_step3_bundle(tmp_path, provenance_rows=rows)
+    provenance = phase4_step3_provenance(bundle)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), provenance=provenance), repo_root)
+    facts = report["observed_facts"]["provenance"]
+    assert facts["provenance_row_coverage"]["value"] == 3 / 4
+    assert facts["provenance_required_field_coverage"]["value"] == 1 / 2
+    assert facts["grounding_field_coverage"]["value"] == 1 / 2
+    assert facts["missing_provenance_count"]["value"] == 1
+    assert facts["source_type_counts"]["value"]["unknown"] == 1
+    assert facts["provenance_confidence_counts"]["value"] is None
+    assert facts["provenance_confidence_counts"]["status"] == "unavailable"
+    assert report["derived_metrics"]["provenance"]["missing_provenance_share"]["value"] == 1 / 4
+    assert report["derived_metrics"]["provenance"]["source_type_shares"]["value"]["unknown"] == 1 / 4
+    assert report["run"]["run_status"] == "partial" and report["errors"]
+    assert report["capabilities"]["provenance"]["execution_status"] == "partial"
+    assert any(item["code"] == "E_SCHEMA_REQUIRED_FIELD" for item in report["errors"])
+
+
+def test_phase4_step3_absent_provenance_never_infers_unknown_or_grounded_records(tmp_path, repo_root):
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    provenance = phase4_step3_provenance(bundle)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), provenance=provenance), repo_root)
+    facts = report["observed_facts"]["provenance"]
+    assert facts["missing_provenance_count"]["value"] == 4
+    assert facts["provenance_row_coverage"]["value"] == 0
+    assert facts["source_type_counts"]["value"]["unknown"] == 0
+    assert facts["known_open_count"]["value"] == facts["known_closed_count"]["value"] == 0
+    assert facts["unresolved_grounding_count"]["value"] == 4
+    assert report["derived_metrics"]["provenance"]["missing_provenance_share"]["value"] == 1
+    assert report["capabilities"]["provenance"]["status"] == "unavailable"
+
+
+def test_phase4_step3_representation_exclusions_never_shrink_provenance_denominator(tmp_path, repo_root):
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, ("a", None, "b", None),
+                                provenance_rows=phase4_step3_provenance_rows()[:3])
+    distribution, provenance = phase4_step3_distribution(bundle), phase4_step3_provenance(bundle)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(),
+        distributions=(distribution,), provenance=provenance), repo_root)
+    metric = report["derived_metrics"]["diversity"]["by_version"]["v1"]["gini_simpson_diversity"]
+    assert metric["denominator"] == 2 and metric["value"] == 1 / 2
+    assert metric["scope"]["excluded_record_count"] == 2
+    assert metric["scope"]["exclusions"] == [
+        {"record_key": {"dataset_version": "v1", "record_id": "r1"},
+         "reason_codes": ["R_CALC_REPRESENTATION_MISSING"]},
+        {"record_key": {"dataset_version": "v1", "record_id": "r3"},
+         "reason_codes": ["R_CALC_REPRESENTATION_MISSING"]},
+    ]
+    assert report["observed_facts"]["provenance"]["provenance_row_coverage"]["denominator"] == 4
+    assert report["observed_facts"]["provenance"]["provenance_row_coverage"]["value"] == 3 / 4
+
+
+def test_phase4_step3_weighted_provenance_preserves_zero_weight_missing_row_separation(tmp_path, repo_root):
+    from recursive_integrity_toolkit.models import RecordKey
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, provenance_rows=phase4_step3_provenance_rows()[:3])
+    weights = {RecordKey("v1", "r" + str(i)): value for i, value in enumerate((1, 2, 0, 5))}
+    provenance = phase4_step3_provenance(bundle, weights=weights)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), provenance=provenance), repo_root)
+    values = report["derived_metrics"]["provenance"]
+    assert values["source_type_shares"]["value"]["unknown"] == 1 / 4
+    assert values["weighted_source_type_shares"]["value"]["unknown"] == 0
+    assert values["weighted_source_type_shares"]["value"]["human"] == 1 / 8
+    assert values["missing_provenance_share"]["value"] == 1 / 4
+    assert values["weighted_missing_provenance_share"]["value"] == 5 / 8
+    assert values["total_weight"]["value"] == 8 and values["missing_provenance_weight"]["value"] == 5
+    for field in ("total_weight", "missing_provenance_weight", "weighted_missing_provenance_share"):
+        assert values[field]["owner_ids"] == ["PR-005"]
+        assert values[field]["weighting"]["weighting_mode"] == "weighted"
+
+
+def test_phase4_step3_direct_closure_remains_interval_without_confidence_discount(tmp_path, repo_root):
+    from recursive_integrity_toolkit.metrics.bounds import direct_closure_exposure
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, provenance_rows=phase4_step3_provenance_rows()[:3])
+    provenance = phase4_step3_provenance(bundle)
+    closure = direct_closure_exposure(provenance)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(),
+        provenance=provenance, closure=closure), repo_root)
+    interval = report["derived_metrics"]["closure_exposure"]["direct"]
+    assert interval["lower_bound"]["value"] == 1 / 4
+    assert interval["upper_bound"]["value"] == 3 / 4
+    assert interval["interval_width"]["value"] == 1 / 2
+    assert interval["confidence_disclosure"] == "provenance_confidence_is_separate_and_does_not_discount_grounding"
+    assert "midpoint" not in interval
+
+
+def test_phase4_step3_forged_provenance_coverage_and_source_metadata_are_rejected(tmp_path):
+    from dataclasses import replace
+    import pytest
+    from recursive_integrity_toolkit.models import ValidationCoverage
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, provenance_rows=phase4_step3_provenance_rows()[:3])
+    result = phase4_step3_provenance(bundle)
+    bad = (replace(result, provenance_row_coverage=ValidationCoverage(4, 4, "selected_valid_records")),
+           replace(result, source=replace(result.source,
+                   counts_metadata=replace(result.source.counts_metadata, owner_id="T4"))))
+    for forged in bad:
+        with pytest.raises((TypeError, ValueError)):
+            assemble_report(bundle, run=phase4_step3_run(), provenance=forged)
+
+
+def test_phase4_step3_source_counts_and_grounding_cannot_contradict_supplied_rows(tmp_path):
+    from dataclasses import replace
+    import pytest
+    from recursive_integrity_toolkit.models import WeightingOptions
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, provenance_rows=phase4_step3_provenance_rows()[:3])
+    result = phase4_step3_provenance(bundle)
+    counts = (("human", 2), ("synthetic", 0), ("mixed", 0), ("sensor", 0), ("unknown", 1))
+    forged = (replace(result, source=replace(result.source, counts=counts)),
+              replace(result, direct_grounding=replace(result.direct_grounding,
+                  known_open_count=replace(result.direct_grounding.known_open_count, value=3))),
+              replace(result, source=replace(result.source, counts_metadata=replace(
+                  result.source.counts_metadata, weighting=WeightingOptions("weighted", "weight")))))
+    for value in forged:
+        with pytest.raises((TypeError, ValueError)):
+            assemble_report(bundle, run=phase4_step3_run(), provenance=value)

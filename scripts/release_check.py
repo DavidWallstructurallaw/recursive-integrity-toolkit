@@ -2065,12 +2065,723 @@ def phase4_step2_cli_main() -> int:
     return 0
 
 
+# Phase 4 Step 3 adds pure adapters. All earlier stage gates remain callable.
+PHASE4_STEP2_FINAL = "fcea74e2b1858e83cdbfd1b8212d15343d63ff08"
+PHASE4_STEP2_TREE = "c3ce887fd393cfc6c18364546005f2b74a63b746"
+PHASE4_STEP2_TEST_TREE = "9d6ac0cbf3827ab54c7852503d99d442a3796259"
+PHASE4_STEP3_APPROVAL = "开始 **Phase 4 Step 3**"
+PHASE4_STEP3_APPROVAL_DATE = "2026-09-19"
+PHASE4_STEP3_ALLOWED = {'.github/workflows/ci.yml',
+ '.github/workflows/golden.yml',
+ '.github/workflows/release.yml',
+ '.github/workflows/security.yml',
+ 'PHASE_4_BASELINE.json',
+ 'PHASE_4_DECISIONS.md',
+ 'docs/architecture.md',
+ 'docs/report_schema.md',
+ 'docs/theory_traceability.md',
+ 'scripts/check_spec_consistency.py',
+ 'scripts/check_traceability.py',
+ 'scripts/release_check.py',
+ 'src/recursive_integrity_toolkit/reports/assembly.py',
+ 'tests/conftest.py',
+ 'tests/integration/test_ci_workflows.py',
+ 'tests/integration/test_hero_structure.py',
+ 'tests/integration/test_license_notices.py',
+ 'tests/integration/test_no_algorithms.py',
+ 'tests/integration/test_no_network.py',
+ 'tests/integration/test_optional_dependency.py',
+ 'tests/integration/test_owner_ids.py',
+ 'tests/integration/test_package_import.py',
+ 'tests/integration/test_package_install.py',
+ 'tests/integration/test_partial_lineage_report.py',
+ 'tests/integration/test_partial_provenance_report.py',
+ 'tests/integration/test_phase4_gates.py',
+ 'tests/integration/test_prohibited_structure.py',
+ 'tests/integration/test_repository_structure.py',
+ 'tests/integration/test_schema_json.py',
+ 'tests/unit/test_PR012_evidence_classes.py',
+ 'tests/unit/test_PR014_unavailable.py',
+ 'tests/unit/test_PR018_language.py',
+ 'tests/unit/test_phase4_contracts.py'}
+PHASE4_STEP3_NEW = ()
+PHASE4_STEP3_DOCUMENT_CORRECTIONS = {
+    "docs/report_schema.md": [{
+        "old": "| `derived_metrics.provenance.weighted_source_type_masses` | number | `user_declared_weight_mass` | `derived_metric` | `PR-005` | `PR-005.source_weight_mass` | 2 | Null only with unavailable reasons |",
+        "new": "| `derived_metrics.provenance.weighted_source_type_masses` | category_mass_map | `user_declared_weight_mass` | `derived_metric` | `PR-005` | `PR-005.source_weight_mass` | 2 | Null only with unavailable reasons |",
+    }],
+}
+PHASE4_STEP3_MIGRATIONS = {'tests/integration/test_phase4_gates.py': [{'new': 'def '
+                                                    'test_phase4_step2_current_runtime_opens_only_the_canonical_result(repo_root, '
+                                                    'phase3_final_snapshot, '
+                                                    'phase4_step2_snapshot):\n'
+                                                    '    repo_root = phase4_step2_snapshot\n',
+                                             'node': 'test_phase4_step2_current_runtime_opens_only_the_canonical_result',
+                                             'old': 'def '
+                                                    'test_phase4_step2_current_runtime_opens_only_the_canonical_result(repo_root, '
+                                                    'phase3_final_snapshot):\n'},
+                                            {'new': 'def '
+                                                    'test_phase4_step2_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, '
+                                                    'phase4_step2_snapshot):\n'
+                                                    '    repo_root = phase4_step2_snapshot\n',
+                                             'node': 'test_phase4_step2_current_workflows_preserve_matrix_and_use_active_dispatch',
+                                             'old': 'def '
+                                                    'test_phase4_step2_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root):\n'},
+                                            {'new': 'def '
+                                                    'test_phase4_step2_current_snapshot_checks_valid_tree_before_mutations(repo_root, '
+                                                    'tmp_path, phase4_gate_tools, mutation, '
+                                                    'phase4_step2_snapshot):',
+                                             'node': 'test_phase4_step2_current_snapshot_checks_valid_tree_before_mutations',
+                                             'old': 'def '
+                                                    'test_phase4_step2_current_snapshot_checks_valid_tree_before_mutations(repo_root, '
+                                                    'tmp_path, phase4_gate_tools, mutation):'},
+                                            {'new': '        shutil.copyfile(phase4_step2_snapshot '
+                                                    '/ relative, destination)',
+                                             'node': 'test_phase4_step2_current_snapshot_checks_valid_tree_before_mutations',
+                                             'old': '        shutil.copyfile(repo_root / relative, '
+                                                    'destination)'}],
+ 'tests/unit/test_phase4_contracts.py': [{'new': 'def '
+                                                 'test_phase4_step2_approved_control_keeps_independent_step1_anchors(phase4_tools, '
+                                                 'phase4_step2_snapshot):\n'
+                                                 '    control = json.loads((phase4_step2_snapshot '
+                                                 '/ '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))',
+                                          'node': 'test_phase4_step2_approved_control_keeps_independent_step1_anchors',
+                                          'old': 'def '
+                                                 'test_phase4_step2_approved_control_keeps_independent_step1_anchors(phase4_tools):\n'
+                                                 '    control = json.loads((ROOT / '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))'},
+                                         {'new': 'def '
+                                                 'test_phase4_step2_control_rejects_forged_scope_and_stage(phase4_tools, '
+                                                 'field, value, phase4_step2_snapshot):\n'
+                                                 '    control = json.loads((phase4_step2_snapshot '
+                                                 '/ '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))',
+                                          'node': 'test_phase4_step2_control_rejects_forged_scope_and_stage',
+                                          'old': 'def '
+                                                 'test_phase4_step2_control_rejects_forged_scope_and_stage(phase4_tools, '
+                                                 'field, value):\n'
+                                                 '    control = json.loads((ROOT / '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))'},
+                                         {'new': 'def '
+                                                 'test_phase4_step2_control_rejects_unapproved_dispatch(phase4_tools, '
+                                                 'step, phase4_step2_snapshot):\n'
+                                                 '    control = json.loads((phase4_step2_snapshot '
+                                                 '/ '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))',
+                                          'node': 'test_phase4_step2_control_rejects_unapproved_dispatch',
+                                          'old': 'def '
+                                                 'test_phase4_step2_control_rejects_unapproved_dispatch(phase4_tools, '
+                                                 'step):\n'
+                                                 '    control = json.loads((ROOT / '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))'},
+                                         {'new': 'def '
+                                                 'test_phase4_step2_control_requires_explicit_approval_fields(phase4_tools, '
+                                                 'field, phase4_step2_snapshot):\n'
+                                                 '    control = json.loads((phase4_step2_snapshot '
+                                                 '/ '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))',
+                                          'node': 'test_phase4_step2_control_requires_explicit_approval_fields',
+                                          'old': 'def '
+                                                 'test_phase4_step2_control_requires_explicit_approval_fields(phase4_tools, '
+                                                 'field):\n'
+                                                 '    control = json.loads((ROOT / '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))'},
+                                         {'new': 'def '
+                                                 'test_phase4_step2_control_cannot_mint_extra_permission(phase4_tools, '
+                                                 'phase4_step2_snapshot):\n'
+                                                 '    control = json.loads((phase4_step2_snapshot '
+                                                 '/ '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))',
+                                          'node': 'test_phase4_step2_control_cannot_mint_extra_permission',
+                                          'old': 'def '
+                                                 'test_phase4_step2_control_cannot_mint_extra_permission(phase4_tools):\n'
+                                                 '    control = json.loads((ROOT / '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))'},
+                                         {'new': 'def '
+                                                 'test_phase4_step2_historical_migrations_are_five_explicit_step1_bindings(phase4_tools, '
+                                                 'phase4_step1_snapshot, phase4_step2_snapshot):',
+                                          'node': 'test_phase4_step2_historical_migrations_are_five_explicit_step1_bindings',
+                                          'old': 'def '
+                                                 'test_phase4_step2_historical_migrations_are_five_explicit_step1_bindings(phase4_tools, '
+                                                 'phase4_step1_snapshot):'},
+                                         {'new': 'def '
+                                                 'test_phase4_step2_historical_guard_rejects_assertion_and_binding_weakening(phase4_tools, '
+                                                 'phase4_step1_snapshot, mutation, '
+                                                 'phase4_step2_snapshot):',
+                                          'node': 'test_phase4_step2_historical_guard_rejects_assertion_and_binding_weakening',
+                                          'old': 'def '
+                                                 'test_phase4_step2_historical_guard_rejects_assertion_and_binding_weakening(phase4_tools, '
+                                                 'phase4_step1_snapshot, mutation):'},
+                                         {'new': '            path, (phase4_step1_snapshot / '
+                                                 'path).read_bytes(), (phase4_step2_snapshot / '
+                                                 'path).read_bytes(),',
+                                          'node': 'test_phase4_step2_historical_migrations_are_five_explicit_step1_bindings',
+                                          'old': '            path, (phase4_step1_snapshot / '
+                                                 'path).read_bytes(), (ROOT / path).read_bytes(),'},
+                                         {'new': '    before = (phase4_step1_snapshot / '
+                                                 'path).read_bytes()\n'
+                                                 '    after = (phase4_step2_snapshot / '
+                                                 'path).read_bytes()',
+                                          'node': 'test_phase4_step2_historical_guard_rejects_assertion_and_binding_weakening',
+                                          'old': '    before = (phase4_step1_snapshot / '
+                                                 'path).read_bytes()\n'
+                                                 '    after = (ROOT / path).read_bytes()'}]}
+
+
+def _phase4_step2_files():
+    """Read the exact accepted Step 2 Git tree and verify every blob identity."""
+    for suffix, expected in (("^{commit}", PHASE4_STEP2_FINAL), ("^{tree}", PHASE4_STEP2_TREE),
+                             (":tests", PHASE4_STEP2_TEST_TREE)):
+        if git("rev-parse", PHASE4_STEP2_FINAL + suffix).decode().strip() != expected:
+            raise ValueError("Pinned Phase 4 Step 2 identity mismatch")
+    objects = {}
+    for entry in git("ls-tree", "-rz", PHASE4_STEP2_FINAL).split(b"\0"):
+        if not entry:
+            continue
+        metadata, raw_path = entry.split(b"\t", 1)
+        mode, kind, oid = metadata.split()
+        path = raw_path.decode("utf-8")
+        if (mode not in (b"100644", b"100755") or kind != b"blob" or path in objects
+                or path.startswith("/") or ".." in path.split("/") or ".git" in path.split("/")):
+            raise ValueError("Unsafe pinned Step 2 Git object")
+        objects[path] = oid.decode("ascii")
+    if len(objects) != 227:
+        raise ValueError("Pinned Step 2 must contain exactly 227 files")
+    files = {}
+    with zipfile.ZipFile(io.BytesIO(git("archive", "--format=zip", PHASE4_STEP2_FINAL))) as archive:
+        names = [item.filename for item in archive.infolist() if not item.is_dir()]
+        if len(names) != len(objects) or set(names) != set(objects):
+            raise ValueError("Pinned Step 2 archive identity mismatch")
+        for name in names:
+            raw = archive.read(name)
+            oid = hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + b"\0" + raw).hexdigest()
+            if oid != objects[name]:
+                raise ValueError(f"Pinned Step 2 blob mismatch: {name}")
+            files[name] = raw
+    return MappingProxyType(files)
+
+
+def phase4_step3_expected_control() -> dict:
+    """Actual Step 3 approval is independent of the mutable control document."""
+    prior = _phase4_step2_files()
+    result = phase4_step2_expected_control()
+    result.pop("previous_step_local_commit")
+    result.update({
+        "control_version": "1.2", "active_step": 3,
+        "approval_date": PHASE4_STEP3_APPROVAL_DATE, "approval_basis": PHASE4_STEP3_APPROVAL,
+        "previous_step_commit": PHASE4_STEP2_FINAL,
+        "previous_step_tree": PHASE4_STEP2_TREE,
+        "previous_step_test_tree": PHASE4_STEP2_TEST_TREE,
+        "previous_step_core_tests": 2728, "previous_step_parquet_tests": 2731,
+        "previous_step_files_sha256": {p: hashlib.sha256(raw).hexdigest() for p, raw in sorted(prior.items())},
+        "permitted_paths": sorted(PHASE4_STEP3_ALLOWED), "new_files_permitted": [],
+        "runtime_changes_authorized": True, "schema_changes_authorized": False,
+        "runtime_paths_authorized": ["src/recursive_integrity_toolkit/reports/assembly.py"],
+        "schema_paths_authorized": [],
+        "step2_historical_binding_nodes": {p: sorted({r["node"] for r in rows})
+                                          for p, rows in sorted(PHASE4_STEP3_MIGRATIONS.items())},
+    })
+    return result
+
+
+def verify_phase4_step3_control(control: dict, step: int = 3) -> None:
+    if type(step) is not int or step != 3 or type(control) is not dict:
+        raise ValueError("Unsupported Phase 4 Step 3 stage/control")
+    try:
+        actual = json.dumps(control, sort_keys=True, ensure_ascii=True, allow_nan=False)
+        expected = json.dumps(phase4_step3_expected_control(), sort_keys=True, ensure_ascii=True, allow_nan=False)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Invalid Phase 4 Step 3 control") from error
+    if actual != expected:
+        raise ValueError("Phase 4 control differs from the independently approved Step 3 contract")
+
+
+def verify_phase4_step3_changes(changes: list[tuple[str, str]]) -> None:
+    seen = set()
+    for status, path in changes:
+        if path in seen or path not in PHASE4_STEP3_ALLOWED or status != "M":
+            raise ValueError(f"Unapproved Phase 4 Step 3 path/operation: {status} {path}")
+        seen.add(path)
+
+
+def _phase4_step3_header(node, path):
+    """Allow explicit test parametrization/fixtures, never definition-time effects."""
+    for decorator in node.decorator_list:
+        if not isinstance(decorator, ast.Call) or ast.unparse(decorator.func) not in {
+                "pytest.fixture", "pytest.mark.parametrize"}:
+            raise ValueError(f"Unapproved Step 3 test decorator: {path}:{node.name}")
+        if ast.unparse(decorator.func) == "pytest.fixture" and not node.name.startswith("phase4_step"):
+            raise ValueError("A Step 3 fixture must have an explicit scoped name")
+        if any(keyword.arg is None for keyword in decorator.keywords):
+            raise ValueError("Decorator expansion is outside the Step 3 contract")
+        for value in [*decorator.args, *(keyword.value for keyword in decorator.keywords)]:
+            try:
+                ast.literal_eval(value)
+            except (ValueError, TypeError, SyntaxError) as error:
+                raise ValueError("Step 3 decorator arguments must be literal") from error
+    clone = ast.parse(ast.unparse(node)).body[0]
+    clone.decorator_list = []
+    _phase4_preserve_function_header(clone, path)
+
+
+def _phase4_step3_append_only(before: bytes, after: bytes, path: str) -> None:
+    if not after.startswith(before):
+        raise ValueError(f"Inherited Step 2 prefix changed: {path}")
+    old, new = ast.parse(before), ast.parse(after)
+    bindings = set()
+    for node in old.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            bindings.add(node.name)
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            bindings.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            bindings.update(child.id for target in targets for child in ast.walk(target) if isinstance(child, ast.Name))
+    for node in new.body[len(old.body):]:
+        if not isinstance(node, ast.FunctionDef) or node.name in bindings:
+            raise ValueError(f"Step 3 addition executes, rebinds or shadows inherited source: {path}")
+        allowed_snapshot = path == "tests/conftest.py" and node.name == "phase4_step2_snapshot"
+        if not allowed_snapshot and not node.name.startswith(("test_phase4_step3_", "phase4_step3_")):
+            raise ValueError(f"Step 3 added test/helper is not explicitly scoped: {path}:{node.name}")
+        if path == "tests/conftest.py" and node.name != "phase4_step2_snapshot":
+            raise ValueError("Only the pinned Step 2 shared fixture is authorized")
+        bindings.add(node.name)
+        _phase4_step3_header(node, path)
+
+
+def verify_phase4_step3_test_migration(path: str, before: bytes, after: bytes) -> None:
+    prior = _phase4_step2_files()
+    if path not in prior or path not in PHASE4_STEP3_ALLOWED or before != prior[path] or not path.startswith("tests/"):
+        raise ValueError("Step 3 migration requires the exact named Step 2 source")
+    _phase4_step3_check_test_migration(path, before, after)
+
+
+def _phase4_step3_check_test_migration(path: str, before: bytes, after: bytes) -> None:
+    """Check a source already read from the verified Step 2 immutable mapping."""
+    expected = before
+    for row in PHASE4_STEP3_MIGRATIONS.get(path, []):
+        old, new = row["old"].encode(), row["new"].encode()
+        if expected.count(old) != 1:
+            raise ValueError("Step 2 historical binding is not unique")
+        expected = expected.replace(old, new, 1)
+    _phase4_step3_append_only(expected, after, path)
+
+
+def _phase4_step3_preserve_tooling(before: bytes, after: bytes, path: str) -> None:
+    """Permit the exact Step 3 dispatch addition and preserve every older statement."""
+    if path == "scripts/release_check.py":
+        old = ('def cli_main() -> int:\n'
+               '    argv = sys.argv[1:]\n'
+               '    explicit_phase4 = "--phase=4" in argv or any(a == "--phase" and b == "4" for a, b in zip(argv, argv[1:]))\n'
+               '    explicit_step2 = "--step=2" in argv or any(a == "--step" and b == "2" for a, b in zip(argv, argv[1:]))\n'
+               '    if explicit_phase4 and explicit_step2:\n'
+               '        return phase4_step2_cli_main()\n'
+               '    return phase4_cli_main() if explicit_phase4 else main()')
+        new = old.replace('    return phase4_cli_main() if explicit_phase4 else main()',
+                          '    explicit_step3 = "--step=3" in argv or any(a == "--step" and b == "3" for a, b in zip(argv, argv[1:]))\n'
+                          '    if explicit_phase4 and explicit_step3:\n'
+                          '        return phase4_step3_cli_main()\n'
+                          '    return phase4_cli_main() if explicit_phase4 else main()')
+        replacements = [(old, new)]
+    else:
+        old = '    if args.phase == 4 and args.step == 2:\n        return phase4_step2_main(step=args.step)\n'
+        new = old + '    if args.phase == 4 and args.step == 3:\n        return phase4_step3_main(step=args.step)\n'
+        replacements = [(old, new),
+                        ('Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2',
+                         'Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3')]
+    expected = before
+    for old, new in replacements:
+        if expected.count(old.encode()) != 1:
+            raise ValueError(f"Historical dispatcher identity mismatch: {path}")
+        expected = expected.replace(old.encode(), new.encode(), 1)
+    _phase4_preserve_tooling(expected, after, path)
+
+
+def verify_phase4_step3_snapshot(root: Path = ROOT) -> dict:
+    prior = _phase4_step2_files()
+    for path, raw in prior.items():
+        target = root / path
+        if not target.is_file() or target.is_symlink():
+            raise ValueError(f"Missing or aliased inherited Step 2 file: {path}")
+        current = target.read_bytes()
+        if path not in PHASE4_STEP3_ALLOWED and current != raw:
+            raise ValueError(f"Protected Step 2 bytes changed: {path}")
+        if path.startswith("tests/") and path in PHASE4_STEP3_ALLOWED:
+            _phase4_step3_check_test_migration(path, raw, current)
+        elif path.startswith("scripts/") and path in PHASE4_STEP3_ALLOWED:
+            _phase4_step3_preserve_tooling(raw, current, path)
+        elif path in {"docs/architecture.md", "docs/theory_traceability.md", "docs/report_schema.md", "PHASE_4_DECISIONS.md"}:
+            expected = raw
+            for correction in PHASE4_STEP3_DOCUMENT_CORRECTIONS.get(path, []):
+                old, new = correction["old"].encode(), correction["new"].encode()
+                if expected.count(old) != 1:
+                    raise ValueError(f"Historical documentation correction is not unique: {path}")
+                expected = expected.replace(old, new, 1)
+            if not current.startswith(expected):
+                raise ValueError(f"Step 2 historical documentation prefix changed: {path}")
+    actual_modules = {p.relative_to(root).as_posix() for p in (root / "src/recursive_integrity_toolkit").rglob("*.py")}
+    expected_modules = {p for p in prior if p.startswith("src/") and p.endswith(".py")}
+    if actual_modules != expected_modules or len(actual_modules) != 40:
+        raise ValueError("Step 3 cannot change the runtime module set")
+    if {p.name for p in (root / "schemas").iterdir()} != {Path(p).name for p in prior if p.startswith("schemas/")}:
+        raise ValueError("Step 3 cannot change the schema set")
+    if hashlib.sha256((root / "PHASE_4_PLAN.md").read_bytes()).hexdigest() != PHASE4_PLAN_SHA256:
+        raise ValueError("Approved Phase 4 plan changed")
+    verify_phase4_step3_control(json.loads((root / "PHASE_4_BASELINE.json").read_text(encoding="utf-8")))
+    decisions = (root / "PHASE_4_DECISIONS.md").read_text(encoding="utf-8")
+    if PHASE4_STEP3_APPROVAL not in decisions or PHASE4_STEP2_FINAL not in decisions:
+        raise ValueError("Actual Step 3 authorization or Step 2 evidence anchor missing")
+    if any((root / name).exists() for name in PHASE4_FORBIDDEN_OUTPUTS):
+        raise ValueError("Step 3 cannot create Phase 4 completion records or audit outputs")
+    import runpy
+    checker = runpy.run_path(str(root / "scripts/check_traceability.py"), run_name="phase4_step3_assembly_boundary")
+    checker["phase4_step2_result_boundary"](root / "src/recursive_integrity_toolkit/result.py")
+    checker["phase4_step3_assembly_boundary"](root / "src/recursive_integrity_toolkit/reports/assembly.py")
+    schema_bytes = (root / "schemas/report.schema.json").read_bytes()
+    if hashlib.sha256(schema_bytes).hexdigest() != PHASE4_STEP2_REPORT_SCHEMA_SHA256:
+        raise ValueError("Step 3 report schema differs from its independently reviewed bytes")
+    schema = json.loads(schema_bytes)
+    if (schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
+            or schema.get("type") != "object" or schema.get("additionalProperties") is not False):
+        raise ValueError("Step 3 report schema dialect/closed root mismatch")
+    return {"package_modules": 40, "frozen_runtime_modules": 39, "frozen_schemas": 5,
+            "hero_files_unchanged": 6, "historical_phase3_migrated_nodes": 16,
+            "phase_complete": False, "result_contracts_enabled": True,
+            "adapters_enabled": True, "cli_analysis_enabled": False}
+
+
+def audit_phase4_step3(step: int = 3) -> dict:
+    verify_phase4_step3_control(json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8")), step)
+    result = {"phase": 4, "active_step": step, **verify_phase4_step3_snapshot(),
+              "phase0_hashes_verified": 16, "publication_authorized": False}
+    print(json.dumps(result, indent=2))
+    return result
+
+
+def audit_phase4_step3_diff(step: int = 3) -> dict:
+    if type(step) is not int or step != 3:
+        raise ValueError("Unsupported Phase 4 Step 3 stage")
+    _phase4_step2_files()
+    subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", PHASE4_STEP2_FINAL, "HEAD"], check=True)
+    raw = git("diff", "--name-status", "--no-renames", "-z", PHASE4_STEP2_FINAL, "--").split(b"\0")
+    raw = [part.decode("utf-8") for part in raw if part]
+    if len(raw) % 2:
+        raise ValueError("Malformed Step 3 Git difference records")
+    changes = list(zip(raw[::2], raw[1::2]))
+    changes.extend(("A", p.decode()) for p in git("ls-files", "--others", "--exclude-standard", "-z").split(b"\0") if p)
+    verify_phase4_step3_changes(changes)
+    result = {"previous_step_commit": PHASE4_STEP2_FINAL, "changed_files": len(changes),
+              "changes": changes, "step": 3, "scope": "PASS"}
+    print(json.dumps(result, indent=2))
+    return result
+
+
+def phase4_step3_baseline_evidence(output: Path) -> dict:
+    """Reconcile all inherited identities, including the accepted Step 2 suite."""
+    output.mkdir(parents=True, exist_ok=True)
+    inherited = phase4_step2_baseline_evidence(output / "phase4-step2-inherited")
+    with tempfile.TemporaryDirectory(prefix="rit-p4-step2-identities-") as temp:
+        baseline = Path(temp)
+        for name, raw in _phase4_step2_files().items():
+            target = baseline / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
+        old, old_log = _collect(baseline)
+    current, current_log = _collect(ROOT)
+    expected = 2731 if os.environ.get("RIT_TEST_PARQUET") == "1" else 2728
+    if len(old) != expected or set(old) - set(current):
+        raise ValueError("Accepted Phase 4 Step 2 test identities were lost")
+    result = {"baseline_commit": PHASE4_STEP2_FINAL, "baseline_test_tree": PHASE4_STEP2_TEST_TREE,
+              "baseline_nodeids": old, "current_nodeids": current, "missing_nodeids": [],
+              "baseline_tests": len(old), "current_tests": len(current), "inherited": inherited,
+              "nodeids_sha256": hashlib.sha256(("\n".join(old)+"\n").encode()).hexdigest()}
+    (output / "phase4_step3_test_identity_manifest.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
+    (output / "phase4-step2-collection.log").write_text(old_log, encoding="utf-8")
+    (output / "phase4-step3-collection.log").write_text(current_log, encoding="utf-8")
+    print(json.dumps({k: result[k] for k in ("baseline_tests", "current_tests", "missing_nodeids")}, indent=2))
+    return result
+
+
+def phase4_step3_candidate(output: Path, step: int = 3) -> None:
+    """Build tested Step 3 intermediate evidence without declaring Phase 4 complete."""
+    if os.environ.get("RIT_TEST_PARQUET") != "1" or importlib.util.find_spec("pyarrow") is None:
+        raise ValueError("Step 3 candidate evidence requires RIT_TEST_PARQUET=1 and real PyArrow")
+    output.mkdir(parents=True, exist_ok=True)
+    result = audit_phase4_step3(step)
+    result["diff"] = audit_phase4_step3_diff(step)
+    if git("status", "--porcelain").strip():
+        raise ValueError("Step 3 candidate archive requires committed, clean source")
+    result["core"] = verify_junit(output / "core.xml", minimum=2728)
+    result["parquet"] = verify_junit(output / "parquet.xml", require_parquet=True, minimum=2731)
+    result["core_math_measurements"] = verify_step10_evidence(output / "core.xml", output / "phase4-step3-core-observations.json")
+    result["parquet_math_measurements"] = verify_step10_evidence(output / "parquet.xml", output / "phase4-step3-parquet-observations.json")
+    identity = phase4_step3_baseline_evidence(output)
+    result["test_identity"] = {k: identity[k] for k in ("baseline_tests", "current_tests", "nodeids_sha256")}
+    expected = set()
+    for node in identity["current_nodeids"]:
+        base, bracket, parameter = node.partition("[")
+        owner, name = base.rsplit("::", 1)
+        expected.add((owner.removesuffix(".py").replace("/", ".").replace("::", "."), name + bracket + parameter))
+    for name, parquet in (("core.xml", False), ("parquet.xml", True)):
+        cases = {(c.get("classname", ""), c.get("name", "")) for c in ET.parse(output / name).getroot().iter("testcase")}
+        target = expected if parquet else {c for c in expected if c[1] not in PARQUET_CASES}
+        if cases != target:
+            raise ValueError(f"Step 3 JUnit does not execute the entire current suite: {name}")
+    wheel, _ = verify_distributions(output / "dist")
+    phase4_step2_installed_contract_smoke(wheel)
+    phase4_step3_installed_assembly_smoke(wheel)
+    archive = output / "recursive-integrity-toolkit-phase4-step3-candidate.zip"
+    subprocess.run(["git", "-C", str(ROOT), "archive", "--format=zip", "--prefix=recursive-integrity-toolkit/", "HEAD", "-o", str(archive.resolve())], check=True)
+    tracked = {p for p in git("ls-files", "-z").decode().split("\0") if p}
+    with zipfile.ZipFile(archive) as zipped:
+        names = {p.removeprefix("recursive-integrity-toolkit/") for p in zipped.namelist() if not p.endswith("/")}
+        if names != tracked or len(tracked) != 227:
+            raise ValueError("Step 3 source archive file set mismatch")
+        for name in names:
+            if zipped.read("recursive-integrity-toolkit/"+name) != (ROOT / name).read_bytes():
+                raise ValueError(f"Step 3 source archive byte mismatch: {name}")
+    result.update({"commit": git("rev-parse", "HEAD").decode().strip(),
+                   "tree": git("rev-parse", "HEAD^{tree}").decode().strip(),
+                   "source_archive": archive.name, "tracked_files": len(tracked),
+                   "python": sys.version, "platform": sys.platform,
+                   "versions": {name: importlib.metadata.version(name) for name in ("numpy", "pandas", "pytest")}})
+    (output / "phase4_step3_execution_metadata.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
+    (output / "phase4_step3_repository_files.sha256").write_text("".join(f"{hashlib.sha256((ROOT/name).read_bytes()).hexdigest()}  {name}\n" for name in sorted(tracked)), encoding="utf-8")
+    paths = sorted(p for p in output.rglob("*") if p.is_file() and p.name != "phase4_step3_artifacts.sha256")
+    (output / "phase4_step3_artifacts.sha256").write_text("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(output).as_posix()}\n" for p in paths), encoding="utf-8")
+    print(f"Phase 4 Step 3 candidate: {len(tracked)} source files verified; Phase 4 remains incomplete.")
+
+
+def phase4_step3_cli_main() -> int:
+    parser = argparse.ArgumentParser(description="Phase 4 Step 3 maintainer gate")
+    parser.add_argument("--phase", type=int, choices=(4,), required=True)
+    parser.add_argument("--step", type=int, choices=(3,), required=True)
+    parser.add_argument("--diff", action="store_true")
+    parser.add_argument("--junit", type=Path)
+    parser.add_argument("--require-parquet", action="store_true")
+    parser.add_argument("--minimum-tests", type=int, default=1)
+    parser.add_argument("--baseline-evidence", type=Path)
+    parser.add_argument("--dist", type=Path)
+    parser.add_argument("--smoke-wheel", type=Path)
+    parser.add_argument("--candidate", type=Path)
+    parser.add_argument("--delivery", type=Path)
+    args = parser.parse_args()
+    if args.delivery is not None:
+        raise ValueError("Phase 4 Step 3 cannot certify a final phase delivery")
+    if args.junit is not None:
+        verify_junit(args.junit, require_parquet=args.require_parquet, minimum=args.minimum_tests)
+    elif args.baseline_evidence is not None:
+        phase4_step3_baseline_evidence(args.baseline_evidence)
+    elif args.dist is not None:
+        audit_phase4_step3(args.step)
+        wheel, _ = verify_distributions(args.dist)
+        smoke_installed(wheel)
+        smoke_installed_duplicates(wheel)
+        phase4_step2_installed_contract_smoke(wheel)
+        phase4_step3_installed_assembly_smoke(wheel)
+    elif args.smoke_wheel is not None:
+        smoke_installed(args.smoke_wheel)
+    elif args.candidate is not None:
+        phase4_step3_candidate(args.candidate, args.step)
+    else:
+        audit_phase4_step3(args.step)
+        if args.diff:
+            audit_phase4_step3_diff(args.step)
+    return 0
+
+
+def phase4_step3_installed_assembly_smoke(wheel: Path) -> None:
+    """Exercise an installed, hand-authored typed handoff with every effect blocked."""
+    with tempfile.TemporaryDirectory(prefix="rit-p4-step3-installed-assembly-") as temp:
+        work = Path(temp)
+        subprocess.run([sys.executable, "-m", "venv", str(work / "venv")], check=True)
+        bindir = work / "venv" / ("Scripts" if os.name == "nt" else "bin")
+        python = bindir / ("python.exe" if os.name == "nt" else "python")
+        subprocess.run([str(python), "-m", "pip", "install", "--no-index", "--no-deps", str(wheel.resolve())],
+                       cwd=work, check=True)
+        program = '''import builtins, copy, importlib.abc, io, json, socket, sys
+from dataclasses import replace
+from pathlib import Path
+from types import MappingProxyType
+blocked_roots = {'numpy', 'pandas', 'pyarrow', 'jsonschema', 'referencing', 'networkx', 'scipy', 'sklearn'}
+blocked_import_layers = tuple('recursive_integrity_toolkit.' + name for name in (
+    'cli', 'reports.json_report', 'reports.markdown_report', 'reports.html_report'))
+class DenyAnalysis(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.')[0] in blocked_roots or any(
+                fullname == layer or fullname.startswith(layer + '.') for layer in blocked_import_layers):
+            raise AssertionError('installed assembly attempted optional, CLI or renderer import: ' + fullname)
+sys.meta_path.insert(0, DenyAnalysis())
+def blocked(*args, **kwargs):
+    raise AssertionError('installed assembly attempted file or network access')
+socket.create_connection = blocked
+socket.getaddrinfo = blocked
+socket.socket.connect = blocked
+socket.socket.connect_ex = blocked
+from recursive_integrity_toolkit.models import (
+    BundleValidationResult, Capability, CapabilityKey, CapabilityStatus,
+    CanonicalRow, FileFormat, FileInventoryEntry, FileRole, ProvenanceMatch, RecordKey, RowLocation,
+    ObservabilityAssessment, ProvenanceJoinResult, ValidationCoverage,
+    ValidationMessage, ValidationSeverity, VersionOrderResult,
+)
+import recursive_integrity_toolkit.reports.assembly as assembly
+from recursive_integrity_toolkit.result import CanonicalReport
+assert Path(assembly.__file__).resolve().is_relative_to(Path(sys.argv[1]) / 'venv')
+assert not Path(assembly.__file__).resolve().is_relative_to(Path(sys.argv[2]) / 'src')
+# Prepare real installed-kernel evidence before enabling the assembly execution barrier.
+from recursive_integrity_toolkit.config import RepresentationConfig
+from recursive_integrity_toolkit.representations.field import assign_field_states
+from recursive_integrity_toolkit.metrics.diversity import calculate_state_distribution
+rows = tuple(CanonicalRow('records', RecordKey('v1', identifier),
+             MappingProxyType({'dataset_version': 'v1', 'record_id': identifier,
+                               'content': 'synthetic installed fixture', 'topic': topic}),
+             MappingProxyType({}), MappingProxyType({}),
+             location=RowLocation(FileRole.RECORDS_PRIMARY, 'fixture.jsonl', index, index))
+             for index, (identifier, topic) in enumerate((('a', 'one'), ('b', 'two')), 1))
+represented = assign_field_states(rows, dataset_versions=('v1',), scope_id='installed:v1',
+    config=RepresentationConfig('topic', 'topic_field', 'topic', 'installed-fixture-v1', 'error'))
+distribution = calculate_state_distribution(represented)
+expected_support = distribution.unweighted.support_size.value
+expected_diversity = distribution.unweighted.gini_simpson_diversity.value
+expected_concentration = distribution.unweighted.simpson_concentration.value
+assert (expected_support, expected_diversity, expected_concentration) == (2, 0.5, 0.5)
+record_keys = tuple(row.record_key for row in rows)
+empirical_coverage = ValidationCoverage(0, 2, 'all_valid_records')
+empirical_join = ProvenanceJoinResult(('v1',), record_keys, False,
+    tuple(ProvenanceMatch(key, None) for key in record_keys), record_keys,
+    empirical_coverage, empirical_coverage, empirical_coverage, ())
+empirical_caps = {key: Capability(CapabilityStatus.UNAVAILABLE, reason_codes=('R_MISSING_EVIDENCE',))
+                  for key in CapabilityKey}
+empirical_caps[CapabilityKey.INGESTION] = Capability(CapabilityStatus.AVAILABLE)
+empirical_caps[CapabilityKey.CONTENT_DIAGNOSTICS] = Capability(CapabilityStatus.AVAILABLE)
+empirical_bundle = BundleValidationResult(
+    inventory=(FileInventoryEntry(FileRole.RECORDS_PRIMARY, Path('fixture.jsonl'), FileFormat.JSONL,
+                                  128, '0' * 64, 2, ('dataset_version', 'record_id', 'content', 'topic')),),
+    records=rows, provenance=None, provenance_join=empirical_join,
+    version_order=VersionOrderResult(('v1',), ('v1',), 'single_version', {}, {}), generation=None,
+    observability=ObservabilityAssessment(1, empirical_caps), mapping_traces=(), content_read_keys=(),
+    validation_messages=(),
+)
+# Result type imports are permitted; executing a calculation or input operation is not.
+def deny_execution(frame, event, argument):
+    if event == 'call':
+        source = frame.f_code.co_filename.replace(chr(92), '/')
+        if any('/recursive_integrity_toolkit/' + layer + '/' in source for layer in (
+                'metrics', 'io', 'representations', 'observability', 'lineage')):
+            raise AssertionError('installed assembly executed an analytical/input function: ' + frame.f_code.co_name)
+sys.setprofile(deny_execution)
+builtins.open = blocked
+io.open = blocked
+def deny_effects(event, arguments):
+    if event in ('open', 'os.listdir', 'os.scandir', 'os.system', 'subprocess.Popen') or event.startswith('socket.'):
+        raise AssertionError('installed assembly attempted an external effect: ' + event)
+sys.addaudithook(deny_effects)
+coverage = ValidationCoverage(0, 0, 'all_valid_records')
+join = ProvenanceJoinResult((), (), False, (), (), coverage, coverage, coverage, ())
+observability = ObservabilityAssessment(0, {
+    key: Capability(CapabilityStatus.UNAVAILABLE, reason_codes=('R_EMPTY_SCOPE',))
+    for key in CapabilityKey
+})
+bundle = BundleValidationResult(
+    inventory=(), records=(), provenance=None, provenance_join=join,
+    version_order=VersionOrderResult((), (), 'not_available', {}, {}), generation=None,
+    observability=observability, mapping_traces=(), content_read_keys=(), validation_messages=(),
+)
+run = {
+    'run_id': 'installed-typed-empty-case', 'toolkit_version': '0.1.0.dev2',
+    'report_schema_version': '1.0', 'started_at': None, 'completed_at': None,
+    'duration_seconds': None, 'python_version': None, 'platform': None,
+    'command': None, 'config_hash': None, 'random_seed': None,
+    'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0,
+    'deterministic': True, 'privacy_mode': 'standard', 'run_status': 'complete',
+    'null_reasons': {
+        'started_at': 'Pure assembly does not start a clock.',
+        'completed_at': 'Pure assembly does not start a clock.',
+        'duration_seconds': 'Pure assembly does not measure execution.',
+        'python_version': 'No execution environment is asserted.',
+        'platform': 'No execution environment is asserted.',
+        'command': 'Direct installed Python API, no command invoked.',
+        'config_hash': 'No resolved configuration hash was supplied.',
+        'random_seed': 'No stochastic scenario was requested.',
+    },
+}
+original_run = copy.deepcopy(run)
+report = assembly.assemble_report(bundle, run=run)
+assert type(report) is CanonicalReport
+payload = report.to_dict()
+assert tuple(payload) == ('run', 'inputs', 'observability', 'capabilities', 'observed_facts',
+                         'derived_metrics', 'proxy_signals', 'simulations', 'unavailable_conclusions',
+                         'recommended_next_metadata', 'warnings', 'errors')
+assert payload['run'] == original_run and run == original_run
+assert payload['inputs']['scope']['record_count'] == 0
+assert payload['inputs']['artifacts'] == [] and payload['inputs']['file_hashes'] == []
+assert payload['simulations'] == {} and payload['errors'] == []
+assert payload['capabilities']['lineage']['execution_status'] == 'deferred'
+assert report.sections['observability']['capabilities'] is report.sections['capabilities']
+assert {'model_performance_decline', 'causal_ancestor_effect', 'universal_integrity',
+        'universal_collapse_prediction'} <= {item['conclusion'] for item in payload['unavailable_conclusions']}
+for name in ('provenance_row_coverage', 'provenance_required_field_coverage', 'grounding_field_coverage'):
+    field = payload['observed_facts']['provenance'][name]
+    assert field['value'] is None and field['status'] == 'unavailable'
+    assert field['denominator'] == 0 and field['reason_codes']
+assert assembly.assemble_report(bundle, run=run).to_dict() == payload
+empirical = assembly.assemble_report(empirical_bundle, run=run, distributions=(distribution,)).to_dict()
+assert empirical['observed_facts']['record_counts']['v1']['value'] == 2
+assert empirical['derived_metrics']['support']['by_version']['v1']['support_size']['value'] == expected_support
+assert empirical['derived_metrics']['diversity']['by_version']['v1']['gini_simpson_diversity']['value'] == expected_diversity
+assert empirical['derived_metrics']['diversity']['by_version']['v1']['simpson_concentration']['value'] == expected_concentration
+assert empirical['simulations'] == {} and empirical['errors'] == []
+assert empirical['capabilities']['content_diagnostics']['execution_status'] == 'completed'
+assert 'synthetic installed fixture' not in json.dumps(empirical)
+run['run_id'] = 'caller-input-mutation'
+payload['unavailable_conclusions'].clear()
+assert report.to_dict()['run']['run_id'] == original_run['run_id']
+assert report.to_dict()['unavailable_conclusions']
+failure = ValidationMessage('E_FILE_PARSE', ValidationSeverity.FATAL,
+                            'The supplied records artifact could not be parsed.')
+failed_bundle = replace(bundle, validation_messages=(failure,))
+failed = assembly.assemble_report(failed_bundle, run=original_run).to_dict()
+assert failed['run']['run_status'] == 'failed'
+assert len(failed['errors']) == 1
+assert failed['errors'][0]['code'] == 'E_FILE_PARSE'
+assert failed['errors'][0]['severity'] == 'fatal'
+assert failed['errors'][0]['effect_on_run'] == 'failed'
+assert failed['simulations'] == {}
+assert failed['capabilities']['ingestion']['execution_status'] == 'failed'
+for supplied in ({}, object()):
+    try:
+        assembly.assemble_report(supplied, run=original_run)
+    except assembly.ReportAssemblyError:
+        pass
+    else:
+        raise AssertionError('installed assembly accepted an untyped validation handoff')
+for changes in ({'privacy_mode': 'redacted', 'redacted_mode': True}, {'duration_seconds': float('inf')}):
+    invalid = dict(original_run)
+    invalid.update(changes)
+    try:
+        assembly.assemble_report(bundle, run=invalid)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('installed assembly accepted an invalid run declaration')
+assert not blocked_roots.intersection(sys.modules)
+assert not any(name == layer or name.startswith(layer + '.') for name in sys.modules for layer in blocked_import_layers)
+sys.setprofile(None)
+print('installed Step 3: typed empty/error and prepared empirical handoffs, exact kernel values, null coverage, immutable mirror, deterministic disclosures, no default scenarios; analytical execution, optional imports, file I/O and network blocked during assembly: PASS')
+'''
+        subprocess.run([str(python), "-I", "-c", program, str(work), str(ROOT)], cwd=work, check=True)
+
+
 def cli_main() -> int:
     argv = sys.argv[1:]
     explicit_phase4 = "--phase=4" in argv or any(a == "--phase" and b == "4" for a, b in zip(argv, argv[1:]))
     explicit_step2 = "--step=2" in argv or any(a == "--step" and b == "2" for a, b in zip(argv, argv[1:]))
     if explicit_phase4 and explicit_step2:
         return phase4_step2_cli_main()
+    explicit_step3 = "--step=3" in argv or any(a == "--step" and b == "3" for a, b in zip(argv, argv[1:]))
+    if explicit_phase4 and explicit_step3:
+        return phase4_step3_cli_main()
     return phase4_cli_main() if explicit_phase4 else main()
 
 

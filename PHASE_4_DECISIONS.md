@@ -186,3 +186,102 @@ HTTP error. This acceptance uses the observed remote job results and exact sourc
 tree equivalence; it does not claim that hosted archive bytes were downloaded and
 independently verified. The previously verified local Step 1 candidate evidence
 retains its separate identity.
+
+## Step 2 acceptance before Step 3 execution
+
+Step 2 is accepted at commit `fcea74e2b1858e83cdbfd1b8212d15343d63ff08`,
+source tree `c3ce887fd393cfc6c18364546005f2b74a63b746` and tests tree
+`9d6ac0cbf3827ab54c7852503d99d442a3796259`. Core and minimum-dependency
+regressions each passed 2728 tests; the real-Parquet regression passed 2731.
+All inherited identities and all twenty frozen mathematical cases survived.
+The package retains 227 tracked source files, forty Python modules and dev2.
+
+All four remote workflow roles and all twelve jobs concluded successfully on that
+same commit. The external Step 2 receipt and evidence retain the full command,
+environment, failure/fix, identity, raw-log and artifact-metadata records.
+
+| Workflow role | Accepted run | Result |
+|---|---|---|
+| CI matrix and real Parquet | [35411353402](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35411353402) | Success, nine jobs |
+| Hero and mathematical contract | [35411353398](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35411353398) | Success |
+| Security boundary | [35411353389](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35411353389) | Success |
+| Build and candidate evidence | [35411353380](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35411353380) | Success |
+
+The hosted artifact was checked through its generating job and API metadata; it
+was not downloaded. The byte-verified local candidate was created from the same
+accepted commit. An API digest is not presented as an independently downloaded
+archive checksum.
+
+## Step 3 authorization and assembly boundary
+
+On 2026-09-19 UTC the Theory Owner instructed: `开始 **Phase 4 Step 3**`.
+This instruction advances the previously approved plan to Step 3. Earlier stop
+statements remain the historical record of their own authorization intervals.
+Phase 4 remains incomplete. Step 4, a main merge, a tag and software publication
+are not authorized by this step.
+
+The exact allowed set is the twenty-six common maintenance paths and the seven
+additional Step 3 paths in the approved plan, for thirty-three existing paths.
+Only modifications are permitted. No addition, deletion, rename or mode change
+is authorized. The independently enforced permission registry and approval text
+cannot be expanded by editing the JSON control document.
+
+Only `src/recursive_integrity_toolkit/reports/assembly.py` gains runtime behavior.
+All thirty-nine other runtime modules, all five schemas, the six Hero files,
+mathematical oracles, Phase 0 authorities, dependency declarations, version and
+module set remain byte-exact to Step 2. This includes the frozen canonical report
+contract and public schema established by Step 2. Adapters consume accepted typed
+results, preserve their original evidence and scope, disclose unavailable claims
+and generate documented deterministic guidance. No metric, graph, simulation,
+filesystem or network operation is permitted in assembly. Privacy conversion,
+rendering and CLI analysis retain their later-step boundaries.
+
+One exact documentation correction fixes the Step 2 field table's value-type
+label for `derived_metrics.provenance.weighted_source_type_masses`: `number`
+becomes `category_mass_map`, matching the already frozen canonical contract and
+schema. The full old/new row is independently registered. All remaining Step 2
+report documentation bytes are preserved before additive Step 3 documentation.
+This correction changes neither the public schema nor an analytical value.
+
+### Exact Step 2 historical bindings
+
+Ten named nodes use the verified accepted Step 2 snapshot through thirteen exact
+source replacements, recorded in the independent release-checker registry.
+Their function names, parameterizations and substantive assertions remain intact.
+
+| File | Exact nodes and changed binding |
+|---|---|
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step2_approved_control_keeps_independent_step1_anchors`, `test_phase4_step2_control_rejects_forged_scope_and_stage`, `test_phase4_step2_control_rejects_unapproved_dispatch`, `test_phase4_step2_control_requires_explicit_approval_fields`, `test_phase4_step2_control_cannot_mint_extra_permission`: read the pinned Step 2 control. |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step2_historical_migrations_are_five_explicit_step1_bindings`, `test_phase4_step2_historical_guard_rejects_assertion_and_binding_weakening`: read the pinned Step 2 migrated test bytes. |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step2_current_runtime_opens_only_the_canonical_result`, `test_phase4_step2_current_workflows_preserve_matrix_and_use_active_dispatch`: inspect the pinned Step 2 runtime and workflows. |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step2_current_snapshot_checks_valid_tree_before_mutations`: copy pinned Step 2 files before applying its original mutations. |
+
+The new `phase4_step2_snapshot` fixture verifies the fixed commit, source tree,
+tests tree, regular-file inventory and every Git blob before use and at teardown.
+Shared current fixtures and all earlier snapshot fixtures retain their original
+bytes. Current input, validation, mathematical and security behavior continues to
+run against current source. Current Step 3 gate tests separately verify a passing
+unmodified current tree before exercising negative mutations.
+
+The Step 3 test guard allows only the listed historical replacements followed by
+new explicitly scoped `test_phase4_step3_` and `phase4_step3_` functions. It rejects
+inherited assertion edits, rebinding, module-scope imports or executable values,
+and definition-time side effects. Only the named Step 2 snapshot fixture may be
+added to `conftest.py`. Existing maintainer functions and constants remain exact,
+apart from the registered Step 3 dispatcher additions. Historical Step 1 and
+Step 2 commands remain callable with their original meanings and stage inputs.
+
+### Step 3 verification and evidence policy
+
+Acceptance requires independent valid and invalid supplied-result cases, useful
+partial-evidence preservation, pure assembly checks, all inherited node identities,
+complete current core and real-Parquet regressions, frozen mathematical evidence,
+builds and isolated installed-contract/assembly checks. Four remote workflow roles
+must pass on the delivered commit. The candidate remains an intermediate Step 3
+artifact. No result is called accepted before its required checks execute.
+
+The external Step 3 receipt records actual commits and trees, changed paths,
+commands, environments, outcomes, failed attempts and repairs, review findings,
+remote evidence and remaining limitations. Technical review is consolidated
+assistant review; it does not assert independent human certification, empirical
+theory validation or production readiness. Stop after accepted Step 3.

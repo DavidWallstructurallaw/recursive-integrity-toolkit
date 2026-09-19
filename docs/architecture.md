@@ -280,3 +280,25 @@ the opened result contract and every still-frozen module. Step 2 permissions are
 independent of the editable control file and do not authorize Step 3. Actual
 execution, commit identities and workflow outcomes are recorded in the external
 Step 2 receipt; Phase 4 remains incomplete.
+
+
+## Phase 4 Step 3: explicit evidence assembly
+
+The authorized assembly module consumes accepted validation and calculation
+contracts and constructs the frozen Step 2 canonical report. Each adapter names
+its public fields explicitly, retains the supplied result's scientific owner and
+evidence class, and checks its scope, representation, metadata and availability.
+It performs no ingestion, classification, metric, graph, simulation or file
+operation. Calculations are completed by their existing owners before assembly.
+
+Input eligibility and actual execution remain independent. Available lineage
+inputs never imply that Phase 5 graph work ran. Supplied scenarios remain
+experimental simulation evidence; ordinary assembly does not request them.
+Family failures preserve useful compatible evidence and remain visible as
+structured errors with the affected execution family.
+
+The Step 3 maintainer boundary freezes result.py, all five root schemas, the
+other 38 runtime modules, dependencies, Hero fixtures and mathematical oracles.
+Historical gates retain their accepted snapshot semantics; active Step 3 gates
+check the current source separately. Privacy transformation, rendering and CLI
+analysis remain assigned to their later approved steps.

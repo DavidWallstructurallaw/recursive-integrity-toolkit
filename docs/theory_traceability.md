@@ -268,3 +268,26 @@ phase to calculate them. Unregistered public results are rejected.
 No new formula, interpretation of the supplied theory papers, causal claim,
 universal score or functional-failure diagnosis is introduced. Original numerical
 expectations, authority records and all calculation bodies remain fixed.
+
+
+## Phase 4 Step 3 assembly ownership
+
+PR-012 owns evidence placement; PR-014 owns bounded unavailable conclusions
+and actionable metadata recommendations; PR-018 owns the distinction between
+measurements, declared assumptions, proxies and prohibited stronger conclusions.
+The assembly adapters preserve the existing T, PR and F owners of their supplied
+results. A proxy does not acquire the authority of its numerical basis.
+
+The frozen Step 2 registry controls every public analytical path. Missing
+provenance rows remain distinct from explicit unknown declarations, and
+representation exclusions never shrink provenance denominators. Weighted
+companions retain their weight basis. Supplied analytic or sampled scenarios
+retain their model, method, parameters and original numerical values under
+simulations. No adapter creates a new formula or infers model performance,
+source independence, causal ancestry, production failure or universal integrity.
+
+Phase 5 lineage conclusions stay deferred even when the accepted Phase 2 input
+assessment reaches Level 4. Validation and assembly do not certify empirical
+truth or prove that arbitrary caller-supplied objects came from a trusted run.
+The actual Step 3 authorization, preservation rules and verification evidence
+are recorded in the Phase 4 control files and the external step receipt.

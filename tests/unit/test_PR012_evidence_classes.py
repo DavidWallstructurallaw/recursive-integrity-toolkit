@@ -856,3 +856,658 @@ def test_phase4_step2_visible_duplicate_identities_remain_at_least_two_and_uniqu
     group["redaction"] = {"omitted_fields": ["record_keys"], "reason": "redacted_identity_details"}
     with pytest.raises(ValueError):
         CanonicalReport.from_dict(payload)
+
+
+# Phase 4 Step 3: independently authored report assembly expectations.
+def phase4_step3_run():
+    return {
+        "run_id": "step3-independent-case", "toolkit_version": "0.1.0.dev2",
+        "report_schema_version": "1.0", "started_at": None, "completed_at": None,
+        "duration_seconds": None, "python_version": None, "platform": None,
+        "command": None, "config_hash": None, "random_seed": None,
+        "strict_mode": False, "redacted_mode": False, "network_call_count": 0,
+        "deterministic": True, "privacy_mode": "standard", "run_status": "complete",
+        "null_reasons": {
+            "started_at": "Pure assembly does not start a clock.",
+            "completed_at": "Pure assembly does not start a clock.",
+            "duration_seconds": "Pure assembly does not measure execution.",
+            "python_version": "No execution environment is asserted.",
+            "platform": "No execution environment is asserted.",
+            "command": "Direct Python API, no command invoked.",
+            "config_hash": "No resolved configuration hash was supplied.",
+            "random_seed": "No run-wide random generator was requested.",
+        },
+    }
+
+
+def phase4_step3_bundle(tmp_path, labels=("a", "a", "b", "c"), *,
+                        provenance_rows=None, versions=None, representation=True):
+    import json
+    from recursive_integrity_toolkit.io.validation import validate_bundle
+    from recursive_integrity_toolkit.models import AuditBundle, FileRole, InputSource
+
+    if not labels:
+        from recursive_integrity_toolkit.models import (
+            BundleValidationResult, Capability, CapabilityKey, CapabilityStatus,
+            ObservabilityAssessment, ProvenanceJoinResult, ValidationCoverage, VersionOrderResult,
+        )
+        coverage = ValidationCoverage(0, 0, "selected_valid_records")
+        joined = ProvenanceJoinResult((), (), False, (), (), coverage, coverage, coverage, ())
+        order = VersionOrderResult((), (), "unavailable", {}, {})
+        assessment = ObservabilityAssessment(0, {
+            key: Capability(CapabilityStatus.UNAVAILABLE, coverage,
+                            requirements_missing=("valid records",), reason_codes=("R_EMPTY_SCOPE",))
+            for key in CapabilityKey
+        }, limitations=("No records were supplied.",))
+        return BundleValidationResult((), (), None, joined, order, None, assessment, (), (), ())
+    versions = ("v1",) * len(labels) if versions is None else versions
+    records = [dict(dataset_version=version, record_id="r" + str(index),
+                    content="synthetic public fixture", topic=label)
+               for index, (version, label) in enumerate(zip(versions, labels))]
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    path = tmp_path / "records.jsonl"
+    path.write_text("".join(json.dumps(row) + "\n" for row in records), encoding="utf-8")
+    sources = [InputSource(FileRole.RECORDS_PRIMARY, path)]
+    if provenance_rows is not None:
+        path = tmp_path / "provenance.jsonl"
+        path.write_text("".join(json.dumps(row) + "\n" for row in provenance_rows), encoding="utf-8")
+        sources.append(InputSource(FileRole.PROVENANCE_MANIFEST, path))
+    config = {}
+    if representation:
+        config["representation"] = {
+            "name": "topic", "source": "topic_field", "field": "topic",
+            "version": "taxonomy-v1", "missing_value_policy": "exclude",
+        }
+    if len(set(versions)) > 1:
+        config["version_order"] = list(dict.fromkeys(versions))
+    return validate_bundle(AuditBundle(tuple(sources)), configuration=config)
+
+
+def phase4_step3_distribution(bundle, version="v1", *, weights=None):
+    from recursive_integrity_toolkit.config import RepresentationConfig
+    from recursive_integrity_toolkit.metrics.diversity import calculate_state_distribution
+    from recursive_integrity_toolkit.models import WeightingOptions
+    from recursive_integrity_toolkit.representations.field import assign_field_states
+
+    represented = assign_field_states(
+        bundle.records, dataset_versions=(version,), scope_id="report-" + version,
+        config=RepresentationConfig("topic", "topic_field", "topic", "taxonomy-v1", "exclude"),
+    )
+    if weights is None:
+        return calculate_state_distribution(represented)
+    return calculate_state_distribution(represented, weighting=WeightingOptions("weighted", "weight"),
+                                        weights=weights)
+
+
+def phase4_step3_schema(report, repo_root):
+    import json
+    from jsonschema import Draft202012Validator
+
+    payload = report.to_dict()
+    schema = json.loads((repo_root / "schemas/report.schema.json").read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(payload)
+    assert tuple(payload) == (
+        "run", "inputs", "observability", "capabilities", "observed_facts",
+        "derived_metrics", "proxy_signals", "simulations", "unavailable_conclusions",
+        "recommended_next_metadata", "warnings", "errors",
+    )
+    assert payload["observability"]["capabilities"] == payload["capabilities"]
+    return payload
+
+
+def test_phase4_step3_distribution_keeps_hand_computed_counts_diversity_and_classes(tmp_path, repo_root):
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    result = phase4_step3_distribution(bundle)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), distributions=(result,)), repo_root)
+    counts = report["observed_facts"]["state_counts"]["by_version"]["v1"]
+    diversity = report["derived_metrics"]["diversity"]["by_version"]["v1"]
+    support = report["derived_metrics"]["support"]["by_version"]["v1"]["support_size"]
+    assert counts["value"] == [{"state_id": "a", "state_count": 2},
+                               {"state_id": "b", "state_count": 1},
+                               {"state_id": "c", "state_count": 1}]
+    assert counts["evidence_class"] == "observed_fact"
+    assert support["value"] == 3 and support["method_id"] == "F-002"
+    assert diversity["gini_simpson_diversity"]["value"] == 5 / 8
+    assert diversity["simpson_concentration"]["value"] == 3 / 8
+    assert diversity["gini_simpson_diversity"]["value"] == result.unweighted.gini_simpson_diversity.value
+    for name in ("gini_simpson_diversity", "simpson_concentration", "state_frequencies"):
+        assert diversity[name]["evidence_class"] == "derived_metric"
+        assert diversity[name]["denominator"] == 4
+        assert diversity[name]["scope"]["record_count"] == 4
+    assert report["simulations"] == {}
+    assert "support_delta" not in report["derived_metrics"]["support"]
+
+
+def test_phase4_step3_weighted_companions_keep_distinct_mass_and_record_denominators(tmp_path, repo_root):
+    from recursive_integrity_toolkit.models import RecordKey
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    weights = {RecordKey("v1", "r" + str(i)): value for i, value in enumerate((1, 1, 0, 2))}
+    result = phase4_step3_distribution(bundle, weights=weights)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), distributions=(result,)), repo_root)
+    values = report["derived_metrics"]["diversity"]["by_version"]["v1"]
+    assert values["gini_simpson_diversity"]["value"] == 5 / 8
+    assert values["weighted_gini_simpson_diversity"]["value"] == 1 / 2
+    assert values["weighted_state_masses"]["value"] == [
+        {"state_id": "a", "state_mass": 2}, {"state_id": "b", "state_mass": 0},
+        {"state_id": "c", "state_mass": 2},
+    ]
+    assert values["weighted_state_masses"]["unit"] == "user_declared_weight_mass"
+    for name in ("weighted_gini_simpson_diversity", "weighted_simpson_concentration",
+                 "weighted_state_frequencies", "weighted_state_masses"):
+        assert values[name]["weighting"]["weighting_mode"] == "weighted"
+        assert values[name]["weighting"]["weight_field"] == "weight"
+        assert values[name]["evidence_class"] == "derived_metric"
+    assert report["derived_metrics"]["support"]["by_version"]["v1"]["weighted_support_size"]["value"] == 2
+    assert report["observed_facts"]["state_counts"]["by_version"]["v1"]["value"][1]["state_count"] == 1
+
+
+def test_phase4_step3_explicit_pair_preserves_only_accepted_delta_families(tmp_path, repo_root):
+    from recursive_integrity_toolkit.metrics.diversity import compare_support
+    from recursive_integrity_toolkit.models import ExplicitPairContext
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, ("a", "a", "b", "c", "a", "a", "a", "c"),
+                                versions=("v1",) * 4 + ("v2",) * 4)
+    earlier, later = phase4_step3_distribution(bundle), phase4_step3_distribution(bundle, "v2")
+    a, b = earlier.unweighted, later.unweighted
+    comparison = compare_support(a, b, context=ExplicitPairContext(a.scope, b.scope,
+        a.representation, b.representation, bundle.version_order),
+        earlier_state_semantics="literal shared topic meaning", later_state_semantics="literal shared topic meaning")
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(),
+        distributions=(earlier, later), comparison=comparison), repo_root)
+    support = report["derived_metrics"]["support"]
+    assert support["support_delta"]["value"] == -1
+    assert support["support_retention_ratio"]["value"] == 2 / 3
+    assert support["support_loss_count"]["value"] == 1
+    assert support["support_added_count"]["value"] == 0
+    assert support["extinct_states"]["value"] == ["b"]
+    assert report["derived_metrics"]["diversity"]["gini_simpson_diversity_delta"]["value"] == -1 / 4
+    capability = report["capabilities"]["dataset_longitudinal"]
+    assert capability["execution_status"] in ("partial", "completed")
+    assert capability["execution_scope"]
+    assert report["proxy_signals"]["support_contraction"]["level"] == "present"
+    assert "relative_change" not in support and "source_share_delta" not in report["derived_metrics"]
+
+
+def test_phase4_step3_supplied_analytic_scenario_stays_simulation_and_default_is_empty(tmp_path, repo_root):
+    from recursive_integrity_toolkit.metrics.resampling import expected_diversity_after_steps
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    distribution = phase4_step3_distribution(bundle).unweighted
+    expected = expected_diversity_after_steps({"a": 1 / 2, "b": 1 / 4, "c": 1 / 4},
+        resample_size=4, steps=2, scope=distribution.scope, representation=distribution.representation)
+    empty = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run()), repo_root)
+    assert empty["simulations"] == {}
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), expected_diversity=expected), repo_root)
+    scenario = report["simulations"]["closed_resampling"]
+    assert scenario["evidence_class"] == "simulation" and scenario["status"] == "experimental"
+    assert scenario["expected_diversity"] == [5 / 8, 15 / 32, 45 / 128]
+    assert scenario["assumptions"] and scenario["limitations"]
+    assert report["observability"]["maximum_level"] == bundle.observability.maximum_level
+    assert "closed_resampling" not in report["derived_metrics"]
+
+
+def test_phase4_step3_supplied_sampled_paths_are_copied_without_rng_execution(tmp_path, repo_root, monkeypatch):
+    import numpy
+    from recursive_integrity_toolkit.metrics.resampling import simulate_closed_resampling
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    distribution = phase4_step3_distribution(bundle).unweighted
+    simulation = simulate_closed_resampling({"a": 1 / 2, "b": 1 / 4, "c": 1 / 4},
+        resample_size=4, steps=2, seed=17, replicates=2,
+        scope=distribution.scope, representation=distribution.representation)
+    def phase4_step3_forbid(*args, **kwargs):
+        raise AssertionError("Assembly attempted RNG execution")
+    monkeypatch.setattr(numpy.random, "default_rng", phase4_step3_forbid)
+    monkeypatch.setattr(numpy.random, "Generator", phase4_step3_forbid)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), resampling=simulation), repo_root)
+    scenario = report["simulations"]["closed_resampling"]
+    assert len(scenario["sampled_paths"]) == 2
+    for actual, original in zip(scenario["sampled_paths"], simulation.sampled_paths):
+        assert actual["replicate_index"] == original.replicate_index
+        assert [row["support_size"] for row in actual["generations"]] == [row.support_size for row in original.generations]
+        assert [row["gini_simpson_diversity"] for row in actual["generations"]] == [row.gini_simpson_diversity for row in original.generations]
+
+
+def test_phase4_step3_extinction_probability_preserves_hand_worked_conditional_value(tmp_path, repo_root):
+    import pytest
+    from recursive_integrity_toolkit.metrics.tail import one_step_extinction_probability
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    distribution = phase4_step3_distribution(bundle).unweighted
+    extinction = one_step_extinction_probability(state_id="b", state_frequency=1 / 4,
+        resample_size=4, scope=distribution.scope, representation=distribution.representation)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), extinction=(extinction,)), repo_root)
+    scenario = report["simulations"]["tail_extinction"]
+    value = scenario["by_state"]["b"]["one_step_extinction_probability"]
+    assert value == pytest.approx(81 / 256, abs=1e-12)
+    assert scenario["evidence_class"] == "simulation" and scenario["resample_size"] == 4
+    assert scenario["limitations"]
+
+
+def test_phase4_step3_rejects_forged_result_types_and_duplicate_version_slots(tmp_path):
+    import pytest
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    distribution = phase4_step3_distribution(bundle)
+    for bad in ({"unweighted": distribution.unweighted}, object(), 0, True):
+        with pytest.raises((TypeError, ValueError)):
+            assemble_report(bundle, run=phase4_step3_run(), distributions=(bad,))
+    with pytest.raises((TypeError, ValueError)):
+        assemble_report(bundle, run=phase4_step3_run(), distributions=(distribution, distribution))
+    with pytest.raises((TypeError, ValueError)):
+        assemble_report(bundle, run=phase4_step3_run(), distributions=[distribution])
+
+
+def test_phase4_step3_rejects_mismatched_formula_owner_class_unit_and_denominator(tmp_path):
+    from dataclasses import replace
+    import pytest
+    from recursive_integrity_toolkit.models import CalculationEvidenceClass
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    distribution = phase4_step3_distribution(bundle).unweighted
+    scalar = distribution.gini_simpson_diversity
+    for changes in ({"formula_id": "F-004"}, {"owner_id": "T4"},
+                    {"evidence_class": CalculationEvidenceClass.OBSERVED_FACT},
+                    {"unit": "records"}):
+        with pytest.raises((TypeError, ValueError)):
+            forged = replace(distribution, gini_simpson_diversity=replace(scalar,
+                             metadata=replace(scalar.metadata, **changes)))
+            assemble_report(bundle, run=phase4_step3_run(), distributions=(forged,))
+
+
+def test_phase4_step3_rejects_boolean_nonfinite_and_out_of_range_metric_values(tmp_path):
+    from dataclasses import replace
+    import pytest
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    distribution = phase4_step3_distribution(bundle).unweighted
+    for value in (True, False, float("nan"), float("inf"), -0.1, 1.1):
+        with pytest.raises((TypeError, ValueError)):
+            scalar = replace(distribution.gini_simpson_diversity)
+            object.__setattr__(scalar, "value", value)
+            assemble_report(bundle, run=phase4_step3_run(), distributions=(replace(distribution, gini_simpson_diversity=scalar),))
+
+
+def test_phase4_step3_rejects_result_scope_from_another_bundle(tmp_path):
+    import pytest
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path / "source")
+    foreign = phase4_step3_bundle(tmp_path / "foreign", versions=("v9",) * 4)
+    distribution = phase4_step3_distribution(foreign, "v9")
+    with pytest.raises((TypeError, ValueError)):
+        assemble_report(bundle, run=phase4_step3_run(), distributions=(distribution,))
+
+
+def test_phase4_step3_all_calculation_entrypoints_are_blocked_during_assembly(tmp_path, repo_root, monkeypatch):
+    import inspect
+    from recursive_integrity_toolkit.metrics import bounds, diversity, duplicates, provenance, resampling, tail
+    from recursive_integrity_toolkit.models import CalculationScope, ContentMode, TailSelectionOptions
+    from recursive_integrity_toolkit.reports import assembly
+
+    rows = [{"dataset_version": "v1", "record_id": "r" + str(i), "source_type": "human",
+             "provenance_confidence": "confirmed", "external_grounding": "yes"} for i in range(4)]
+    bundle = phase4_step3_bundle(tmp_path, provenance_rows=rows)
+    distribution = phase4_step3_distribution(bundle)
+    scope = CalculationScope(("v1",), bundle.provenance_join.scope_record_keys, (),
+                             bundle.provenance_join.provenance_row_coverage.denominator_name, "provenance-v1")
+    composition = provenance.summarize_provenance(bundle.provenance_join, scope=scope)
+    closure = bounds.direct_closure_exposure(composition)
+    duplicate = duplicates.detect_exact_duplicates(bundle.records, dataset_versions=("v1",), scope_id="duplicates-v1",
+        representation_name="record_form", representation_version="exact-v1",
+        normalization_profile="exact_utf8_v1", content_mode=ContentMode.INLINE)
+    tail_result = tail.select_tail(distribution.unweighted, options=TailSelectionOptions("singleton_count"))
+    scenario = resampling.expected_diversity_after_steps({"a": 1 / 2, "b": 1 / 4, "c": 1 / 4},
+        resample_size=4, steps=2, scope=distribution.unweighted.scope, representation=distribution.unweighted.representation)
+    extinction = tail.one_step_extinction_probability(1 / 4, resample_size=4, state_id="b",
+        scope=distribution.unweighted.scope, representation=distribution.unweighted.representation)
+    def phase4_step3_forbid(*args, **kwargs):
+        raise AssertionError("Assembly attempted a calculation")
+    for module in (bounds, diversity, duplicates, provenance, resampling, tail):
+        for name, value in tuple(vars(module).items()):
+            if inspect.isfunction(value) and value.__module__ == module.__name__:
+                monkeypatch.setattr(module, name, phase4_step3_forbid)
+    for name, value in tuple(vars(assembly).items()):
+        if inspect.isfunction(value) and value.__module__.startswith("recursive_integrity_toolkit.metrics"):
+            monkeypatch.setattr(assembly, name, phase4_step3_forbid)
+    report = phase4_step3_schema(assembly.assemble_report(bundle, run=phase4_step3_run(), distributions=(distribution,),
+        provenance=composition, closure=closure, duplicates=duplicate, tail=tail_result,
+        expected_diversity=scenario, extinction=(extinction,)), repo_root)
+    assert report["derived_metrics"]["diversity"]["by_version"]["v1"]["gini_simpson_diversity"]["value"] == 5 / 8
+    assert report["derived_metrics"]["closure_exposure"]["direct"]["lower_bound"]["value"] == 0
+    assert report["observed_facts"]["content"]["duplicate_record_count"]["value"] == 3
+    assert report["simulations"]["closed_resampling"]["expected_diversity"] == [5 / 8, 15 / 32, 45 / 128]
+
+
+def test_phase4_step3_assembly_performs_no_file_or_network_access(tmp_path, repo_root, monkeypatch):
+    import builtins
+    import io
+    import socket
+    import urllib.request
+    from pathlib import Path
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    distribution = phase4_step3_distribution(bundle)
+    def phase4_step3_forbid(*args, **kwargs):
+        raise AssertionError("Assembly attempted file or network access")
+    with monkeypatch.context() as blocked:
+        for owner, name in ((builtins, "open"), (io, "open"), (Path, "open"),
+                            (socket, "socket"), (socket, "create_connection"),
+                            (socket, "getaddrinfo"), (urllib.request, "urlopen")):
+            blocked.setattr(owner, name, phase4_step3_forbid)
+        report = assemble_report(bundle, run=phase4_step3_run(), distributions=(distribution,))
+    payload = phase4_step3_schema(report, repo_root)
+    assert payload["run"]["network_call_count"] == 0
+
+
+def test_phase4_step3_assembly_does_not_mutate_inputs_or_return_mutable_state(tmp_path, repo_root):
+    from copy import deepcopy
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    distribution = phase4_step3_distribution(bundle)
+    run = phase4_step3_run()
+    before = deepcopy(run)
+    report = assemble_report(bundle, run=run, distributions=(distribution,))
+    exported = phase4_step3_schema(report, repo_root)
+    exported["derived_metrics"]["support"]["by_version"]["v1"]["support_size"]["value"] = 99
+    run["run_id"] = "caller-mutated"
+    again = report.to_dict()
+    assert again["run"]["run_id"] == before["run_id"]
+    assert again["derived_metrics"]["support"]["by_version"]["v1"]["support_size"]["value"] == 3
+    assert distribution.unweighted.support_size.value == 3
+
+
+def test_phase4_step3_rejects_boolean_coverage_and_mismatched_distribution_denominator(tmp_path):
+    from dataclasses import replace
+    import pytest
+    from recursive_integrity_toolkit.models import ValidationCoverage
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    result = phase4_step3_distribution(bundle)
+    forged = (replace(result, coverage=ValidationCoverage(True, 4, "selected_valid_records")),
+              replace(result, unweighted=replace(result.unweighted, frequency_denominator=100)))
+    for value in forged:
+        with pytest.raises((TypeError, ValueError)):
+            assemble_report(bundle, run=phase4_step3_run(), distributions=(value,))
+
+
+def test_phase4_step3_rejects_mismatched_representation_and_weighting_metadata(tmp_path):
+    from dataclasses import replace
+    import pytest
+    from recursive_integrity_toolkit.models import WeightingOptions
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    result = phase4_step3_distribution(bundle).unweighted
+    scalar = result.gini_simpson_diversity
+    changes = ({"representation": replace(result.representation, representation_version="unrelated-taxonomy")},
+               {"weighting": WeightingOptions("weighted", "weight")},
+               {"scope": replace(result.scope, scope_id="unrelated-scope")})
+    for change in changes:
+        forged = replace(result, gini_simpson_diversity=replace(scalar, metadata=replace(scalar.metadata, **change)))
+        with pytest.raises((TypeError, ValueError)):
+            assemble_report(bundle, run=phase4_step3_run(), distributions=(forged,))
+
+
+def test_phase4_step3_untrusted_mapping_callbacks_are_never_executed(tmp_path):
+    from collections.abc import Mapping
+    import pytest
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    class phase4_step3_UntrustedMapping(Mapping):
+        def __getitem__(self, key):
+            raise AssertionError("Untrusted lookup executed")
+        def __iter__(self):
+            raise AssertionError("Untrusted iterator executed")
+        def __len__(self):
+            raise AssertionError("Untrusted length executed")
+    bundle = phase4_step3_bundle(tmp_path)
+    with pytest.raises((TypeError, ValueError)):
+        assemble_report(bundle, run=phase4_step3_UntrustedMapping())
+
+
+def test_phase4_step3_conflicting_closed_scenario_slots_are_rejected(tmp_path):
+    import pytest
+    from recursive_integrity_toolkit.metrics.resampling import expected_diversity_after_steps, simulate_closed_resampling
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    distribution = phase4_step3_distribution(bundle).unweighted
+    context = {"scope": distribution.scope, "representation": distribution.representation}
+    expected = expected_diversity_after_steps({"a": 1.0}, resample_size=4, steps=1, **context)
+    sampled = simulate_closed_resampling({"a": 1.0}, resample_size=4, steps=1, seed=2, replicates=1, **context)
+    with pytest.raises((TypeError, ValueError)):
+        assemble_report(bundle, run=phase4_step3_run(), expected_diversity=expected, resampling=sampled)
+
+
+def test_phase4_step3_standalone_probability_evidence_does_not_invent_empirical_records(tmp_path, repo_root):
+    from recursive_integrity_toolkit.metrics.diversity import distribution_from_probabilities
+    from recursive_integrity_toolkit.models import CalculationScope, RecordKey, RepresentationDescriptor
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, ())
+    scope = CalculationScope(("scenario-v1",), (RecordKey("scenario-v1", "declared-basis"),), (),
+                             "explicit_scenario_basis", "supplied-vector")
+    descriptor = RepresentationDescriptor("topic", "topic_field", "taxonomy-v1", "literal_field_value", field_name="topic")
+    supplied = distribution_from_probabilities({"a": 1 / 2, "b": 1 / 2}, scope=scope, representation=descriptor)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), distributions=(supplied,)), repo_root)
+    assert report["inputs"]["scope"]["record_count"] == 0
+    assert report["observability"]["maximum_level"] == 0
+    assert not report["observed_facts"].get("state_counts", {}).get("by_version")
+    probabilities = report["observed_facts"]["supplied_state_probabilities"]["by_version"]["scenario-v1"]
+    assert probabilities["value"] == [{"state_id": "a", "probability": 1 / 2},
+                                       {"state_id": "b", "probability": 1 / 2}]
+    assert report["derived_metrics"]["diversity"]["by_version"]["scenario-v1"]["gini_simpson_diversity"]["value"] == 1 / 2
+
+
+def test_phase4_step3_standalone_simulation_cannot_promote_empty_input_observability(tmp_path, repo_root):
+    from recursive_integrity_toolkit.metrics.resampling import expected_diversity_after_steps
+    from recursive_integrity_toolkit.models import CalculationScope, RecordKey, RepresentationDescriptor
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, ())
+    scope = CalculationScope(("scenario-v1",), (RecordKey("scenario-v1", "declared-basis"),), (),
+                             "explicit_scenario_basis", "standalone-scenario")
+    representation = RepresentationDescriptor("topic", "topic_field", "taxonomy-v1", "literal_field_value", field_name="topic")
+    simulation = expected_diversity_after_steps({"a": 1 / 2, "b": 1 / 2}, resample_size=2,
+                                                steps=1, scope=scope, representation=representation)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), expected_diversity=simulation), repo_root)
+    assert report["simulations"]["closed_resampling"]["expected_diversity"] == [1 / 2, 1 / 4]
+    assert report["observability"]["maximum_level"] == 0
+    capability = report["capabilities"]["intervention_simulation"]
+    assert capability["status"] == "unavailable" and capability["execution_status"] == "completed"
+    assert report["inputs"]["scope"]["dataset_versions"] == []
+
+
+def test_phase4_step3_exact_duplicate_adapter_preserves_existing_record_form_counts(tmp_path, repo_root):
+    from recursive_integrity_toolkit.metrics.duplicates import detect_exact_duplicates
+    from recursive_integrity_toolkit.models import ContentMode
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    duplicates = detect_exact_duplicates(bundle.records, dataset_versions=("v1",), scope_id="duplicates-v1",
+        representation_name="record_form", representation_version="exact-v1",
+        normalization_profile="exact_utf8_v1", content_mode=ContentMode.INLINE)
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), duplicates=duplicates), repo_root)
+    facts = report["observed_facts"]["content"]
+    assert facts["duplicate_record_count"]["value"] == 3
+    assert facts["duplicate_group_count"]["value"] == 1
+    groups = facts["exact_duplicate_groups"]["value"]
+    assert len(groups) == 1 and groups[0]["record_count"] == 4
+    assert groups[0]["record_keys"] == [{"dataset_version": "v1", "record_id": "r" + str(i)} for i in range(4)]
+    assert facts["exact_duplicate_groups"]["evidence_class"] == "observed_fact"
+
+
+def test_phase4_step3_forged_duplicate_count_cannot_contradict_supplied_groups(tmp_path):
+    from dataclasses import replace
+    import pytest
+    from recursive_integrity_toolkit.metrics.duplicates import detect_exact_duplicates
+    from recursive_integrity_toolkit.models import ContentMode
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    duplicates = detect_exact_duplicates(bundle.records, dataset_versions=("v1",), scope_id="duplicates-v1",
+        representation_name="record_form", representation_version="exact-v1",
+        normalization_profile="exact_utf8_v1", content_mode=ContentMode.INLINE)
+    forged = replace(duplicates, duplicate_record_count=replace(duplicates.duplicate_record_count, value=1))
+    with pytest.raises((TypeError, ValueError)):
+        assemble_report(bundle, run=phase4_step3_run(), duplicates=forged)
+
+
+def phase4_step3_mapped_pair(tmp_path, direction):
+    from recursive_integrity_toolkit.metrics.diversity import compare_support, distribution_from_counts
+    from recursive_integrity_toolkit.models import CalculationScope, ExplicitPairContext, RepresentationDescriptor
+    from recursive_integrity_toolkit.representations.compatibility import StateMappingDeclaration
+
+    fine = RepresentationDescriptor("topic", "topic_field", "fine-v1", "literal_field_value", field_name="topic")
+    coarse = RepresentationDescriptor("topic", "topic_field", "coarse-v1", "literal_coarse_labels", field_name="topic")
+    fine_labels, coarse_labels = ("red", "red", "green", "pear"), ("apple", "pear", "pear", "pear")
+    labels = fine_labels + coarse_labels if direction == "earlier_to_later" else coarse_labels + fine_labels
+    bundle = phase4_step3_bundle(tmp_path, labels, versions=("v1",) * 4 + ("v2",) * 4)
+    first = CalculationScope(("v1",), tuple(row.record_key for row in bundle.records[:4]), (), "included_representation_records", "map-v1")
+    second = CalculationScope(("v2",), tuple(row.record_key for row in bundle.records[4:]), (), "included_representation_records", "map-v2")
+    if direction == "earlier_to_later":
+        a = distribution_from_counts({"red": 2, "green": 1, "pear": 1}, scope=first, representation=fine)
+        b = distribution_from_counts({"apple": 1, "pear": 3}, scope=second, representation=coarse)
+        earlier_meaning, later_meaning = "fine-meaning", "coarse-meaning"
+    else:
+        a = distribution_from_counts({"apple": 1, "pear": 3}, scope=first, representation=coarse)
+        b = distribution_from_counts({"red": 2, "green": 1, "pear": 1}, scope=second, representation=fine)
+        earlier_meaning, later_meaning = "coarse-meaning", "fine-meaning"
+    mapping = StateMappingDeclaration(direction, fine, coarse, "fine-meaning", "coarse-meaning",
+                                      {"red": "apple", "green": "apple", "pear": "pear"})
+    result = compare_support(a, b, context=ExplicitPairContext(first, second, a.representation,
+        b.representation, bundle.version_order), earlier_state_semantics=earlier_meaning,
+        later_state_semantics=later_meaning, state_mapping=mapping)
+    return bundle, result
+
+
+def test_phase4_step3_both_directed_maps_preserve_original_and_harmonized_support(tmp_path, repo_root):
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    for direction in ("earlier_to_later", "later_to_earlier"):
+        bundle, comparison = phase4_step3_mapped_pair(tmp_path / direction, direction)
+        report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), comparison=comparison), repo_root)
+        support = report["derived_metrics"]["support"]
+        assert support["support_delta"]["value"] == 0
+        assert support["support_retention_ratio"]["value"] == 1
+        details = support["comparison_details"]["value"]
+        assert details["compatibility_method"] == "explicit_directed_state_mapping"
+        assert details["state_mapping"] == [{"source_state": "green", "target_state": "apple"},
+                                            {"source_state": "pear", "target_state": "pear"},
+                                            {"source_state": "red", "target_state": "apple"}]
+        assert details["harmonized_earlier_support"] == details["harmonized_later_support"] == ["apple", "pear"]
+        assert len(details["original_earlier_support"]) == (3 if direction == "earlier_to_later" else 2)
+        assert len(details["original_later_support"]) == (2 if direction == "earlier_to_later" else 3)
+        assert report["proxy_signals"]["support_contraction"]["level"] == "not_present"
+
+
+def test_phase4_step3_forged_mapping_effect_and_pair_scalar_status_are_rejected(tmp_path):
+    from dataclasses import replace
+    import pytest
+    from recursive_integrity_toolkit.models import CalculationReason, CalculationStatus
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle, comparison = phase4_step3_mapped_pair(tmp_path, "earlier_to_later")
+    bad_delta = replace(comparison.gini_simpson_diversity_delta, status=CalculationStatus.UNAVAILABLE,
+                        value=None, reason_codes=(CalculationReason.EMPTY_SCOPE,))
+    forged = (replace(comparison, mapping_effect=(("earlier", 99, 2), ("later", 2, 2))),
+              replace(comparison, gini_simpson_diversity_delta=bad_delta))
+    for value in forged:
+        with pytest.raises((TypeError, ValueError)):
+            assemble_report(bundle, run=phase4_step3_run(), comparison=value)
+
+
+def test_phase4_step3_nomap_pair_rejects_forged_common_semantic_claim(tmp_path):
+    from dataclasses import replace
+    import pytest
+    from recursive_integrity_toolkit.metrics.diversity import compare_support
+    from recursive_integrity_toolkit.models import ExplicitPairContext
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, ("a", "b", "a", "b"), versions=("v1", "v1", "v2", "v2"))
+    a, b = phase4_step3_distribution(bundle).unweighted, phase4_step3_distribution(bundle, "v2").unweighted
+    comparison = compare_support(a, b, context=ExplicitPairContext(a.scope, b.scope,
+        a.representation, b.representation, bundle.version_order),
+        earlier_state_semantics="same meaning", later_state_semantics="same meaning")
+    forged = replace(comparison, compatibility=replace(comparison.compatibility, later_state_semantics="another meaning"))
+    with pytest.raises((TypeError, ValueError)):
+        assemble_report(bundle, run=phase4_step3_run(), comparison=forged)
+
+
+def test_phase4_step3_inventory_only_artifacts_do_not_claim_parse_or_validation(tmp_path, repo_root):
+    from dataclasses import replace
+    from recursive_integrity_toolkit.models import FileFormat, FileInventoryEntry, FileRole
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path)
+    inventory = bundle.inventory + (
+        FileInventoryEntry(FileRole.EMBEDDING_DATA, tmp_path / "declared.npy", FileFormat.NPY, 0, "0" * 64),
+        FileInventoryEntry(FileRole.EXTERNAL_REFERENCE, tmp_path / "declared.jsonl", FileFormat.JSONL, 0, "1" * 64),
+    )
+    report = phase4_step3_schema(assemble_report(replace(bundle, inventory=inventory), run=phase4_step3_run()), repo_root)
+    artifacts = {entry["role"]: entry for entry in report["inputs"]["artifacts"]}
+    for role in ("embedding_data", "external_reference"):
+        assert artifacts[role]["parse_status"] == "not_requested"
+        assert artifacts[role]["validation_status"] == "not_requested"
+        assert artifacts[role]["row_count"] is None
+    assert artifacts["records_primary"]["parse_status"] == "completed"
+
+
+def test_phase4_step3_standalone_probability_pair_uses_its_own_explicit_order(tmp_path, repo_root):
+    from recursive_integrity_toolkit.io.validation import resolve_version_order
+    from recursive_integrity_toolkit.metrics.diversity import compare_support, distribution_from_probabilities
+    from recursive_integrity_toolkit.models import CalculationScope, ExplicitPairContext, RecordKey, RepresentationDescriptor
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, ())
+    representation = RepresentationDescriptor("topic", "topic_field", "taxonomy-v1", "literal_field_value", field_name="topic")
+    first = CalculationScope(("p1",), (RecordKey("p1", "declared-basis"),), (), "explicit_scenario_basis", "p1")
+    second = CalculationScope(("p2",), (RecordKey("p2", "declared-basis"),), (), "explicit_scenario_basis", "p2")
+    a = distribution_from_probabilities({"a": 1 / 2, "b": 1 / 2}, scope=first, representation=representation)
+    b = distribution_from_probabilities({"a": 1.0}, scope=second, representation=representation)
+    order = resolve_version_order(("p1", "p2"), invocation_order=("p1", "p2"))
+    comparison = compare_support(a, b, context=ExplicitPairContext(first, second, representation, representation, order),
+                                 earlier_state_semantics="literal shared meaning", later_state_semantics="literal shared meaning")
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), comparison=comparison), repo_root)
+    assert report["derived_metrics"]["support"]["support_delta"]["value"] == -1
+    assert report["derived_metrics"]["support"]["support_retention_ratio"]["value"] == 1 / 2
+    assert report["derived_metrics"]["diversity"]["gini_simpson_diversity_delta"]["value"] == -1 / 2
+    assert report["observability"]["maximum_level"] == 0
+    assert report["capabilities"]["dataset_longitudinal"]["status"] == "unavailable"
+    assert report["inputs"]["scope"]["record_count"] == 0
+
+
+def test_phase4_step3_pair_rejects_mixed_probability_and_empirical_input_bases(tmp_path):
+    from dataclasses import replace
+    import pytest
+    from recursive_integrity_toolkit.errors import CanonicalValidationError
+    from recursive_integrity_toolkit.metrics.diversity import compare_support, distribution_from_probabilities
+    from recursive_integrity_toolkit.models import ExplicitPairContext
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = phase4_step3_bundle(tmp_path, ("a", "b", "a", "b"), versions=("v1", "v1", "v2", "v2"))
+    a, b = phase4_step3_distribution(bundle).unweighted, phase4_step3_distribution(bundle, "v2").unweighted
+    context = ExplicitPairContext(a.scope, b.scope, a.representation, b.representation, bundle.version_order)
+    options = {"context": context, "earlier_state_semantics": "same meaning", "later_state_semantics": "same meaning"}
+    comparison = compare_support(a, b, **options)
+    supplied = distribution_from_probabilities({"a": 1 / 2, "b": 1 / 2}, scope=a.scope, representation=a.representation)
+    with pytest.raises(CanonicalValidationError):
+        compare_support(supplied, b, **options)
+    forged = replace(comparison, original_earlier=supplied, harmonized_earlier=supplied)
+    with pytest.raises((TypeError, ValueError)):
+        assemble_report(bundle, run=phase4_step3_run(), comparison=forged)

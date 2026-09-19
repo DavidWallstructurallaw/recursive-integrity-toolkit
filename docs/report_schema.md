@@ -102,7 +102,7 @@ Input capability status is `available`, `partial`, `unavailable` or `experimenta
 | `derived_metrics.tail.tail_states` | state_id[] | `set_of_states` | `derived_metric` | `T2` | `T2.declared_tail_rule` | 1 | Null only with unavailable reasons |
 | `derived_metrics.provenance.source_type_shares` | category_ratio_map | `ratio` | `derived_metric` | `PR-005` | `F-007` | 2 | Null only with unavailable reasons |
 | `derived_metrics.provenance.weighted_source_type_shares` | category_ratio_map | `ratio` | `derived_metric` | `PR-005` | `F-007` | 2 | Null only with unavailable reasons |
-| `derived_metrics.provenance.weighted_source_type_masses` | number | `user_declared_weight_mass` | `derived_metric` | `PR-005` | `PR-005.source_weight_mass` | 2 | Null only with unavailable reasons |
+| `derived_metrics.provenance.weighted_source_type_masses` | category_mass_map | `user_declared_weight_mass` | `derived_metric` | `PR-005` | `PR-005.source_weight_mass` | 2 | Null only with unavailable reasons |
 | `derived_metrics.provenance.total_weight` | number | `user_declared_weight_mass` | `derived_metric` | `PR-005` | `PR-005.total_weight` | 2 | Null only with unavailable reasons |
 | `derived_metrics.provenance.missing_provenance_weight` | number | `user_declared_weight_mass` | `derived_metric` | `PR-005` | `PR-005.missing_provenance_weight` | 2 | Null only with unavailable reasons |
 | `derived_metrics.provenance.missing_provenance_share` | number | `ratio` | `derived_metric` | `PR-004` | `PR-004.one_minus_row_coverage` | 2 | Null only with unavailable reasons |
@@ -938,3 +938,146 @@ Privacy identity omission can remove optional scope identity arrays while retain
 Independent hand-authored PR-012/PR-013 fixtures test schema and canonical construction, five-class placement, unknown keys, null/zero distinctions, nonfinite and boolean values, metadata, immutability, capability mirrors and interval consistency. Schema validation uses only the local file. Runtime additionally enforces cross-field rules such as exact null-reason keys, duplicate table identities, scope membership, mirror equality and interval/trajectory consistency. These constraints supplement JSON Schema without claiming that schema-only validation proves every semantic invariant.
 
 This step creates no report adapters, no Markdown/JSON rendering files, no CLI analysis command and no Phase 4 completion claim.
+
+## Phase 4 Step 3: explicit evidence assembly
+
+The preceding Step 2 material describes the frozen schema and constructor contract. Step 3 adds `recursive_integrity_toolkit.reports.assembly` while retaining report schema version `1.0`, the twelve sections, their order and their registered field ownership. The correction of `weighted_source_type_masses` to `category_mass_map` above describes its existing category-to-mass object; it changes no schema or mathematical result.
+
+### Public Python interface
+
+```python
+def assemble_report(
+    bundle: BundleValidationResult,
+    *,
+    run: dict,
+    distributions: tuple[StateDistributionResult | DistributionMetrics, ...] = (),
+    provenance: ProvenanceCompositionResult | None = None,
+    duplicates: ExactDuplicateResult | None = None,
+    tail: TailSelectionResult | None = None,
+    comparison: SupportComparison | None = None,
+    closure: DirectClosureExposureBounds | None = None,
+    expected_diversity: ExpectedDiversityResult | None = None,
+    resampling: ResamplingSimulation | None = None,
+    extinction: tuple[ExtinctionProbabilityResult, ...] = (),
+    family_errors: tuple[FamilyFailure, ...] = (),
+) -> CanonicalReport:
+    ...
+
+@dataclass(frozen=True, slots=True)
+class FamilyFailure:
+    capability: CapabilityKey
+    messages: tuple[ValidationMessage, ...]
+
+class ReportAssemblyError(ReportValidationError):
+    ...
+```
+
+Both `bundle` and `run` are required. `bundle` is the existing typed `BundleValidationResult` handoff, including its inventory, selected provenance join, chronology, observability assessment and diagnostics. `run` supplies every required run field and exact null reasons documented above. Assembly requires `privacy_mode: standard` and `redacted_mode: false`; it creates no identifiers, timestamps, environment readings, configuration hashes or random seeds. A valid empty typed bundle can retain an empty version list and zero record count without inventing a dataset version.
+
+Callers first obtain results through the accepted validation and calculation APIs, then explicitly pass the results they want represented. Collection arguments are immutable tuples. The adapters require their exact supported result classes and retain the registered fields through explicit field selection. A returned `CanonicalReport` supplies the same immutable sections and detached `to_dict()` export described in Step 2. Unsupported types, duplicate public slots and inconsistent handoffs raise a validation error instead of silently dropping or overwriting evidence.
+
+Assembly validates result types, finite values, metadata ownership, accepted method declarations, scope membership, coverage and denominator consistency. These checks do not authenticate the producer or establish the truth of supplied content, provenance, state meanings or calculations. A coherent supplied result remains a declaration-bound handoff. Assembly does not rerun its owner calculation as an independent numerical oracle.
+
+### Accepted adapters and evidence placement
+
+| Argument or retained input | Accepted type | Public evidence |
+| --- | --- | --- |
+| `bundle` | `BundleValidationResult` | Input inventory, hashes already supplied by validation, record counts, independent provenance coverage, original observability, diagnostics and bounded immediate-reference validation observations |
+| `distributions` | `StateDistributionResult` | Unweighted observed state counts, derived support/diversity/frequency values and an explicitly supplied weighted companion |
+| `distributions` | `DistributionMetrics` | A supplied count-backed or explicit-probability distribution, its support/diversity values and exact input basis |
+| `provenance` | `ProvenanceCompositionResult` | Declared source/confidence counts, independent coverage, missing-row counts/shares, direct grounding classes and optional weighted source companions |
+| `duplicates` | `ExactDuplicateResult` | Exact duplicate counts and groups under the supplied normalization and scope |
+| `tail` | `TailSelectionResult` | The declared rule, its parameters, supplied membership, support/share and rarity ranking |
+| `comparison` | `SupportComparison` | Supplied pair support delta, retention, loss/added counts, original support differences and diversity delta with explicit comparison basis |
+| `closure` | `DirectClosureExposureBounds` | Supplied lower bound, upper bound and interval width, with operationalization, coverage and separate confidence disclosure |
+| `expected_diversity` | `ExpectedDiversityResult` | Experimental analytic closed-resampling expectation and supplied scenario metadata |
+| `resampling` | `ResamplingSimulation` | Experimental sampled paths, support trajectories, extinction events and supplied scenario metadata |
+| `extinction` | Tuple of `ExtinctionProbabilityResult` | Explicitly supplied selected-state one-step extinction marginals under one shared scenario basis |
+| `family_errors` | Tuple of `FamilyFailure` | Explicit capability-bound error/fatal diagnostics alongside independently useful evidence |
+
+Empirical frequencies remain derived metrics. Explicit supplied probabilities are observed declarations under `observed_facts.supplied_state_probabilities.by_version`, with an explicit probability basis and no invented record-count denominator. Scenario probabilities remain simulations. Product metadata, capability decisions, warnings, errors and recommendations retain their product ownership without an additional scientific evidence class.
+
+### Scope, coverage and representation
+
+Empirical result scopes must use identities and versions retained in the validated bundle. Included and excluded identities, scope identifiers, denominator meanings and representation descriptors remain attached to their fields. Representation exclusions do not shrink input inventory, provenance denominators or unrelated result families. A missing representation permits input/provenance reporting and an explicit metadata recommendation; assembly does not select a topic field, hash representation or missing-state sentinel.
+
+An explicit-probability distribution, a pair of explicit-probability distributions and a supplied simulation may retain a separate mathematical scope and representation. Their declarations do not raise the bundle's input observability or establish empirical record evidence. A shared top-level representation summary is populated only when supplied empirical result descriptors agree. Multiple descriptors remain visible in their individual envelopes with an input limitation explaining the missing single summary.
+
+The existing classifier's coverage-detail names have the following explicit public mapping. Its underlying numerators, denominators, denominator names and ratios remain unchanged.
+
+| Existing classifier detail | Report `coverage_details` field |
+| --- | --- |
+| `content` | `record_coverage` |
+| `representation` | `representation_coverage` |
+| `row` | `provenance_row_coverage` |
+| `required_fields` | `provenance_required_field_coverage` |
+| `grounding` | `grounding_field_coverage` |
+| Existing lineage capability coverage | `resolved_parent_edge_coverage` |
+
+The provenance capability additionally retains all three independent join coverages. Row presence, required-field validity and known grounding are separate observations. Missing rows remain distinct from an explicit `unknown` category. A zero coverage denominator produces `ratio: null` with an empty-scope reason; corresponding scalar coverage fields are unavailable with `value: null`. A measured zero remains numeric zero. Confidence categories are retained as categories and counts, without conversion into trust probabilities or discounts on grounding.
+
+Weighted results keep their explicit weighting mode, `weight` field, record-weight denominator and `user_declared_weight_mass` units. Weighted state masses and source masses remain derived quantities. They accompany unweighted record counts and never replace them. A weighted distribution companion must share the unweighted scope and representation; unsupported standalone or conflicting weighting declarations are rejected.
+
+### Explicit pair and public-slot rules
+
+`comparison` represents one supplied accepted pair. It preserves distinct earlier/later selected versions, explicit order and order source, original and harmonized representations, literal state-meaning declarations, original positive-support differences, harmonized metric basis and mapping effects. Assembly checks this retained context without inferring chronology from version names, argument order or a cached capability flag.
+
+The existing Python calculation API supports both explicit mapping directions, `earlier_to_later` and `later_to_earlier`. A supplied result retains its direction, source/target representations, state meanings, mapping table and collision groups. Assembly exports those accepted declarations; it does not apply a new map or recompute harmonized distributions. This Python handoff does not expand the narrower future CLI comparison contract in P4-D03.
+
+A probability-pair-only handoff preserves `input_basis: explicit_probability_vector`, pair scopes, comparison declarations, supplied deltas and support sets. It does not automatically export complete original probability tables. To include those independent tables, also pass the original `DistributionMetrics` through `distributions`; their own declared version slots must remain unambiguous. Retaining pair basis therefore does not claim that every original distribution has been serialized.
+
+The schema has one scalar/table slot per version and weighting mode, plus singleton slots for provenance composition, duplicate summary, tail selection, direct bounds and one pair comparison. Duplicate version/weighting results are rejected. Callers must choose one explicit compatible scope for each singleton family or construct separate reports; assembly never pools versions, merges unrelated scopes or silently overwrites one result with another.
+
+### Supplied simulations
+
+`expected_diversity` and `resampling` are mutually exclusive because both occupy `simulations.closed_resampling`. Supplying both fails explicitly. A nonempty `extinction` tuple occupies the separate `simulations.tail_extinction` slot. Its state identities must be unique, and all entries must share scope, representation, sample size and numerical policy. Their selected-state marginals do not assert a complete empirical distribution.
+
+Scenario model/version, assumptions, supplied/effective distributions, normalization disclosure, numerical policy, horizon, sample size, seed, RNG identity, replicate schedule, paths and underflow disclosures remain attached to the applicable result. Analytic expectations, sampled paths and analytic one-step probabilities retain their distinct method labels. Mathematical scopes may differ from the bundle's empirical scope without upgrading its observability assessment.
+
+No scenario runs during assembly. Omitted scenario arguments leave `simulations` empty. A supplied extinction marginal alone does not select a tail or create a tail-fragility signal. External reopening remains rejected by the Phase 4 schema, and external-reference loss remains unregistered. Supplied scenarios cannot establish an empirical intervention effect or a calibrated production-failure forecast.
+
+### Input eligibility, execution and failures
+
+The seven capability input statuses, original reason codes, requirements and input coverage retain the existing classifier assessment. Assembly adds independent execution fields and copies the same matrix into `observability.capabilities`. The canonical constructor retains one immutable shared capability object.
+
+| Capability | Step 3 execution interpretation |
+| --- | --- |
+| `ingestion` | The retained bundle-validation operation is identified explicitly; retained ingestion errors produce partial/failed execution according to surviving input evidence. |
+| `content_diagnostics` | Names supplied distribution, duplicate and tail operations. With no supplied result or family error it is `not_requested`; supplied operations are `completed` unless retained family errors make execution `partial`. An error with no supplied operation is `failed`. |
+| `provenance` | Names supplied provenance-composition/direct-bound operations under the same completed/partial/failed rules. Independent validation coverage remains available even when no calculation is requested. |
+| `lineage` | Always `deferred` in Phase 4, including Level 4 input eligibility. Retained immediate-parent validation errors remain errors without asserting graph execution. |
+| `dataset_longitudinal` | A supplied pair records its limited support/diversity operation with `partial` execution and an explicit deferred-change-families reason. Without a supplied pair it is `not_requested`, or `failed` when an explicitly bound failure exists. |
+| `model_longitudinal` | `deferred`, with the missing implementation/evidence boundary retained. |
+| `intervention_simulation` | Names supplied analytic expectation, sampled path or extinction-marginal operations; no supplied scenario means `not_requested`. Explicitly bound failures remain failed/partial execution. |
+
+Every noncompleted execution status has reasons. Completed/partial execution has a nonempty operation scope. A capability marked partial because other future change families are deferred does not itself make the run partial. Deferred and unrequested work alone does not create a run error.
+
+`FamilyFailure` requires an exact `CapabilityKey` and a nonempty tuple of existing `ValidationMessage` objects whose severity is `error` or `fatal`. A warning-only collection is rejected. This explicit binding resolves errors such as `E_SCHEMA_TYPE` that can occur in several families. Existing bundle/calculation diagnostics use their structured source, field, file role and fixed code mappings; assembly never guesses a family from message wording. Severity, code, safe message and allowed location fields remain visible.
+
+When errors survive, a fatal diagnostic sets `run_status: failed`. Other errors yield `partial` when useful supplied evidence survives and `failed` when no usable evidence remains. Errors carry the same effective run status. Original provenance or parent errors are preserved alongside independent content results. Warnings alone do not change successful run status; upstream strict-mode promotions retain their supplied error severity. Assembly does not calculate CLI exit codes.
+
+Input eligibility and execution can legitimately differ. Completely absent usable provenance leaves input status unavailable, yet assembly can complete an explicitly supplied composition or direct-bounds handoff. The accepted dataset-facing `direct_closure_exposure` returns null bounds when no usable required-provenance row exists. Valid explicit unknown grounding can support a numeric `[0, 1]` interval. The separate explicit count-envelope API can also supply `[0, 1]` without certifying usable dataset provenance. Assembly preserves each result and its reasons; it does not replace unavailable bounds with an interval or promote the input classifier.
+
+### Proxies, unavailable conclusions and next metadata
+
+The current deterministic signals are restricted to these existing bases. Comparisons to zero and complete coverage identify a documented presence condition; they do not add empirical severity thresholds.
+
+| Signal | Rule and basis | Required interpretation |
+| --- | --- | --- |
+| `support_contraction` | A usable supplied explicit-pair support delta is negative. Basis fields cite the delta and supplied support differences/comparison details. | Restricted to the pair's selected scope, representation and declared common state meaning; no production failure or model-performance claim. |
+| `tail_fragility` | A usable supplied tail-support count is positive under the supplied explicit tail-selection rule. | Declared tail membership, with no hidden threshold, importance claim or calibrated production forecast. |
+| `provenance_uncertainty` | A supplied usable direct interval width is positive, or a cited usable row/required-field/grounding coverage is below one. | Cites actual fields with matching scopes and preserves their distinct denominator meanings; completeness does not establish truth or source independence. |
+
+Zero/positive support delta and an empty selected tail can produce `not_present` under their own usable basis. Missing, unavailable or zero-denominator evidence is not converted into zero or a negative finding. When a signal has no usable basis it is omitted. Each emitted proxy retains basis paths, deterministic trigger text, scope, representation where applicable, coverage and limitations. No `shared_ancestry_dependence` proxy is generated in this phase.
+
+The required unavailable-conclusion safeguards include model-performance decline, causal ancestor effect, universal integrity and universal collapse prediction. Applicable additional entries explain production failure, complete-pipeline closure, deferred lineage analysis/closure/external ancestry and empirical intervention effects. Each uses its registered owner and method, unavailable evidence class/status, specific reasons, blocking evidence, required next metadata, related capability and theory/product limit. Missing input, invalid evidence, incompatible declarations, deferred implementation and conclusions outside product scope remain distinguishable. Unavailable does not establish that a conclusion is false.
+
+Lineage validation observations remain bounded by their source method. Retained reference-entry counts preserve the classifier's multiplicity and denominator. The earlier-version ordering certificate is described as its sufficient declared-order certificate; it is not reported as general graph-cycle traversal. Root counts, HHI, effective roots, lineage depth, graph traversal, lineage closure and ancestry proxies remain deferred with explicit disclosures.
+
+Recommendations are deterministic requests for evidence: missing matching provenance rows, usable required fields, unresolved external grounding, an explicitly missing representation, missing chronology, unresolved composite parent references and versioned model outcomes. Their priorities follow uncertainty reduction, the next available evidence requirement, error resolution and optional enrichment. Recommendations refer to the missing fields or retained classifier reasons; the absence of a single top-level representation summary alone does not assert that representation was never declared.
+
+Recommendations do not enforce policy, repair records or promise that metadata alone unlocks deferred implementations or universal claims. Source category, human review, confidence and external grounding remain independent declarations. A narrower direct interval does not certify complete pipeline closure, factual truth or an independent source.
+
+### Step 3 boundaries
+
+This interface performs in-memory assembly and validation of supplied evidence. It does not ingest files, resolve content references, assign states, classify new inputs, calculate a metric, traverse a graph, run a simulation, redact identities, render JSON/Markdown/HTML, invoke a CLI analysis, perform network calls or publish artifacts. Privacy transformation, rendering and CLI orchestration belong to later approved steps. The historical Step 2 model/schema and the existing mathematical owners remain unchanged.

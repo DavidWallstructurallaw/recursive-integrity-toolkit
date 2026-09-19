@@ -90,3 +90,118 @@ def test_phase2_step9_content_limits_and_invalid_utf8(tmp_path):
             normalization_options=NormalizationOptions(content_mode=ContentMode.LOCAL_REF), configuration={'resource_limits':limits})
         assert result.has_errors
         assert any(m.code == expected.value and m.row_number == 1 for m in result.validation_messages)
+
+
+# Phase 4 Step 3: independently authored report assembly expectations.
+def phase4_step3_run():
+    return {
+        "run_id": "step3-independent-case", "toolkit_version": "0.1.0.dev2",
+        "report_schema_version": "1.0", "started_at": None, "completed_at": None,
+        "duration_seconds": None, "python_version": None, "platform": None,
+        "command": None, "config_hash": None, "random_seed": None,
+        "strict_mode": False, "redacted_mode": False, "network_call_count": 0,
+        "deterministic": True, "privacy_mode": "standard", "run_status": "complete",
+        "null_reasons": {
+            "started_at": "Pure assembly does not start a clock.",
+            "completed_at": "Pure assembly does not start a clock.",
+            "duration_seconds": "Pure assembly does not measure execution.",
+            "python_version": "No execution environment is asserted.",
+            "platform": "No execution environment is asserted.",
+            "command": "Direct Python API, no command invoked.",
+            "config_hash": "No resolved configuration hash was supplied.",
+            "random_seed": "No run-wide random generator was requested.",
+        },
+    }
+
+
+def phase4_step3_schema(report, repo_root):
+    import json
+    from jsonschema import Draft202012Validator
+
+    payload = report.to_dict()
+    schema = json.loads((repo_root / "schemas/report.schema.json").read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(payload)
+    assert tuple(payload) == (
+        "run", "inputs", "observability", "capabilities", "observed_facts",
+        "derived_metrics", "proxy_signals", "simulations", "unavailable_conclusions",
+        "recommended_next_metadata", "warnings", "errors",
+    )
+    assert payload["observability"]["capabilities"] == payload["capabilities"]
+    return payload
+
+
+def test_phase4_step3_level_four_keeps_lineage_input_available_and_execution_deferred(tmp_path, repo_root):
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = validate_bundle(_bundle(tmp_path, ["v1::p"]), configuration=_config())
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run()), repo_root)
+    assert report["observability"]["maximum_level"] == 4
+    lineage = report["capabilities"]["lineage"]
+    assert lineage["status"] == "available" and lineage["execution_status"] == "deferred"
+    assert lineage["execution_reason_codes"]
+    assert report["capabilities"]["dataset_longitudinal"]["status"] == "available"
+    assert report["capabilities"]["dataset_longitudinal"]["execution_status"] == "not_requested"
+    assert report["run"]["run_status"] == "complete"
+    assert report["simulations"] == {}
+
+
+def test_phase4_step3_ordering_validation_never_becomes_graph_cycle_or_ancestry_result(tmp_path, repo_root):
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = validate_bundle(_bundle(tmp_path, ["v1::p"]), configuration=_config())
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run()), repo_root)
+    facts = report["observed_facts"].get("lineage", {})
+    if "cycle_status" in facts:
+        assert facts["cycle_status"]["status"] == "unavailable"
+        assert facts["cycle_status"]["value"] is None
+    for field, value in report["derived_metrics"].get("lineage", {}).items():
+        if field != "resolved_parent_edge_coverage":
+            assert value["status"] == "unavailable" and value["value"] is None
+    for value in report["derived_metrics"].get("closure_exposure", {}).get("lineage", {}).values():
+        assert value["status"] == "unavailable" and value["value"] is None
+    assert "cycle_detected" not in facts and "external_root_count" not in facts
+    conclusions = {item["conclusion"] for item in report["unavailable_conclusions"]}
+    assert {"lineage_analysis", "external_ancestry", "causal_ancestor_effect"} <= conclusions
+
+
+def test_phase4_step3_unresolved_parent_warning_survives_without_observability_downgrade(tmp_path, repo_root):
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    bundle = validate_bundle(_bundle(tmp_path, ["v1::absent"]), configuration=_config())
+    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run()), repo_root)
+    assert report["observability"]["maximum_level"] == 4
+    assert report["capabilities"]["lineage"]["status"] == "unavailable"
+    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert any(item["code"] == WarningCode.PARENT_UNRESOLVED.value for item in report["warnings"])
+    assert not report["errors"] and report["run"]["run_status"] == "complete"
+
+
+def test_phase4_step3_existing_parent_errors_keep_level_four_and_partial_report(tmp_path, repo_root):
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+
+    for index, parents in enumerate((["v2::c"], ["bad::format::x"])):
+        bundle = validate_bundle(_bundle(tmp_path / str(index), parents), configuration=_config())
+        report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run()), repo_root)
+        assert report["observability"]["maximum_level"] == 4
+        assert report["capabilities"]["lineage"]["status"] == "unavailable"
+        assert report["run"]["run_status"] == "partial"
+        assert report["errors"] and report["inputs"]["scope"]["record_count"] == 2
+        codes = {item["code"] for item in report["errors"]}
+        assert codes & {ErrorCode.LINEAGE_CYCLE.value, ErrorCode.PARENT_FORMAT.value}
+        assert "lineage_closure_exposure" in {item["conclusion"] for item in report["unavailable_conclusions"]}
+
+
+def test_phase4_step3_assembly_never_traverses_or_revalidates_lineage(tmp_path, repo_root, monkeypatch):
+    from recursive_integrity_toolkit.io import validation
+    from recursive_integrity_toolkit.reports import assembly
+
+    bundle = validate_bundle(_bundle(tmp_path, ["v1::p"]), configuration=_config())
+    def phase4_step3_forbid(*args, **kwargs):
+        raise AssertionError("Assembly attempted lineage traversal or validation")
+    for name in ("resolve_parent_references", "validate_generation_declarations"):
+        monkeypatch.setattr(validation, name, phase4_step3_forbid)
+        if hasattr(assembly, name):
+            monkeypatch.setattr(assembly, name, phase4_step3_forbid)
+    report = phase4_step3_schema(assembly.assemble_report(bundle, run=phase4_step3_run()), repo_root)
+    assert report["observability"]["maximum_level"] == 4
+    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
