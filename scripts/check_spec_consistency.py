@@ -58,6 +58,20 @@ def phase4_main(step: int = 1) -> int:
     return result
 
 
+def phase4_step2_main(step: int = 2) -> int:
+    """Check the authorized canonical contract and the frozen repository layout."""
+    import runpy
+
+    if type(step) is not int or step != 2:
+        raise ValueError("Only authorized Phase 4 Step 2 specification checking is available")
+    control = runpy.run_path(str(ROOT / "scripts/release_check.py"),
+                            run_name="phase4_step2_specification_control")
+    control["audit_phase4_step2"](step=step)
+    result = main()
+    print("Phase 4 Step 2: canonical report schema and preserved specification structure: PASS")
+    return result
+
+
 def cli_main(argv: list[str] | None = None) -> int:
     """Keep the argument-free historical gate and add explicit Phase 4 dispatch."""
     import argparse
@@ -72,7 +86,9 @@ def cli_main(argv: list[str] | None = None) -> int:
         return main()
     if args.phase == 4 and args.step == 1:
         return phase4_main(step=args.step)
-    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1")
+    if args.phase == 4 and args.step == 2:
+        return phase4_step2_main(step=args.step)
+    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2")
     return 2
 
 

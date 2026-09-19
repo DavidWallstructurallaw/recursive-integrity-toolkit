@@ -241,3 +241,30 @@ Step 2. No public report field, serializer, redaction claim, new primary owner o
 scientific measurement is established by this Step 1 checkpoint. Subsequent
 steps must map every analytical field to its existing calculation basis and
 preserve assumptions and limitations under the approved plan.
+
+
+## Phase 4 Step 2: field and evidence contract
+
+`result.py` activates PR-012, PR-013 and PR-014 for canonical report contracts
+only. PR-015/PR-016 metadata fields record the declared reporting contract without
+implementing privacy transforms or later orchestration. `docs/report_schema.md`
+is the detailed typed public-field registry, preserving the approved paths from
+`THEORY_TO_CODE_TRACEABILITY.md` sections 30 through 37 and registering explicitly
+bounded companions of already accepted Phase 3 results.
+
+Every analytical field has one evidence class, a status, unit/type, method or
+product rule, owner and trace identifiers, scope, representation when applicable,
+coverage/denominator, assumptions and limitations. Metadata retains product
+ownership without becoming a scientific measurement. The provenance coverage
+fields keep their approved `observed_facts.provenance.*` registry locations.
+
+Input capability assessment and actual execution status remain distinct.
+Level 4 input eligibility does not imply that deferred lineage computation ran.
+Zero is a measured value; unavailable values retain explicit nulls and reasons.
+Proxy triggers and scenario model declarations retain their own evidence classes.
+The schema can describe future registered fields without authorizing the current
+phase to calculate them. Unregistered public results are rejected.
+
+No new formula, interpretation of the supplied theory papers, causal claim,
+universal score or functional-failure diagnosis is introduced. Original numerical
+expectations, authority records and all calculation bodies remain fixed.

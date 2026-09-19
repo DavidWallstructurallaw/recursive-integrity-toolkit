@@ -92,3 +92,97 @@ workflow outcomes belong in the external Step 1 execution receipt and evidence
 archive. This record does not claim an unexecuted check passed. Final Step 1
 acceptance is recorded only after its required checks pass on the delivered
 commit. Stop before Phase 4 Step 2.
+
+## Step 2 authorization and canonical contract boundary
+
+On 2026-09-19 UTC the Theory Owner instructed: `批准，开始 **Phase 4 Step 2**`.
+This instruction advances the approved plan to Step 2. The Step 1 statements above
+remain the historical record of their authorization interval. Phase 4 remains
+incomplete; Step 3, a main merge, a tag and software publication are not authorized.
+
+The Step 1 local tested commit is `5aa9cd6d06bfffec9cc280a52277aa9152a8627e`.
+The corresponding GitHub commit is `a7f3c46d6ca05de36bfcb60f496ebb2d5ab4a37c`.
+Both identify source tree `7f8ef492568456bf5d46fb1b7e2631cb9b94e3fd` and tests tree
+`2ce77e331a0fc377387735bb55dffd3be630b59c`. Creating the commit through the
+GitHub connection changed its commit identity without changing any source bytes.
+The remote commit is the independently pinned Step 2 starting point. The original
+Phase 3 anchors and all Step 1 functions, controls and test assertions retain their
+historical semantics.
+
+Step 2 permits modifications only in the common maintenance set and the five
+additional paths named in plan section 6: `result.py`, `report.schema.json`,
+`docs/report_schema.md`, PR-012 tests and PR-013 tests. All 31 paths already exist;
+no additions, deletions, moves or renames are permitted. Only the report-local
+canonical contract module gains runtime behavior and only the report schema may
+change. The other 39 runtime modules, four schemas, six Hero files, mathematical
+oracles, dependency declarations, development version and module set stay exact.
+Report adapters and CLI analysis remain unopened.
+
+### Explicit Step 1 historical bindings proposed before implementation
+
+Five narrowly identified nodes, comprising seven exact source replacements,
+consume the verified Step 1 tree where their original Step 1 assertions require it:
+
+| File | Exact node and source binding |
+|---|---|
+| `tests/unit/test_phase4_contracts.py` | `phase4_control` reads the pinned Step 1 control file. |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_registered_migrations_accept_only_the_approved_inventory` checks Step 1 historical-test bytes after the original sixteen migrations. |
+| `tests/integration/test_phase4_gates.py` | `phase4_mutation_tree` copies the pinned Step 1 tree for the unchanged Step 1 positive and negative gate assertions. |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_final_snapshot_preserves_all_current_runtime_bytes` compares the Step 1 runtime with final Phase 3. |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_active_workflows_preserve_full_matrix_and_use_current_dispatch` checks the pinned Step 1 workflow wiring. |
+
+Names, assertions, parametrization and rejection behavior remain unchanged. The
+new session fixture verifies its commit, source tree, tests tree, regular-file set
+and each Git blob before use and at teardown. Shared current repository fixtures
+and all existing Phase 3 snapshot fixtures remain untouched. Current Step 2 tests
+independently require a passing unmodified current tree before testing mutations,
+check its own exact active control and workflow wiring, and verify the 39 frozen
+runtime modules. Historical mutation tests alone are insufficient evidence that
+the new current tree passes.
+
+The new Step 2 append guard retains exact Step 1 prefixes after those seven
+registered substitutions. It allows explicitly named Step 2 test/helper functions
+and literal pytest parametrization/fixture decorators. It rejects shadowed names,
+module-scope imports and assignments, executable decorator/default expressions,
+and changes to inherited assertions. The Step 1 append and function-header guards
+remain unchanged and callable on the Step 1 snapshot.
+
+New Step 2 maintainer functions preserve all prior maintainer statements. The only
+inherited function-body edits are exact CLI dispatcher branches that select the
+new Step 2 functions. Old Step 1 dispatch and historical Phase 2/3 entry semantics
+remain available. The control file cannot expand its own independently fixed path,
+operation, runtime, schema or approval boundary.
+
+### Step 2 verification and evidence
+
+Acceptance requires the complete active core/real-Parquet regressions, inherited
+node-identity reconciliation, independent valid and invalid schema/model fixtures,
+current positive and negative gates, builds and isolated installation checks, and
+all four remote workflow roles on the delivered commit. The artifact remains an
+intermediate Step 2 candidate. Actual command outputs, failed attempts and fixes,
+remote workflow identities, consolidated review findings and remaining limitations
+are retained in the external Step 2 receipt and evidence archive. This record does
+not certify a check that has not executed.
+
+## Step 1 acceptance evidence before Step 2 execution
+
+On 2026-09-19 UTC all four required workflow roles completed successfully on
+`a7f3c46d6ca05de36bfcb60f496ebb2d5ab4a37c`. Their twelve jobs were individually
+checked and all concluded `success`. The source tree exactly matches the locally
+verified Step 1 tree identified above. This closes the previously pending remote
+Step 1 acceptance gate before applying the Step 2 implementation.
+
+| Workflow role | Run ID | Result |
+|---|---|---|
+| CI matrix and real Parquet | [35409538446](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35409538446) | Success |
+| Hero and mathematical contract | [35409538423](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35409538423) | Success |
+| Security boundary | [35409538376](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35409538376) | Success |
+| Build and candidate evidence | [35409538478](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35409538478) | Success |
+
+The external Step 2 evidence record retains the remote acceptance JSON, job
+results and artifact metadata. Downloading the hosted candidate archive could not
+be completed: materializing the connector's temporary download URL returned an
+HTTP error. This acceptance uses the observed remote job results and exact source
+tree equivalence; it does not claim that hosted archive bytes were downloaded and
+independently verified. The previously verified local Step 1 candidate evidence
+retains its separate identity.

@@ -249,3 +249,34 @@ read-only permissions and historical verification. Step 1 is a development
 governance checkpoint. Canonical report contracts, redaction, renderers, result
 assembly, output writing and an operational audit CLI remain later authorized
 steps; no Phase 4 completion or publication is implied.
+
+
+## Phase 4 Step 2: canonical report contracts
+
+The Theory Owner authorized Step 2 with `批准，开始 **Phase 4 Step 2**`.
+This step opens only `result.py` for report-local immutable structures and
+validation. The other thirty-nine runtime modules retain their accepted bytes,
+including all input, calculation, command, assembly and renderer bodies. The
+forty-module layout and existing dependencies remain fixed.
+
+`CanonicalReport.from_dict(...)` validates the explicit public contract before
+constructing a deeply immutable report. `to_dict()` returns an independent
+mutable export in the twelve-section order. The contract distinguishes the five
+report evidence classes from the inherited calculation enum. Evidence placement,
+finite typed values, required metadata, null reasons, denominator/scope context
+and capability input/execution statuses are checked before rendering can exist.
+The canonical capability matrix and its compatibility mirror must agree.
+
+The strict local report schema and `docs/report_schema.md` register each permitted
+public field. Runtime validation uses the standard library; the schema validator
+remains a test dependency. Semantic cross-field checks supplement JSON Schema,
+including mirror equality and interval consistency. No input ingestion, metric
+calculation, report assembly, privacy transformation or user-facing report output
+is introduced by this step.
+
+Historical Phase 3 and Phase 4 Step 1 functions and test assertions remain
+available on their pinned source snapshots. Dedicated current Step 2 gates check
+the opened result contract and every still-frozen module. Step 2 permissions are
+independent of the editable control file and do not authorize Step 3. Actual
+execution, commit identities and workflow outcomes are recorded in the external
+Step 2 receipt; Phase 4 remains incomplete.

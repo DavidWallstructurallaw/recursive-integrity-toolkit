@@ -294,3 +294,70 @@ def phase3_final_subprocess_env(phase3_final_snapshot):
     env["PYTHONPATH"] = str(phase3_final_snapshot / "src")
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     return env
+
+
+@pytest.fixture(scope="session")
+def phase4_step1_snapshot(repo_root, tmp_path_factory):
+    """Provide verified accepted Phase 4 Step 1 bytes only to listed historical tests.
+
+    The source checkout is never rebound. The private archive has no Git working
+    tree, accepts only pinned regular-file blobs, and is checked again after use.
+    Files remain writable so copies in inherited mutation tests work on Windows;
+    changing this snapshot itself fails the closing byte and file-set check.
+    """
+    import hashlib
+    import io
+    import subprocess
+    import zipfile
+    from pathlib import PurePosixPath
+
+    commit = "a7f3c46d6ca05de36bfcb60f496ebb2d5ab4a37c"
+    tree = "7f8ef492568456bf5d46fb1b7e2631cb9b94e3fd"
+    tests_tree = "2ce77e331a0fc377387735bb55dffd3be630b59c"
+
+    def git(*arguments):
+        return subprocess.check_output(["git", "-C", str(repo_root), *arguments])
+
+    assert git("rev-parse", commit + "^{commit}").decode().strip() == commit
+    assert git("rev-parse", commit + "^{tree}").decode().strip() == tree
+    assert git("rev-parse", commit + ":tests").decode().strip() == tests_tree
+    blobs = {}
+    for entry in git("ls-tree", "-rz", commit).split(b"\0"):
+        if not entry:
+            continue
+        metadata, name = entry.split(b"\t", 1)
+        mode, kind, oid = metadata.split()
+        relative = name.decode("utf-8")
+        parts = PurePosixPath(relative).parts
+        assert mode in (b"100644", b"100755") and kind == b"blob"
+        assert parts and not relative.startswith("/") and ".." not in parts and ".git" not in parts
+        assert relative not in blobs
+        blobs[relative] = oid.decode("ascii")
+
+    def blob_oid(raw):
+        return hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + b"\0" + raw).hexdigest()
+
+    root = tmp_path_factory.mktemp("phase4-step1")
+    raw = git("archive", "--format=zip", commit)
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        members = [member for member in archive.infolist() if not member.is_dir()]
+        assert len(members) == len(blobs)
+        assert {member.filename for member in members} == set(blobs)
+        for member in members:
+            content = archive.read(member)
+            assert blob_oid(content) == blobs[member.filename], member.filename
+            destination = root.joinpath(*PurePosixPath(member.filename).parts)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(content)
+
+    def verify_unchanged():
+        paths = list(root.rglob("*"))
+        assert not any(path.is_symlink() for path in paths), "Historical snapshot gained a symlink"
+        files = {path.relative_to(root).as_posix(): path for path in paths if path.is_file()}
+        assert set(files) == set(blobs), "Historical snapshot file set changed"
+        for name, path in files.items():
+            assert blob_oid(path.read_bytes()) == blobs[name], f"Historical snapshot changed: {name}"
+
+    verify_unchanged()
+    yield root
+    verify_unchanged()
