@@ -27,7 +27,8 @@ def _is_docstring_only(path: Path) -> bool:
     return len(tree.body) == 1 and isinstance(tree.body[0], ast.Expr) and isinstance(tree.body[0].value, ast.Constant) and isinstance(tree.body[0].value.value, str)
 
 
-def test_only_step8_authorized_modules_gain_behavior(package_root) -> None:
+def test_only_step8_authorized_modules_gain_behavior(package_root,phase3_final_package_root) -> None:
+    package_root = phase3_final_package_root
     for path in sorted(package_root.rglob("*.py")):
         relative = path.relative_to(package_root)
         if relative.as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE | PHASE3_EXACT_EXECUTABLE | PHASE3_DISTRIBUTION_EXECUTABLE | PHASE3_PROVENANCE_EXECUTABLE | PHASE3_BOUNDS_EXECUTABLE | PHASE3_TAIL_EXECUTABLE | PHASE3_RESAMPLING_EXECUTABLE | PHASE3_PAIR_EXECUTABLE or (len(relative.parts) == 1 and path.name in STEP1_EXECUTABLE):
@@ -35,7 +36,8 @@ def test_only_step8_authorized_modules_gain_behavior(package_root) -> None:
         assert _is_docstring_only(path), f"Premature executable body: {relative}"
 
 
-def test_protected_phase3_plus_modules_remain_placeholders(package_root) -> None:
+def test_protected_phase3_plus_modules_remain_placeholders(package_root,phase3_final_package_root) -> None:
+    package_root = phase3_final_package_root
     for prefix in PROTECTED_PREFIXES:
         for path in sorted((package_root / prefix).rglob("*.py")):
             if path.relative_to(package_root).as_posix() in STEP2_EXECUTABLE | STEP3_EXECUTABLE | STEP4_EXECUTABLE | STEP8_EXECUTABLE | PHASE3_FIELD_EXECUTABLE | PHASE3_EXACT_EXECUTABLE | PHASE3_DISTRIBUTION_EXECUTABLE | PHASE3_PROVENANCE_EXECUTABLE | PHASE3_BOUNDS_EXECUTABLE | PHASE3_TAIL_EXECUTABLE | PHASE3_RESAMPLING_EXECUTABLE | PHASE3_PAIR_EXECUTABLE:
@@ -64,7 +66,8 @@ def test_no_analytical_function_names_exist(package_root) -> None:
     assert not (names & FORBIDDEN_ANALYTICAL_NAMES)
 
 
-def test_PR003_traceability_script_enforces_step8_scope(repo_root) -> None:
+def test_PR003_traceability_script_enforces_step8_scope(repo_root,phase3_final_snapshot) -> None:
+    repo_root = phase3_final_snapshot
     import subprocess
     import sys
     result = subprocess.run([sys.executable, "scripts/check_traceability.py"],

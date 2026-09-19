@@ -217,3 +217,27 @@ The sampler's independent checks include exact finite multinomial enumeration, n
 | Units, methods, evidence, status, reasons, assumptions, representation, scope and weighting | Definitions 6/19; approved Step 1 contracts; PR-016 supporting / models and result owners | metadata, no additional numerical claim | `test_phase3_contracts.py`, each family above; unavailable scalars carry None, not invented zero |
 
 F-001 through F-010, F-014/F-015 and F-018 cover this approved subset. F-011 through F-013 ancestry-related work and F-016 external-reference loss and F-017 reopening work remain unimplemented. T4/T6, lineage bounds, T5, public report/CLI fields and complete temporal workflows retain their separate phase gates. Twenty frozen cases run without changing their JSON/source-note bytes. The final integration runner also checks evidence labels, scope separation and fail-on-call input-only behavior. No universal integrity, entropy, collapse or causal-failure score is introduced.
+
+## Phase 4 Step 1: preserved mathematical and ownership baseline
+
+The Phase 4 governance baseline is accepted Phase 3 commit
+`e3ffb8c0a88bfe31f669f9662d9b5213da628b3a`. Step 1 preserves the complete
+Phase 3 field index above, owner IDs, evidence classifications, formula
+transcriptions, units, unavailable-value rules and approved numerical tolerances.
+All forty package modules, twenty mathematical oracle cases, canonical Hero
+inputs and sixteen Phase 0 authority documents remain protected by their pinned
+identities. The approved plan adds product and verification decisions without
+adding mathematical fields, formulas or interpretations of the theory papers.
+
+| Step 1 control | Traceability effect | Evidence boundary |
+|---|---|---|
+| Approved plan and P4-D01 through P4-D11 | Record authorized future report/CLI design | Approval does not establish implementation or empirical theory validation |
+| Frozen Phase 3 source and test identities | Preserve accepted analytical definitions and inherited test nodes | Historical assertions run against their explicitly named snapshot |
+| Explicit Phase 4 checker dispatch | Validate current governance before unchanged mathematical AST checks | Step 1 cannot authorize new report behavior or relax old formula guards |
+| Exact migration and path permissions | Bound maintenance to listed source-binding changes and approved files | Protected source/oracle changes and forged scope expansion are rejected |
+
+The public report path registry and canonical result envelopes are scheduled for
+Step 2. No public report field, serializer, redaction claim, new primary owner or
+scientific measurement is established by this Step 1 checkpoint. Subsequent
+steps must map every analytical field to its existing calculation basis and
+preserve assumptions and limitations under the approved plan.

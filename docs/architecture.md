@@ -221,3 +221,31 @@ The ordinary bundle validator never dispatches any of these calls. Metrics may r
 Shared modules retain owner-specific gates. T3 direct bounds do not open lineage bounds; closed sampling does not open T5 reopening; explicit pair operations do not open Phase 6A orchestration. Reports, renderers, embeddings, general lineage, external-reference metrics and reserved logging/result assembly remain protected. No function ownership, source formula, dependency, backend, CLI command or serialized schema changes in Step 11.
 
 Step 11 stage guards pin the original source/runtime digest after undoing exactly the two approved version literals. Historical tests use immutable Step 10 source and preserve all node identities. The two maintenance exceptions are narrow, explicitly approved and checked against exact original bytes. Build/install/archive tools operate as maintainer processes outside user-data flows. Final acceptance is bound to actual CI for the final source commit.
+
+## Phase 4 Step 1: baseline and governance activation
+
+This section records the current governance boundary after the historical Phase 3
+sections. The accepted starting commit is
+`e3ffb8c0a88bfe31f669f9662d9b5213da628b3a`. The approved `PHASE_4_PLAN.md`,
+`PHASE_4_BASELINE.json` and `PHASE_4_DECISIONS.md` control the Phase 4 work.
+Step 1 records approval of the plan decisions and authorizes baseline freezing,
+historical-test binding and active maintainer checks. It opens no runtime module
+or report schema. All forty runtime modules, their version `0.1.0.dev2`, the
+mathematical inputs and the existing report schema retain their accepted bytes.
+
+The three maintainer checkers select Phase 4 explicitly with `--phase 4 --step 1`.
+The traceability and specification checkers first apply the Phase 4 control and
+frozen-source verification, then call their unchanged historical checks. Their
+argument-free entry points and original Phase 3 functions/constants remain
+available. No global Phase 3 active-step constant is repurposed. Historical
+tests that depend on an earlier stage bind only to the independently verified
+final Phase 3 snapshot under the plan's exact migration inventory; the earlier
+Step 10 snapshot keeps its identity and purpose.
+
+The active control rejects unauthorized path changes, altered formula/oracle
+bytes, premature runtime behavior and forged stage permission. Workflow roles
+select the active phase while retaining their platform/dependency matrices,
+read-only permissions and historical verification. Step 1 is a development
+governance checkpoint. Canonical report contracts, redaction, renderers, result
+assembly, output writing and an operational audit CLI remain later authorized
+steps; no Phase 4 completion or publication is implied.

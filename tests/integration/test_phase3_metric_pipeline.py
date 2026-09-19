@@ -221,7 +221,8 @@ def test_phase3_hero_source_and_oracle_bytes_are_not_rewritten(repo_root,phase3_
 
 
 @pytest.mark.parametrize("module",["lineage/graph.py","lineage/cycles.py","lineage/ancestry.py","reports/assembly.py","reports/json_report.py","reports/markdown_report.py","reports/html_report.py","result.py"])
-def test_phase3_later_implementations_remain_empty(package_root,module):
+def test_phase3_later_implementations_remain_empty(package_root,module,phase3_final_package_root):
+    package_root = phase3_final_package_root
     tree = ast.parse((package_root/module).read_bytes())
     assert len(tree.body) == 1 and isinstance(tree.body[0],ast.Expr) and isinstance(tree.body[0].value,ast.Constant)
     assert isinstance(tree.body[0].value.value,str)
@@ -366,7 +367,8 @@ def test_phase3_step11_control_and_new_files_are_fixed(repo_root):
     "src/recursive_integrity_toolkit/metrics/resampling.py",
     "pyproject.toml","tests/golden/phase3_math_cases.json",
 ])
-def test_phase3_step11_rejects_changes_beyond_version_literals(repo_root,tmp_path,path):
+def test_phase3_step11_rejects_changes_beyond_version_literals(repo_root,tmp_path,path,phase3_final_snapshot):
+    repo_root = phase3_final_snapshot
     import shutil
     gate = runpy.run_path(str(repo_root/"scripts/release_check.py"))
     shutil.copytree(repo_root/"src/recursive_integrity_toolkit",tmp_path/"src/recursive_integrity_toolkit",ignore=shutil.ignore_patterns("__pycache__"))
@@ -385,7 +387,8 @@ def test_phase3_step11_rejects_changes_beyond_version_literals(repo_root,tmp_pat
             gate["verify_step11_snapshot"](tmp_path)
 
 
-def test_phase3_step11_test_exceptions_are_exact(repo_root,phase3_step10_snapshot):
+def test_phase3_step11_test_exceptions_are_exact(repo_root,phase3_step10_snapshot,phase3_final_snapshot):
+    repo_root = phase3_final_snapshot
     gate = runpy.run_path(str(repo_root/"scripts/release_check.py"))
     unit = "tests/unit/test_phase3_contracts.py"
     pipeline = "tests/integration/test_phase3_metric_pipeline.py"

@@ -44,5 +44,37 @@ def main() -> int:
     return 0
 
 
+def phase4_main(step: int = 1) -> int:
+    """Validate Step 1 control and preserve the inherited structure checks."""
+    import runpy
+
+    if type(step) is not int or step != 1:
+        raise ValueError("Only authorized Phase 4 Step 1 specification checking is available")
+    control = runpy.run_path(str(ROOT / "scripts/release_check.py"),
+                            run_name="phase4_specification_control")
+    control["audit_phase4"](step=step)
+    result = main()
+    print("Phase 4 Step 1: approved governance and frozen specification structure: PASS")
+    return result
+
+
+def cli_main(argv: list[str] | None = None) -> int:
+    """Keep the argument-free historical gate and add explicit Phase 4 dispatch."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--phase", type=int, choices=(3, 4))
+    parser.add_argument("--step", type=int)
+    args = parser.parse_args(argv)
+    if args.phase is None and args.step is None:
+        return main()
+    if args.phase == 3 and args.step == 11:
+        return main()
+    if args.phase == 4 and args.step == 1:
+        return phase4_main(step=args.step)
+    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1")
+    return 2
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(cli_main())

@@ -4,7 +4,8 @@ import subprocess
 import sys
 
 
-def test_cli_help_runs(subprocess_env) -> None:
+def test_cli_help_runs(subprocess_env,phase3_final_subprocess_env) -> None:
+    subprocess_env = phase3_final_subprocess_env
     result = subprocess.run(
         [sys.executable, "-m", "recursive_integrity_toolkit", "--help"],
         capture_output=True,
@@ -28,3 +29,19 @@ def test_cli_version_runs(subprocess_env) -> None:
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "recursive-integrity-toolkit 0.1.0.dev2"
+
+
+def test_phase4_cli_help_uses_current_source(subprocess_env) -> None:
+    """Current startup remains exercised after preserving the historical help text."""
+    result = subprocess.run(
+        [sys.executable, "-m", "recursive_integrity_toolkit", "--help"],
+        capture_output=True,
+        text=True,
+        env=subprocess_env,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "usage:" in result.stdout.lower()
+    assert "version" in result.stdout
+    assert "--help" in result.stdout
+    assert result.stderr == ""

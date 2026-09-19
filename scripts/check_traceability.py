@@ -755,5 +755,37 @@ def main() -> int:
     return 0
 
 
+def phase4_main(step: int = 1) -> int:
+    """Apply the approved Step 1 control before the frozen Phase 3 AST gate."""
+    import runpy
+
+    if type(step) is not int or step != 1:
+        raise ValueError("Only authorized Phase 4 Step 1 traceability is available")
+    control = runpy.run_path(str(ROOT / "scripts/release_check.py"),
+                            run_name="phase4_traceability_control")
+    control["audit_phase4"](step=step)
+    result = main()
+    print("Phase 4 Step 1: approved governance and frozen Phase 3 traceability: PASS")
+    return result
+
+
+def cli_main(argv: list[str] | None = None) -> int:
+    """Select the active phase without changing historical checker semantics."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--phase", type=int, choices=(3, 4))
+    parser.add_argument("--step", type=int)
+    args = parser.parse_args(argv)
+    if args.phase is None and args.step is None:
+        return main()
+    if args.phase == 3 and args.step == PHASE3_ACTIVE_STEP:
+        return main()
+    if args.phase == 4 and args.step == 1:
+        return phase4_main(step=args.step)
+    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1")
+    return 2
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(cli_main())

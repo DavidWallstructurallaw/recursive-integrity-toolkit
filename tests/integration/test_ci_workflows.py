@@ -18,7 +18,8 @@ def test_workflow_file_set_and_basic_contract(repo_root: Path) -> None:
         assert "\t" not in text
 
 
-def test_workflows_preserve_phase_boundary(repo_root: Path) -> None:
+def test_workflows_preserve_phase_boundary(repo_root: Path,phase3_final_snapshot) -> None:
+    repo_root = phase3_final_snapshot
     combined = "\n".join(p.read_text(encoding="utf-8").lower() for p in (repo_root / ".github/workflows").glob("*.yml"))
     for term in FORBIDDEN_WORKFLOW_TERMS:
         assert term not in combined
@@ -69,7 +70,8 @@ def test_phase2_core_and_real_parquet_have_independent_complete_runs(repo_root):
     assert 'dependencies.txt' in text
 
 
-def test_phase2_delivery_builds_both_formats_and_tests_installed_wheel(repo_root):
+def test_phase2_delivery_builds_both_formats_and_tests_installed_wheel(repo_root,phase3_final_snapshot):
+    repo_root = phase3_final_snapshot
     # Same identity and safety guarantees; only the active artifact stage changes.
     text = (repo_root / ".github/workflows/release.yml").read_text(encoding="utf-8")
     for required in ("python -m build", "python -m twine check --strict", "--dist", "--delivery",
@@ -83,7 +85,8 @@ def test_phase2_delivery_builds_both_formats_and_tests_installed_wheel(repo_root
         assert required in script
 
 
-def test_phase2_hero_workflow_preserves_scaffold_only_golden_boundary(repo_root):
+def test_phase2_hero_workflow_preserves_scaffold_only_golden_boundary(repo_root,phase3_final_snapshot):
+    repo_root = phase3_final_snapshot
     text = (repo_root / ".github/workflows/golden.yml").read_text(encoding="utf-8")
     body = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
     assert "test_hero_structure.py" in body

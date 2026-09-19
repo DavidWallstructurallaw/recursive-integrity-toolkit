@@ -12,6 +12,8 @@ Limits:
 """
 
 
-def test_PR013_report_schema_owner_and_placeholder(owner_checker, placeholder_checker):
+def test_PR013_report_schema_owner_and_placeholder(owner_checker, placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):
+    owner_checker = phase3_final_owner_checker
+    placeholder_checker = phase3_final_placeholder_checker
     owner_checker("reports/json_report.py", "PR-013")
     placeholder_checker("reports/json_report.py")

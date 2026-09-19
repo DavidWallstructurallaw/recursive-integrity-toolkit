@@ -13,7 +13,8 @@ def _row(version, identity):
                          kind="records")
 
 
-def test_PR016_ordering_owner_and_no_later_behavior(owner_checker, package_root, placeholder_checker):
+def test_PR016_ordering_owner_and_no_later_behavior(owner_checker, package_root, placeholder_checker,phase3_final_placeholder_checker):
+    placeholder_checker = phase3_final_placeholder_checker
     owner_checker("utils/ordering.py", "PR-016")
     tree = ast.parse((package_root / "utils/ordering.py").read_text())
     names = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}

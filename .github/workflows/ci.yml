@@ -1,4 +1,4 @@
-name: Phase 3 Step 11 CI
+name: Phase 4 Step 1 CI
 
 on:
   push:
@@ -57,20 +57,20 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-core"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" | tee "$RUNNER_TEMP/rit-core/phase3_test_results.log"
-          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 2472
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" | tee "$RUNNER_TEMP/rit-core/phase4_test_results.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 2489
       - name: Check explicit current step and frozen inherited identities
         run: |
           set -euo pipefail
-          python scripts/check_spec_consistency.py
-          python scripts/check_traceability.py
-          python scripts/release_check.py --phase 3 --step 11 --diff
-          python scripts/release_check.py --baseline-evidence "$RUNNER_TEMP/rit-core"
+          python scripts/check_spec_consistency.py --phase 4 --step 1
+          python scripts/check_traceability.py --phase 4 --step 1
+          python scripts/release_check.py --phase 4 --step 1 --diff
+          python scripts/release_check.py --phase 4 --step 1 --baseline-evidence "$RUNNER_TEMP/rit-core"
       - name: Retain core evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase3-step11-core-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.dependencies }}
+          name: phase4-step1-core-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.dependencies }}
           path: ${{ runner.temp }}/rit-core/
           if-no-files-found: error
           retention-days: 30
@@ -101,14 +101,14 @@ jobs:
           python -m pip freeze > "$RUNNER_TEMP/rit-parquet/dependencies.txt"
           python -m pip check
           python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" | tee "$RUNNER_TEMP/rit-parquet/phase3_parquet_results.log"
-          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 2475
-          python scripts/release_check.py --baseline-evidence "$RUNNER_TEMP/rit-parquet"
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" | tee "$RUNNER_TEMP/rit-parquet/phase4_parquet_results.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 2492
+          python scripts/release_check.py --phase 4 --step 1 --baseline-evidence "$RUNNER_TEMP/rit-parquet"
       - name: Retain Parquet evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase3-step11-real-parquet
+          name: phase4-step1-real-parquet
           path: ${{ runner.temp }}/rit-parquet/
           if-no-files-found: error
           retention-days: 30

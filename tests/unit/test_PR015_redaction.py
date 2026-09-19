@@ -12,6 +12,8 @@ Limits:
 """
 
 
-def test_PR015_redaction_owner_and_placeholder(owner_checker, placeholder_checker):
+def test_PR015_redaction_owner_and_placeholder(owner_checker, placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):
+    owner_checker = phase3_final_owner_checker
+    placeholder_checker = phase3_final_placeholder_checker
     owner_checker("utils/logging.py", "PR-015")
     placeholder_checker("utils/logging.py")

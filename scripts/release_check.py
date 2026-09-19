@@ -950,6 +950,584 @@ def candidate(output: Path, step: int = ACTIVE_STEP) -> None:
     print(f"Step 11 source artifact: {len(tracked)} tracked files verified. Final acceptance also requires all workflow roles on this commit.")
 
 
+# Phase 4 gates are additive. Historical Phase 2/3 functions and constants above
+# keep their original contracts; the active Phase 4 dispatcher is separate.
+from functools import lru_cache
+import io
+import importlib.util
+from types import MappingProxyType
+
+PHASE4_FINAL = "e3ffb8c0a88bfe31f669f9662d9b5213da628b3a"
+PHASE4_TREE = "e2a25f8cfdc66c3317809c479f80fdae162e6ba9"
+PHASE4_TEST_TREE = "6ab22cb9197a8f094f455b29a07a851062bb26c9"
+PHASE4_PLAN_SHA256 = "5a6d65696720a426630e876d001937b2837d24774fcb6c2bd43b8e09f5ae93f0"
+PHASE4_STEP1_NEW = {
+    "PHASE_4_PLAN.md", "PHASE_4_BASELINE.json", "PHASE_4_DECISIONS.md",
+    "tests/unit/test_phase4_contracts.py", "tests/integration/test_phase4_gates.py",
+}
+PHASE4_G = {
+    "PHASE_4_BASELINE.json", "PHASE_4_DECISIONS.md", "scripts/check_traceability.py",
+    "scripts/check_spec_consistency.py", "scripts/release_check.py", "tests/conftest.py",
+    "tests/unit/test_phase4_contracts.py", "tests/integration/test_phase4_gates.py",
+    "tests/integration/test_no_algorithms.py", "tests/integration/test_ci_workflows.py",
+    "tests/integration/test_repository_structure.py", "tests/integration/test_owner_ids.py",
+    "tests/integration/test_package_import.py", "tests/integration/test_package_install.py",
+    "tests/integration/test_optional_dependency.py", "tests/integration/test_no_network.py",
+    "tests/integration/test_schema_json.py", "tests/integration/test_hero_structure.py",
+    "tests/integration/test_prohibited_structure.py", "tests/integration/test_license_notices.py",
+    ".github/workflows/ci.yml", ".github/workflows/security.yml",
+    ".github/workflows/golden.yml", ".github/workflows/release.yml",
+    "docs/architecture.md", "docs/theory_traceability.md",
+}
+PHASE4_MIGRATION_PATHS = {
+    "tests/unit/test_PR012_evidence_classes.py", "tests/unit/test_PR013_report_schema.py",
+    "tests/unit/test_PR014_unavailable.py", "tests/unit/test_PR015_redaction.py",
+    "tests/unit/test_PR016_determinism.py", "tests/unit/test_PR018_language.py",
+    "tests/integration/test_no_algorithms.py", "tests/integration/test_phase3_metric_pipeline.py",
+    "tests/integration/test_cli_validation.py", "tests/integration/test_ci_workflows.py",
+}
+PHASE4_STEP1_ALLOWED = PHASE4_G | PHASE4_STEP1_NEW | PHASE4_MIGRATION_PATHS
+PHASE4_FORBIDDEN_OUTPUTS = {
+    "PHASE_4_COMPLETION.md", "PHASE_4_VALIDATION_REPORT.md",
+    "PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md", "report.json", "report.md",
+}
+PHASE4_APPROVAL = "批准，开始 **Phase 4 Step 1**"
+PHASE4_MIGRATIONS = {'tests/integration/test_ci_workflows.py': [{'new': 'def '
+                                                    'test_workflows_preserve_phase_boundary(repo_root: '
+                                                    'Path,phase3_final_snapshot) -> None:\n'
+                                                    '    repo_root = phase3_final_snapshot\n',
+                                             'node': 'test_workflows_preserve_phase_boundary',
+                                             'old': 'def '
+                                                    'test_workflows_preserve_phase_boundary(repo_root: '
+                                                    'Path) -> None:\n'},
+                                            {'new': 'def '
+                                                    'test_phase2_delivery_builds_both_formats_and_tests_installed_wheel(repo_root,phase3_final_snapshot):\n'
+                                                    '    repo_root = phase3_final_snapshot\n',
+                                             'node': 'test_phase2_delivery_builds_both_formats_and_tests_installed_wheel',
+                                             'old': 'def '
+                                                    'test_phase2_delivery_builds_both_formats_and_tests_installed_wheel(repo_root):\n'},
+                                            {'new': 'def '
+                                                    'test_phase2_hero_workflow_preserves_scaffold_only_golden_boundary(repo_root,phase3_final_snapshot):\n'
+                                                    '    repo_root = phase3_final_snapshot\n',
+                                             'node': 'test_phase2_hero_workflow_preserves_scaffold_only_golden_boundary',
+                                             'old': 'def '
+                                                    'test_phase2_hero_workflow_preserves_scaffold_only_golden_boundary(repo_root):\n'}],
+ 'tests/integration/test_cli_validation.py': [{'new': 'def '
+                                                      'test_cli_help_runs(subprocess_env,phase3_final_subprocess_env) '
+                                                      '-> None:\n'
+                                                      '    subprocess_env = '
+                                                      'phase3_final_subprocess_env\n',
+                                               'node': 'test_cli_help_runs',
+                                               'old': 'def test_cli_help_runs(subprocess_env) -> '
+                                                      'None:\n'}],
+ 'tests/integration/test_no_algorithms.py': [{'new': 'def '
+                                                     'test_only_step8_authorized_modules_gain_behavior(package_root,phase3_final_package_root) '
+                                                     '-> None:\n'
+                                                     '    package_root = phase3_final_package_root\n',
+                                              'node': 'test_only_step8_authorized_modules_gain_behavior',
+                                              'old': 'def '
+                                                     'test_only_step8_authorized_modules_gain_behavior(package_root) '
+                                                     '-> None:\n'},
+                                             {'new': 'def '
+                                                     'test_protected_phase3_plus_modules_remain_placeholders(package_root,phase3_final_package_root) '
+                                                     '-> None:\n'
+                                                     '    package_root = phase3_final_package_root\n',
+                                              'node': 'test_protected_phase3_plus_modules_remain_placeholders',
+                                              'old': 'def '
+                                                     'test_protected_phase3_plus_modules_remain_placeholders(package_root) '
+                                                     '-> None:\n'},
+                                             {'new': 'def '
+                                                     'test_PR003_traceability_script_enforces_step8_scope(repo_root,phase3_final_snapshot) '
+                                                     '-> None:\n'
+                                                     '    repo_root = phase3_final_snapshot\n',
+                                              'node': 'test_PR003_traceability_script_enforces_step8_scope',
+                                              'old': 'def '
+                                                     'test_PR003_traceability_script_enforces_step8_scope(repo_root) '
+                                                     '-> None:\n'}],
+ 'tests/integration/test_phase3_metric_pipeline.py': [{'new': 'def '
+                                                              'test_phase3_later_implementations_remain_empty(package_root,module,phase3_final_package_root):\n'
+                                                              '    package_root = '
+                                                              'phase3_final_package_root\n',
+                                                       'node': 'test_phase3_later_implementations_remain_empty',
+                                                       'old': 'def '
+                                                              'test_phase3_later_implementations_remain_empty(package_root,module):\n'},
+                                                      {'new': 'def '
+                                                              'test_phase3_step11_rejects_changes_beyond_version_literals(repo_root,tmp_path,path,phase3_final_snapshot):\n'
+                                                              '    repo_root = phase3_final_snapshot\n',
+                                                       'node': 'test_phase3_step11_rejects_changes_beyond_version_literals',
+                                                       'old': 'def '
+                                                              'test_phase3_step11_rejects_changes_beyond_version_literals(repo_root,tmp_path,path):\n'},
+                                                      {'new': 'def '
+                                                              'test_phase3_step11_test_exceptions_are_exact(repo_root,phase3_step10_snapshot,phase3_final_snapshot):\n'
+                                                              '    repo_root = phase3_final_snapshot\n',
+                                                       'node': 'test_phase3_step11_test_exceptions_are_exact',
+                                                       'old': 'def '
+                                                              'test_phase3_step11_test_exceptions_are_exact(repo_root,phase3_step10_snapshot):\n'}],
+ 'tests/unit/test_PR012_evidence_classes.py': [{'new': 'def '
+                                                       'test_PR012_evidence_classes_owner_and_placeholder(owner_checker, '
+                                                       'placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):\n'
+                                                       '    owner_checker = phase3_final_owner_checker\n'
+                                                       '    placeholder_checker = '
+                                                       'phase3_final_placeholder_checker\n',
+                                                'node': 'test_PR012_evidence_classes_owner_and_placeholder',
+                                                'old': 'def '
+                                                       'test_PR012_evidence_classes_owner_and_placeholder(owner_checker, '
+                                                       'placeholder_checker):\n'}],
+ 'tests/unit/test_PR013_report_schema.py': [{'new': 'def '
+                                                    'test_PR013_report_schema_owner_and_placeholder(owner_checker, '
+                                                    'placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):\n'
+                                                    '    owner_checker = phase3_final_owner_checker\n'
+                                                    '    placeholder_checker = '
+                                                    'phase3_final_placeholder_checker\n',
+                                             'node': 'test_PR013_report_schema_owner_and_placeholder',
+                                             'old': 'def '
+                                                    'test_PR013_report_schema_owner_and_placeholder(owner_checker, '
+                                                    'placeholder_checker):\n'}],
+ 'tests/unit/test_PR014_unavailable.py': [{'new': 'def '
+                                                  'test_PR014_unavailable_owner_and_placeholder(owner_checker, '
+                                                  'placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):\n'
+                                                  '    owner_checker = phase3_final_owner_checker\n'
+                                                  '    placeholder_checker = '
+                                                  'phase3_final_placeholder_checker\n',
+                                           'node': 'test_PR014_unavailable_owner_and_placeholder',
+                                           'old': 'def '
+                                                  'test_PR014_unavailable_owner_and_placeholder(owner_checker, '
+                                                  'placeholder_checker):\n'}],
+ 'tests/unit/test_PR015_redaction.py': [{'new': 'def '
+                                                'test_PR015_redaction_owner_and_placeholder(owner_checker, '
+                                                'placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):\n'
+                                                '    owner_checker = phase3_final_owner_checker\n'
+                                                '    placeholder_checker = '
+                                                'phase3_final_placeholder_checker\n',
+                                         'node': 'test_PR015_redaction_owner_and_placeholder',
+                                         'old': 'def '
+                                                'test_PR015_redaction_owner_and_placeholder(owner_checker, '
+                                                'placeholder_checker):\n'}],
+ 'tests/unit/test_PR016_determinism.py': [{'new': 'def '
+                                                  'test_PR016_ordering_owner_and_no_later_behavior(owner_checker, '
+                                                  'package_root, '
+                                                  'placeholder_checker,phase3_final_placeholder_checker):\n'
+                                                  '    placeholder_checker = '
+                                                  'phase3_final_placeholder_checker\n',
+                                           'node': 'test_PR016_ordering_owner_and_no_later_behavior',
+                                           'old': 'def '
+                                                  'test_PR016_ordering_owner_and_no_later_behavior(owner_checker, '
+                                                  'package_root, placeholder_checker):\n'}],
+ 'tests/unit/test_PR018_language.py': [{'new': 'def '
+                                               'test_PR018_language_owner_and_placeholder(owner_checker, '
+                                               'placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):\n'
+                                               '    owner_checker = phase3_final_owner_checker\n'
+                                               '    placeholder_checker = '
+                                               'phase3_final_placeholder_checker\n',
+                                        'node': 'test_PR018_language_owner_and_placeholder',
+                                        'old': 'def '
+                                               'test_PR018_language_owner_and_placeholder(owner_checker, '
+                                               'placeholder_checker):\n'}]}
+
+
+@lru_cache(maxsize=1)
+def _phase4_baseline_files():
+    """Read immutable Git objects once, independently of the editable manifest."""
+    for suffix, expected in (("^{commit}", PHASE4_FINAL), ("^{tree}", PHASE4_TREE),
+                             (":tests", PHASE4_TEST_TREE)):
+        if git("rev-parse", PHASE4_FINAL + suffix).decode().strip() != expected:
+            raise ValueError("Pinned Phase 3 baseline identity mismatch")
+    blobs = {}
+    for entry in git("ls-tree", "-rz", PHASE4_FINAL).split(b"\0"):
+        if not entry:
+            continue
+        info, name = entry.split(b"\t", 1)
+        mode, kind, oid = info.split()
+        path = name.decode("utf-8")
+        if mode not in (b"100644", b"100755") or kind != b"blob":
+            raise ValueError("Unexpected baseline file type")
+        if Path(path).is_absolute() or ".." in Path(path).parts or path in blobs:
+            raise ValueError("Unsafe baseline path")
+        blobs[path] = oid.decode("ascii")
+    result = {}
+    with zipfile.ZipFile(io.BytesIO(git("archive", "--format=zip", PHASE4_FINAL))) as archive:
+        names = [n for n in archive.namelist() if not n.endswith("/")]
+        if len(names) != len(set(names)) or set(names) != set(blobs) or len(names) != 222:
+            raise ValueError("Pinned baseline archive file set mismatch")
+        for name in names:
+            raw = archive.read(name)
+            oid = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+            if oid != blobs[name]:
+                raise ValueError(f"Pinned baseline blob mismatch: {name}")
+            result[name] = raw
+    return MappingProxyType(result)
+
+
+def phase4_expected_control() -> dict:
+    """Independent exact authorization, protected-byte and migration registry."""
+    files = _phase4_baseline_files()
+    authority = re.findall(r"\| `([^`]+\.md)` \| `([0-9a-f]{64})` \|",
+                           files["PHASE_0_APPROVAL.md"].decode())
+    if len(authority) != 16:
+        raise ValueError("Expected sixteen original authority hashes")
+    return {
+        "control_version": "1.0", "active_phase": 4, "active_step": 1,
+        "baseline_commit": PHASE4_FINAL, "baseline_tree": PHASE4_TREE,
+        "baseline_test_tree": PHASE4_TEST_TREE, "baseline_branch": "phase3-metrics",
+        "work_branch": "phase4-reports-cli",
+        "main_at_authorization": "cfe1bd0941c1125498ac3d9d9ebf3adafa2c2fcb",
+        "approved_plan_sha256": PHASE4_PLAN_SHA256, "approval_date": "2026-09-18",
+        "approval_basis": PHASE4_APPROVAL,
+        "approved_decisions": [f"P4-D{i:02d}" for i in range(1, 12)],
+        "baseline_core_tests": 2489, "baseline_parquet_tests": 2492,
+        "baseline_tracked_files": 222, "baseline_package_modules": 40,
+        "baseline_placeholders": 16, "phase0_sha256": dict(authority),
+        "baseline_files_sha256": {p: hashlib.sha256(raw).hexdigest() for p, raw in sorted(files.items())},
+        "permitted_paths": sorted(PHASE4_STEP1_ALLOWED),
+        "new_files_permitted": sorted(PHASE4_STEP1_NEW),
+        "historical_migration_nodes": {p: [r["node"] for r in rows]
+                                       for p, rows in sorted(PHASE4_MIGRATIONS.items())},
+        "runtime_changes_authorized": False, "schema_changes_authorized": False,
+        "phase_complete": False, "next_step_authorized": False,
+        "main_merge_authorized": False, "publication_authorized": False,
+    }
+
+
+def verify_phase4_control(control: dict, step: int = 1) -> None:
+    if type(step) is not int or step != 1 or type(control) is not dict:
+        raise ValueError("Unsupported Phase 4 stage/control")
+    try:
+        actual = json.dumps(control, sort_keys=True, ensure_ascii=True, allow_nan=False)
+        expected = json.dumps(phase4_expected_control(), sort_keys=True, ensure_ascii=True, allow_nan=False)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Invalid Phase 4 control") from error
+    if actual != expected:
+        raise ValueError("Phase 4 control differs from the fixed approved Step 1 contract")
+
+
+def verify_phase4_changes(changes: list[tuple[str, str]]) -> None:
+    seen = set()
+    for status, path in changes:
+        if path in seen or path not in PHASE4_STEP1_ALLOWED:
+            raise ValueError(f"Unapproved or repeated Phase 4 path: {path}")
+        seen.add(path)
+        required_status = "A" if path in PHASE4_STEP1_NEW else "M"
+        if status != required_status:
+            raise ValueError(f"Unapproved Phase 4 change kind: {status} {path}")
+
+
+def verify_phase4_test_migration(path: str, before: bytes, after: bytes) -> None:
+    """Permit exact source bindings, retaining original assertions/parameters."""
+    if path not in PHASE4_MIGRATIONS or before != _phase4_baseline_files()[path]:
+        raise ValueError("Migration requires the named pinned Phase 3 source")
+    expected = before
+    for row in PHASE4_MIGRATIONS[path]:
+        old, new = row["old"].encode(), row["new"].encode()
+        if expected.count(old) != 1:
+            raise ValueError("Historical binding is not unique")
+        expected = expected.replace(old, new, 1)
+    if not after.startswith(expected):
+        raise ValueError(f"Inherited test changed beyond its approved binding: {path}")
+    _phase4_append_only(expected, after, path)
+
+
+def _phase4_preserve_function_header(node, path):
+    """Reject import-time effects in newly permitted function definitions."""
+    decorators = [ast.unparse(value) for value in node.decorator_list]
+    expected = []
+    if path == "tests/conftest.py" and node.name.startswith("phase3_final_"):
+        expected = ["pytest.fixture(scope='session')"]
+    elif path == "scripts/release_check.py" and node.name == "_phase4_baseline_files":
+        expected = ["lru_cache(maxsize=1)"]
+    if decorators != expected:
+        raise ValueError(f"Unapproved added function decorator: {path}:{node.name}")
+    for value in [*node.args.defaults, *node.args.kw_defaults]:
+        if value is None or isinstance(value, ast.Name) and value.id == "ROOT":
+            continue
+        try:
+            ast.literal_eval(value)
+        except (ValueError, TypeError, SyntaxError) as error:
+            raise ValueError(f"Nonliteral added function default: {path}:{node.name}") from error
+    arguments = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
+    arguments.extend(value for value in (node.args.vararg, node.args.kwarg) if value is not None)
+    annotations = [value.annotation for value in arguments] + [node.returns]
+    allowed_nodes = (ast.Name, ast.Constant, ast.Subscript, ast.Tuple, ast.List,
+                     ast.BinOp, ast.BitOr, ast.Load)
+    allowed_names = {"Path", "list", "str", "bytes", "dict", "int", "bool", "tuple", "set"}
+    for value in annotations:
+        if value is not None and any(
+                not isinstance(child, allowed_nodes)
+                or isinstance(child, ast.Name) and child.id not in allowed_names
+                for child in ast.walk(value)):
+            raise ValueError(f"Unapproved added function annotation: {path}:{node.name}")
+
+
+def _phase4_append_only(before: bytes, after: bytes, path: str) -> None:
+    if not after.startswith(before):
+        raise ValueError(f"Inherited source prefix changed: {path}")
+    # Appended tests/helpers cannot shadow inherited globals or redefine nodes.
+    old_tree, new_tree = ast.parse(before), ast.parse(after)
+    def bindings(tree):
+        names = []
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.append(node.name)
+            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                names.extend(n.id for target in targets for n in ast.walk(target) if isinstance(n, ast.Name))
+        return names
+    names = bindings(new_tree)
+    if len(names) != len(set(names)) or any(names.count(n) != 1 for n in bindings(old_tree)):
+        raise ValueError(f"Appended source redefines an inherited binding: {path}")
+    for node in new_tree.body[len(old_tree.body):]:
+        if not isinstance(node, ast.FunctionDef):
+            raise ValueError(f"Appended test source executes or rebinds at module scope: {path}")
+        prefix = "phase3_final_" if path == "tests/conftest.py" else "test_phase4_"
+        if not node.name.startswith(prefix):
+            raise ValueError(f"Appended function is outside the Step 1 test/fixture scope: {path}")
+        _phase4_preserve_function_header(node, path)
+
+
+def _phase4_preserve_tooling(before: bytes, after: bytes, path: str) -> None:
+    """All inherited maintainer definitions/constants remain exact."""
+    old_text, new_text = before.decode(), after.decode()
+    old, new = ast.parse(old_text), ast.parse(new_text)
+    def entry_guard(node):
+        return isinstance(node, ast.If) and isinstance(node.test, ast.Compare) and "__name__" in ast.unparse(node.test)
+    historical = [n for n in old.body if not entry_guard(n)]
+    guards = [n for n in new.body if entry_guard(n)]
+    expected_guard = ast.parse('if __name__ == "__main__":\n    raise SystemExit(cli_main())').body[0]
+    if len(guards) != 1 or ast.dump(guards[0]) != ast.dump(expected_guard):
+        raise ValueError(f"Unapproved maintainer entrypoint: {path}")
+    cursor = 0
+    allowed_imports = {"from functools import lru_cache", "import io", "import importlib.util", "from types import MappingProxyType"}
+    for node in new.body:
+        if entry_guard(node):
+            continue
+        segment = ast.get_source_segment(new_text, node)
+        if cursor < len(historical) and segment == ast.get_source_segment(old_text, historical[cursor]):
+            cursor += 1
+            continue
+        if isinstance(node, ast.FunctionDef) and (node.name == "cli_main" or node.name.startswith(
+                ("phase4_", "_phase4_", "verify_phase4_", "audit_phase4"))):
+            _phase4_preserve_function_header(node, path)
+            continue
+        if isinstance(node, ast.Assign) and all(isinstance(t, ast.Name) and t.id.startswith("PHASE4_") for t in node.targets):
+            approved_union = ast.parse("PHASE4_G | PHASE4_STEP1_NEW | PHASE4_MIGRATION_PATHS", mode="eval").body
+            if ([target.id for target in node.targets] == ["PHASE4_STEP1_ALLOWED"]
+                    and ast.dump(node.value) == ast.dump(approved_union)):
+                continue
+            try:
+                ast.literal_eval(node.value)
+            except (ValueError, TypeError, SyntaxError) as error:
+                raise ValueError(f"Nonliteral added maintainer constant: {path}") from error
+            continue
+        if isinstance(node, (ast.Import, ast.ImportFrom)) and ast.unparse(node) in allowed_imports:
+            continue
+        raise ValueError(f"Unapproved executable maintainer addition: {path}")
+    if cursor != len(historical):
+        raise ValueError(f"Historical maintainer statement changed: {path}")
+    def named(tree):
+        result = {}
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                keys = [node.name]
+            elif isinstance(node, ast.Assign):
+                keys = []
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        keys.append(target.id)
+                    elif isinstance(target, (ast.Tuple, ast.List)):
+                        keys.extend(n.id for n in ast.walk(target) if isinstance(n, ast.Name))
+            else:
+                continue
+            for key in keys:
+                if key in result:
+                    raise ValueError(f"Duplicate maintainer binding: {key}")
+                result[key] = node
+        return result
+    current = named(new)
+    for key, node in named(old).items():
+        if key not in current or ast.get_source_segment(old_text, node) != ast.get_source_segment(new_text, current[key]):
+            raise ValueError(f"Historical maintainer contract changed: {path}:{key}")
+
+
+def verify_phase4_snapshot(root: Path = ROOT) -> dict:
+    files = _phase4_baseline_files()
+    for path, raw in files.items():
+        target = root / path
+        if not target.is_file() or target.is_symlink():
+            raise ValueError(f"Missing or aliased inherited file: {path}")
+        current = target.read_bytes()
+        if path not in PHASE4_STEP1_ALLOWED and current != raw:
+            raise ValueError(f"Protected Phase 3 bytes changed: {path}")
+        if path in PHASE4_MIGRATIONS:
+            verify_phase4_test_migration(path, raw, current)
+        elif path.startswith("tests/") and path in PHASE4_STEP1_ALLOWED:
+            _phase4_append_only(raw, current, path)
+        elif path.startswith("scripts/") and path in PHASE4_STEP1_ALLOWED:
+            _phase4_preserve_tooling(raw, current, path)
+    actual_modules = {p.relative_to(root).as_posix() for p in (root / "src/recursive_integrity_toolkit").rglob("*.py")}
+    expected_modules = {p for p in files if p.startswith("src/") and p.endswith(".py")}
+    if actual_modules != expected_modules or len(actual_modules) != 40:
+        raise ValueError("Step 1 cannot change the runtime module set")
+    if {p.name for p in (root / "schemas").iterdir()} != {Path(p).name for p in files if p.startswith("schemas/")}:
+        raise ValueError("Step 1 cannot change the schema set")
+    for path in PHASE4_STEP1_NEW:
+        if not (root / path).is_file() or (root / path).is_symlink():
+            raise ValueError(f"Missing or unsafe Step 1 control/test file: {path}")
+    if hashlib.sha256((root / "PHASE_4_PLAN.md").read_bytes()).hexdigest() != PHASE4_PLAN_SHA256:
+        raise ValueError("Approved Phase 4 plan bytes changed")
+    verify_phase4_control(json.loads((root / "PHASE_4_BASELINE.json").read_text(encoding="utf-8")))
+    decisions = (root / "PHASE_4_DECISIONS.md").read_text(encoding="utf-8")
+    if PHASE4_APPROVAL not in decisions or any(f"P4-D{i:02d}" not in decisions for i in range(1, 12)):
+        raise ValueError("Actual Phase 4 approval record missing")
+    if any((root / name).exists() for name in PHASE4_FORBIDDEN_OUTPUTS):
+        raise ValueError("Step 1 cannot create Phase 4 completion records or audit reports")
+    return {"package_modules_unchanged": 40, "schemas_unchanged": 5,
+            "hero_files_unchanged": 6, "historical_migrated_nodes": 16,
+            "phase_complete": False, "runtime_behavior_added": False}
+
+
+def audit_phase4(step: int = 1) -> dict:
+    verify_phase4_control(json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8")), step)
+    result = {"phase": 4, "active_step": step, **verify_phase4_snapshot(),
+              "phase0_hashes_verified": 16, "publication_authorized": False}
+    print(json.dumps(result, indent=2))
+    return result
+
+
+def audit_phase4_diff(step: int = 1) -> dict:
+    if type(step) is not int or step != 1:
+        raise ValueError("Unsupported Phase 4 step")
+    subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", PHASE4_FINAL, "HEAD"], check=True)
+    raw = git("diff", "--name-status", "--no-renames", "-z", PHASE4_FINAL, "--").split(b"\0")
+    raw = [part.decode("utf-8") for part in raw if part]
+    if len(raw) % 2:
+        raise ValueError("Malformed Git difference records")
+    changes = list(zip(raw[::2], raw[1::2]))
+    changes.extend(("A", p.decode()) for p in git("ls-files", "--others", "--exclude-standard", "-z").split(b"\0") if p)
+    verify_phase4_changes(changes)
+    result = {"baseline_commit": PHASE4_FINAL, "changed_files": len(changes),
+              "changes": changes, "step": 1, "scope": "PASS"}
+    print(json.dumps(result, indent=2))
+    return result
+
+
+def phase4_baseline_evidence(output: Path) -> dict:
+    """Reconcile final Phase 3 identities plus all previously required identities."""
+    output.mkdir(parents=True, exist_ok=True)
+    inherited = baseline_evidence(output / "phase3-inherited")
+    with tempfile.TemporaryDirectory(prefix="rit-p4-baseline-") as temp:
+        baseline = Path(temp)
+        for name, raw in _phase4_baseline_files().items():
+            target = baseline / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
+        old, old_log = _collect(baseline)
+    current, current_log = _collect(ROOT)
+    expected = 2492 if os.environ.get("RIT_TEST_PARQUET") == "1" else 2489
+    if len(old) != expected or set(old) - set(current):
+        raise ValueError("Accepted final Phase 3 test identities were lost")
+    result = {"baseline_commit": PHASE4_FINAL, "baseline_test_tree": PHASE4_TEST_TREE,
+              "baseline_nodeids": old, "current_nodeids": current, "missing_nodeids": [],
+              "baseline_tests": len(old), "current_tests": len(current), "inherited": inherited,
+              "nodeids_sha256": hashlib.sha256(("\n".join(old)+"\n").encode()).hexdigest()}
+    (output / "phase4_test_identity_manifest.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
+    (output / "phase3-final-collection.log").write_text(old_log, encoding="utf-8")
+    (output / "phase4-current-collection.log").write_text(current_log, encoding="utf-8")
+    print(json.dumps({k: result[k] for k in ("baseline_tests", "current_tests", "missing_nodeids")}, indent=2))
+    return result
+
+
+def phase4_candidate(output: Path, step: int = 1) -> None:
+    """Archive a tested intermediate Step 1; never certify phase completion."""
+    if os.environ.get("RIT_TEST_PARQUET") != "1":
+        raise ValueError("Step 1 candidate evidence requires RIT_TEST_PARQUET=1 and real PyArrow")
+    if importlib.util.find_spec("pyarrow") is None:
+        raise ValueError("Step 1 candidate evidence requires real PyArrow")
+    output.mkdir(parents=True, exist_ok=True)
+    result = audit_phase4(step)
+    result["diff"] = audit_phase4_diff(step)
+    if git("status", "--porcelain").strip():
+        raise ValueError("Candidate archive requires committed, clean source")
+    result["core"] = verify_junit(output / "core.xml", minimum=2489)
+    result["parquet"] = verify_junit(output / "parquet.xml", require_parquet=True, minimum=2492)
+    result["core_math_measurements"] = verify_step10_evidence(output / "core.xml", output / "phase4-core-observations.json")
+    result["parquet_math_measurements"] = verify_step10_evidence(output / "parquet.xml", output / "phase4-parquet-observations.json")
+    identity = phase4_baseline_evidence(output)
+    result["test_identity"] = {k: identity[k] for k in ("baseline_tests", "current_tests", "nodeids_sha256")}
+    expected = set()
+    for node in identity["current_nodeids"]:
+        base, bracket, parameter = node.partition("[")
+        owner, name = base.rsplit("::", 1)
+        expected.add((owner.removesuffix(".py").replace("/", ".").replace("::", "."),
+                      name + bracket + parameter))
+    for name, parquet in (("core.xml", False), ("parquet.xml", True)):
+        cases = {(c.get("classname", ""), c.get("name", "")) for c in ET.parse(output / name).getroot().iter("testcase")}
+        target = expected if parquet else {c for c in expected if c[1] not in PARQUET_CASES}
+        if cases != target:
+            raise ValueError(f"Candidate JUnit does not execute the entire current suite: {name}")
+    verify_distributions(output / "dist")
+    archive = output / "recursive-integrity-toolkit-phase4-step1-candidate.zip"
+    subprocess.run(["git", "-C", str(ROOT), "archive", "--format=zip", "--prefix=recursive-integrity-toolkit/", "HEAD", "-o", str(archive.resolve())], check=True)
+    tracked = {p for p in git("ls-files", "-z").decode().split("\0") if p}
+    with zipfile.ZipFile(archive) as zipped:
+        names = {p.removeprefix("recursive-integrity-toolkit/") for p in zipped.namelist() if not p.endswith("/")}
+        if names != tracked:
+            raise ValueError("Step 1 source archive file set mismatch")
+        for name in names:
+            if zipped.read("recursive-integrity-toolkit/"+name) != (ROOT / name).read_bytes():
+                raise ValueError(f"Step 1 source archive byte mismatch: {name}")
+    result.update({"commit": git("rev-parse", "HEAD").decode().strip(),
+                   "tree": git("rev-parse", "HEAD^{tree}").decode().strip(),
+                   "source_archive": archive.name, "tracked_files": len(tracked),
+                   "python": sys.version, "platform": sys.platform,
+                   "versions": {name: importlib.metadata.version(name) for name in ("numpy", "pandas", "pytest")}})
+    (output / "phase4_execution_metadata.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
+    (output / "phase4_repository_files.sha256").write_text("".join(f"{hashlib.sha256((ROOT/name).read_bytes()).hexdigest()}  {name}\n" for name in sorted(tracked)), encoding="utf-8")
+    paths = sorted(p for p in output.rglob("*") if p.is_file() and p.name != "phase4_artifacts.sha256")
+    (output / "phase4_artifacts.sha256").write_text("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(output).as_posix()}\n" for p in paths), encoding="utf-8")
+    print(f"Phase 4 Step 1 candidate: {len(tracked)} source files verified; Phase 4 remains incomplete.")
+
+
+def phase4_cli_main() -> int:
+    parser = argparse.ArgumentParser(description="Phase 4 Step 1 maintainer gate")
+    parser.add_argument("--phase", type=int, choices=(4,), required=True)
+    parser.add_argument("--step", type=int, choices=(1,), required=True)
+    parser.add_argument("--diff", action="store_true")
+    parser.add_argument("--junit", type=Path)
+    parser.add_argument("--require-parquet", action="store_true")
+    parser.add_argument("--minimum-tests", type=int, default=1)
+    parser.add_argument("--baseline-evidence", type=Path)
+    parser.add_argument("--dist", type=Path)
+    parser.add_argument("--smoke-wheel", type=Path)
+    parser.add_argument("--candidate", type=Path)
+    parser.add_argument("--delivery", type=Path)
+    args = parser.parse_args()
+    if args.delivery is not None:
+        raise ValueError("Phase 4 Step 1 cannot certify a final phase delivery")
+    if args.junit is not None:
+        verify_junit(args.junit, require_parquet=args.require_parquet, minimum=args.minimum_tests)
+    elif args.baseline_evidence is not None:
+        phase4_baseline_evidence(args.baseline_evidence)
+    elif args.dist is not None:
+        audit_phase4(args.step)
+        wheel, _ = verify_distributions(args.dist)
+        smoke_installed(wheel)
+        smoke_installed_duplicates(wheel)
+    elif args.smoke_wheel is not None:
+        smoke_installed(args.smoke_wheel)
+    elif args.candidate is not None:
+        phase4_candidate(args.candidate, args.step)
+    else:
+        audit_phase4(args.step)
+        if args.diff:
+            audit_phase4_diff(args.step)
+    return 0
+
+
+def cli_main() -> int:
+    argv = sys.argv[1:]
+    explicit_phase4 = "--phase=4" in argv or any(a == "--phase" and b == "4" for a, b in zip(argv, argv[1:]))
+    return phase4_cli_main() if explicit_phase4 else main()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", type=int, choices=(2, 3), default=2)
@@ -988,4 +1566,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(cli_main())
