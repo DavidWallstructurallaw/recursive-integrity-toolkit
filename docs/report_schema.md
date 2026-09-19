@@ -1081,3 +1081,66 @@ Recommendations do not enforce policy, repair records or promise that metadata a
 ### Step 3 boundaries
 
 This interface performs in-memory assembly and validation of supplied evidence. It does not ingest files, resolve content references, assign states, classify new inputs, calculate a metric, traverse a graph, run a simulation, redact identities, render JSON/Markdown/HTML, invoke a CLI analysis, perform network calls or publish artifacts. Privacy transformation, rendering and CLI orchestration belong to later approved steps. The historical Step 2 model/schema and the existing mathematical owners remain unchanged.
+
+## Phase 4 Step 4: privacy and execution metadata APIs
+
+Step 4 preserves all twelve section keys, the ninety-entry field registry and the
+local report schema bytes. It adds `result.SafeReportView` and an explicit
+`reports.assembly.privacy_view(report, mode=..., record_id_mode=..., protection=...)`
+transition after the existing canonical assembly. `SafeReportView.to_dict()`
+returns detached data in the same canonical shape. Its nested sections are
+immutable, and the capability compatibility mirror remains equal to the canonical
+capability matrix. Canonical structure alone does not establish privacy.
+
+`standard` retains declared structural labels and approved local inventory.
+`redacted` pseudonymizes dataset, state and scope identities, including dynamic
+map keys and nested comparison/simulation details. Both modes exclude arbitrary
+caller narrative from diagnostics and safe metadata. Reported analytical values,
+scope counts, denominators, evidence classes, availability, execution status and
+error severity are preserved. Input-inventory and normalized configuration hashes
+remain linkable reproducibility metadata; raw per-record content digests are
+protected when they serve as state or group identities.
+
+In redacted mode, record IDs default to `hash`; `preserve` affects only the
+declared record-ID field, and `omit` removes identity-bearing lists. Duplicate
+groups with omitted identities retain `record_count` and the frozen
+`redaction.omitted_fields = ["record_keys"]` contract. Optional scope identity
+arrays may be omitted while their counts remain. Distinct registered exclusion
+reasons remain disclosed with their protected scope association under
+`run.identifier_protection.limitations`. Per-record linkage is intentionally
+omitted. Redaction does not introduce an unavailable analytical conclusion.
+
+The existing optional `run.identifier_protection` object records
+`HMAC-SHA-256`, `run` or `cross_run` stability, record-ID mode and limitations.
+Fresh secrets separate runs; an explicitly supplied checked local secret file
+permits cross-run stability. Neither secret bytes, secret paths nor a reverse
+mapping is exported. Fixed injected secrets support reproducible tests.
+
+`config.resolve_phase4_options` validates the Phase 4 declarations before use;
+`phase4_config_summary` exposes a small allowlist and `phase4_config_hash` hashes
+normalized declared meaning under the documented secret exclusions. Existing
+Phase 2 configuration and validation entry points retain their prior behavior.
+Unsupported activation and competing declarations remain explicit errors.
+
+`reports.assembly.build_run_metadata` accepts explicit measurements and approved
+operation names (`python_api`, `audit`, `validate`, `example`). It creates standard
+internal metadata suitable for `assemble_report`; callers then select the final
+privacy view. It reconstructs an approved command description without raw argv,
+uses null reasons for unrecorded fields and describes network count scope as
+`toolkit_managed_outbound_operations`. A Python API call does not claim a CLI
+invocation. Output privacy is separate from determinism of supplied calculations.
+When resolved options already declare privacy and record-ID modes, view selection
+must match those declarations. A different view cannot silently rewrite the
+configuration summary while retaining its original hash.
+
+`utils.logging.safe_diagnostic`, `format_diagnostic` and `emit_diagnostic`
+construct content-safe structured diagnostics. Registered codes use static
+toolkit explanations; unrecognized labels receive protected identifiers without
+being reclassified as another registered error. Severity, capability effects and
+safe locations remain. An output stream must be supplied explicitly; import does
+not configure a logger or emit a record. JSON-line diagnostics do not implement
+the deferred JSON report renderer.
+
+Step 4 does not render reports, publish output files, start CLI analysis, expand
+the public metric set or change any mathematical owner. It provides identifier
+and content protection, not statistical anonymity or authentication of evidence.

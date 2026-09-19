@@ -285,3 +285,91 @@ commands, environments, outcomes, failed attempts and repairs, review findings,
 remote evidence and remaining limitations. Technical review is consolidated
 assistant review; it does not assert independent human certification, empirical
 theory validation or production readiness. Stop after accepted Step 3.
+
+## Step 4 authorization and privacy boundary
+
+On 2026-09-19 UTC the Theory Owner instructed: `继续`.
+This instruction follows the delivered and accepted Step 3 receipt and is
+interpreted in that context as authorization to execute the next approved step,
+Phase 4 Step 4. The quoted instruction is the actual wording, not an invented
+explicit step title. Earlier stop statements remain the historical record of
+their own authorization intervals. Step 5, a main merge, tags and software
+publication are not authorized by this instruction. Phase 4 remains incomplete.
+
+The accepted Step 3 anchor is commit
+`974545c456e535ba1e1c5b6bf4ae0ce25bc04b57`, source tree
+`15498f3f00d0ce048c3cba2156eb7a44f096ae88`, and tests tree
+`17b87858f77ee4413c98cfd76f16f52170246741`. Its final core and real-Parquet
+counts were 2876 and 2879. Its four remote workflows and twelve jobs passed on
+that exact commit; earlier timeout attempts remain recorded in the Step 3
+receipt. The core CI timeout is retained at sixty minutes without dropping tests
+or changing historical preservation helpers.
+
+The exact allowed set is the twenty-six common maintenance paths plus the ten
+additional Step 4 paths in the approved plan, for thirty-six existing paths.
+Only modifications are permitted. No addition, deletion, rename, mode change,
+dependency, version or module-set change is approved. The independent checker
+defines this permission set; editing the JSON control cannot expand it.
+
+Only `result.py`, `reports/assembly.py`, `config.py`, `utils/hashing.py` and
+`utils/logging.py` under `src/recursive_integrity_toolkit/` may gain Step 4
+runtime behavior. Inherited helpers remain preserved before additive extensions.
+The five root schemas, six Hero files, frozen mathematical oracles, Phase 0
+authorities and the other thirty-five runtime modules remain unchanged.
+Privacy follows supplied-result assembly and cannot recompute metrics, classify
+inputs, activate graph analysis, render reports or start CLI analysis.
+
+P4-D05 selects standard and redacted output. Both exclude raw content, notes,
+embeddings, secrets and complete configuration dumps. Redacted views additionally
+protect nested identity-bearing values and omit paths, URIs and raw content
+hashes. Explicit record-ID preservation applies only to declared record-ID
+fields. Domain-separated HMAC-SHA-256 uses canonical encodings, a fresh default
+secret or an explicitly supplied local secret file, with algorithm and stability
+scope disclosed but no key material, file path or reversible mapping.
+Aggregate values, denominators, evidence classes, availability and diagnostic
+severity remain intact. This is identifier/content protection without a claim
+of statistical anonymity. Existing debug labels do not activate raw logging.
+
+### Exact Step 3 historical bindings
+
+Ten named nodes use the verified accepted Step 3 snapshot through thirteen exact
+source replacements, proposed before modification and registered independently
+in the release checker. Names, parameterizations and substantive assertions are
+preserved.
+
+| File | Exact nodes and changed binding |
+|---|---|
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step3_approved_control_keeps_independent_step2_anchors`, `test_phase4_step3_control_rejects_forged_scope_and_stage`, `test_phase4_step3_control_rejects_unapproved_dispatch`, `test_phase4_step3_control_requires_explicit_approval_fields`, `test_phase4_step3_control_cannot_mint_extra_permission`: read the pinned Step 3 control. |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step3_historical_migrations_preserve_ten_step2_gate_nodes`, `test_phase4_step3_historical_guard_rejects_assertion_and_binding_weakening`: use the pinned Step 3 migrated test bytes as the historical after-state. |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step3_current_runtime_opens_only_assembly_and_freezes_schema`, `test_phase4_step3_current_workflows_preserve_matrix_and_use_active_dispatch`: inspect the pinned Step 3 runtime and workflows. |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step3_current_snapshot_checks_valid_tree_before_mutations`: copy pinned Step 3 files before applying the original mutations. |
+
+The additive `phase4_step3_snapshot` fixture verifies the exact commit, source
+and test trees, regular-file inventory and every Git blob before use and at
+teardown. Shared current fixtures and all previous snapshots retain their bytes.
+Current mathematical, input, configuration and hashing behavior stays on current
+source. Separate Step 4 tests verify the valid current tree before negative
+mutations and independently exercise privacy and inherited-helper preservation.
+
+The Step 4 checker preserves earlier maintainer definitions and constants, with
+only the explicit dispatcher additions. Current source preservation uses a new
+helper without modifying or replacing older helpers. Approved runtime additions
+are constrained by fixed reviewed AST identities; inherited declarations are
+separately checked against the accepted Step 3 AST identities. These identities
+are fixed checker data, never learned from the source under inspection.
+
+### Step 4 verification and evidence policy
+
+Acceptance requires nested privacy sentinels through both selected modes, safe
+configuration/run summaries and diagnostic success/failure paths, stable-secret
+consistency, fresh-secret separation, no analytical recomputation, exact
+inherited test identities, complete core/minimum/real-Parquet regressions, frozen
+mathematical cases, isolated builds and installed privacy checks. Four remote
+workflow roles must pass on the delivered commit. The candidate remains an
+intermediate Step 4 artifact; no unexecuted check is recorded as accepted.
+
+The external Step 4 receipt records actual source identities, changed paths,
+commands, environments, outcomes, failed attempts and repairs, review findings
+and limitations. Technical review is consolidated assistant review, without
+asserting independent human certification, empirical theory validation or
+production readiness. Stop after accepted Step 4.

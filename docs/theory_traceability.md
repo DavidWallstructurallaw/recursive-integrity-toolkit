@@ -291,3 +291,27 @@ assessment reaches Level 4. Validation and assembly do not certify empirical
 truth or prove that arbitrary caller-supplied objects came from a trusted run.
 The actual Step 3 authorization, preservation rules and verification evidence
 are recorded in the Phase 4 control files and the external step receipt.
+
+## Phase 4 Step 4 privacy and diagnostic ownership
+
+| Existing owner | Step 4 responsibility | Preserved boundary |
+|---|---|---|
+| PR-015 | Standard/redacted views, HMAC pseudonyms, record-ID modes and safe diagnostics | No raw content, notes, embeddings or secret material in selected output |
+| PR-016 | Explicit safe run/configuration metadata and deterministic fixed-context transformations | Fresh default secrets intentionally separate runs; no metric recomputation |
+| PR-012/PR-013/PR-014 | Safe immutable report views preserve evidence placement, availability and null meaning | Frozen field registry, root schema, evidence classes and aggregate values |
+| Existing T1-T6/PR/F field owners | Values and denominator/scope semantics already supplied to the report | Privacy transformation creates no mathematical, causal or empirical conclusion |
+
+The report privacy stage changes disclosure after accepted calculation and
+assembly. A protected identifier denotes the same report entity within its
+explicit context. Omitted identity-bearing details are disclosed as redaction,
+not as missing source evidence. Error severity, evidence classes, aggregate
+numeric values and availability remain unchanged. No calculation owner or
+input parser executes during the installed privacy-transformation check.
+
+Safe option summaries and sanitized diagnostics are operational product rules.
+They do not add a theory equation, empirical authenticity guarantee, general
+anonymity claim, network monitor or statistical privacy bound. The declared
+network count concerns toolkit-managed operations; blocked network execution
+checks provide separate evidence. User approval for Step 4 is the contextual
+instruction `继续` following accepted Step 3; the approved Phase 4 plan remains
+byte-frozen.

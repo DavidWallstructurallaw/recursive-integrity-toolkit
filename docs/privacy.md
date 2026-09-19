@@ -61,3 +61,68 @@ Representation and metric calls operate on supplied immutable memory and do not 
 Sampled closed resampling creates one explicitly seeded local PCG64 generator per call after domain/resource checks. It does not read or alter the global random stream. No auto-installation or remote RNG exists. Declared operation/state/horizon/replicate bounds limit allocation; they do not provide an OS memory sandbox or certify full-report performance.
 
 Scopes, state IDs, source declarations, weights, content digests and original distributions can be sensitive. Default repr suppression and static errors reduce accidental disclosure, but deliberate serialization or inspection of these internal objects can expose caller data. They are not redacted public reports. Missing provenance and errors remain visible; no inference of authorship, external truth, semantic independence or safe deployment is performed. Evidence bundles use only repository-owned synthetic fixtures.
+
+## Phase 4 Step 4: explicit safe report views
+
+The Step 4 APIs implement approved P4-D05 and P4-D08, with PR-015 privacy and
+PR-016 reproducibility ownership. The earlier paragraphs describe their accepted
+historical stages. `assemble_report` continues to assemble standard internal
+evidence. Its `CanonicalReport` validates structure and evidence semantics;
+validation alone is not a privacy transformation. After calculation and assembly,
+call `reports.assembly.privacy_view` to create an immutable `SafeReportView` for
+an output sink. This operation does not ingest files, invoke a metric, change a
+classifier result, start a simulation or publish a report.
+
+Standard views retain structural identifiers and approved local input inventory,
+while excluding raw content, private notes, full embeddings, secrets and raw
+configuration dumps. Caller-supplied narrative and exception text are not trusted
+because they pass structural validation. Approved static explanations remain
+readable; unrecognized text is withheld with an explicit privacy disclosure.
+Structured diagnostics retain severity, counts, affected capabilities and
+available safe locations. Registered diagnostic codes retain their meaning;
+unknown codes cannot be relabeled as another registered error category.
+
+Redacted views additionally remove full paths, source/evidence references and raw
+per-record content digests. Input-inventory SHA-256 and normalized configuration
+SHA-256 remain reproducibility metadata under P4-D08. They are linkable and do
+not provide statistical anonymity. Dataset, state, scope and other potentially sensitive identifiers
+are transformed consistently across nested scopes, map keys, comparisons and
+simulation identities. The selected order and all supplied aggregate numbers,
+denominators, evidence classes, availability and error severity remain unchanged.
+Pseudonyms do not reorder parallel simulation arrays.
+
+Record-ID modes are `hash` (the redacted default), `preserve` and `omit`.
+An explicit `preserve` applies only to declared record-ID fields, never to a
+matching string embedded in a diagnostic, path or other narrative. `omit` removes
+record-level linkage while retaining aggregate counts and disclosure of exclusion
+reasons. An omitted duplicate-group identity list uses the existing
+`redacted_identity_details` contract. These omissions describe a privacy choice,
+not missing input evidence, and do not turn an available metric into unavailable.
+
+Identifier protection uses domain-separated HMAC-SHA-256 over unambiguous
+canonical encodings. A fresh secret gives run-scoped consistency and separates
+otherwise identical runs. An explicitly supplied local secret file permits
+declared cross-run consistency. A fixed injected secret is useful for deterministic
+tests. Secrets, secret file paths and reverse mappings are never included in a
+safe view or diagnostic. Domain separation prevents an identical string used as
+a dataset version and a state from acquiring the same identifier by accident.
+
+Safe run metadata uses explicit supplied execution measurements and a reconstructed
+approved command description. It never copies raw command-line arguments. A
+normalized resolved-config SHA-256 identifies the declared configuration under
+documented exclusions; it is not an authenticity check. Input SHA-256 values still
+describe supplied bytes. The network count has scope
+`toolkit_managed_outbound_operations`, not operating-system-wide monitoring.
+Unavailable metadata has a specific null reason rather than an invented clock,
+environment or execution claim.
+
+The Phase 4 options adapter validates supported output declarations and conflicts
+without changing inherited `resolve_config` or `validate_bundle` behavior. Direct
+Phase 2 calls retain their inert output mappings. Only standard and redacted
+privacy are selected; inherited debug labels do not activate raw-content output.
+
+These views provide identifier and content protection, not statistical anonymity,
+small-cell suppression, evidence authentication or protection from deliberate
+inspection of the caller's original internal objects. Step 4 does not implement
+renderers, CLI analysis or output publication. Those later sinks must consume the
+validated privacy view before emitting a report or diagnostic.

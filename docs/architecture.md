@@ -302,3 +302,47 @@ other 38 runtime modules, dependencies, Hero fixtures and mathematical oracles.
 Historical gates retain their accepted snapshot semantics; active Step 3 gates
 check the current source separately. Privacy transformation, rendering and CLI
 analysis remain assigned to their later approved steps.
+
+## Phase 4 Step 4: explicit privacy views and safe diagnostics
+
+The Step 4 boundary is the accepted Step 3 commit
+`974545c456e535ba1e1c5b6bf4ae0ce25bc04b57`. Five existing runtime modules may
+receive privacy, configuration, run-metadata and diagnostic additions:
+`result.py`, `reports/assembly.py`, `config.py`, `utils/hashing.py` and
+`utils/logging.py`. The other 35 runtime modules, all five root schemas, six
+canonical Hero files, calculation kernels and mathematical expectations retain
+their accepted bytes. The module set, dependencies and package version are
+unchanged. Earlier helper bodies, canonical validation and evidence assembly
+remain callable with their inherited behavior.
+
+An explicitly requested privacy view consumes an already assembled immutable
+canonical report. It does not reload input, classify records, calculate metrics,
+infer ancestry or activate a renderer. Standard output removes unsafe free text
+and content-bearing metadata. Redacted output additionally protects nested
+identities and removes paths, source/evidence URIs and raw content hashes.
+Record-ID preserve/hash/omit selection is restricted to record identifiers;
+it does not permit raw content, paths, notes or secrets. Domain-separated
+HMAC-SHA-256 pseudonyms use an explicit context. Fresh default keys have run
+scope; an explicit local secret file permits cross-run consistency. Neither key
+material nor its file path is report metadata.
+
+The Phase 4 configuration adapter leaves the Phase 2 resolver and input pipeline
+unchanged. Safe summaries, normalized configuration hashes and reconstructed
+commands expose approved option meaning without dumping the full configuration
+or argv. Diagnostic formatting retains severity and registered codes while
+replacing unsafe caller text. Sinks require explicit invocation and consume
+privacy-safe diagnostics. An inherited debug label does not enable raw logging.
+
+The Step 4 maintainer checker preserves all historical source definitions and
+uses a new source-segment check that splits each source once. This is an additive
+implementation of current preservation checks; prior stage checkers keep their
+accepted bodies. Historical Step 3 test identities are reconciled in addition to
+the prior identity chain. Installed-wheel checks exercise canonical assembly,
+privacy views, configuration and diagnostic formatting, with analytical calls,
+input operations, file access and network blocked during the privacy transform.
+The four workflow roles retain the full operating-system, Python and dependency
+matrix, real optional Parquet, and the 60-minute core-job budget.
+
+Step 4 does not implement JSON/Markdown rendering, output transactions, the audit
+CLI or a product performance certification. Identifier protection does not
+assert statistical anonymity or suppress small cells.

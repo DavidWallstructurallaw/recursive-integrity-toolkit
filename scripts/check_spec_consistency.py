@@ -86,6 +86,20 @@ def phase4_step3_main(step: int = 3) -> int:
     return result
 
 
+def phase4_step4_main(step: int = 4) -> int:
+    """Check authorized evidence assembly against the frozen public contract."""
+    import runpy
+
+    if type(step) is not int or step != 4:
+        raise ValueError("Only authorized Phase 4 Step 4 specification checking is available")
+    control = runpy.run_path(str(ROOT / "scripts/release_check.py"),
+                            run_name="phase4_step4_specification_control")
+    control["audit_phase4_step4"](step=step)
+    result = main()
+    print("Phase 4 Step 4: privacy views and safe diagnostics and preserved specification structure: PASS")
+    return result
+
+
 def cli_main(argv: list[str] | None = None) -> int:
     """Keep the argument-free historical gate and add explicit Phase 4 dispatch."""
     import argparse
@@ -104,7 +118,9 @@ def cli_main(argv: list[str] | None = None) -> int:
         return phase4_step2_main(step=args.step)
     if args.phase == 4 and args.step == 3:
         return phase4_step3_main(step=args.step)
-    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3")
+    if args.phase == 4 and args.step == 4:
+        return phase4_step4_main(step=args.step)
+    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4")
     return 2
 
 

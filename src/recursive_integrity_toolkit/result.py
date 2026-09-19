@@ -1,7 +1,7 @@
-"""Immutable canonical report contracts for Phase 4 Step 2.
+"""Immutable canonical report contracts and explicit safe output views.
 
 Owner IDs:
-    PR-012, PR-013, PR-014, PR-016; field-specific owners are in FIELD_REGISTRY.
+    PR-012, PR-013, PR-014, PR-015, PR-016; field-specific owners are in FIELD_REGISTRY.
 Theory Map IDs:
     Inherited through the declared T1-T6 or explicit product-rule field owners.
 Inputs:
@@ -14,7 +14,7 @@ Limits:
     No ingestion, classifier, metric, simulation, adapter, renderer or CLI runs.
     A valid contract does not certify the truth of supplied evidence.
 Current phase status:
-    Phase 4 Step 2 canonical result and public-field contract only.
+    Phase 4 Step 4 adds a safe-view wrapper; the Step 2 schema remains frozen.
 """
 from __future__ import annotations
 
@@ -977,3 +977,57 @@ class CanonicalReport:
     def to_dict(self) -> dict:
         """Return detached public data; this is no calculation adapter or renderer."""
         return _thaw(self.sections)
+
+
+class PrivacyMode(StrEnum):
+    """The two approved Phase 4 output views; debug is not an output mode."""
+
+    STANDARD = "standard"
+    REDACTED = "redacted"
+
+
+class RecordIdMode(StrEnum):
+    PRESERVE = "preserve"
+    HASH = "hash"
+    OMIT = "omit"
+
+
+@dataclass(frozen=True, slots=True, init=False, repr=False)
+class SafeReportView:
+    """An immutable, explicitly selected privacy view for later output sinks.
+
+    Canonical validation alone does not make arbitrary narrative text safe. Use
+    ``reports.assembly.privacy_view`` to create this boundary after calculation.
+    This type is a programming contract, not protection against deliberate Python
+    object introspection or reconstruction.
+    """
+
+    _report: CanonicalReport
+
+    def __init__(self, *args, **kwargs) -> None:
+        raise TypeError("create a SafeReportView through privacy_view")
+
+    @classmethod
+    def _from_safe_report(cls, report: CanonicalReport) -> "SafeReportView":
+        if type(report) is not CanonicalReport:
+            raise TypeError("safe view requires an exact canonical report")
+        result = object.__new__(cls)
+        object.__setattr__(result, "_report", report)
+        return result
+
+    @property
+    def sections(self) -> Mapping:
+        return self._report.sections
+
+    @property
+    def privacy_mode(self) -> PrivacyMode:
+        return PrivacyMode(self.sections["run"]["privacy_mode"])
+
+    @property
+    def record_id_mode(self) -> RecordIdMode:
+        protection = self.sections["run"].get("identifier_protection")
+        return RecordIdMode.PRESERVE if protection is None else RecordIdMode(protection["record_id_mode"])
+
+    def to_dict(self) -> dict:
+        """Return a detached, already protected canonical payload."""
+        return self._report.to_dict()

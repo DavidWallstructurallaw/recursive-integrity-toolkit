@@ -1,4 +1,4 @@
-name: Phase 4 Step 3 Security Boundary
+name: Phase 4 Step 4 Security Boundary
 
 on:
   push:
@@ -60,19 +60,21 @@ jobs:
             tests/unit/test_PR012_evidence_classes.py \
             tests/unit/test_PR013_report_schema.py \
             tests/unit/test_PR014_unavailable.py \
+            tests/unit/test_PR015_redaction.py \
+            tests/unit/test_PR016_determinism.py \
             tests/unit/test_PR018_language.py \
             tests/integration/test_partial_provenance_report.py \
             tests/unit/test_phase4_contracts.py \
             tests/integration/test_phase4_gates.py \
-            --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/phase4_step3_security_results.log"
-          python scripts/release_check.py --phase 4 --step 3 --junit "$RUNNER_TEMP/rit-security/security.xml"
-          python scripts/check_traceability.py --phase 4 --step 3
-          python scripts/release_check.py --phase 4 --step 3
+            --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/phase4_step4_security_results.log"
+          python scripts/release_check.py --phase 4 --step 4 --junit "$RUNNER_TEMP/rit-security/security.xml"
+          python scripts/check_traceability.py --phase 4 --step 4
+          python scripts/release_check.py --phase 4 --step 4
       - name: Retain actual security test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase4-step3-security-boundary
+          name: phase4-step4-security-boundary
           path: ${{ runner.temp }}/rit-security/
           if-no-files-found: error
           retention-days: 30

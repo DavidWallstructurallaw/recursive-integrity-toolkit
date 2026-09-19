@@ -5342,6 +5342,176 @@ def phase4_step3_main(step: int = 3) -> int:
     return 0
 
 
+# Step 4 adds privacy after canonical assembly. Historical stage checkers above
+# retain their original source. Fixed identities below are review data; none is
+# derived from the current source when the boundary runs.
+PHASE4_STEP4_INHERITED_AST_SHA256 = {
+    "src/recursive_integrity_toolkit/result.py": "4cbf8f28cb0aa04edc0a931c8a27b64c18ee1975b7e93a51edf62d34f6615ca9",
+    "src/recursive_integrity_toolkit/reports/assembly.py": "23b0574b56baa9b147a221742c53a37d995352d52d51f528bda0316eef30fd72",
+    "src/recursive_integrity_toolkit/utils/hashing.py": "d263ee776c8c2c9751106b959589cb7c49f5bbc3be0cbf7634717c88dccb8b98",
+    "src/recursive_integrity_toolkit/utils/logging.py": "35ad89e78bf13acf4ca8adea239b5c79db8001f5cbabbf2cfc7e27680e9c3e57",
+    "src/recursive_integrity_toolkit/config.py": "a85a8bab70aa2e2625be4943d1769ac33301d8a6725396925c7dbf44ac28f3b2",
+}
+PHASE4_STEP4_RUNTIME_AST_SHA256 = {
+    "src/recursive_integrity_toolkit/config.py": "92fb35fe0895f799c0b90c20d80f0262c92da8afb2b96e17154a870837ed71d5",
+    "src/recursive_integrity_toolkit/reports/assembly.py": "e96f66d5fcaa45e2eea53f19e78db345d703b4d565b4d635944682c728eb2329",
+    "src/recursive_integrity_toolkit/result.py": "a5f9f85b2e10128202feb1bc122f912315b0b46ccf1e2c67e0c7127229160a12",
+    "src/recursive_integrity_toolkit/utils/hashing.py": "6774dbc0177e876731da2d163f85acd583430dee1747a092528e0edaa869c0da",
+    "src/recursive_integrity_toolkit/utils/logging.py": "973a746221ea3d83fd1ab42a5687075bed6ad962a0c727cfa6350e94f71c94d3"
+}
+PHASE4_STEP4_ADDITIVE_BINDINGS = {
+    "src/recursive_integrity_toolkit/result.py": [
+        "PrivacyMode",
+        "RecordIdMode",
+        "SafeReportView"
+    ],
+    "src/recursive_integrity_toolkit/reports/assembly.py": [
+        "_PRIVACY_SAFE_TEXT",
+        "_privacy_contract",
+        "_privacy_alias",
+        "_privacy_text",
+        "_privacy_value",
+        "_privacy_run_fields",
+        "privacy_view",
+        "build_run_metadata"
+    ],
+    "src/recursive_integrity_toolkit/utils/hashing.py": [
+        "canonical_json_bytes",
+        "sha256_canonical",
+        "_phase4_secret_file",
+        "IdentifierProtection"
+    ],
+    "src/recursive_integrity_toolkit/utils/logging.py": [
+        "_TEMPLATES",
+        "_FIELDS",
+        "_EXCEPTION_TYPES",
+        "_severity",
+        "_code",
+        "_protection",
+        "_policy",
+        "safe_code",
+        "safe_diagnostic_text",
+        "safe_remediation",
+        "safe_field",
+        "safe_role",
+        "safe_effects",
+        "safe_record_key",
+        "_position",
+        "safe_diagnostic",
+        "format_diagnostic",
+        "emit_diagnostic"
+    ],
+    "src/recursive_integrity_toolkit/config.py": [
+        "Phase4Options",
+        "_phase4_config_data",
+        "_phase4_option_path",
+        "_phase4_literal",
+        "resolve_phase4_options",
+        "phase4_config_summary",
+        "phase4_config_hash"
+    ]
+}
+
+
+def _phase4_step4_ast_digest(nodes: list) -> str:
+    """Hash a location-free AST consistently on supported Python 3.11/3.12."""
+    import hashlib
+    import json
+
+    def canonical(value):
+        if isinstance(value, ast.AST):
+            return [type(value).__name__, [[name, canonical(item)]
+                    for name, item in ast.iter_fields(value)
+                    if name != "type_params" or item]]
+        if isinstance(value, list):
+            return [canonical(item) for item in value]
+        return [type(value).__name__, repr(value)]
+
+    # Python 3.12 adds empty type_params fields. Ignoring only empty ones makes
+    # the same non-generic source portable; nonempty type parameters remain data.
+    module = ast.Module(body=nodes, type_ignores=[])
+    payload = json.dumps(canonical(module), ensure_ascii=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _phase4_step4_bound_names(node) -> set[str]:
+    """Return only explicit top-level definition or assignment targets."""
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        return {node.name}
+    if isinstance(node, ast.Assign):
+        targets = node.targets
+    elif isinstance(node, ast.AnnAssign):
+        targets = [node.target]
+    else:
+        return set()
+    return {item.id for target in targets for item in ast.walk(target)
+            if isinstance(item, ast.Name) and isinstance(item.ctx, ast.Store)}
+
+
+def phase4_step4_runtime_boundary(path: Path, relative: str) -> None:
+    """Check one reviewed Step 4 runtime module without importing its code.
+
+    The complete reviewed AST constrains calls, imports, declarations, arithmetic,
+    sink use and control flow. A separate accepted-Step-3 identity freezes all
+    inherited non-import declarations after the explicitly named additions are
+    removed. Only the module ownership documentation is outside the AST digest.
+    """
+    if relative not in PHASE4_STEP4_INHERITED_AST_SHA256:
+        raise ValueError("Phase 4 Step 4 runtime path is outside the approved five modules")
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, UnicodeError, SyntaxError) as exc:
+        raise ValueError("Phase 4 Step 4 runtime source cannot be inspected") from exc
+    doc = ast.get_docstring(tree) or ""
+    if "Owner IDs:" not in doc or "Current phase status:" not in doc:
+        raise ValueError("Phase 4 Step 4 runtime ownership metadata is missing")
+    body = tree.body[1:] if ast.get_docstring(tree) is not None else tree.body
+    if _phase4_step4_ast_digest(body) != PHASE4_STEP4_RUNTIME_AST_SHA256.get(relative):
+        raise ValueError("Phase 4 Step 4 runtime differs from the reviewed privacy implementation")
+    additions = set(PHASE4_STEP4_ADDITIVE_BINDINGS.get(relative, ()))
+    inherited = []
+    observed_additions = set()
+    for node in body:
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            continue
+        names = _phase4_step4_bound_names(node)
+        if names & additions:
+            if not names <= additions or names & observed_additions:
+                raise ValueError("Phase 4 Step 4 additions rebind an inherited or duplicate name")
+            observed_additions.update(names)
+        else:
+            inherited.append(node)
+    if observed_additions != additions:
+        raise ValueError("Phase 4 Step 4 reviewed additive declaration is missing")
+    if _phase4_step4_ast_digest(inherited) != PHASE4_STEP4_INHERITED_AST_SHA256[relative]:
+        raise ValueError("Phase 4 Step 4 changed an inherited runtime helper or contract")
+
+
+def phase4_step4_privacy_boundary(root: Path) -> None:
+    """Enforce the five explicit privacy modules and frozen public schema."""
+    import hashlib
+
+    for relative in sorted(PHASE4_STEP4_INHERITED_AST_SHA256):
+        phase4_step4_runtime_boundary(root / relative, relative)
+    schema = root / "schemas/report.schema.json"
+    if hashlib.sha256(schema.read_bytes()).hexdigest() != PHASE4_STEP2_REPORT_SCHEMA_SHA256:
+        raise ValueError("Phase 4 Step 4 changed the frozen public report schema")
+
+
+def phase4_step4_main(step: int = 4) -> int:
+    """Validate Step 4 control, additive privacy and inherited helper identities."""
+    import runpy
+
+    if type(step) is not int or step != 4:
+        raise ValueError("Only authorized Phase 4 Step 4 traceability is available")
+    control = runpy.run_path(str(ROOT / "scripts/release_check.py"),
+                            run_name="phase4_step4_traceability_control")
+    control["audit_phase4_step4"](step=step)
+    phase4_step4_privacy_boundary(ROOT)
+    print("Phase 4 Step 4: inherited contracts and reviewed privacy, metadata and diagnostics: PASS")
+    return 0
+
+
 def cli_main(argv: list[str] | None = None) -> int:
     """Select the active phase without changing historical checker semantics."""
     import argparse
@@ -5360,7 +5530,9 @@ def cli_main(argv: list[str] | None = None) -> int:
         return phase4_step2_main(step=args.step)
     if args.phase == 4 and args.step == 3:
         return phase4_step3_main(step=args.step)
-    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3")
+    if args.phase == 4 and args.step == 4:
+        return phase4_step4_main(step=args.step)
+    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4")
     return 2
 
 
