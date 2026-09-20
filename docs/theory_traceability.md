@@ -315,3 +315,31 @@ network count concerns toolkit-managed operations; blocked network execution
 checks provide separate evidence. User approval for Step 4 is the contextual
 instruction `继续` following accepted Step 3; the approved Phase 4 plan remains
 byte-frozen.
+
+## Phase 4 Step 5 renderer ownership
+
+| Existing owner | Renderer responsibility | Preserved evidence boundary |
+|---|---|---|
+| PR-013 | Validated JSON and twelve-section Markdown output | Frozen schema and field registry; no new analytical path |
+| PR-016 | Stable section and mapping order, retained arrays and finite numeric representation | Supplied numerical values and upstream sequence semantics remain unchanged |
+| PR-018 | Visible statuses, null reasons, evidence legend and literal-safe caller labels | No stronger conclusion, executable markup or caller-authored toolkit assertion |
+| PR-015 | Render only an explicitly selected `SafeReportView` | Rendering does not replace privacy selection or provide statistical anonymity |
+| PR-012/PR-014 and existing T/PR/F field owners | Retain classifications, scopes, denominators, limitations and unavailable conclusions | Serialization supplies no formula, inferred evidence or independent empirical verification |
+
+The renderers consume the accepted report after its privacy transformation.
+Observability remains an input assessment; a Level 4 report may retain deferred
+lineage execution. Partial capabilities retain their coverage and reasons.
+Supplied scenarios remain experimental simulation evidence, and unavailable
+conclusions remain distinct from conclusions established to be false. The
+capability compatibility mirror produces one human-readable matrix without
+creating a second assessment.
+
+JSON and Markdown retain provided values without thresholding, percentage
+conversion, interval midpoint substitution, rounding tiny values to zero or
+deriving an additional metric. Markdown quotes dynamic labels as data and
+preserves ordinary Unicode while escaping markup and display controls. These
+are presentation and product rules; they neither reinterpret the theory papers
+nor establish source authenticity, causal ancestry, model performance, universal
+integrity or a collapse prediction. The twenty frozen mathematical cases and
+their numerical expectations remain the responsibility of their existing
+owners.

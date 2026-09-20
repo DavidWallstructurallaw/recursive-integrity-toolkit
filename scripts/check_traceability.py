@@ -5512,6 +5512,65 @@ def phase4_step4_main(step: int = 4) -> int:
     return 0
 
 
+# Step 5 opens only two rendering placeholders. These review identities are
+# fixed checker data, independent of the source being inspected at gate time.
+PHASE4_STEP5_RUNTIME_AST_SHA256 = {
+    "src/recursive_integrity_toolkit/reports/json_report.py": "04c46cdd644021b01b285dd6e62a2b026be27ac60607cc6117582d9581c0a283",
+    "src/recursive_integrity_toolkit/reports/markdown_report.py": "08ece6fc0ba3ea57dab335508978a974439c7f37aa84e4dcd652615fa6628e84",
+}
+PHASE4_STEP5_RUNTIME_OWNERS = {
+    "src/recursive_integrity_toolkit/reports/json_report.py": ["PR-013", "PR-016"],
+    "src/recursive_integrity_toolkit/reports/markdown_report.py": ["PR-013", "PR-018"],
+}
+
+
+def phase4_step5_runtime_boundary(path: Path, relative: str) -> None:
+    """Inspect the complete reviewed renderer AST without importing its code.
+
+    A fixed identity covers imports, function signatures, literal declarations,
+    calls, effects and control flow. The two accepted placeholders contained no
+    inherited functions or assignments. Every other runtime module is frozen by
+    the separately verified accepted Step 4 file inventory.
+    """
+    if relative not in PHASE4_STEP5_RUNTIME_AST_SHA256:
+        raise ValueError("Phase 4 Step 5 runtime path is outside the two approved renderers")
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, UnicodeError, SyntaxError) as exc:
+        raise ValueError("Phase 4 Step 5 runtime source cannot be inspected") from exc
+    doc = ast.get_docstring(tree) or ""
+    if ("Owner IDs:" not in doc or "Current phase status:" not in doc
+            or not all(owner in doc for owner in PHASE4_STEP5_RUNTIME_OWNERS[relative])):
+        raise ValueError("Phase 4 Step 5 renderer ownership metadata is missing")
+    body = tree.body[1:] if ast.get_docstring(tree) is not None else tree.body
+    if _phase4_step4_ast_digest(body) != PHASE4_STEP5_RUNTIME_AST_SHA256[relative]:
+        raise ValueError("Phase 4 Step 5 runtime differs from the reviewed rendering implementation")
+
+
+def phase4_step5_renderers_boundary(root: Path) -> None:
+    """Enforce both pure renderer implementations and the frozen public schema."""
+    import hashlib
+
+    for relative in sorted(PHASE4_STEP5_RUNTIME_AST_SHA256):
+        phase4_step5_runtime_boundary(root / relative, relative)
+    if hashlib.sha256((root / "schemas/report.schema.json").read_bytes()).hexdigest() != PHASE4_STEP2_REPORT_SCHEMA_SHA256:
+        raise ValueError("Phase 4 Step 5 changed the frozen public report schema")
+
+
+def phase4_step5_main(step: int = 5) -> int:
+    """Validate explicit Step 5 authorization and reviewed renderer boundaries."""
+    import runpy
+
+    if type(step) is not int or step != 5:
+        raise ValueError("Only authorized Phase 4 Step 5 traceability is available")
+    control = runpy.run_path(str(ROOT / "scripts/release_check.py"),
+                            run_name="phase4_step5_traceability_control")
+    control["audit_phase4_step5"](step=step)
+    phase4_step5_renderers_boundary(ROOT)
+    print("Phase 4 Step 5: reviewed JSON and Markdown rendering and frozen prior contracts: PASS")
+    return 0
+
+
 def cli_main(argv: list[str] | None = None) -> int:
     """Select the active phase without changing historical checker semantics."""
     import argparse
@@ -5532,7 +5591,9 @@ def cli_main(argv: list[str] | None = None) -> int:
         return phase4_step3_main(step=args.step)
     if args.phase == 4 and args.step == 4:
         return phase4_step4_main(step=args.step)
-    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4")
+    if args.phase == 4 and args.step == 5:
+        return phase4_step5_main(step=args.step)
+    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5")
     return 2
 
 

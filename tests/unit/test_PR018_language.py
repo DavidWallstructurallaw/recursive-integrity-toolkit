@@ -467,3 +467,284 @@ def test_phase4_step4_diagnostic_privacy_enums_interoperate_without_enabling_deb
                                protection=context)["code"] == "E_FILE_PARSE"
     with pytest.raises(ValueError, match="only standard or redacted"):
         safe_diagnostic(message, mode=InputPrivacyMode.DEBUG)
+
+
+# Phase 4 Step 5: readable evidence and injection-safe Markdown.
+def phase4_step5_markdown_data_strings(markdown):
+    """Read quoted JSON literals inside inline code, never execute markup."""
+    import json
+    import re
+
+    result = []
+    for token in re.findall(r"`([^`\n]+)`", markdown):
+        try:
+            value = json.loads(token)
+        except (ValueError, TypeError):
+            continue
+        if type(value) is str:
+            result.append(value)
+    return result
+
+
+def phase4_step5_hostile_identity_payload(label):
+    from test_PR012_evidence_classes import phase4_step2_metric_report_fixture
+
+    payload = phase4_step2_metric_report_fixture()
+    metric = payload["derived_metrics"]["diversity"]["by_version"].pop("v1")["gini_simpson_diversity"]
+    metric["scope"]["dataset_versions"] = [label]
+    metric["scope"]["scope_id"] = label
+    metric["representation"]["representation_name"] = label
+    payload["derived_metrics"]["diversity"]["by_version"][label] = {"gini_simpson_diversity": metric}
+    return payload
+
+
+def test_phase4_step5_markdown_title_twelve_headings_and_empty_sections_are_visible():
+    from test_PR013_report_schema import phase4_step2_report_fixture, phase4_step5_renderers, phase4_step5_view
+
+    _, render_markdown = phase4_step5_renderers()
+    markdown = render_markdown(phase4_step5_view(phase4_step2_report_fixture()))
+    assert markdown.startswith("# Recursive Integrity Audit Report\n")
+    assert [line for line in markdown.splitlines() if line.startswith("## ")] == [
+        "## Run metadata", "## Input inventory", "## Observability summary", "## Capability matrix",
+        "## Observed facts", "## Derived metrics", "## Proxy signals", "## Simulations",
+        "## Unavailable conclusions", "## Recommended next metadata", "## Warnings", "## Errors"]
+    assert markdown.count("# Recursive Integrity Audit Report") == 1
+    for empty in ("Input inventory", "Observability summary", "Capability matrix", "Observed facts",
+                  "Derived metrics", "Proxy signals", "Simulations", "Unavailable conclusions",
+                  "Recommended next metadata", "Warnings", "Errors"):
+        body = markdown.split("## " + empty + "\n", 1)[1].split("\n## ", 1)[0]
+        assert body.strip()
+
+
+def test_phase4_step5_markdown_preserves_status_evidence_and_full_precision_with_units():
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_rich_payload, phase4_step5_view
+
+    _, render_markdown = phase4_step5_renderers()
+    view = phase4_step5_view(phase4_step5_rich_payload())
+    markdown = render_markdown(view)
+    strings = phase4_step5_markdown_data_strings(markdown)
+    for value in ("partial", "available", "unavailable", "deferred", "experimental",
+                  "observed_fact", "derived_metric", "simulation", "unavailable_conclusion",
+                  "dimensionless", "records", "ratio", "F-003", "F-009", "F-010", "T3"):
+        assert value in strings or value in markdown, value
+    assert "0.12345678901234566" in markdown
+    assert "0.25" in markdown and "0.75" in markdown and "0.5" in markdown
+    for field in ("lower_bound", "upper_bound", "interval_width", "denominator", "coverage",
+                  "record_count", "excluded_record_count", "representation", "method_id",
+                  "owner_ids", "trace_ids", "assumptions", "limitations", "reason_codes"):
+        assert field in markdown, field
+    assert "midpoint" not in markdown
+    assert view.to_dict()["capabilities"]["lineage"]["coverage"] == 0.75
+
+
+def test_phase4_step5_markdown_never_substitutes_unavailable_metric_with_zero():
+    from test_PR012_evidence_classes import phase4_step2_metric_report_fixture
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_view
+
+    payload = phase4_step2_metric_report_fixture()
+    metric = payload["derived_metrics"]["diversity"]["by_version"]["v1"]["gini_simpson_diversity"]
+    metric.update({"value": None, "status": "unavailable", "representation": None,
+        "coverage": None, "coverage_reason": "No selected-state distribution was supplied.",
+        "denominator": None, "denominator_reason": "No eligible records were supplied.",
+        "reason_codes": ["R_REPRESENTATION_NOT_DECLARED"],
+        "required_evidence": ["An explicit state representation is required."]})
+    view = phase4_step5_view(payload)
+    markdown = phase4_step5_renderers()[1](view)
+    body = markdown.split("## Derived metrics\n", 1)[1].split("\n## ", 1)[0]
+    assert "Unavailable" in body
+    value_rows = [line for line in body.splitlines()
+                  if line.startswith('| `["value"]` |')]
+    assert len(value_rows) == 1
+    assert "Unavailable" in value_rows[0]
+    assert "Value: Unavailable" in body
+    assert "NaN" not in body
+    assert "R_REPRESENTATION_NOT_DECLARED" in body
+    strings = phase4_step5_markdown_data_strings(body)
+    safe_metric = view.to_dict()["derived_metrics"]["diversity"]["by_version"]["v1"]["gini_simpson_diversity"]
+    for reason in (safe_metric["coverage_reason"], safe_metric["denominator_reason"],
+                   *safe_metric["required_evidence"]):
+        assert reason in strings or reason in body
+    assert safe_metric["value"] is None
+    assert "value" in body and "denominator" in body and "coverage" in body
+
+
+def test_phase4_step5_markdown_run_null_reasons_and_required_footer_are_preserved():
+    from test_PR013_report_schema import phase4_step2_report_fixture, phase4_step5_renderers, phase4_step5_view
+
+    view = phase4_step5_view(phase4_step2_report_fixture())
+    markdown = phase4_step5_renderers()[1](view)
+    strings = phase4_step5_markdown_data_strings(markdown)
+    reason = view.to_dict()["run"]["null_reasons"]["random_seed"]
+    assert reason in strings or reason in markdown
+    assert "Unavailable" in markdown
+    footer = markdown.split("## Errors\n", 1)[1]
+    for value in ("0.1.0.dev2", "1.0", "observed_fact", "derived_metric", "proxy_signal",
+                  "simulation", "unavailable_conclusion", "traceability"):
+        assert value.lower() in footer.lower(), value
+    assert "unavailable conclusions" in footer.lower()
+    assert "false conclusions" in footer.lower()
+    assert "round" in markdown.lower() or "precision" in markdown.lower()
+    assert "JSON" in markdown
+
+
+def test_phase4_step5_markdown_unicode_and_hostile_structural_ids_remain_inert_data():
+    import json
+    import re
+    import unicodedata
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_view
+
+    render_json, render_markdown = phase4_step5_renderers()
+    for label in ("中文状态 café 🚀", "left|right", "`` `escape` ```", "<script>alert(1)</script>",
+                  "[claim](javascript:alert(1))", "![image](https://invalid.example/track)",
+                  "\n## Forged report\n| field | claimed |", "\r\n# Forged title\t\x1b[31m",
+                  "safe\u202eevil\u2066text\u2069\u2028line\u2029paragraph", "&lt;img src=x&gt;"):
+        view = phase4_step5_view(phase4_step5_hostile_identity_payload(label))
+        assert label in view.to_dict()["derived_metrics"]["diversity"]["by_version"]
+        serialized = render_json(view)
+        assert label in json.loads(serialized)["derived_metrics"]["diversity"]["by_version"]
+        markdown = render_markdown(view)
+        assert label in phase4_step5_markdown_data_strings(markdown), repr(label)
+        assert "<script>" not in markdown and "<img" not in markdown
+        outside_code = re.sub(r"`[^`\n]*`", "", markdown)
+        assert "javascript:" not in outside_code
+        assert "https://invalid.example/track" not in outside_code
+        assert "[claim]" not in outside_code and "![image]" not in outside_code
+        assert not re.search(r"^#{1,6} Forged", markdown, re.MULTILINE)
+        assert not re.search(r"^```", markdown, re.MULTILINE)
+        assert all(character == "\n" or unicodedata.category(character) not in (
+            "Cc", "Cf", "Cs", "Zl", "Zp") for character in markdown)
+        assert len([line for line in markdown.splitlines() if line.startswith("## ")]) == 12
+        for line in markdown.splitlines():
+            if line.startswith("|") and "left" in line and "right" in line:
+                assert "left|right" not in line
+        if label == "中文状态 café 🚀":
+            assert label in markdown
+
+
+def test_phase4_step5_redacted_reports_withhold_hostile_identity_but_keep_analysis():
+    import json
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_view
+
+    label = "PRIVATE_RENDERER_ID|[claim](javascript:evil)中文"
+    view = phase4_step5_view(phase4_step5_hostile_identity_payload(label), "redacted")
+    render_json, render_markdown = phase4_step5_renderers()
+    serialized, markdown = render_json(view), render_markdown(view)
+    assert "PRIVATE_RENDERER_ID" not in serialized + markdown
+    payload = json.loads(serialized)
+    versions = payload["derived_metrics"]["diversity"]["by_version"]
+    assert len(versions) == 1
+    identity = next(iter(versions))
+    assert identity.startswith("hmac-sha256:")
+    assert identity in markdown
+    assert versions[identity]["gini_simpson_diversity"]["value"] == 0
+    assert "derived_metric" in markdown and "F-003" in markdown
+
+
+def test_phase4_step5_all_supplied_analytical_string_values_are_visible_after_sanitization():
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_rich_payload, phase4_step5_view
+
+    def strings(value):
+        if type(value) is str:
+            yield value
+        elif type(value) is dict:
+            for child in value.values():
+                yield from strings(child)
+        elif type(value) is list:
+            for child in value:
+                yield from strings(child)
+
+    for mode in ("standard", "redacted"):
+        view = phase4_step5_view(phase4_step5_rich_payload(), mode)
+        markdown = phase4_step5_renderers()[1](view)
+        visible = phase4_step5_markdown_data_strings(markdown)
+        for name in ("observed_facts", "derived_metrics", "simulations", "unavailable_conclusions"):
+            for value in strings(view.to_dict()[name]):
+                assert value in visible or value in markdown, (name, value)
+
+
+def test_phase4_step5_error_and_warning_codes_remain_visible_without_raw_diagnostic_text():
+    from test_PR013_report_schema import phase4_step2_error_report_fixture, phase4_step5_renderers, phase4_step5_view
+
+    payload = phase4_step2_error_report_fixture()
+    payload["errors"][0]["code"] = "E_FILE_PARSE"
+    payload["errors"][0]["message"] = "PRIVATE_ERROR_BODY\n## Forged claim"
+    payload["errors"][0]["remediation"] = ["PRIVATE_ERROR_REMEDIATION"]
+    payload["warnings"] = [{"code": "W_PROVENANCE_MISSING_ROW",
+        "message": "PRIVATE_ERROR_BODY", "count": 1,
+        "affected_scope": {"dataset_versions": ["v1"], "record_count": 2,
+            "excluded_record_count": 0, "denominator_basis": "included_records", "scope_id": "v1"},
+        "representative_locations": [], "effect_on_capabilities": ["provenance"],
+        "remediation": ["PRIVATE_ERROR_REMEDIATION"], "severity": "warning", "coverage": None}]
+    view = phase4_step5_view(payload)
+    for render in phase4_step5_renderers():
+        output = render(view)
+        assert "PRIVATE_ERROR_BODY" not in output
+        assert "PRIVATE_ERROR_REMEDIATION" not in output
+        assert "E_FILE_PARSE" in output
+        assert "W_PROVENANCE_MISSING_ROW" in output
+        assert "failed" in output
+
+
+def test_phase4_step5_markdown_preserves_tiny_finite_values_and_signed_zero():
+    from test_PR012_evidence_classes import phase4_step2_metric_report_fixture
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_view
+
+    for value, expected in ((5e-324, "5e-324"), (-0.0, "-0.0"), (0.0, "0.0")):
+        payload = phase4_step2_metric_report_fixture()
+        payload["derived_metrics"]["diversity"]["by_version"]["v1"][
+            "gini_simpson_diversity"]["value"] = value
+        markdown = phase4_step5_renderers()[1](phase4_step5_view(payload))
+        assert expected in markdown
+
+
+def test_phase4_step5_capability_known_coverage_keeps_explicit_null_reason_field():
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_rich_payload, phase4_step5_view
+
+    view = phase4_step5_view(phase4_step5_rich_payload())
+    assert view.to_dict()["capabilities"]["ingestion"]["coverage"] == 1.0
+    assert view.to_dict()["capabilities"]["ingestion"]["coverage_reason"] is None
+    markdown = phase4_step5_renderers()[1](view)
+    body = markdown.split("## Capability matrix\n", 1)[1].split("\n## ", 1)[0]
+    assert body.count("coverage_reason") == 7
+    assert "Unavailable" in body
+    assert "null" in body
+
+
+def test_phase4_step5_canonical_boundary_rejects_invalid_unicode_before_rendering():
+    import pytest
+    from test_PR013_report_schema import phase4_step5_view
+
+    for label in ("has\x00nul", "unpaired\ud800surrogate"):
+        with pytest.raises(ValueError):
+            phase4_step5_view(phase4_step5_hostile_identity_payload(label))
+
+
+def test_phase4_step5_proxy_signal_retains_bounded_claim_basis_and_metadata_requests(tmp_path):
+    import json
+    from recursive_integrity_toolkit.metrics.tail import select_tail
+    from recursive_integrity_toolkit.models import TailSelectionOptions
+    from recursive_integrity_toolkit.reports.assembly import assemble_report
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_view
+
+    bundle = phase4_step3_bundle(tmp_path)
+    distribution = phase4_step3_distribution(bundle)
+    tail = select_tail(distribution.unweighted, options=TailSelectionOptions("singleton_count"))
+    report = assemble_report(bundle, run=phase4_step3_run(), distributions=(distribution,), tail=tail)
+    render_json, render_markdown = phase4_step5_renderers()
+    for mode in ("standard", "redacted"):
+        view = phase4_step5_view(report.to_dict(), mode)
+        actual = json.loads(render_json(view))
+        signal = actual["proxy_signals"]["tail_fragility"]
+        assert signal["evidence_class"] == "proxy_signal"
+        assert signal["level"] == "present"
+        assert actual["derived_metrics"]["tail"]["tail_support_size"]["value"] == 2
+        assert "This signal is not a calibrated forecast of the production pipeline." in signal["limitations"]
+        markdown = render_markdown(view)
+        body = markdown.split("## Proxy signals\n", 1)[1].split("\n## ", 1)[0]
+        assert "proxy_signal" in body and "present" in body
+        assert "basis_fields" in body and "trigger_rule" in body
+        assert "not a calibrated forecast" in body
+        assert actual["recommended_next_metadata"]
+        recommendations = markdown.split("## Recommended next metadata\n", 1)[1].split("\n## ", 1)[0]
+        assert recommendations.lstrip().startswith("- ")
+        assert "scope" in recommendations and "expected_unlock" in recommendations

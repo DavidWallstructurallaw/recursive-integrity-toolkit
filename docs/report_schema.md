@@ -1144,3 +1144,125 @@ the deferred JSON report renderer.
 Step 4 does not render reports, publish output files, start CLI analysis, expand
 the public metric set or change any mathematical owner. It provides identifier
 and content protection, not statistical anonymity or authentication of evidence.
+
+## Phase 4 Step 5: JSON and Markdown renderer APIs
+
+The explicit public calls are
+`reports.json_report.render_json(report: SafeReportView) -> str` and
+`reports.markdown_report.render_markdown(report: SafeReportView) -> str`.
+Call `reports.assembly.privacy_view` first, selecting standard or redacted output
+and its approved record-ID behavior. Both renderers require the exact safe-view
+type, obtain detached data and revalidate the frozen canonical contract before
+formatting. Raw mappings, `CanonicalReport` objects and safe-view subclasses are
+rejected. Rendering does not create a privacy key or choose a privacy mode.
+
+```python
+from recursive_integrity_toolkit.reports.assembly import privacy_view
+from recursive_integrity_toolkit.reports.json_report import render_json
+from recursive_integrity_toolkit.reports.markdown_report import render_markdown
+
+# report is an already assembled CanonicalReport.
+view = privacy_view(report, mode="standard")
+json_text = render_json(view)
+markdown_text = render_markdown(view)
+```
+
+The two strings describe the same selected view. These calls do not write a
+report, open an input or output file, select a destination, invoke a CLI,
+calculate a metric or make a network call. The HTML renderer remains a
+placeholder. Standard output still retains approved structural labels and local
+inventory paths; choose the redacted privacy view when those identifiers should
+be protected. Markdown escaping is additional display protection and does not
+change that privacy choice.
+
+### Deterministic JSON and sequence order
+
+JSON preserves the twelve required top-level keys in their registered order.
+Nested mapping keys use lexical Unicode order, independent of their construction
+order. Arrays keep their complete supplied order and multiplicity, including
+state/value arrays, chronological versions, directed-map details, sampled
+generations, diagnostics and ranked metadata recommendations. Dynamic state and
+version keys remain literal keys. No renderer sorts an array by its protected
+identifier, removes a member, changes a comparison direction or introduces a
+new frequency or severity ranking. The accepted evidence producer determines
+sequence meaning before privacy selection and rendering.
+
+Output uses two-space JSON indentation, UTF-8-compatible Unicode, LF structural
+line endings and one final newline. JSON string escaping preserves control
+characters as data. Nonfinite values are rejected by canonical validation and
+serialization. The payload retains numeric types, finite values, nulls, empty
+objects and empty arrays. Repeated rendering of the same view produces the same
+string; a newly selected view with a fresh pseudonym secret intentionally may
+differ. Timestamps, run IDs and other supplied metadata are never silently
+normalized by a renderer.
+
+### Markdown structure and analytical parity
+
+Markdown begins with `# Recursive Integrity Audit Report`, followed by a compact
+run summary and all twelve required level-two headings in the registered order.
+The summary identifies the run, maximum observability, capability statuses,
+record scope, representation and warning/error counts without computing an
+additional analysis. A complete capability matrix includes input status,
+execution status, coverage and reason details. Its observability compatibility
+mirror refers to this same displayed matrix and is not printed as a second
+assessment.
+
+Analytical envelopes display their status, evidence class, value, unit,
+denominator, coverage and method together. Field tables retain the complete
+registered metadata and nested supplied values. Field paths distinguish literal
+dynamic keys from structural field names. Homogeneous arrays of records with
+at most eight scalar columns use compact tables; their columns are sorted and
+their row order remains unchanged. Assumptions and limitations use ordered
+bullet lists; warnings, errors and recommended metadata retain their individual
+entries and detail fields. Empty required sections remain visible.
+Partial, deferred and experimental labels stay explicit wherever supplied.
+Scenarios remain in the simulation section, with their model and assumptions.
+
+The footer names the supplied toolkit version, report schema version, all five
+evidence classes and the traceability reference. It explains that unavailable
+conclusions have not been established to be false. Rendering does not turn a
+proxy into a measurement, a declared source into authenticated truth, or input
+eligibility into completed analysis.
+
+### Numeric and unavailable display policy
+
+Markdown uses finite JSON round-trip numeric representations in the supplied
+units. Integer values remain exact. Floating-point values retain enough digits
+to recover the supplied value, including tiny positive probabilities, signed
+zero and small interval widths. A mathematically integral float remains a float
+when that is the accepted payload representation. Ratios stay ratios; no
+percentage conversion, fixed decimal truncation or midpoint estimate is
+introduced. This explicit precision policy takes the reporting specification's
+fixed-decimal suggestions as recommendations while preserving the approved
+Step 5 requirement that human display must not erase nonzero values or bounds.
+Machine-readable JSON remains authoritative.
+
+Intervals retain separate supplied lower bound, upper bound and width with
+their original unit, scope and limitations. Weighted masses keep their declared
+weight unit and denominator. Nulls display `Unavailable` with the retained
+field or envelope reason context. A null never displays as numerical zero;
+zero, false, empty collections and missing evidence retain distinct forms.
+Where a null describes a nonapplicable optional field, the display explains
+that status without inventing an unavailable analytical result or additional
+evidence code.
+
+### Literal text safety and limits
+
+Only fixed toolkit text supplies headings, table structure and explanatory
+claims. Every caller-controlled string, including dynamic keys, appears as a
+quoted JSON string inside an inline-code span. JSON escapes represent quote and
+backslash characters. Additional reversible Unicode escapes protect backticks,
+table pipes, angle brackets, ampersands, display-control/format characters and
+line/paragraph separators. Ordinary Unicode remains readable. Links, raw HTML,
+fenced-code markers, heading syntax and newlines supplied as labels therefore
+remain literal data and cannot create a report section or executable markup.
+Reading the displayed JSON literal recovers its string; escape sequences are
+never interpreted as templates or evaluated.
+
+The renderer validates structure and formats already selected evidence. Its
+safe-view type is an API contract, not isolation from a Python caller capable
+of mutating private objects or replacing runtime functions. It does not certify
+evidence authenticity, provide statistical anonymity, limit total report size
+or establish whole-product performance. Publication safety belongs to Step 6;
+the remaining CLI, packaged-resource and final acceptance work retains its
+later phase-step boundaries.

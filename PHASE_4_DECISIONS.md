@@ -373,3 +373,105 @@ commands, environments, outcomes, failed attempts and repairs, review findings
 and limitations. Technical review is consolidated assistant review, without
 asserting independent human certification, empirical theory validation or
 production readiness. Stop after accepted Step 4.
+
+## Step 5 authorization and renderer boundary
+
+On 2026-09-20 UTC the Theory Owner instructed: `很好，Phase 4 Step 5 继续`.
+This explicitly advances the accepted plan to Step 5. Earlier stop statements
+remain the historical record of their own authorization intervals. Phase 4
+remains incomplete. Step 6, a main merge, tags and software publication are not
+authorized by this instruction.
+
+The accepted Step 4 anchor is commit
+`49454a9b162cb8d35e38d1cb1ae32cb208d3a01c`, source tree
+`79264d845e08f73ee68e160dea04f7786f18fd0a`, and tests tree
+`4aa4ca0b22f8b8c25afe27feeaba713d6f0830bf`. Its accepted core and real-Parquet
+counts were 3071 and 3074. Step 5 records this prior implementation identity
+separately from its own current implementation and execution evidence.
+
+The exact allowed set is the twenty-six common maintenance paths plus the six
+additional Step 5 paths in the approved plan, for thirty-two existing paths.
+Only modifications are permitted. No addition, deletion, rename, mode change,
+dependency, version or module-set change is approved. The independently enforced
+permission registry prevents the control document from expanding its own scope.
+
+Only `reports/json_report.py` and `reports/markdown_report.py` under
+`src/recursive_integrity_toolkit/` may gain runtime behavior. The other thirty-eight
+runtime modules, all five schemas, six Hero source files, mathematical oracles,
+Phase 0 authorities and development version `0.1.0.dev2` remain byte-exact to the
+accepted Step 4 source. This includes the canonical model, privacy transformation,
+configuration resolver, hashing and diagnostic helpers. The HTML placeholder
+remains unchanged. Rendering cannot compute metrics, inspect source inputs,
+choose a privacy policy, create identifiers, publish files or start CLI analysis.
+
+### Rendering contract and ordering policy
+
+Both renderers require an exact `SafeReportView` and validate its copied canonical
+payload through `validate_report` before serialization. Callers explicitly apply
+`privacy_view` first. A dictionary or internal `CanonicalReport` cannot silently
+bypass the accepted privacy boundary. No schema, input or metric owner is imported
+or executed to render the supplied safe report.
+
+The twelve top-level sections retain their frozen order. Nested object keys use
+lexical ordering. Every array preserves the accepted canonical sequence, including
+state/probability associations, mappings, comparison direction, trajectories,
+diagnostics and recommendation priorities. Section 32's suggested display sorting
+does not authorize the renderer to infer a new ranking or independently reorder
+paired arrays. Repeated rendering of the same safe view produces identical text;
+fresh-key pseudonyms remain a separate Step 4 source of cross-run variation.
+
+JSON preserves finite numerical values without display conversion. Markdown uses
+exact integers and shortest round-trip finite-float spelling with original units.
+This explicit display precision preserves tiny nonzero values and narrow interval
+bounds. Neither percentages nor rounded analytical values are invented. Null
+reasons, methods, evidence classes, denominator metadata, limitations and partial,
+deferred or experimental status remain visible in the human-readable report.
+
+Arbitrary text is data within fixed toolkit-authored headings and labels. Markdown
+escaping covers table separators, link syntax, raw HTML, line breaks and control
+sequences while retaining a recoverable representation of hostile labels and
+Unicode. Renderer errors use fixed safe text and cannot echo supplied content.
+The current renderer APIs return text only. Destination selection and publication
+safety remain Step 6 work.
+
+### Exact Step 4 historical bindings
+
+Ten named functions use the verified accepted Step 4 snapshot through thirteen
+exact source replacements registered independently in the release checker.
+These definitions account for sixty-eight existing parametrized pytest nodes.
+Original names, parameterizations and substantive assertions remain intact.
+
+| File | Exact function definitions and changed binding |
+|---|---|
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step4_approved_control_keeps_independent_step3_anchors`, `test_phase4_step4_control_rejects_forged_scope_and_stage`, `test_phase4_step4_control_rejects_unapproved_dispatch`, `test_phase4_step4_control_requires_explicit_approval_fields`, `test_phase4_step4_control_cannot_mint_extra_permission`: read the pinned Step 4 control. |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step4_historical_migrations_preserve_ten_step3_gate_nodes`, `test_phase4_step4_historical_guard_rejects_assertion_and_binding_weakening`: use pinned Step 4 migrated test bytes as the historical after-state. |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step4_current_runtime_opens_only_privacy_metadata_modules_and_freezes_schema`, `test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch`: inspect pinned Step 4 runtime and workflows. |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step4_current_snapshot_checks_valid_tree_before_mutations`: copy pinned Step 4 files before applying its original mutations. |
+
+The additive `phase4_step4_snapshot` verifies the fixed commit, source and test
+trees, regular-file inventory and every Git blob before use and at teardown.
+Earlier fixtures and maintainer functions retain their source, apart from exact
+Step 5 dispatcher additions. Current privacy, configuration, mathematical, input
+and security tests continue to execute current runtime code. New Step 5 gate
+tests independently accept the unmodified current tree before negative mutations.
+Fixed reviewed renderer AST identities constrain imports, calls, declarations and
+control flow without importing the renderer under inspection. Gate execution
+cannot learn a new accepted AST from that current source.
+
+### Step 5 verification and evidence policy
+
+Acceptance requires independent twelve-section JSON/schema and Markdown cases,
+analytical parity, finite-number and interval preservation, deterministic ordering,
+hostile-label escaping, status and null-reason visibility, and blocked input,
+network and calculation operations. All inherited node identities must remain,
+including the five-generation chain from final Phase 3 through accepted Step 4.
+Four remote workflow roles retain all eight core combinations, real Parquet,
+frozen Hero/math, security and isolated build/installed checks. The existing
+sixty-minute core budget is unchanged. Complete local core, minimum-dependency and
+real-Parquet suites must pass; no incomplete execution is reported as acceptance.
+
+The external Step 5 receipt records actual source identities, changed paths,
+commands, environments, outcomes, failed attempts and repairs, review findings
+and limitations. Technical review is consolidated assistant review without
+asserting independent human certification, empirical theory validation or
+production readiness. Stop after accepted Step 5.

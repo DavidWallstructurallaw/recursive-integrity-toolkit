@@ -526,3 +526,206 @@ def test_phase4_step2_sha256_metadata_rejects_trailing_line_breaks(schema_root):
         assert not validator.is_valid(payload), repr(value)
         with pytest.raises(ValueError):
             CanonicalReport.from_dict(payload)
+
+
+# Phase 4 Step 5: authored renderer contracts, without expected-output goldens.
+def phase4_step5_rich_payload():
+    """Combine independent, already reviewed literal evidence contracts."""
+    import copy
+    from test_PR012_evidence_classes import (
+        phase4_step2_additional_evidence_fixture, phase4_step2_interval_report_fixture,
+        phase4_step2_metric_fixture, phase4_step2_sampled_path_report_fixture,
+    )
+
+    payload = phase4_step2_capability_report_fixture()
+    payload["run"]["run_status"] = "partial"
+    payload["capabilities"]["lineage"].update({"status": "partial", "coverage": 0.75,
+        "reason_codes": ["R_LINEAGE_PARTIAL"]})
+    payload["observability"]["capabilities"] = copy.deepcopy(payload["capabilities"])
+    payload["observed_facts"] = {"content": {
+        "duplicate_record_count": phase4_step2_metric_fixture(observed=True)}}
+    metric = phase4_step2_metric_fixture()
+    metric["value"] = 0.12345678901234566
+    payload["derived_metrics"] = phase4_step2_interval_report_fixture()["derived_metrics"]
+    payload["derived_metrics"]["diversity"] = {"by_version": {"v1": {
+        "gini_simpson_diversity": metric}}}
+    payload["simulations"] = phase4_step2_sampled_path_report_fixture()["simulations"]
+    payload["unavailable_conclusions"] = [
+        phase4_step2_additional_evidence_fixture("unavailable_conclusion")]
+    return payload
+
+
+def phase4_step5_view(payload, mode="standard", record_id_mode=None):
+    from recursive_integrity_toolkit.reports.assembly import privacy_view
+    from recursive_integrity_toolkit.result import CanonicalReport
+    from recursive_integrity_toolkit.utils.hashing import IdentifierProtection
+
+    return privacy_view(CanonicalReport.from_dict(payload), mode=mode,
+        record_id_mode=record_id_mode,
+        protection=IdentifierProtection.create(secret=b"renderer-contract-only-key-32byte"))
+
+
+def phase4_step5_renderers():
+    from recursive_integrity_toolkit.reports.json_report import render_json
+    from recursive_integrity_toolkit.reports.markdown_report import render_markdown
+
+    return render_json, render_markdown
+
+
+def test_phase4_step5_json_round_trip_validates_local_schema_and_all_values(schema_root):
+    import json
+    from recursive_integrity_toolkit.result import validate_report
+
+    validator = phase4_step2_schema_validator(schema_root)
+    render_json, _ = phase4_step5_renderers()
+    for payload in (phase4_step2_report_fixture(), phase4_step2_error_report_fixture(),
+                    phase4_step5_rich_payload()):
+        for mode in ("standard", "redacted"):
+            view = phase4_step5_view(payload, mode)
+            expected = view.to_dict()
+            result = render_json(view)
+            assert type(result) is str
+            actual = json.loads(result)
+            validator.validate(actual)
+            validate_report(actual)
+            assert actual == expected
+            assert tuple(actual) == ("run", "inputs", "observability", "capabilities",
+                "observed_facts", "derived_metrics", "proxy_signals", "simulations",
+                "unavailable_conclusions", "recommended_next_metadata", "warnings", "errors")
+            assert actual["observability"].get("capabilities", {}) == actual["capabilities"]
+            assert view.to_dict() == expected
+
+
+def test_phase4_step5_json_does_not_round_intervals_or_precise_scalar_values():
+    import json
+
+    render_json, _ = phase4_step5_renderers()
+    actual = json.loads(render_json(phase4_step5_view(phase4_step5_rich_payload())))
+    assert actual["derived_metrics"]["diversity"]["by_version"]["v1"][
+        "gini_simpson_diversity"]["value"] == 0.12345678901234566
+    interval = actual["derived_metrics"]["closure_exposure"]["direct"]
+    assert interval["lower_bound"]["value"] == 0.25
+    assert interval["upper_bound"]["value"] == 0.75
+    assert interval["interval_width"]["value"] == 0.5
+    assert "midpoint" not in interval
+    assert actual["observed_facts"]["content"]["duplicate_record_count"]["value"] == 0
+    assert actual["simulations"]["closed_resampling"]["status"] == "experimental"
+    assert actual["capabilities"]["lineage"]["execution_status"] == "deferred"
+
+
+def test_phase4_step5_renderers_require_explicit_safe_view_without_adapting_inputs():
+    import pytest
+    from recursive_integrity_toolkit.result import CanonicalReport
+
+    class CannotInspect:
+        def to_dict(self):
+            raise AssertionError("Raw input must not be introspected")
+
+        def __str__(self):
+            raise AssertionError("Raw input must not be formatted")
+
+    payload = phase4_step5_rich_payload()
+    for render in phase4_step5_renderers():
+        for value in (None, False, payload, CanonicalReport.from_dict(payload),
+                      "PRIVATE_INPUT_SENTINEL", CannotInspect()):
+            with pytest.raises(TypeError) as error:
+                render(value)
+            assert "PRIVATE_INPUT_SENTINEL" not in str(error.value)
+
+
+def test_phase4_step5_renderers_revalidate_and_reject_nonfinite_or_broken_contract():
+    import copy
+    import pytest
+    from recursive_integrity_toolkit.result import CanonicalReport, SafeReportView
+
+    original = phase4_step5_view(phase4_step5_rich_payload()).to_dict()
+    for case in ("nan", "infinity", "missing_section", "wrong_mirror"):
+        payload = copy.deepcopy(original)
+        if case in ("nan", "infinity"):
+            payload["run"]["duration_seconds"] = float("nan" if case == "nan" else "inf")
+        elif case == "missing_section":
+            del payload["warnings"]
+        else:
+            payload["observability"]["capabilities"]["lineage"]["coverage"] = 0.5
+        broken = object.__new__(CanonicalReport)
+        object.__setattr__(broken, "sections", payload)
+        view = object.__new__(SafeReportView)
+        object.__setattr__(view, "_report", broken)
+        for render in phase4_step5_renderers():
+            with pytest.raises(ValueError):
+                render(view)
+
+
+def test_phase4_step5_renderers_perform_no_file_network_input_or_metric_operations(monkeypatch):
+    import builtins
+    import os
+    import socket
+    from pathlib import Path
+    from recursive_integrity_toolkit import config
+    from recursive_integrity_toolkit.io import validation
+    from recursive_integrity_toolkit.metrics import diversity, provenance, resampling
+
+    view = phase4_step5_view(phase4_step5_rich_payload())
+    before = view.to_dict()
+    renderers = phase4_step5_renderers()
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Renderer crossed its pure supplied-data boundary")
+
+    with monkeypatch.context() as patch:
+        for owner, name in ((builtins, "open"), (os, "open"), (Path, "open"),
+                            (socket, "socket"), (socket, "getaddrinfo"),
+                            (config, "load_config"), (validation, "validate_bundle"),
+                            (diversity, "calculate_state_distribution"),
+                            (provenance, "summarize_provenance"),
+                            (resampling, "simulate_closed_resampling")):
+            patch.setattr(owner, name, forbidden)
+        for render in renderers:
+            assert type(render(view)) is str
+    assert view.to_dict() == before
+
+
+def test_phase4_step5_renderer_imports_do_not_load_analytical_or_input_owners(subprocess_env):
+    import subprocess
+    import sys
+
+    script = '''
+import builtins
+import sys
+original_import = builtins.__import__
+def restricted_import(name, *args, **kwargs):
+    if name.split('.')[0] in {'numpy', 'pandas', 'pyarrow', 'jsonschema'}:
+        raise AssertionError('Renderer imported an analytical/test dependency: ' + name)
+    if 'recursive_integrity_toolkit.metrics' in name or 'recursive_integrity_toolkit.io' in name:
+        raise AssertionError('Renderer imported an input or calculation owner: ' + name)
+    return original_import(name, *args, **kwargs)
+builtins.__import__ = restricted_import
+from recursive_integrity_toolkit.reports.json_report import render_json
+from recursive_integrity_toolkit.reports.markdown_report import render_markdown
+assert callable(render_json) and callable(render_markdown)
+assert not any(name.startswith(('recursive_integrity_toolkit.metrics.',
+    'recursive_integrity_toolkit.io.')) for name in sys.modules)
+'''
+    result = subprocess.run([sys.executable, "-c", script], env=subprocess_env,
+        capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_phase4_step5_json_preserves_smallest_float_large_finite_count_and_negative_zero():
+    import json
+    import math
+    from test_PR012_evidence_classes import phase4_step2_metric_report_fixture
+
+    render_json, _ = phase4_step5_renderers()
+    for value in (5e-324, -0.0, 0.9999999999999999):
+        payload = phase4_step2_metric_report_fixture()
+        payload["derived_metrics"]["diversity"]["by_version"]["v1"][
+            "gini_simpson_diversity"]["value"] = value
+        actual = json.loads(render_json(phase4_step5_view(payload)))["derived_metrics"][
+            "diversity"]["by_version"]["v1"]["gini_simpson_diversity"]["value"]
+        assert actual == value
+        assert math.copysign(1, actual) == math.copysign(1, value)
+    payload = phase4_step2_metric_report_fixture(observed=True)
+    payload["observed_facts"]["content"]["duplicate_record_count"]["value"] = 9007199254740993
+    actual = json.loads(render_json(phase4_step5_view(payload)))
+    assert actual["observed_facts"]["content"]["duplicate_record_count"]["value"] == 9007199254740993

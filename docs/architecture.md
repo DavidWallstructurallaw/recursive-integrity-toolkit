@@ -346,3 +346,45 @@ matrix, real optional Parquet, and the 60-minute core-job budget.
 Step 4 does not implement JSON/Markdown rendering, output transactions, the audit
 CLI or a product performance certification. Identifier protection does not
 assert statistical anonymity or suppress small cells.
+
+## Phase 4 Step 5: pure JSON and Markdown rendering
+
+The Step 5 boundary is accepted Step 4 commit
+`49454a9b162cb8d35e38d1cb1ae32cb208d3a01c`. Only the two existing renderer
+modules gain runtime behavior: `reports/json_report.py` and
+`reports/markdown_report.py`. The other 38 package modules, all five root
+schemas, calculation owners, six canonical Hero files and mathematical oracle
+bytes retain their accepted identities. Package version, dependencies and the
+40-module layout remain unchanged.
+
+The explicit sequence is calculation, canonical assembly, privacy selection,
+then rendering. `render_json(view)` and `render_markdown(view)` each accept an
+exact `SafeReportView`, revalidate its detached canonical data and return a
+string. A raw `CanonicalReport`, mapping or subclass is rejected. Neither
+renderer selects a privacy mode or creates a pseudonym key. The existing safe
+view is a programming boundary, not a sandbox against a Python caller that
+deliberately reconstructs its private objects.
+
+Both formats preserve all twelve sections and the same analytical fields,
+units, scopes, denominators, availability, evidence classes and supplied numbers.
+JSON keeps the required top-level order, sorts nested mapping keys and retains
+array order. Markdown presents one capability matrix and identifies the
+observability compatibility copy as that same matrix. Existing sequence order
+is retained for state/probability pairs, comparison directions, simulation
+trajectories, diagnostics and metadata recommendations. Rendering never sorts
+one member of a parallel sequence independently or recalculates its values.
+
+Markdown separates fixed toolkit headings and explanations from quoted literal
+data. Its field paths encode dynamic keys without treating a caller label as a
+heading, link, HTML element or assertion. Displayed numbers use round-trip
+representations, preserving tiny nonzero values, exact integers and supplied
+interval endpoints. Null values remain visibly unavailable with their retained
+reason context. JSON remains the authoritative machine-readable artifact.
+
+Rendering is an explicit, standard-library-only, in-memory operation. It does
+not read files, resolve input references, import numerical owners, run a metric,
+sample a scenario, traverse a graph, call a network or write to a stream.
+Output destinations and publication transactions remain assigned to Step 6;
+CLI analysis and packaged examples remain assigned to their later steps.
+The HTML placeholder remains unchanged. No report-length performance target or
+whole-product acceptance follows from this renderer boundary.

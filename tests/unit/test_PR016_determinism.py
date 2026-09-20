@@ -310,3 +310,141 @@ def test_phase4_step4_PR016_safe_summary_revalidates_forged_options():
     with pytest.raises(ConfigurationError) as error:
         phase4_config_summary(options)
     assert "PRIVATE" not in str(error.value)
+
+
+# Phase 4 Step 5: renderer ordering follows declared structure, never new chronology.
+def phase4_step5_reverse_mapping_insertions(value):
+    if type(value) is dict:
+        return {key: phase4_step5_reverse_mapping_insertions(child)
+                for key, child in reversed(tuple(value.items()))}
+    if type(value) is list:
+        return [phase4_step5_reverse_mapping_insertions(child) for child in value]
+    return value
+
+
+def phase4_step5_replace_literal_states(value):
+    if type(value) is dict:
+        return {key: phase4_step5_replace_literal_states(child) for key, child in value.items()}
+    if type(value) is list:
+        return [phase4_step5_replace_literal_states(child) for child in value]
+    if type(value) is str:
+        return {"a": "z-state", "b": "a-state", "c": "中文状态"}.get(value, value)
+    return value
+
+
+def test_phase4_step5_identical_safe_views_repeat_exact_json_and_markdown_bytes():
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_rich_payload, phase4_step5_view
+
+    for mode in ("standard", "redacted"):
+        first = phase4_step5_view(phase4_step5_rich_payload(), mode)
+        second = phase4_step5_view(phase4_step5_rich_payload(), mode)
+        for render in phase4_step5_renderers():
+            expected = render(first)
+            assert expected.encode("utf-8") == render(first).encode("utf-8")
+            assert expected.encode("utf-8") == render(second).encode("utf-8")
+            assert expected.endswith("\n")
+            assert "\r" not in expected
+
+
+def test_phase4_step5_mapping_insertion_order_does_not_change_serialization():
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_rich_payload, phase4_step5_view
+
+    payload = phase4_step5_rich_payload()
+    permuted = phase4_step5_reverse_mapping_insertions(payload)
+    assert permuted == payload
+    for mode in ("standard", "redacted"):
+        first, second = phase4_step5_view(payload, mode), phase4_step5_view(permuted, mode)
+        for render in phase4_step5_renderers():
+            assert render(first) == render(second)
+
+
+def test_phase4_step5_json_nested_mapping_keys_are_lexical_without_reordering_sections():
+    import json
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_rich_payload, phase4_step5_view
+
+    render_json, _ = phase4_step5_renderers()
+    actual = json.loads(render_json(phase4_step5_view(phase4_step5_rich_payload())))
+
+    def verify(value):
+        if type(value) is dict:
+            assert list(value) == sorted(value)
+            for child in value.values():
+                verify(child)
+        elif type(value) is list:
+            for child in value:
+                verify(child)
+
+    assert tuple(actual) == ("run", "inputs", "observability", "capabilities", "observed_facts",
+        "derived_metrics", "proxy_signals", "simulations", "unavailable_conclusions",
+        "recommended_next_metadata", "warnings", "errors")
+    for section in actual.values():
+        verify(section)
+
+
+def test_phase4_step5_declared_state_order_keeps_parallel_arrays_and_event_identity():
+    import json
+    from test_PR012_evidence_classes import phase4_step2_sampled_path_report_fixture
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_view
+
+    payload = phase4_step5_replace_literal_states(phase4_step2_sampled_path_report_fixture())
+    render_json, render_markdown = phase4_step5_renderers()
+    for mode in ("standard", "redacted"):
+        view = phase4_step5_view(payload, mode)
+        before = view.to_dict()["simulations"]["closed_resampling"]
+        actual = json.loads(render_json(view))["simulations"]["closed_resampling"]
+        assert actual == before
+        order = actual["parameters"]["state_order"]
+        assert [item["state_id"] for item in actual["initial_distribution"]] == order
+        assert [item["probability"] for item in actual["initial_distribution"]] == [0.25, 0.25, 0.5]
+        generations = actual["sampled_paths"][0]["generations"]
+        assert generations[0]["state_frequencies"] == [0.25, 0.25, 0.5]
+        assert generations[1]["state_counts"] == [0, 0, 2]
+        assert generations[1]["support"] == [order[2]]
+        assert [item["state_id"] for item in actual["extinction_events"]] == order[:2]
+        if mode == "standard":
+            assert order == ["z-state", "a-state", "中文状态"]
+        markdown = render_markdown(view)
+        for identity in order:
+            assert identity in markdown
+        assert view.to_dict()["simulations"]["closed_resampling"] == before
+
+
+def test_phase4_step5_explicit_pair_direction_and_duplicate_members_survive_both_outputs(tmp_path):
+    import json
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_view
+    from test_PR015_redaction import phase4_step4_private_report
+
+    report = phase4_step4_private_report(tmp_path, pair=True, scenario=True, duplicates=True)
+    render_json, render_markdown = phase4_step5_renderers()
+    for mode, record_id_mode in (("standard", None), ("redacted", "hash"),
+                                 ("redacted", "preserve"), ("redacted", "omit")):
+        view = phase4_step5_view(report.to_dict(), mode, record_id_mode)
+        before = view.to_dict()
+        actual = json.loads(render_json(view))
+        assert actual == before
+        pair = actual["derived_metrics"]["support"]["support_delta"]["scope"]
+        assert pair == before["derived_metrics"]["support"]["support_delta"]["scope"]
+        assert len(pair["dataset_versions"]) == 2
+        if mode == "standard":
+            assert pair["dataset_versions"] == ["VERSION_SENTINEL", "LATER_VERSION_SENTINEL"]
+        markdown = render_markdown(view)
+        assert "support_delta" in markdown
+        assert "exact_duplicate_groups" in markdown
+        assert "sampled_paths" in markdown
+        assert view.to_dict() == before
+
+
+def test_phase4_step5_list_permutation_changes_outputs_instead_of_hiding_declared_order():
+    import copy
+    import json
+    from test_PR012_evidence_classes import phase4_step2_sampled_path_report_fixture
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_view
+
+    original = phase4_step2_sampled_path_report_fixture()
+    changed = copy.deepcopy(original)
+    changed["simulations"]["closed_resampling"]["extinction_events"].reverse()
+    for render in phase4_step5_renderers():
+        assert render(phase4_step5_view(original)) != render(phase4_step5_view(changed))
+    actual = json.loads(phase4_step5_renderers()[0](phase4_step5_view(changed)))
+    assert [item["state_id"] for item in actual["simulations"]["closed_resampling"][
+        "extinction_events"]] == ["b", "a"]

@@ -575,7 +575,8 @@ def test_phase4_step3_junit_dispatch_accepts_valid_subsets_and_rejects_bad_evide
         assert "Failed, errored or skipped test" in rejected.stderr
 
 
-def test_phase4_step4_current_runtime_opens_only_privacy_metadata_modules_and_freezes_schema(repo_root, phase4_step3_snapshot):
+def test_phase4_step4_current_runtime_opens_only_privacy_metadata_modules_and_freezes_schema(repo_root, phase4_step3_snapshot, phase4_step4_snapshot):
+    repo_root = phase4_step4_snapshot
     package = "src/recursive_integrity_toolkit"
     current = {path.relative_to(repo_root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
                for path in (repo_root / package).rglob("*.py")}
@@ -595,7 +596,8 @@ def test_phase4_step4_current_runtime_opens_only_privacy_metadata_modules_and_fr
     assert schemas == {path.name: path.read_bytes() for path in (phase4_step3_snapshot / "schemas").glob("*.json")}
 
 
-def test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root):
+def test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, phase4_step4_snapshot):
+    repo_root = phase4_step4_snapshot
     names = {"ci.yml", "golden.yml", "security.yml", "release.yml"}
     root = repo_root / ".github/workflows"
     assert {path.name for path in root.glob("*.yml")} == names
@@ -653,7 +655,7 @@ def test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(
     "control_step", "control_scope", "control_schema_scope", "historical_assertion", "historical_tooling",
     "historical_binding", "historical_document", "input_hash_helper", "config_resolver_helper",
 ])
-def test_phase4_step4_current_snapshot_checks_valid_tree_before_mutations(repo_root, tmp_path, phase4_gate_tools, mutation):
+def test_phase4_step4_current_snapshot_checks_valid_tree_before_mutations(repo_root, tmp_path, phase4_gate_tools, mutation, phase4_step4_snapshot):
     import json
 
     tracked = subprocess.check_output(["git", "-C", str(repo_root), "ls-files", "-z"])
@@ -662,7 +664,7 @@ def test_phase4_step4_current_snapshot_checks_valid_tree_before_mutations(repo_r
     for relative in sorted(paths):
         destination = tmp_path / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(repo_root / relative, destination)
+        shutil.copyfile(phase4_step4_snapshot / relative, destination)
     verify = phase4_gate_tools["verify_phase4_step4_snapshot"]
     baseline = verify(tmp_path)
     assert baseline["package_modules"] == 40
@@ -785,6 +787,240 @@ def test_phase4_step4_junit_dispatch_accepts_valid_subsets_and_rejects_bad_evide
     assert json.loads(passed.stdout)["tests"] == 1
     assert json.loads(passed.stdout)["passed"] == 1
     too_small = subprocess.run(command + ["--minimum-tests", "2876"], cwd=tmp_path,
+                               text=True, capture_output=True, check=False)
+    assert too_small.returncode != 0
+    assert "Insufficient or duplicate test cases" in too_small.stderr
+    for outcome in ("failure", "error", "skipped"):
+        invalid = ('<testsuites><testsuite tests="1">'
+                   '<testcase classname="independent.subset" name="test_one">'
+                   f'<{outcome} message="independent rejection case" />'
+                   '</testcase></testsuite></testsuites>')
+        junit.write_text(invalid, encoding="utf-8")
+        rejected = subprocess.run(command, cwd=tmp_path, text=True, capture_output=True, check=False)
+        assert rejected.returncode != 0
+        assert "Failed, errored or skipped test" in rejected.stderr
+
+
+def test_phase4_step5_current_runtime_opens_only_renderers_and_freezes_schema(repo_root, phase4_step4_snapshot):
+    package = "src/recursive_integrity_toolkit"
+    current = {path.relative_to(repo_root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+               for path in (repo_root / package).rglob("*.py")}
+    frozen = {path.relative_to(phase4_step4_snapshot).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+              for path in (phase4_step4_snapshot / package).rglob("*.py")}
+    assert len(current) == len(frozen) == 40
+    assert current.keys() == frozen.keys()
+    opened = {package + "/" + relative for relative in (
+        "reports/json_report.py", "reports/markdown_report.py",
+    )}
+    assert {path for path in current if current[path] != frozen[path]} == opened
+    assert {path: digest for path, digest in current.items() if path not in opened} == {
+        path: digest for path, digest in frozen.items() if path not in opened
+    }
+    schemas = {path.name: path.read_bytes() for path in (repo_root / "schemas").glob("*.json")}
+    assert len(schemas) == 5
+    assert schemas == {path.name: path.read_bytes() for path in (phase4_step4_snapshot / "schemas").glob("*.json")}
+
+
+def test_phase4_step5_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root):
+    names = {"ci.yml", "golden.yml", "security.yml", "release.yml"}
+    root = repo_root / ".github/workflows"
+    expected_timeouts = {"ci.yml": [60, 20], "golden.yml": [15], "security.yml": [20], "release.yml": [25]}
+    assert {path.name for path in root.glob("*.yml")} == names
+    for name in sorted(names):
+        text = (root / name).read_text(encoding="utf-8")
+        assert [int(line.split(":", 1)[1]) for line in text.splitlines()
+                if line.strip().startswith("timeout-minutes:")] == expected_timeouts[name]
+        assert "Phase 4 Step 5" in text, name
+        assert "--phase 4 --step 5" in text, name
+        for older in ("--phase 4 --step 4", "--phase 4 --step 3", "--phase 4 --step 2", "--phase 4 --step 1", "--phase 3 --step 11"):
+            assert older not in text, (name, older)
+        assert "permissions:\n  contents: read" in text
+        assert "persist-credentials: false" in text
+        assert "timeout-minutes:" in text and "set -euo pipefail" in text
+        assert "actions/upload-artifact@v4" in text and "if-no-files-found: error" in text
+        for line in text.splitlines():
+            if "python scripts/release_check.py" in line:
+                assert "--phase 4 --step 5" in line, (name, line)
+        for forbidden in ("continue-on-error:", "|| true", "contents: write", "id-token: write", "twine upload", "git push"):
+            assert forbidden not in text, (name, forbidden)
+    ci = (root / "ci.yml").read_text(encoding="utf-8")
+    for required in ('os: [ubuntu-latest, windows-latest]', 'python-version: ["3.11", "3.12"]',
+                     'dependencies: [current, minimum]', '"numpy==2.0.0" "pandas==2.2.2"',
+                     'RIT_TEST_PARQUET: "0"', 'RIT_TEST_PARQUET: "1"', '--require-parquet',
+                     '--baseline-evidence', 'python -m pip check',
+                     '--minimum-tests 3071', '--minimum-tests 3074',
+                     "find_spec('pyarrow') is None", 'import pyarrow'):
+        assert required in ci
+    assert ci.count("python -m pytest -p no:cacheprovider -q --junitxml=") == 2
+    assert " -k " not in ci
+    golden = (root / "golden.yml").read_text(encoding="utf-8")
+    for required in ("tests/golden/test_phase3_math.py", "tests/integration/test_hero_structure.py",
+                     "tests/integration/test_phase3_metric_pipeline.py"):
+        assert required in golden
+    security = (root / "security.yml").read_text(encoding="utf-8")
+    for required in ('tests/integration/test_no_network.py', 'tests/integration/test_optional_dependency.py',
+                     'tests/unit/test_PR012_evidence_classes.py', 'tests/unit/test_PR013_report_schema.py',
+                     'tests/unit/test_PR014_unavailable.py', 'tests/unit/test_PR015_redaction.py',
+                     'tests/unit/test_PR016_determinism.py', 'tests/unit/test_PR018_language.py',
+                     'tests/integration/test_partial_provenance_report.py',
+                     'tests/integration/test_partial_lineage_report.py',
+                     'tests/unit/test_phase4_contracts.py', 'tests/integration/test_phase4_gates.py'):
+        assert required in security
+    release = (root / "release.yml").read_text(encoding="utf-8")
+    assert "python -m build" in release and "python -m twine check --strict" in release
+    assert "--dist" in release and "--candidate" in release
+    assert "--delivery" not in release
+    assert "recursive-integrity-toolkit-phase4-step5-candidate" in release
+    assert "rit-phase4-step4" not in release
+    assert "--minimum-tests 3071" in release and "--minimum-tests 3074" in release
+    assert release.count("python -m pytest -p no:cacheprovider -q --junitxml=") == 2
+
+
+@pytest.mark.parametrize("mutation", [
+    "unchanged", "formula", "math_oracle", "frozen_model", "frozen_schema", "hero", "dependency", "plan",
+    "cli", "html", "assembly", "result", "config", "hashing", "logging", "output_paths", "unknown_runtime", "missing_runtime", "premature_completion", "premature_report",
+    "control_step", "control_scope", "control_schema_scope", "historical_assertion", "historical_tooling",
+    "historical_binding", "historical_document", "input_hash_helper", "config_resolver_helper",
+])
+def test_phase4_step5_current_snapshot_checks_valid_tree_before_mutations(repo_root, tmp_path, phase4_gate_tools, mutation):
+    import json
+
+    tracked = subprocess.check_output(["git", "-C", str(repo_root), "ls-files", "-z"])
+    paths = set(tracked.decode().split("\0")) - {""}
+    assert len(paths) == 227
+    for relative in sorted(paths):
+        destination = tmp_path / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(repo_root / relative, destination)
+    verify = phase4_gate_tools["verify_phase4_step5_snapshot"]
+    baseline = verify(tmp_path)
+    assert baseline["package_modules"] == 40
+    assert baseline["frozen_runtime_modules"] == 38
+    assert baseline["frozen_schemas"] == 5
+    assert baseline["result_contracts_enabled"] is True
+    assert baseline["adapters_enabled"] is True
+    assert baseline["privacy_views_enabled"] is True
+    assert baseline["renderers_enabled"] is True
+    assert baseline["cli_analysis_enabled"] is False
+    assert baseline["phase_complete"] is False
+    if mutation == "unchanged":
+        return
+    replacements = {
+        "formula": ("src/recursive_integrity_toolkit/metrics/diversity.py",
+                    b"diversity = 1.0 - concentration", b"diversity = 0.5 - concentration"),
+        "math_oracle": ("tests/golden/phase3_math_cases.json", b'"v2_support":5', b'"v2_support":3'),
+        "hero": ("examples/hero/records_v2.csv", b"v2_08,v2,", b"v2_99,v2,"),
+        "dependency": ("pyproject.toml", b"numpy>=2.0", b"numpy>=3.0"),
+        "historical_assertion": ("tests/unit/test_phase4_contracts.py",
+                                 b'    assert control["active_phase"] == 4 and control["active_step"] == 4\n',
+                                 b"    assert True\n"),
+        "historical_tooling": ("scripts/release_check.py",
+                               b"def verify_phase4_step4_control(control: dict, step: int = 4) -> None:",
+                               b"def verify_phase4_step4_control(control: dict, step: int = 4) -> None:\n    return"),
+        "historical_binding": ("tests/integration/test_phase4_gates.py",
+                               b"def test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, phase4_step4_snapshot):\n    repo_root = phase4_step4_snapshot\n",
+                               b"def test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, phase4_step4_snapshot):\n"),
+        "historical_document": ("docs/report_schema.md", b"# Report Schema\n",
+                                b"# Unauthorized historical document\n"),
+        "input_hash_helper": ("src/recursive_integrity_toolkit/utils/hashing.py",
+                              b"return hashlib.sha256(data).hexdigest()", b"return hashlib.sha256(b'changed').hexdigest()"),
+        "config_resolver_helper": ("src/recursive_integrity_toolkit/config.py",
+                                   b"def resolve_config(", b"def resolve_config_disabled("),
+    }
+    appended = {
+        "frozen_model": "src/recursive_integrity_toolkit/models.py",
+        "frozen_schema": "schemas/report.schema.json",
+        "plan": "PHASE_4_PLAN.md",
+        "cli": "src/recursive_integrity_toolkit/cli.py",
+        "html": "src/recursive_integrity_toolkit/reports/html_report.py",
+        "assembly": "src/recursive_integrity_toolkit/reports/assembly.py",
+        "result": "src/recursive_integrity_toolkit/result.py",
+        "config": "src/recursive_integrity_toolkit/config.py",
+        "hashing": "src/recursive_integrity_toolkit/utils/hashing.py",
+        "logging": "src/recursive_integrity_toolkit/utils/logging.py",
+        "output_paths": "src/recursive_integrity_toolkit/utils/paths.py",
+    }
+    added = {
+        "unknown_runtime": "src/recursive_integrity_toolkit/reports/unauthorized.py",
+        "premature_completion": "PHASE_4_COMPLETION.md", "premature_report": "report.json",
+    }
+    if mutation in replacements:
+        relative, original, replacement = replacements[mutation]
+        path = tmp_path / relative
+        source = path.read_bytes()
+        assert source.count(original) == 1
+        path.write_bytes(source.replace(original, replacement, 1))
+    elif mutation in appended:
+        path = tmp_path / appended[mutation]
+        path.write_bytes(path.read_bytes() + b"\nUnauthorized Step 5 mutation\n")
+    elif mutation in added:
+        path = tmp_path / added[mutation]
+        assert not path.exists()
+        path.write_text("Unauthorized later-stage file\n", encoding="utf-8")
+    elif mutation == "missing_runtime":
+        (tmp_path / "src/recursive_integrity_toolkit/metrics/bounds.py").unlink()
+    elif mutation.startswith("control_"):
+        path = tmp_path / "PHASE_4_BASELINE.json"
+        control = json.loads(path.read_text(encoding="utf-8"))
+        if mutation == "control_step":
+            control["active_step"] = 6
+        elif mutation == "control_scope":
+            control["runtime_paths_authorized"].append("src/recursive_integrity_toolkit/reports/assembly.py")
+        else:
+            control["schema_changes_authorized"] = True
+            control["schema_paths_authorized"].append("schemas/report.schema.json")
+        path.write_text(json.dumps(control), encoding="utf-8")
+    else:
+        raise AssertionError(f"Unknown active mutation case: {mutation}")
+    with pytest.raises(ValueError):
+        verify(tmp_path)
+
+
+@pytest.mark.parametrize("relative,injection", [
+    ("reports/json_report.py", b"\nimport socket\n"),
+    ("reports/json_report.py", b"\nfrom ..metrics.diversity import effective_state_diversity\n"),
+    ("reports/json_report.py", b"\nfrom ..io.validation import validate_bundle\n"),
+    ("reports/json_report.py", b"\nimport numpy\n"),
+    ("reports/json_report.py", b"\ndef invented_metric(values):\n    return sum(value * value for value in values)\n"),
+    ("reports/json_report.py", b"\nrender_json = lambda value: '{}'\n"),
+    ("reports/json_report.py", b"\ndef dynamic_call(value):\n    return eval(value)\n"),
+    ("reports/markdown_report.py", b"\nimport urllib.request\n"),
+    ("reports/markdown_report.py", b"\nfrom .assembly import assemble_report\n"),
+    ("reports/markdown_report.py", b"\nfrom ..metrics import coverage\n"),
+    ("reports/markdown_report.py", b"\nfrom ..io.readers import read_csv\n"),
+    ("reports/markdown_report.py", b"\nimport pandas\n"),
+    ("reports/markdown_report.py", b"\nopen('private.txt', 'w').write('raw content')\n"),
+    ("reports/markdown_report.py", b"\nexec('forged = True')\n"),
+    ("reports/markdown_report.py", b"\ndef effect_at_definition(value=globals().clear()):\n    pass\n"),
+    ("reports/markdown_report.py", b"\n@print('raw content')\ndef decorated_effect():\n    pass\n"),
+])
+def test_phase4_step5_renderer_ast_checks_current_source_before_rejecting_scope_injection(repo_root, tmp_path, relative, injection):
+    checker = runpy.run_path(str(repo_root / "scripts/check_traceability.py"), run_name="phase4_step5_ast_tests")
+    verify = checker["phase4_step5_runtime_boundary"]
+    repository_path = "src/recursive_integrity_toolkit/" + relative
+    current = repo_root / repository_path
+    verify(current, repository_path)
+    copy = tmp_path / "source.py"
+    copy.write_bytes(current.read_bytes() + injection)
+    with pytest.raises(ValueError):
+        verify(copy, repository_path)
+
+
+def test_phase4_step5_junit_dispatch_accepts_valid_subsets_and_rejects_bad_evidence(repo_root, tmp_path):
+    import json
+
+    junit = tmp_path / "subset.xml"
+    command = [sys.executable, str(repo_root / "scripts/release_check.py"),
+               "--phase", "4", "--step", "5", "--junit", str(junit)]
+    valid = ('<testsuites><testsuite tests="1" failures="0" errors="0" skipped="0">'
+             '<testcase classname="independent.subset" name="test_one" />'
+             '</testsuite></testsuites>')
+    junit.write_text(valid, encoding="utf-8")
+    passed = subprocess.run(command, cwd=tmp_path, text=True, capture_output=True, check=False)
+    assert passed.returncode == 0, passed.stderr
+    assert json.loads(passed.stdout)["tests"] == 1
+    assert json.loads(passed.stdout)["passed"] == 1
+    too_small = subprocess.run(command + ["--minimum-tests", "3071"], cwd=tmp_path,
                                text=True, capture_output=True, check=False)
     assert too_small.returncode != 0
     assert "Insufficient or duplicate test cases" in too_small.stderr
