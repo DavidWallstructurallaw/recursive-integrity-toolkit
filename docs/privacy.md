@@ -126,3 +126,42 @@ small-cell suppression, evidence authentication or protection from deliberate
 inspection of the caller's original internal objects. Step 4 does not implement
 renderers, CLI analysis or output publication. Those later sinks must consume the
 validated privacy view before emitting a report or diagnostic.
+
+## Phase 4 Step 6 safe local output
+
+The output helper consumes a validated SafeReportView. Redaction, record-ID
+protection and analytical content are already fixed before publication. JSON
+and Markdown are rendered in memory before output files are created. Diagnostics
+contain fixed messages and the names `report.json` and `report.md` only. Raw paths,
+input contents, caller-provided labels and OS exception text are not logged.
+
+Choose an explicit local output directory whose existing parent directories are
+stable and trusted. The helper may create that final directory, but does not
+create missing parent chains. It refuses URI, UNC/device, drive-relative,
+non-native separator, parent-traversal, Windows alternate-stream/reserved-name,
+control-character and trailing-dot/space spellings before filesystem inspection.
+Environment variables and `~` are literal names, not expansions. Symbolic links
+and Windows reparse points in inspected input/output paths are rejected without
+resolving their targets. Existing report targets are never overwritten, regardless
+of their file type. All input paths must be explicitly supplied by the caller.
+
+Private staging and exclusive files reduce exposure while writing. POSIX uses
+0700 staging/output leaf directories and 0600 report creation modes; existing
+parent permissions are not changed. Windows protection depends on the platform's
+temporary-directory behavior and parent ACLs. Publication uses hard-link creation
+on POSIX and non-overwriting rename on Windows. Unsupported operations fail;
+there is no fallback that overwrites or copies into a partial final file.
+
+Directory identities and owned-file fingerprints are checked before cleanup.
+Files created or replaced by another actor are retained. If cleanup is uncertain,
+the result is incomplete and callers should inspect the directory themselves.
+Cleanup never recursively deletes foreign temporary entries. An empty output
+leaf created by this attempt may remain after a failure.
+
+The pair is not a filesystem transaction. Another reader may observe the first
+file before the second; a process crash or unhandled interruption may leave one
+file or staging data. Stable ancestor checks do not provide a sandbox against a
+privileged actor swapping directories in a race window or remapping a mount.
+No cross-platform pair crash-durability guarantee is made. File fsync does not
+flush all directory metadata. Do not interpret target existence as successful
+publication; require a `complete` result and use a fresh destination after failure.

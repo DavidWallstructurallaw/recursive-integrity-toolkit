@@ -388,3 +388,27 @@ Output destinations and publication transactions remain assigned to Step 6;
 CLI analysis and packaged examples remain assigned to their later steps.
 The HTML placeholder remains unchanged. No report-length performance target or
 whole-product acceptance follows from this renderer boundary.
+
+## Phase 4 Step 6: local report publication
+
+This increment adds `utils.paths.publish_reports` and the frozen `PublicationResult`
+value to consume a SafeReportView. It reuses the accepted pure JSON/Markdown
+renderers; it performs no loading, analysis, hashing of source content or network
+access. Inputs are explicit path reservations. A private staging directory lives
+inside the explicit output directory, which keeps publication on the same
+filesystem. Both payloads finish before either final name is created.
+
+The publisher returns one of `complete`, `failed` or `incomplete`, with a fixed
+code, exit code, fixed-name publication/residual lists and a temporary cleanup
+flag. `published_files` records successful publication calls even if rollback
+subsequently removed the files. `residual_files` records fixed names whose
+attempt-related cleanup cannot be confirmed; it is not a directory inventory.
+A competing target that prevented publication is preserved and is not claimed
+as this attempt's residual file. `incomplete` also covers uncertain staging cleanup.
+Caller-directed diagnostics are in `utils.logging`; no global logger or stream
+is installed. Operational publication data stays outside the canonical schema.
+
+Inherited helpers remain byte-preserved except module ownership documentation.
+The two output modules are the only runtime changes in this step. CLI wiring
+belongs to the separately authorized next step. See `privacy.md` for filesystem
+limits and `cli.md` for the helper contract and safe failure handling.

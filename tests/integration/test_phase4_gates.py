@@ -17,8 +17,8 @@ def phase4_gate_tools(repo_root):
 def phase4_mutation_tree(repo_root, tmp_path_factory, phase4_gate_tools, phase4_step1_snapshot):
     """One source copy; each individual mutation is restored in a finally block."""
     root = tmp_path_factory.mktemp("phase4-active-mutations")
-    tracked = subprocess.check_output(["git", "-C", str(repo_root), "ls-files", "-z"])
-    paths = set(tracked.decode().split("\0")) - {""}
+    paths = {path.relative_to(phase4_step1_snapshot).as_posix()
+             for path in phase4_step1_snapshot.rglob("*") if path.is_file()}
     paths.update(phase4_gate_tools["PHASE4_STEP1_NEW"])
     for relative in sorted(paths):
         destination = root / relative
@@ -253,8 +253,8 @@ def test_phase4_step2_current_workflows_preserve_matrix_and_use_active_dispatch(
 def test_phase4_step2_current_snapshot_checks_valid_tree_before_mutations(repo_root, tmp_path, phase4_gate_tools, mutation, phase4_step2_snapshot):
     import json
 
-    tracked = subprocess.check_output(["git", "-C", str(repo_root), "ls-files", "-z"])
-    paths = set(tracked.decode().split("\0")) - {""}
+    paths = {path.relative_to(phase4_step2_snapshot).as_posix()
+             for path in phase4_step2_snapshot.rglob("*") if path.is_file()}
     assert len(paths) == 227
     for relative in sorted(paths):
         destination = tmp_path / relative
@@ -449,8 +449,8 @@ def test_phase4_step3_current_workflows_preserve_matrix_and_use_active_dispatch(
 def test_phase4_step3_current_snapshot_checks_valid_tree_before_mutations(repo_root, tmp_path, phase4_gate_tools, mutation, phase4_step3_snapshot):
     import json
 
-    tracked = subprocess.check_output(["git", "-C", str(repo_root), "ls-files", "-z"])
-    paths = set(tracked.decode().split("\0")) - {""}
+    paths = {path.relative_to(phase4_step3_snapshot).as_posix()
+             for path in phase4_step3_snapshot.rglob("*") if path.is_file()}
     assert len(paths) == 227
     for relative in sorted(paths):
         destination = tmp_path / relative
@@ -658,8 +658,8 @@ def test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(
 def test_phase4_step4_current_snapshot_checks_valid_tree_before_mutations(repo_root, tmp_path, phase4_gate_tools, mutation, phase4_step4_snapshot):
     import json
 
-    tracked = subprocess.check_output(["git", "-C", str(repo_root), "ls-files", "-z"])
-    paths = set(tracked.decode().split("\0")) - {""}
+    paths = {path.relative_to(phase4_step4_snapshot).as_posix()
+             for path in phase4_step4_snapshot.rglob("*") if path.is_file()}
     assert len(paths) == 227
     for relative in sorted(paths):
         destination = tmp_path / relative
@@ -760,11 +760,11 @@ def test_phase4_step4_current_snapshot_checks_valid_tree_before_mutations(repo_r
     ("utils/logging.py", b"\ndef effect_at_definition(value=globals().clear()):\n    pass\n"),
     ("utils/logging.py", b"\n@print('raw content')\ndef decorated_effect():\n    pass\n"),
 ])
-def test_phase4_step4_privacy_ast_checks_current_source_before_rejecting_scope_injection(repo_root, tmp_path, relative, injection):
+def test_phase4_step4_privacy_ast_checks_current_source_before_rejecting_scope_injection(repo_root, tmp_path, relative, injection, phase4_step5_snapshot):
     checker = runpy.run_path(str(repo_root / "scripts/check_traceability.py"), run_name="phase4_step4_ast_tests")
     verify = checker["phase4_step4_runtime_boundary"]
     repository_path = "src/recursive_integrity_toolkit/" + relative
-    current = repo_root / repository_path
+    current = (phase4_step5_snapshot if relative == "utils/logging.py" else repo_root) / repository_path
     verify(current, repository_path)
     copy = tmp_path / "source.py"
     copy.write_bytes(current.read_bytes() + injection)
@@ -801,7 +801,8 @@ def test_phase4_step4_junit_dispatch_accepts_valid_subsets_and_rejects_bad_evide
         assert "Failed, errored or skipped test" in rejected.stderr
 
 
-def test_phase4_step5_current_runtime_opens_only_renderers_and_freezes_schema(repo_root, phase4_step4_snapshot):
+def test_phase4_step5_current_runtime_opens_only_renderers_and_freezes_schema(repo_root, phase4_step4_snapshot, phase4_step5_snapshot):
+    repo_root = phase4_step5_snapshot
     package = "src/recursive_integrity_toolkit"
     current = {path.relative_to(repo_root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
                for path in (repo_root / package).rglob("*.py")}
@@ -821,7 +822,8 @@ def test_phase4_step5_current_runtime_opens_only_renderers_and_freezes_schema(re
     assert schemas == {path.name: path.read_bytes() for path in (phase4_step4_snapshot / "schemas").glob("*.json")}
 
 
-def test_phase4_step5_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root):
+def test_phase4_step5_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, phase4_step5_snapshot):
+    repo_root = phase4_step5_snapshot
     names = {"ci.yml", "golden.yml", "security.yml", "release.yml"}
     root = repo_root / ".github/workflows"
     expected_timeouts = {"ci.yml": [60, 20], "golden.yml": [15], "security.yml": [20], "release.yml": [25]}
@@ -882,16 +884,16 @@ def test_phase4_step5_current_workflows_preserve_matrix_and_use_active_dispatch(
     "control_step", "control_scope", "control_schema_scope", "historical_assertion", "historical_tooling",
     "historical_binding", "historical_document", "input_hash_helper", "config_resolver_helper",
 ])
-def test_phase4_step5_current_snapshot_checks_valid_tree_before_mutations(repo_root, tmp_path, phase4_gate_tools, mutation):
+def test_phase4_step5_current_snapshot_checks_valid_tree_before_mutations(repo_root, tmp_path, phase4_gate_tools, mutation, phase4_step5_snapshot):
     import json
 
-    tracked = subprocess.check_output(["git", "-C", str(repo_root), "ls-files", "-z"])
-    paths = set(tracked.decode().split("\0")) - {""}
+    paths = {path.relative_to(phase4_step5_snapshot).as_posix()
+             for path in phase4_step5_snapshot.rglob("*") if path.is_file()}
     assert len(paths) == 227
     for relative in sorted(paths):
         destination = tmp_path / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(repo_root / relative, destination)
+        shutil.copyfile(phase4_step5_snapshot / relative, destination)
     verify = phase4_gate_tools["verify_phase4_step5_snapshot"]
     baseline = verify(tmp_path)
     assert baseline["package_modules"] == 40
@@ -1033,3 +1035,231 @@ def test_phase4_step5_junit_dispatch_accepts_valid_subsets_and_rejects_bad_evide
         rejected = subprocess.run(command, cwd=tmp_path, text=True, capture_output=True, check=False)
         assert rejected.returncode != 0
         assert "Failed, errored or skipped test" in rejected.stderr
+
+
+def test_phase4_step6_current_runtime_opens_only_output_helpers_and_freezes_schema(repo_root, phase4_step5_snapshot):
+    package = "src/recursive_integrity_toolkit"
+    current = {path.relative_to(repo_root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+               for path in (repo_root / package).rglob("*.py")}
+    frozen = {path.relative_to(phase4_step5_snapshot).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+              for path in (phase4_step5_snapshot / package).rglob("*.py")}
+    assert len(current) == len(frozen) == 40
+    assert current.keys() == frozen.keys()
+    opened = {package + "/" + relative for relative in (
+        "utils/paths.py", "utils/logging.py",
+    )}
+    assert {path for path in current if current[path] != frozen[path]} == opened
+    assert {path: digest for path, digest in current.items() if path not in opened} == {
+        path: digest for path, digest in frozen.items() if path not in opened
+    }
+    schemas = {path.name: path.read_bytes() for path in (repo_root / "schemas").glob("*.json")}
+    assert len(schemas) == 5
+    assert schemas == {path.name: path.read_bytes() for path in (phase4_step5_snapshot / "schemas").glob("*.json")}
+
+
+def test_phase4_step6_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root):
+    names = {"ci.yml", "golden.yml", "security.yml", "release.yml"}
+    root = repo_root / ".github/workflows"
+    expected_timeouts = {"ci.yml": [60, 20], "golden.yml": [15], "security.yml": [20], "release.yml": [25]}
+    assert {path.name for path in root.glob("*.yml")} == names
+    for name in sorted(names):
+        text = (root / name).read_text(encoding="utf-8")
+        assert [int(line.split(":", 1)[1]) for line in text.splitlines()
+                if line.strip().startswith("timeout-minutes:")] == expected_timeouts[name]
+        assert "Phase 4 Step 6" in text, name
+        assert "--phase 4 --step 6" in text, name
+        for older in ("--phase 4 --step 5", "--phase 4 --step 4", "--phase 4 --step 3", "--phase 4 --step 2", "--phase 4 --step 1", "--phase 3 --step 11"):
+            assert older not in text, (name, older)
+        assert "permissions:\n  contents: read" in text
+        assert "persist-credentials: false" in text
+        assert "timeout-minutes:" in text and "set -euo pipefail" in text
+        assert "actions/upload-artifact@v4" in text and "if-no-files-found: error" in text
+        for line in text.splitlines():
+            if "python scripts/release_check.py" in line:
+                assert "--phase 4 --step 6" in line, (name, line)
+        for forbidden in ("continue-on-error:", "|| true", "contents: write", "id-token: write", "twine upload", "git push"):
+            assert forbidden not in text, (name, forbidden)
+    ci = (root / "ci.yml").read_text(encoding="utf-8")
+    for required in ('os: [ubuntu-latest, windows-latest]', 'python-version: ["3.11", "3.12"]',
+                     'dependencies: [current, minimum]', '"numpy==2.0.0" "pandas==2.2.2"',
+                     'RIT_TEST_PARQUET: "0"', 'RIT_TEST_PARQUET: "1"', '--require-parquet',
+                     '--baseline-evidence', 'python -m pip check',
+                     '--minimum-tests 3215', '--minimum-tests 3218',
+                     "find_spec('pyarrow') is None", 'import pyarrow'):
+        assert required in ci
+    assert ci.count("python -m pytest -p no:cacheprovider -q --junitxml=") == 2
+    assert " -k " not in ci
+    golden = (root / "golden.yml").read_text(encoding="utf-8")
+    for required in ("tests/golden/test_phase3_math.py", "tests/integration/test_hero_structure.py",
+                     "tests/integration/test_phase3_metric_pipeline.py"):
+        assert required in golden
+    security = (root / "security.yml").read_text(encoding="utf-8")
+    for required in ('tests/integration/test_no_network.py', 'tests/integration/test_optional_dependency.py',
+                     'tests/unit/test_PR012_evidence_classes.py', 'tests/unit/test_PR013_report_schema.py',
+                     'tests/unit/test_PR014_unavailable.py', 'tests/unit/test_PR015_redaction.py',
+                     'tests/unit/test_PR016_determinism.py', 'tests/unit/test_PR018_language.py',
+                     'tests/integration/test_partial_provenance_report.py',
+                     'tests/integration/test_partial_lineage_report.py',
+                     'tests/unit/test_phase4_output_safety.py', 'tests/unit/test_phase4_contracts.py', 'tests/integration/test_phase4_gates.py'):
+        assert required in security
+    release = (root / "release.yml").read_text(encoding="utf-8")
+    assert "python -m build" in release and "python -m twine check --strict" in release
+    assert "--dist" in release and "--candidate" in release
+    assert "--delivery" not in release
+    assert "recursive-integrity-toolkit-phase4-step6-candidate" in release
+    assert "rit-phase4-step4" not in release
+    assert "--minimum-tests 3215" in release and "--minimum-tests 3218" in release
+    assert release.count("python -m pytest -p no:cacheprovider -q --junitxml=") == 2
+
+
+@pytest.mark.parametrize("mutation", [
+    "unchanged", "formula", "math_oracle", "frozen_model", "frozen_schema", "hero", "dependency", "plan",
+    "cli", "html", "assembly", "result", "config", "hashing", "logging", "output_paths", "unknown_runtime", "missing_runtime", "premature_completion", "premature_report",
+    "control_step", "control_scope", "control_schema_scope", "historical_assertion", "historical_tooling",
+    "historical_binding", "historical_document", "input_hash_helper", "config_resolver_helper",
+])
+def test_phase4_step6_current_snapshot_checks_valid_tree_before_mutations(repo_root, tmp_path, phase4_gate_tools, mutation):
+    import json
+
+    tracked = subprocess.check_output(["git", "-C", str(repo_root), "ls-files", "-z"])
+    paths = set(tracked.decode().split("\0")) - {""}
+    assert len(paths) == 228
+    for relative in sorted(paths):
+        destination = tmp_path / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(repo_root / relative, destination)
+    verify = phase4_gate_tools["verify_phase4_step6_snapshot"]
+    baseline = verify(tmp_path)
+    assert baseline["package_modules"] == 40
+    assert baseline["frozen_runtime_modules"] == 38
+    assert baseline["frozen_schemas"] == 5
+    assert baseline["result_contracts_enabled"] is True
+    assert baseline["adapters_enabled"] is True
+    assert baseline["privacy_views_enabled"] is True
+    assert baseline["renderers_enabled"] is True
+    assert baseline["output_publication_enabled"] is True
+    assert baseline["cli_analysis_enabled"] is False
+    assert baseline["phase_complete"] is False
+    if mutation == "unchanged":
+        return
+    replacements = {
+        "formula": ("src/recursive_integrity_toolkit/metrics/diversity.py",
+                    b"diversity = 1.0 - concentration", b"diversity = 0.5 - concentration"),
+        "math_oracle": ("tests/golden/phase3_math_cases.json", b'"v2_support":5', b'"v2_support":3'),
+        "hero": ("examples/hero/records_v2.csv", b"v2_08,v2,", b"v2_99,v2,"),
+        "dependency": ("pyproject.toml", b"numpy>=2.0", b"numpy>=3.0"),
+        "historical_assertion": ("tests/unit/test_phase4_contracts.py",
+                                 b'    assert control["active_phase"] == 4 and control["active_step"] == 4\n',
+                                 b"    assert True\n"),
+        "historical_tooling": ("scripts/release_check.py",
+                               b"def verify_phase4_step4_control(control: dict, step: int = 4) -> None:",
+                               b"def verify_phase4_step4_control(control: dict, step: int = 4) -> None:\n    return"),
+        "historical_binding": ("tests/integration/test_phase4_gates.py",
+                               b"def test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, phase4_step4_snapshot):\n    repo_root = phase4_step4_snapshot\n",
+                               b"def test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, phase4_step4_snapshot):\n"),
+        "historical_document": ("docs/cli.md", b"# CLI\n",
+                                b"# Unauthorized historical document\n"),
+        "input_hash_helper": ("src/recursive_integrity_toolkit/utils/hashing.py",
+                              b"return hashlib.sha256(data).hexdigest()", b"return hashlib.sha256(b'changed').hexdigest()"),
+        "config_resolver_helper": ("src/recursive_integrity_toolkit/config.py",
+                                   b"def resolve_config(", b"def resolve_config_disabled("),
+    }
+    appended = {
+        "frozen_model": "src/recursive_integrity_toolkit/models.py",
+        "frozen_schema": "schemas/report.schema.json",
+        "plan": "PHASE_4_PLAN.md",
+        "cli": "src/recursive_integrity_toolkit/cli.py",
+        "html": "src/recursive_integrity_toolkit/reports/html_report.py",
+        "assembly": "src/recursive_integrity_toolkit/reports/assembly.py",
+        "result": "src/recursive_integrity_toolkit/result.py",
+        "config": "src/recursive_integrity_toolkit/config.py",
+        "hashing": "src/recursive_integrity_toolkit/utils/hashing.py",
+        "logging": "src/recursive_integrity_toolkit/utils/logging.py",
+        "output_paths": "src/recursive_integrity_toolkit/utils/paths.py",
+    }
+    added = {
+        "unknown_runtime": "src/recursive_integrity_toolkit/reports/unauthorized.py",
+        "premature_completion": "PHASE_4_COMPLETION.md", "premature_report": "report.json",
+    }
+    if mutation in replacements:
+        relative, original, replacement = replacements[mutation]
+        path = tmp_path / relative
+        source = path.read_bytes()
+        assert source.count(original) == 1
+        path.write_bytes(source.replace(original, replacement, 1))
+    elif mutation in appended:
+        path = tmp_path / appended[mutation]
+        path.write_bytes(path.read_bytes() + b"\nUnauthorized Step 6 mutation\n")
+    elif mutation in added:
+        path = tmp_path / added[mutation]
+        assert not path.exists()
+        path.write_text("Unauthorized later-stage file\n", encoding="utf-8")
+    elif mutation == "missing_runtime":
+        (tmp_path / "src/recursive_integrity_toolkit/metrics/bounds.py").unlink()
+    elif mutation.startswith("control_"):
+        path = tmp_path / "PHASE_4_BASELINE.json"
+        control = json.loads(path.read_text(encoding="utf-8"))
+        if mutation == "control_step":
+            control["active_step"] = 7
+        elif mutation == "control_scope":
+            control["runtime_paths_authorized"].append("src/recursive_integrity_toolkit/reports/assembly.py")
+        else:
+            control["schema_changes_authorized"] = True
+            control["schema_paths_authorized"].append("schemas/report.schema.json")
+        path.write_text(json.dumps(control), encoding="utf-8")
+    else:
+        raise AssertionError(f"Unknown active mutation case: {mutation}")
+    with pytest.raises(ValueError):
+        verify(tmp_path)
+
+
+@pytest.mark.parametrize("relative,injection", [
+    ("utils/paths.py", b"\nimport socket\n"),
+    ("utils/paths.py", b"\nfrom recursive_integrity_toolkit.metrics import diversity\n"),
+    ("utils/paths.py", b"\ndef new_reader(path):\n    return path.read_bytes()\n"),
+    ("utils/paths.py", b"\nexec('forged=True')\n"),
+    ("utils/paths.py", b"\ndef effect(value=globals().clear()):\n    pass\n"),
+    ("utils/logging.py", b"\nimport urllib.request\n"),
+    ("utils/logging.py", b"\ndef disclose(value):\n    print(value)\n"),
+    ("utils/logging.py", b"\n@print('private')\ndef effect():\n    pass\n"),
+])
+def test_phase4_step6_current_output_ast_rejects_injections(repo_root, tmp_path, relative, injection):
+    checker = runpy.run_path(str(repo_root / "scripts/check_traceability.py"), run_name="phase4_step6_ast_tests")
+    verify = checker["phase4_step6_runtime_boundary"]
+    repository_path = "src/recursive_integrity_toolkit/" + relative
+    current = repo_root / repository_path
+    verify(current, repository_path)
+    target = tmp_path / "changed.py"
+    target.write_bytes(current.read_bytes() + injection)
+    with pytest.raises(ValueError):
+        verify(target, repository_path)
+
+
+@pytest.mark.parametrize("relative,needle,replacement", [
+    ("utils/paths.py", b"def resolve_content_reference", b"def disabled_content_reference"),
+    ("utils/logging.py", b"def format_diagnostic", b"def disabled_diagnostic"),
+])
+def test_phase4_step6_preserves_existing_input_and_diagnostic_helpers(repo_root, phase4_step5_snapshot, phase4_gate_tools, relative, needle, replacement):
+    path = "src/recursive_integrity_toolkit/" + relative
+    before = (phase4_step5_snapshot / path).read_bytes()
+    after = (repo_root / path).read_bytes()
+    verify = phase4_gate_tools["_phase4_step6_preserve_runtime"]
+    verify(before, after, path)
+    assert needle in after
+    with pytest.raises(ValueError):
+        verify(before, after.replace(needle, replacement, 1), path)
+
+
+@pytest.mark.parametrize("injection", [
+    b"\nimport socket\n", b"\npytest.skip('inherited tests')\n",
+    b"\ndef test_unscoped():\n    pass\n",
+    b"\ndef test_phase4_step6_unsafe(value=globals().clear()):\n    pass\n",
+    b"\n@pytest.mark.parametrize('value', list(range(2)))\ndef test_phase4_step6_unsafe(value):\n    pass\n",
+])
+def test_phase4_step6_new_test_file_rejects_definition_effects(repo_root, phase4_gate_tools, injection):
+    path = "tests/unit/test_phase4_output_safety.py"
+    raw = (repo_root / path).read_bytes()
+    verify = phase4_gate_tools["_phase4_step6_new_test"]
+    verify(raw, path)
+    with pytest.raises(ValueError):
+        verify(raw + injection, path)

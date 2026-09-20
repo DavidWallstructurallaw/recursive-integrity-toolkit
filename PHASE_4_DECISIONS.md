@@ -475,3 +475,116 @@ commands, environments, outcomes, failed attempts and repairs, review findings
 and limitations. Technical review is consolidated assistant review without
 asserting independent human certification, empirical theory validation or
 production readiness. Stop after accepted Step 5.
+
+## Phase 4 Step 6 authorization and bounded implementation
+
+User authorization recorded 2026-09-20: Phase 4 Step 6 approved.
+The exact user text is `批准开始Phase 4   **Step 6**`.
+Accepted Step 5 commit: `c1667179e895a798bba2349960162542efa5ef87`;
+source tree: `d83f9fc8e0b569f2d796bd2a83b87422fe350fba`;
+test tree: `974f8e65904c24ed4e226996eaf571aab6123965`.
+The accepted baseline contains 227 files, 40 runtime modules, 3215 core tests
+and 3218 tests with real Parquet. The frozen approved plan is unchanged.
+
+Step 6 implements P4-D07 through additive helpers in `utils/paths.py` and
+`utils/logging.py`, with one new `tests/unit/test_phase4_output_safety.py`.
+The allowed set is the 26 common G paths plus these three paths and
+`docs/privacy.md`, `docs/cli.md`: 31 paths in total. Only the two named runtime
+modules open. Their inherited input/content-reference and diagnostic helper
+bytes remain unchanged after the module ownership docstring. All five schemas,
+38 other runtime modules, dependencies, version, Phase 0 sources, theory mapping,
+mathematical oracles, and Hero fixtures remain frozen. CLI execution, Step 7,
+main merge, tagging, distribution publication and Phase 4 completion stay closed.
+
+### Publication contract and implementation choice
+
+`publish_reports` accepts an already constructed SafeReportView, an explicit
+local output directory, and an explicit list/tuple of caller input paths.
+It validates path spellings before filesystem inspection and completes both pure
+renderers before creating the output leaf directory or private staging directory.
+Both UTF-8 payloads must be fully written and file-fsynced before publication.
+The operation refuses existing target files, directories, hard links and symbolic
+links, and never follows an accepted symbolic-link/reparse-point ancestor.
+Inputs are checked as paths without reading their contents. Missing declared
+inputs still protect their exact destination names.
+
+POSIX publication uses same-filesystem hard-link creation and Windows uses
+rename, with no overwrite or copy fallback. Python documents the Windows
+existing-destination failure behavior and the different POSIX rename behavior:
+[os.rename](https://docs.python.org/3.11/library/os.html#os.rename) and
+[os.link](https://docs.python.org/3.11/library/os.html#os.link).
+Private staging uses [tempfile.mkdtemp](https://docs.python.org/3.11/library/tempfile.html#tempfile.mkdtemp).
+Ownership fingerprints and directory identities are rechecked during publication
+and cleanup. Handled partial failures remove only files still identified as this
+attempt's files. Unknown or externally replaced files are preserved. Completion
+requires both final targets to match the attempt after staging cleanup.
+
+Two filesystem names do not form a portable atomic transaction. Stable, trusted
+ancestor directories are required. The implementation does not promise protection
+from a privileged actor changing ancestors between checks, mount remapping, weak
+remote filesystem semantics, sudden process death, power loss or unhandled
+interrupts. File fsync is not a guarantee of directory or pair crash durability.
+An interrupted attempt can leave an incomplete pair or private staging files;
+callers must inspect the result and must not treat mere target existence as proof
+of complete publication. Empty newly created output leaf directories may remain.
+
+Publication outcomes are operational data and do not enter the canonical report
+schema or change analytical statuses. Fixed safe diagnostics expose no source
+content, paths, raw OS exception messages or caller labels. P4-D06 maps invalid
+paths/configuration to 2, IO/existence/cleanup failures to 1, rendering/internal
+invariant failures to 4 and complete publication to 0. Existing lineage exit 3
+and cross-operation precedence remain unchanged for later CLI integration.
+
+### Exact historical binding maintenance under common G and P4-D10
+
+Fifteen existing definitions receive exact before/after source bindings, recorded
+in `PHASE4_STEP6_MIGRATIONS`. Names, parametrizations and substantive assertions
+are preserved. Seven Step 5 unit definitions and three Step 5 integration
+definitions now inspect the verified accepted Step 5 snapshot. Adding the one
+new test file requires all five historical snapshot inventories to come from
+the corresponding immutable snapshot instead of today's expanded Git inventory.
+The Step 5 inventory change is within the existing ten-definition set, so this
+adds four definitions. One Step 4 AST test additionally uses the accepted Step 5
+logging module for its five historical logging parameters; its other ten
+parameters still inspect current source. New Step 6 output AST checks inspect
+current paths and logging implementations before rejecting injected mutations.
+
+| File | Exact definition |
+|---|---|
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step5_current_runtime_opens_only_renderers_and_freezes_schema` |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step5_current_workflows_preserve_matrix_and_use_active_dispatch` |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step5_current_snapshot_checks_valid_tree_before_mutations` |
+| `tests/integration/test_phase4_gates.py` | `phase4_mutation_tree` |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step2_current_snapshot_checks_valid_tree_before_mutations` |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step3_current_snapshot_checks_valid_tree_before_mutations` |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step4_current_snapshot_checks_valid_tree_before_mutations` |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step4_privacy_ast_checks_current_source_before_rejecting_scope_injection` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step5_approved_control_keeps_independent_step4_anchors` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step5_control_rejects_forged_scope_and_stage` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step5_control_rejects_unapproved_dispatch` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step5_control_requires_explicit_approval_fields` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step5_control_cannot_mint_extra_permission` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step5_historical_migrations_preserve_ten_step4_gate_nodes` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step5_historical_guard_rejects_assertion_and_binding_weakening` |
+
+The new `phase4_step5_snapshot` fixture verifies the fixed commit, source tree,
+test tree and every regular Git blob before use and at teardown. Original
+maintainer functions remain exact except the registered active dispatch changes.
+Current guards independently enforce the 31-path boundary, one new test file,
+228-file candidate inventory, unchanged helpers and fixed reviewed output ASTs.
+No gate computes a fresh accepted AST from a potentially modified current file.
+
+### Step 6 verification and evidence policy
+
+Acceptance requires complete current core, minimum-dependency and real-Parquet
+runs, inherited identity retention through all six baseline generations, pure
+renderer compatibility, input immutability, safe diagnostics, no overwrite,
+concurrent publisher competition, write/disk/permission/rename failure handling,
+ownership-sensitive cleanup, and isolated installed-wheel execution.
+Four remote workflow roles retain eight OS/Python/dependency core combinations,
+real Parquet, frozen Hero/math, security and build/candidate checks. Existing
+job budgets remain unchanged. Failed attempts and repairs are recorded rather
+than counted as passing evidence. Exact source and test identities are sealed in
+the external Step 6 receipt. Review is consolidated assistant review, without a
+claim of independent human certification or whole-product performance acceptance.
+Stop after Step 6 acceptance.

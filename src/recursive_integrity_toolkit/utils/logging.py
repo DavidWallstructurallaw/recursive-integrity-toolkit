@@ -4,7 +4,7 @@ Owner IDs:
     PR-015; PR-018 supporting actionable diagnostic language.
 Inputs:
     Accepted validation messages or exceptions, selected privacy policy, and
-    an optional shared identifier-protection context.
+    an optional shared identifier-protection context; a PublicationResult.
 Outputs:
     Explicitly allowlisted diagnostic dictionaries or single-line JSON text.
 Assumptions:
@@ -14,7 +14,7 @@ Limits:
     traceback, content-bearing debug mode, or import-time output. Pseudonyms
     protect identifiers but do not establish statistical anonymity.
 Current phase status:
-    Phase 4 Step 4 content-safe diagnostic formatting and explicit sink only.
+    Preserved Step 4 diagnostics plus Step 6 safe publication outcomes.
 """
 from __future__ import annotations
 
@@ -276,3 +276,49 @@ def emit_diagnostic(value, *, stream, mode="standard", record_id_mode=None, prot
                              protection=protection, effect_on_capabilities=effect_on_capabilities,
                              effect_on_run=effect_on_run)
     stream.write(text)
+
+
+# Phase 4 Step 6: these operational results do not modify canonical evidence.
+_PUBLICATION_MESSAGES = {
+    "E_OUTPUT_PATH_INVALID": "The output or input path declaration is not a supported local path.",
+    "E_OUTPUT_INPUT_COLLISION": "The output location collides with a declared input.",
+    "E_OUTPUT_EXISTS": "A required report target already exists; it was not replaced.",
+    "E_OUTPUT_UNSAFE": "The output or input directory tree cannot be used safely.",
+    "E_OUTPUT_IO": "The required report files could not both be published.",
+    "E_OUTPUT_RENDER": "The safe report could not be validated and rendered.",
+    "E_OUTPUT_INTERNAL": "An internal failure prevented complete report publication.",
+    "E_OUTPUT_CLEANUP": "Report publication finished, but temporary cleanup is incomplete.",
+}
+
+
+def publication_diagnostic(result):
+    """Return fixed operational text, never paths, OS errors or source content."""
+    from .paths import PublicationResult
+
+    if type(result) is not PublicationResult:
+        raise TypeError("publication diagnostics require an accepted publication result")
+    PublicationResult.__post_init__(result)
+    complete = result.status == "complete"
+    return {
+        "status": result.status, "code": result.code, "exit_code": result.exit_code,
+        "severity": "info" if complete else "fatal" if result.exit_code == 4 else "error",
+        "message": "Both required reports were published." if complete else _PUBLICATION_MESSAGES[result.code],
+        "published_files": list(result.published_files),
+        "residual_files": list(result.residual_files),
+        "temporary_cleanup_complete": result.temporary_cleanup_complete,
+        "remediation": [] if complete else [
+            "Inspect the explicitly selected local directory and any disclosed residual outputs; "
+            "use a safe unused destination before retrying."
+        ],
+    }
+
+
+def format_publication_diagnostic(result):
+    """Format one safe JSON line for either standard or redacted callers."""
+    return json.dumps(publication_diagnostic(result), ensure_ascii=True,
+                      allow_nan=False, separators=(",", ":")) + "\n"
+
+
+def emit_publication_diagnostic(result, *, stream):
+    """Write only to an explicit caller-owned sink; never configure a logger."""
+    stream.write(format_publication_diagnostic(result))

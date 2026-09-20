@@ -343,3 +343,15 @@ nor establish source authenticity, causal ancestry, model performance, universal
 integrity or a collapse prediction. The twenty frozen mathematical cases and
 their numerical expectations remain the responsibility of their existing
 owners.
+
+## Phase 4 Step 6 output boundary
+
+P4-D07 and the privacy/output requirements map to additive publication helpers
+in `utils/paths.py` and fixed operational diagnostics in `utils/logging.py`.
+PR-015 privacy and the existing PR-017 input/content-reference protections stay
+in force. There is no new theory interpretation, formula, empirical inference,
+metric recomputation or evidence-class promotion. Existing result, privacy,
+JSON/Markdown and mathematical contracts remain unchanged. A publication failure
+is an operational outcome and cannot alter the report's analytical conclusions.
+The new output-safety test file, current runtime AST checks, preserved helper
+checks and isolated installed-wheel smoke exercise this boundary directly.

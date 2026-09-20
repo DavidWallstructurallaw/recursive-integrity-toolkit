@@ -5571,6 +5571,50 @@ def phase4_step5_main(step: int = 5) -> int:
     return 0
 
 
+PHASE4_STEP6_RUNTIME_AST_SHA256 = {'src/recursive_integrity_toolkit/utils/logging.py': '1ce0d0c77339f4c63e9f091fa218cfcb0202c709b235643f550a8c3d4c0160b5',
+ 'src/recursive_integrity_toolkit/utils/paths.py': 'f9e77ed3638b520f81769ae2c09095572913b501383d53124d51cde2826a5efa'}
+
+PHASE4_STEP6_INHERITED_AST_SHA256 = {'src/recursive_integrity_toolkit/utils/logging.py': '973a746221ea3d83fd1ab42a5687075bed6ad962a0c727cfa6350e94f71c94d3',
+ 'src/recursive_integrity_toolkit/utils/paths.py': '0010c7bbf86e389ac2599eae023a89caaabe48b10a65cfaeddb01aa619112824'}
+
+PHASE4_STEP6_INHERITED_NODES = {'src/recursive_integrity_toolkit/utils/logging.py': 24,
+ 'src/recursive_integrity_toolkit/utils/paths.py': 17}
+
+def phase4_step6_runtime_boundary(path: Path, relative: str) -> None:
+    """Enforce reviewed output code and unchanged inherited input/diagnostic AST."""
+    if relative not in PHASE4_STEP6_RUNTIME_AST_SHA256:
+        raise ValueError("Step 6 runtime is limited to output paths and diagnostics")
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, SyntaxError) as error:
+        raise ValueError("Step 6 output helper cannot be inspected") from error
+    doc = ast.get_docstring(tree) or ""
+    if "Owner IDs:" not in doc or "Current phase status:" not in doc or "PR-015" not in doc:
+        raise ValueError("Step 6 output ownership metadata is missing")
+    body = tree.body[1:] if ast.get_docstring(tree) is not None else tree.body
+    if _phase4_step4_ast_digest(body) != PHASE4_STEP6_RUNTIME_AST_SHA256[relative]:
+        raise ValueError("Step 6 output implementation differs from the reviewed AST")
+    if _phase4_step4_ast_digest(body[:PHASE4_STEP6_INHERITED_NODES[relative]]) != PHASE4_STEP6_INHERITED_AST_SHA256[relative]:
+        raise ValueError("Step 6 changed an inherited input or diagnostic helper")
+
+
+def phase4_step6_output_boundary(root: Path) -> None:
+    for relative in sorted(PHASE4_STEP6_RUNTIME_AST_SHA256):
+        phase4_step6_runtime_boundary(root / relative, relative)
+    phase4_step5_renderers_boundary(root)
+
+
+def phase4_step6_main(step: int = 6) -> int:
+    import runpy
+    if type(step) is not int or step != 6:
+        raise ValueError("Only authorized Phase 4 Step 6 traceability is available")
+    control = runpy.run_path(str(ROOT / "scripts/release_check.py"), run_name="phase4_step6_traceability_control")
+    control["audit_phase4_step6"](step=step)
+    phase4_step6_output_boundary(ROOT)
+    print("Phase 4 Step 6: safe publication and preserved input/report contracts: PASS")
+    return 0
+
+
 def cli_main(argv: list[str] | None = None) -> int:
     """Select the active phase without changing historical checker semantics."""
     import argparse
@@ -5593,7 +5637,9 @@ def cli_main(argv: list[str] | None = None) -> int:
         return phase4_step4_main(step=args.step)
     if args.phase == 4 and args.step == 5:
         return phase4_step5_main(step=args.step)
-    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5")
+    if args.phase == 4 and args.step == 6:
+        return phase4_step6_main(step=args.step)
+    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5 or --phase 4 --step 6")
     return 2
 
 
