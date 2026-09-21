@@ -349,15 +349,20 @@ def test_phase4_step8_example_never_reuses_a_workspace(tmp_path, capsys, existin
 def test_phase4_step8_example_rejects_unsafe_paths_before_resources(tmp_path, capsys, monkeypatch, path):
     from recursive_integrity_toolkit.cli import main
     import importlib.resources
+    import os
     monkeypatch.chdir(tmp_path)
     accessed = []
     def denied(*args, **kwargs):
         accessed.append(True)
         raise AssertionError("resources read before path rejection")
     monkeypatch.setattr(importlib.resources, "files", denied)
-    assert main(["example", "--out", path]) == 2
+    # Backslash is a native Windows separator. This case then fails because
+    # its parent is absent; POSIX rejects the spelling before filesystem use.
+    native_missing_parent = os.name == "nt" and path == "bad\\path"
+    assert main(["example", "--out", path]) == (1 if native_missing_parent else 2)
     streams = capsys.readouterr()
-    assert streams.out == "" and "E_OUTPUT_PATH_INVALID" in streams.err
+    expected_code = "E_OUTPUT_IO" if native_missing_parent else "E_OUTPUT_PATH_INVALID"
+    assert streams.out == "" and expected_code in streams.err
     assert not accessed and not list(tmp_path.iterdir())
 
 

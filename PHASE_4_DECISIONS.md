@@ -841,3 +841,10 @@ All historical source-binding migrations and protected-owner bytes remain exact.
 Required complete regressions, installed checks, source-archive verification and
 all four remote workflow roles apply to the corrected final source. The external
 receipt records its identity, actual outcomes and all superseded attempts.
+
+The corrected-source Windows matrix exposed a test-only native-path assumption.
+`bad\path` is a native relative path on Windows; its absent parent produces the
+approved I/O exit code 1. POSIX rejects the spelling with configuration exit code
+2. Keep the frozen path implementation, preserve the parameterized test identity,
+and assert both platform-specific results occur before resource reads or writes.
+The failed Windows attempt is retained and the complete final-source gates rerun.
