@@ -690,8 +690,9 @@ seven inherited identity generations; current CLI contract/failure/privacy tests
 installed ordinary audit with core dependencies outside the checkout and blocked
 network; prior installed input/report/publication checks; and exact candidate
 archive bytes. The four workflow roles preserve the eight core OS/Python/dependency
-combinations, real Parquet, Hero/math, security and build jobs. Job budgets remain
-unchanged. All attempts, failures and repairs are retained in external evidence.
+combinations, real Parquet, Hero/math, security and build jobs. Initial job budgets
+were unchanged; the observed build-budget correction below updates only that job.
+All attempts, failures and repairs are retained in external evidence.
 Review is consolidated assistant review, not independent human certification.
 Acceptance and final source identities are recorded in the external Step 7
 receipt after the required checks pass. Stop before Step 8.
@@ -713,3 +714,23 @@ through the existing safe diagnostic adapter. The outer entry point emits a
 fixed safe internal error if command initialization itself fails. Run duration
 is captured after input/calculation work and before report assembly/publication;
 it is not the Step 10 end-to-end performance measurement.
+
+### Observed build-budget correction within common G
+
+The first Step 7 build run, `35553895804`, on commit
+`5a5e5388e8f58727104d5797f9885eeedfcc8393`, ended as `cancelled` at
+2026-09-21 02:46:33 UTC, after 25 minutes 15 seconds. Its core suite passed all
+3620 cases in 831.14 seconds. The subsequent real-Parquet suite reached 85%
+without a reported assertion failure before `The operation was canceled.`
+The observed cancellation coincides with the configured 25-minute job limit;
+the available API does not provide a more specific cancellation reason.
+
+Under the approved common G workflow/evidence maintenance scope, the build job
+now has a bounded 40-minute budget, with its current Step 7 workflow assertion
+updated to require exactly 40. All other job budgets, all test selections,
+failure propagation, read-only permissions and upload-on-failure behavior stay
+unchanged. Historical workflow assertions continue to inspect their pinned
+snapshots. No runtime or mathematical code changes in this correction.
+The first run and its local acceptance evidence are retained as a prior attempt;
+all four workflow roles and complete local regressions execute on the corrected
+source before acceptance. No earlier success substitutes for the final commit.

@@ -1291,7 +1291,7 @@ def test_phase4_step7_current_runtime_opens_only_cli_configuration_and_freezes_s
 def test_phase4_step7_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root):
     names = {"ci.yml", "golden.yml", "security.yml", "release.yml"}
     root = repo_root / ".github/workflows"
-    expected_timeouts = {"ci.yml": [60, 20], "golden.yml": [15], "security.yml": [20], "release.yml": [25]}
+    expected_timeouts = {"ci.yml": [60, 20], "golden.yml": [15], "security.yml": [20], "release.yml": [40]}
     assert {path.name for path in root.glob("*.yml")} == names
     for name in sorted(names):
         text = (root / name).read_text(encoding="utf-8")
