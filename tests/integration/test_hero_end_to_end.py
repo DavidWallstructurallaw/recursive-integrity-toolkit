@@ -355,9 +355,10 @@ def test_phase4_step8_example_rejects_unsafe_paths_before_resources(tmp_path, ca
         accessed.append(True)
         raise AssertionError("resources read before path rejection")
     monkeypatch.setattr(importlib.resources, "files", denied)
-    assert main(["example", "--out", path]) == 1
+    assert main(["example", "--out", path]) == 2
     streams = capsys.readouterr()
-    assert streams.out == "" and not accessed and not list(tmp_path.iterdir())
+    assert streams.out == "" and "E_OUTPUT_PATH_INVALID" in streams.err
+    assert not accessed and not list(tmp_path.iterdir())
 
 
 def test_phase4_step8_example_extraction_failure_cleans_only_its_files(tmp_path, capsys, monkeypatch):

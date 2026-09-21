@@ -172,6 +172,11 @@ def _calculations(bundle, options, *, dataset_versions=None, content_only=False,
                              "all_valid_records_in_selected_dataset_scope", "audit-provenance")
     def provenance_result():
         from .io.validation import join_provenance
+        if dataset_versions is not None and set(scope.included_record_keys) != {
+                row.record_key for row in bundle.records if row.record_key.dataset_version in versions}:
+            raise CanonicalValidationError(ErrorCode.SCHEMA_TYPE,
+                "Provenance requires one complete version scope; this version spans input roles",
+                field="dataset_version")
         joined = bundle.provenance_join if dataset_versions is None else join_provenance(
             bundle.records, bundle.provenance, dataset_versions=versions, strict_mode=options.strict_mode,
             strict_warning_codes=options.configuration.strict_warning_codes)
@@ -229,10 +234,6 @@ def _pair_calculations(bundle, options):
     sides = {role: tuple(sorted({row.record_key.dataset_version for row in bundle.records
              if row.location.file_role is role})) for role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE)}
     earlier, later = sides[FileRole.RECORDS_COMPARE], sides[FileRole.RECORDS_PRIMARY]
-    if earlier == later and len(earlier) == 1:
-        error = CanonicalValidationError(ErrorCode.VERSION_ORDER_CONFLICT,
-            "Comparison requires two distinct versions", field="pair_order")
-        return {"family_errors": (FamilyFailure(CapabilityKey.DATASET_LONGITUDINAL, (_message(error),)),)}, (1,)
     results, exits = _calculations(bundle, options, dataset_versions=later,
         record_role=FileRole.RECORDS_PRIMARY) if len(later) == 1 else ({}, ())
     prior, prior_exits = _calculations(bundle, options, dataset_versions=earlier, content_only=True,
@@ -242,6 +243,9 @@ def _pair_calculations(bundle, options):
     results["distributions"] = a + b if earlier != later else b
     exits += prior_exits
     try:
+        if earlier == later and len(earlier) == 1:
+            raise CanonicalValidationError(ErrorCode.VERSION_ORDER_CONFLICT,
+                "Comparison requires two distinct versions", field="pair_order")
         if len(earlier) != 1 or len(later) != 1:
             raise CanonicalValidationError(ErrorCode.SCHEMA_TYPE,
                 "Each comparison input must contain exactly one version", field="dataset_version")
@@ -335,6 +339,33 @@ def _execute(namespace):
         if options.id_salt_file is not None:
             input_paths.append(options.id_salt_file)
         protection = IdentifierProtection.create(secret_file=options.id_salt_file)
+        # The input API raises before returning its inventory on invalid order.
+        # Capture those bytes before validation and retain them only while the
+        # local file identity and metadata remain stable across the attempt.
+        from .errors import IngestionError, ErrorCode
+        from .models import FileRole
+        from .io.loaders import inventory_source
+        from .utils.paths import local_input_path
+        def order_state(path):
+            try:
+                info = local_input_path(path).stat()
+            except FileNotFoundError:
+                raise IngestionError(ErrorCode.FILE_NOT_FOUND, "Version-order input is unavailable",
+                    file_role=FileRole.VERSION_ORDER.value) from None
+            except OSError:
+                raise IngestionError(ErrorCode.FILE_PARSE, "Version-order input cannot be inspected",
+                    file_role=FileRole.VERSION_ORDER.value) from None
+            return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
+        order_snapshots = []
+        if namespace.command != "validate" and any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs):
+            for source in options.inputs:
+                if source.role is FileRole.VERSION_ORDER:
+                    state = order_state(source.path)
+                    entry = inventory_source(source, limits=options.configuration.resource_limits)
+                    if state != order_state(entry.path):
+                        raise IngestionError(ErrorCode.FILE_PARSE, "Version-order input changed; retry with a stable file",
+                            file_role=FileRole.VERSION_ORDER.value)
+                    order_snapshots.append((entry, state))
         order_failure = ()
         try:
             bundle = validate_bundle(AuditBundle(options.inputs), configuration=phase4_validation_configuration(options),
@@ -349,10 +380,16 @@ def _execute(namespace):
                 raise
             # Invalid chronology cannot erase independently valid input evidence.
             # Revalidate without an ordering claim; retain the original failure.
+            for entry, state in order_snapshots:
+                if state != order_state(entry.path):
+                    raise IngestionError(ErrorCode.FILE_PARSE, "Version-order input changed; retry with a stable file",
+                        file_role=FileRole.VERSION_ORDER.value) from None
             unordered = phase4_validation_configuration(options)
             unordered["version_order"] = []
             bundle = validate_bundle(AuditBundle(tuple(source for source in options.inputs
                 if source.role is not FileRole.VERSION_ORDER)), configuration=unordered, base_directory=Path.cwd())
+            bundle = replace(bundle, inventory=tuple(sorted(bundle.inventory + tuple(entry for entry, _ in order_snapshots),
+                key=lambda entry: (entry.role.value, str(entry.path)))))
             order_failure = (FamilyFailure(CapabilityKey.DATASET_LONGITUDINAL, (_message(order_error),)),)
         if config_inventory:
             bundle = replace(bundle, inventory=tuple(sorted(bundle.inventory + config_inventory,
@@ -404,7 +441,7 @@ def _example(namespace):
     from importlib.resources import files
     import stat
     import sys
-    from .utils.paths import (_OutputFailure, _output_local, _output_walk,
+    from .utils.paths import (_OUTPUT_CODES, _OutputFailure, _output_local, _output_walk,
         _output_info, _output_recheck, _output_write, _output_clean_stage)
     workspace, root_chain, input_chain, owned = None, None, None, {}
     try:
@@ -449,7 +486,7 @@ def _example(namespace):
         sys.stderr.write(code + ": The example workspace could not be prepared.\n")
         if not cleaned:
             sys.stderr.write("E_OUTPUT_IO: Incomplete example files remain in the selected workspace; inspect it before retrying.\n")
-        return 4 if code == "E_INTERNAL" else 1
+        return _exit_code((_OUTPUT_CODES.get(code, 4), 1 if not cleaned else 0))
     sys.stderr.write("Phase 4 example: lineage execution is deferred. inputs/EXPECTED_OUTPUTS.md is the full-product reference, not a claim of calculated lineage results.\n")
     return _execute(invocation)
 

@@ -5657,7 +5657,7 @@ def phase4_step7_main(step: int = 7) -> int:
     return 0
 
 
-PHASE4_STEP8_RUNTIME_AST_SHA256 = {'src/recursive_integrity_toolkit/cli.py': '087430e3111f31e0d6370e8a0297d781f416d8c24cf1305c37ba5c0ca75833bb',
+PHASE4_STEP8_RUNTIME_AST_SHA256 = {'src/recursive_integrity_toolkit/cli.py': 'c4bd7981153974857c03ebe79b7daca6cc68ab324980b8434e6ef8dd3d7fd9c8',
  'src/recursive_integrity_toolkit/config.py': 'df7f8d96997cf0bcae5c53d78a130f07ca847c3bbc609e8e6d5c507d926507fa'}
 
 PHASE4_STEP8_CONFIG_INHERITED_AST_SHA256 = 'cbb96ab25130e4fe45a94cc03299aaa27015a496e38e7dcc6bec1c5d2f7e2573'

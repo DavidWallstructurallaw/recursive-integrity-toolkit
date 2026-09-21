@@ -42,6 +42,12 @@ Repeated singleton declarations, arbitrary maps, per-version compatibility
 assertions and conflicting meanings are rejected. No version sequence, automatic
 pair selection, provenance trajectory, relative-change formula or simulation runs.
 
+When two input roles claim the same version and their record identities are valid,
+the pair is rejected while usable later-side results remain scoped to `--records`.
+A rejected chronology file remains in the report input evidence. Invalid example
+output paths use configuration exit 2; existing destinations and I/O failures use
+exit 1, and internal failures use exit 4.
+
 `rit validate` can inspect two files through `--records` and `--compare`; it accepts
 no `--state-semantics` or tail request and calls no calculation. Its analytical
 sections stay empty. Single-version commands retain their accepted behavior.

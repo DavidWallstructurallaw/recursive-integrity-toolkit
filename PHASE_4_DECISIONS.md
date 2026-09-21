@@ -811,3 +811,33 @@ evidence. The final receipt records actual results and source identities.
 Reviews are consolidated assistant checks, not independent human certification.
 No final-product performance acceptance is claimed; Step 10 owns end-to-end targets.
 Step 9, Phase 4 completion, main merge, tag and package publication remain unopened.
+
+### Step 8 continuation review and failure-path corrections
+
+The Theory Owner instructed `Recursive Integrity Toolkit phase 4 step 8 继续`.
+The continuation recovered implementation commit
+`a24e7c7c2ba321533e23f38df8c47cb746c57b15` and its incomplete acceptance evidence.
+Interrupted local suites and successful subsets of its remote workflows remain
+prior-attempt observations, not acceptance of a corrected source tree.
+
+Delegated assistant review identified three in-scope failure-path corrections:
+preserve usable later-side metrics when distinct records on the two input roles
+claim the same version; retain the rejected chronology document in input evidence
+without accepting its order; and return the approved configuration exit code for
+an invalid example output path. These corrections implement existing P4-D03,
+P4-D06 and P4-D07 contracts. They add no feature, formula, dependency, public field
+or later-phase behavior. Step 8 tests must verify the surviving metrics, retained
+input evidence and exact exit code instead of encoding the faulty outcomes.
+
+For the same-version rejection case, the accepted provenance assembly requires
+all validated records in that version. It cannot represent provenance restricted
+to one of two file roles sharing the version. Preserve later-side content metrics
+and validated input observations, and report this provenance-scope limitation as
+an explicit family failure. Do not pool both roles into a claimed later-side
+provenance metric or alter the protected assembly contract.
+
+The current CLI syntax guard is resealed only after reviewing these edits.
+All historical source-binding migrations and protected-owner bytes remain exact.
+Required complete regressions, installed checks, source-archive verification and
+all four remote workflow roles apply to the corrected final source. The external
+receipt records its identity, actual outcomes and all superseded attempts.

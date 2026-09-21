@@ -519,7 +519,7 @@ def test_phase4_step8_pair_failure_retains_independent_evidence(tmp_path, capsys
     assert report["observed_facts"]["record_counts"] and report["errors"]
     assert "support_delta" not in report["derived_metrics"].get("support", {})
     assert report["capabilities"]["dataset_longitudinal"]["execution_status"] == "failed"
-    if case not in ("same_version", "later_multiversion", "missing_representation"):
+    if case not in ("later_multiversion", "missing_representation"):
         assert report["derived_metrics"]["support"]["by_version"]["later"]["support_size"]["value"] == 3
     if case == "later_multiversion":
         assert set(report["derived_metrics"]["support"]["by_version"]) == {"earlier"}
@@ -630,3 +630,77 @@ def test_phase4_step8_config_declared_compare_uses_config_parent(tmp_path, capsy
     capsys.readouterr()
     report = json.loads((tmp_path / "out/report.json").read_bytes())
     assert report["derived_metrics"]["support"]["support_delta"]["value"] == -1
+
+
+def test_phase4_step8_same_version_pair_retains_only_primary_metrics(tmp_path, capsys):
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    earlier.write_text(earlier.read_text().replace('"earlier"', '"later"'))
+    order.write_text(json.dumps({"version_order": ["later"]}))
+    provenance = tmp_path / "provenance.jsonl"
+    provenance.write_text("\n".join(json.dumps({"dataset_version": "later", "record_id": prefix + str(i),
+        "source_type": source, "external_grounding": grounding, "provenance_confidence": "confirmed"})
+        for prefix, source, grounding in (("e", "synthetic", "no"), ("l", "human", "yes")) for i in range(4)))
+    code, report, streams = phase4_step7_invoke(args + ["--provenance", str(provenance)], tmp_path / "out", capsys)
+    assert code == 1 and report["run"]["run_status"] == "partial"
+    support = report["derived_metrics"]["support"]
+    assert set(support["by_version"]) == {"later"} and "support_delta" not in support
+    assert support["by_version"]["later"]["support_size"]["value"] == 3
+    assert support["by_version"]["later"]["support_size"]["scope"]["record_count"] == 4
+    assert report["derived_metrics"]["diversity"]["by_version"]["later"]["gini_simpson_diversity"]["value"] == 0.625
+    # The accepted provenance contract covers complete versions. Its observed
+    # bundle coverage stays truthful; no pooled composition is mislabeled as
+    # primary-only evidence when both roles assert the same version identity.
+    coverage = report["observed_facts"]["provenance"]["provenance_row_coverage"]
+    assert coverage["value"] == 1 and coverage["scope"]["record_count"] == 8
+    assert "provenance" not in report["derived_metrics"]
+    assert "closure_exposure" not in report["derived_metrics"]
+    assert report["capabilities"]["dataset_longitudinal"]["execution_status"] == "failed"
+    assert "E_VERSION_ORDER_CONFLICT" in {error["code"] for error in report["errors"]}
+    assert any(error["code"] == "E_SCHEMA_TYPE" and error["effect_on_capabilities"] == ["provenance"]
+               for error in report["errors"])
+    assert "E_INTERNAL" not in {error["code"] for error in report["errors"]}
+
+
+@pytest.mark.parametrize("redacted", [False, True])
+def test_phase4_step8_rejected_order_retains_exact_input_hash(tmp_path, capsys, redacted):
+    import hashlib
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    original = b'{"version_order": ["earlier"]}\n'
+    order.write_bytes(original)
+    code, report, streams = phase4_step7_invoke(args + (["--redacted"] if redacted else []), tmp_path / "out", capsys)
+    assert code == 1 and report["run"]["run_status"] == "partial"
+    artifacts = report["inputs"]["artifacts"]
+    indexed = [(i, entry) for i, entry in enumerate(artifacts) if entry["role"] == "version_order"]
+    assert len(indexed) == 1
+    index, artifact = indexed[0]
+    expected_hash = hashlib.sha256(original).hexdigest()
+    assert artifact["file_hash"] == expected_hash and artifact["size_bytes"] == len(original)
+    assert {"artifact_index": index, "algorithm": "sha256", "value": expected_hash} in report["inputs"]["file_hashes"]
+    assert "support_delta" not in report["derived_metrics"]["support"]
+    assert order.read_bytes() == original
+    if redacted:
+        assert str(tmp_path) not in json.dumps(report) + streams.out + streams.err
+
+
+def test_phase4_step8_changed_rejected_order_never_claims_a_stale_hash(tmp_path, capsys, monkeypatch):
+    from recursive_integrity_toolkit.errors import ErrorCode, ToolkitError
+    from recursive_integrity_toolkit.io import validation
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    order.write_text(json.dumps({"version_order": ["earlier"]}))
+    original = validation.validate_bundle
+    calls = []
+    def replaced_during_validation(*args, **kwargs):
+        calls.append(True)
+        try:
+            return original(*args, **kwargs)
+        except ToolkitError as error:
+            assert error.code is ErrorCode.VERSION_ORDER_CONFLICT
+            order.write_text(json.dumps({"version_order": ["earlier", "later"], "PRIVATE_CHANGED_INPUT": True}))
+            raise
+    monkeypatch.setattr(validation, "validate_bundle", replaced_during_validation)
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 1 and calls == [True]
+    assert report["run"]["run_status"] == "failed"
+    assert report["inputs"] == report["derived_metrics"] == {}
+    assert report["errors"][0]["code"] == "E_FILE_PARSE"
+    assert "PRIVATE_CHANGED_INPUT" not in json.dumps(report) + streams.out + streams.err
