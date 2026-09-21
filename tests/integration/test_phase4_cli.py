@@ -1,0 +1,449 @@
+"""P4-D06: independent CLI cases, failure retention and input-only boundaries."""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+
+def phase4_step7_inputs(directory, *, representation=True, provenance=False):
+    records = directory / "records.jsonl"
+    rows = [{"dataset_version": "v1", "record_id": str(i), "content": "PRIVATE_CONTENT_" + str(i),
+             "topic": topic, "weight": weight} for i, (topic, weight) in enumerate(
+                (("A", 10.0), ("A", 1.0), ("B", 1.0), ("C", 1.0)))]
+    records.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+    config = directory / "config.json"
+    config.write_text(json.dumps({"representation": {"name": "topic", "source": "topic_field", "field": "topic",
+        "version": "1", "missing_value_policy": "exclude"}} if representation else {}), encoding="utf-8")
+    args = ["--records", str(records), "--config", str(config)]
+    if provenance:
+        manifest = directory / "provenance.jsonl"
+        manifest.write_text("\n".join(json.dumps({"dataset_version": "v1", "record_id": str(i),
+            "source_type": source, "provenance_confidence": "confirmed", "external_grounding": grounding})
+            for i, (source, grounding) in enumerate((("human", "yes"), ("synthetic", "no"), ("mixed", "unknown")))), encoding="utf-8")
+        args += ["--provenance", str(manifest)]
+    return args, records, config
+
+
+def phase4_step7_invoke(args, directory, capsys, command="audit"):
+    from recursive_integrity_toolkit.cli import main
+    code = main([command, *args, "--out", str(directory)])
+    streams = capsys.readouterr()
+    report = json.loads((directory / "report.json").read_bytes()) if (directory / "report.json").exists() else None
+    if report is not None:
+        from recursive_integrity_toolkit.result import validate_report, SECTION_ORDER
+        validate_report(report)
+        assert set(report) == set(SECTION_ORDER)
+        assert (directory / "report.md").read_text(encoding="utf-8").startswith("# Recursive Integrity Audit Report\n")
+    return code, report, streams
+
+
+def test_phase4_step7_explicit_single_version_metrics_match_hand_counts(tmp_path, capsys):
+    args, records, config = phase4_step7_inputs(tmp_path, provenance=True)
+    before = {path: path.read_bytes() for path in tmp_path.iterdir()}
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 0 and report["run"]["run_status"] == "complete"
+    assert report["derived_metrics"]["support"]["by_version"]["v1"]["support_size"]["value"] == 3
+    assert report["derived_metrics"]["diversity"]["by_version"]["v1"]["gini_simpson_diversity"]["value"] == 0.625
+    direct = report["derived_metrics"]["closure_exposure"]["direct"]
+    assert [direct[key]["value"] for key in ("lower_bound", "upper_bound", "interval_width")] == [0.25, 0.75, 0.5]
+    assert report["run"]["resolved_options"]["weighted"] is False
+    assert "weighted_support_size" not in report["derived_metrics"]["support"]["by_version"]["v1"]
+    assert report["simulations"] == {} and "tail" not in report["derived_metrics"]
+    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert report["capabilities"] == report["observability"]["capabilities"]
+    assert all(path.read_bytes() == data for path, data in before.items())
+    assert {artifact["role"] for artifact in report["inputs"]["artifacts"]} == {"config", "records_primary", "provenance_manifest"}
+    assert json.loads(streams.out)["reports"] == [str(tmp_path / "out" / name) for name in ("report.json", "report.md")]
+    assert "PRIVATE_CONTENT_" not in json.dumps(report) + streams.out + streams.err + (tmp_path / "out/report.md").read_text()
+
+
+def test_phase4_step7_missing_representation_is_limited_success_without_fallback(tmp_path, capsys):
+    args, records, config = phase4_step7_inputs(tmp_path, representation=False)
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 0 and report["run"]["run_status"] == "complete"
+    assert report["inputs"]["representation"] is None
+    assert "support" not in report["derived_metrics"] and "diversity" not in report["derived_metrics"]
+    assert "content" not in report["observed_facts"]
+    # The accepted direct-bounds API requires a supplied manifest. No manifest
+    # preserves unavailable endpoints instead of inventing a [0, 1] result.
+    for endpoint in ("lower_bound", "upper_bound", "interval_width"):
+        item = report["derived_metrics"]["closure_exposure"]["direct"][endpoint]
+        assert item["value"] is None and item["status"] == "unavailable"
+        assert item["reason_codes"] and item["required_evidence"]
+    assert report["capabilities"]["content_diagnostics"]["execution_status"] == "not_requested"
+    assert report["unavailable_conclusions"] and report["warnings"] and not report["errors"]
+
+
+@pytest.mark.parametrize("rule,threshold,expected", [
+    ("singleton_count", None, 2), ("count_at_or_below", "0", 0),
+    ("count_at_or_below", "1", 2), ("frequency_at_or_below", "0.25", 2),
+    ("frequency_at_or_below", "1", 3),
+])
+def test_phase4_step7_tail_only_uses_explicit_rule(tmp_path, capsys, rule, threshold, expected):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    args += ["--tail-rule", rule]
+    if threshold is not None:
+        args += ["--tail-threshold", threshold]
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 0 and report["derived_metrics"]["tail"]["tail_support_size"]["value"] == expected
+    assert report["derived_metrics"]["tail"]["selection"]["rule"] == rule
+    assert report["simulations"] == {}
+
+
+@pytest.mark.parametrize("args", [
+    ["--tail-threshold", "1"], ["--tail-rule", "singleton_count", "--tail-threshold", "1"],
+    ["--tail-rule", "count_at_or_below"], ["--tail-rule", "count_at_or_below", "--tail-threshold", "1.0"],
+    ["--tail-rule", "count_at_or_below", "--tail-threshold", "-1"],
+    ["--tail-rule", "frequency_at_or_below", "--tail-threshold", "nan"],
+    ["--tail-rule", "frequency_at_or_below", "--tail-threshold", "inf"],
+    ["--tail-rule", "frequency_at_or_below", "--tail-threshold", "1.1"],
+    ["--tail-rule", "state_list"], ["--missing-state-id", "PRIVATE_SENTINEL"],
+    ["--record-ids", "omit"], ["--id-salt-file", "PRIVATE_SECRET"],
+    ["--compare", "PRIVATE_COMPARE"], ["--state-semantics", "PRIVATE_MEANING"],
+    ["--simulation"], ["--debug"], ["--force"], ["--rec", "PRIVATE_PATH"],
+])
+def test_phase4_step7_unsupported_or_invalid_options_fail_safely(tmp_path, capsys, args):
+    base, records, config = phase4_step7_inputs(tmp_path)
+    code, report, streams = phase4_step7_invoke(base + args, tmp_path / "out", capsys)
+    assert code == 2
+    assert "PRIVATE_" not in streams.out + streams.err + json.dumps(report)
+    if report is not None:
+        assert report["run"]["run_status"] == "failed" and report["errors"]
+        assert report["derived_metrics"] == {} and report["observed_facts"] == {}
+
+
+@pytest.mark.parametrize("flag,value", [
+    ("--records", "a"), ("--config", "a"), ("--provenance", "a"), ("--compare", "a"),
+    ("--out", "a"), ("--schema-mapping", "a"), ("--version-order", "a"),
+    ("--tail-rule", "singleton_count"), ("--tail-threshold", "1"),
+    ("--redacted", None), ("--strict", None),
+])
+def test_phase4_step7_repeated_singletons_do_not_silently_override(tmp_path, capsys, flag, value):
+    from recursive_integrity_toolkit.cli import main
+    option = [flag] if value is None else [flag, value]
+    assert main(["audit", "--records", "a", *option, *option]) == 2
+    streams = capsys.readouterr()
+    assert streams.out == "" and "E_CONFIG_INVALID" in streams.err
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize("configuration,extra", [
+    ({"privacy_mode": "standard"}, ["--redacted"]),
+    ({"strict_mode": False}, ["--strict"]),
+    ({"output": {"directory": "other"}}, []),
+    ({"inputs": {"records_primary": "other.jsonl"}}, []),
+    ({"output": {"unknown": "PRIVATE_VALUE"}}, []),
+    ({"output": {"record_id_mode": False}}, []),
+    ({"privacy_mode": "debug"}, []),
+    ({"simulation": {"enabled": True, "seed": 1}}, []),
+    ({"state_mapping": {"A": "B"}}, []),
+    ({"inputs": {"records_compare": "compare.jsonl"}}, []),
+    ({"unknown": "PRIVATE_VALUE"}, []),
+])
+def test_phase4_step7_configuration_conflicts_and_closed_options(tmp_path, capsys, configuration, extra):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    config.write_text(json.dumps(configuration))
+    code, report, streams = phase4_step7_invoke(args + extra, tmp_path / "out", capsys)
+    assert code == 2 and "PRIVATE_VALUE" not in streams.err + json.dumps(report)
+
+
+@pytest.mark.parametrize("policy,sentinel,expected,exit_code", [
+    ("exclude", None, 2, 0), ("explicit_missing_state", "MISSING", 3, 0),
+    ("explicit_missing_state", None, None, 2), ("explicit_missing_state", "A", None, 2),
+    ("error", None, None, 1),
+])
+def test_phase4_step7_missing_state_policy_preserves_provenance_scope(tmp_path, capsys, policy, sentinel, expected, exit_code):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    rows = [json.loads(line) for line in records.read_text().splitlines()]
+    rows[-1]["topic"] = None
+    records.write_text("\n".join(json.dumps(row) for row in rows))
+    raw = json.loads(config.read_text()); raw["representation"]["missing_value_policy"] = policy
+    config.write_text(json.dumps(raw))
+    if sentinel is not None:
+        args += ["--missing-state-id", sentinel]
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == exit_code
+    if expected is not None:
+        support = report["derived_metrics"]["support"]["by_version"]["v1"]["support_size"]
+        assert support["value"] == expected
+        assert support["scope"]["record_count"] == (3 if policy == "exclude" else 4)
+        assert report["derived_metrics"]["closure_exposure"]["direct"]["lower_bound"]["scope"]["record_count"] == 4
+    elif sentinel == "A" or policy == "error":
+        assert report["run"]["run_status"] == "partial"
+        assert "closure_exposure" in report["derived_metrics"] and "support" not in report["derived_metrics"]
+
+
+@pytest.mark.parametrize("profile,expected", [("exact_utf8_v1", 0), ("unsupported", 2)])
+def test_phase4_step7_explicit_content_hash_and_duplicates(tmp_path, capsys, profile, expected):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    rows = [json.loads(line) for line in records.read_text().splitlines()]
+    rows[-1]["content"] = rows[0]["content"]
+    records.write_text("\n".join(json.dumps(row) for row in rows))
+    config.write_text(json.dumps({"representation": {"name": "exact", "source": "content_hash", "field": "content",
+        "version": "1", "missing_value_policy": "error", "normalization_profile": profile}}))
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == expected
+    if expected == 0:
+        assert report["observed_facts"]["content"]["duplicate_record_count"]["value"] == 1
+        assert report["observed_facts"]["content"]["duplicate_group_count"]["value"] == 1
+        assert report["derived_metrics"]["support"]["by_version"]["v1"]["support_size"]["value"] == 3
+
+
+def test_phase4_step7_validate_blocks_every_calculation_and_content_reader(tmp_path, capsys, monkeypatch):
+    import importlib
+    import inspect
+    from recursive_integrity_toolkit import cli
+    from recursive_integrity_toolkit.reports import assembly
+    from recursive_integrity_toolkit.io import loaders
+    args, records, config = phase4_step7_inputs(tmp_path, provenance=True)
+    touched = []
+    def denied(*args, **kwargs):
+        touched.append(True)
+        raise AssertionError("calculation or content-reference reader executed")
+    for name in ("metrics.diversity", "metrics.provenance", "metrics.bounds", "metrics.duplicates", "metrics.tail",
+                 "metrics.resampling", "representations.base", "representations.field", "representations.content_hash",
+                 "representations.compatibility"):
+        module = importlib.import_module("recursive_integrity_toolkit." + name)
+        for key, value in vars(module).copy().items():
+            if inspect.isfunction(value) and value.__module__ == module.__name__:
+                monkeypatch.setattr(module, key, denied)
+    monkeypatch.setattr(cli, "_calculations", denied)
+    monkeypatch.setattr(loaders, "load_content_reference", denied)
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys, command="validate")
+    assert code == 0 and touched == [] and report["run"]["run_status"] == "complete"
+    assert report["derived_metrics"] == report["proxy_signals"] == report["simulations"] == {}
+    assert report["observed_facts"]["record_counts"]["v1"]["value"] == 4
+    assert report["capabilities"]["provenance"]["execution_status"] == "not_requested"
+
+
+@pytest.mark.parametrize("command,expected", [("audit", 1), ("validate", 0)])
+def test_phase4_step7_multiple_versions_are_never_implicitly_pooled(tmp_path, capsys, command, expected):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    rows = [json.loads(line) for line in records.read_text().splitlines()]
+    rows[-1]["dataset_version"] = "v2"
+    records.write_text("\n".join(json.dumps(row) for row in rows))
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys, command=command)
+    assert code == expected
+    assert report["inputs"]["scope"]["dataset_versions"] == ["v1", "v2"]
+    assert set(report["observed_facts"]["record_counts"]) == {"v1", "v2"}
+    assert "support" not in report["derived_metrics"] and "provenance" not in report["derived_metrics"]
+    assert report["run"]["run_status"] == ("partial" if command == "audit" else "complete")
+    assert report["inputs"]["artifacts"]
+
+
+@pytest.mark.parametrize("contents,code", [(b"", "E_EMPTY_DATASET"), (b"{PRIVATE_CONTENT", "E_FILE_PARSE"),
+                                         (b"\xff", "E_FILE_ENCODING")])
+def test_phase4_step7_empty_or_malformed_inputs_emit_error_only_pair(tmp_path, capsys, contents, code):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    records.write_bytes(contents)
+    status, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert status == 1 and report["run"]["run_status"] == "failed"
+    assert report["errors"][0]["code"] == code
+    assert report["observed_facts"] == report["derived_metrics"] == report["inputs"] == {}
+    assert "PRIVATE_CONTENT" not in streams.err + json.dumps(report)
+
+
+@pytest.mark.parametrize("strict,codes,expected", [(False, [], 0), (True, [], 0), (True, ["W_PROVENANCE_MISSING_ROW"], 1)])
+def test_phase4_step7_strict_promotion_uses_configured_codes(tmp_path, capsys, strict, codes, expected):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    data = json.loads(config.read_text());data["strict_warning_codes"] = codes
+    config.write_text(json.dumps(data))
+    if strict:
+        args += ["--strict"]
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == expected
+    assert report["run"]["run_status"] == ("partial" if expected else "complete")
+    assert report["derived_metrics"]["support"]["by_version"]["v1"]["support_size"]["value"] == 3
+
+
+@pytest.mark.parametrize("module,name,extra", [
+    ("metrics.provenance", "summarize_provenance", []), ("metrics.bounds", "direct_closure_exposure", []),
+    ("representations.field", "assign_field_states", []), ("metrics.diversity", "calculate_state_distribution", []),
+    ("metrics.tail", "select_tail", ["--tail-rule", "singleton_count"]),
+])
+def test_phase4_step7_family_failure_retains_independent_evidence(tmp_path, capsys, monkeypatch, module, name, extra):
+    import importlib
+    args, records, config = phase4_step7_inputs(tmp_path)
+    def denied(*args, **kwargs):
+        raise RuntimeError("PRIVATE_EXCEPTION_BODY")
+    monkeypatch.setattr(importlib.import_module("recursive_integrity_toolkit." + module), name, denied)
+    code, report, streams = phase4_step7_invoke(args + extra, tmp_path / "out", capsys)
+    assert code == 4 and report["run"]["run_status"] == "partial"
+    assert report["errors"] and report["observed_facts"]["record_counts"]["v1"]["value"] == 4
+    assert ("support" in report["derived_metrics"]) if module in ("metrics.provenance", "metrics.bounds", "metrics.tail") else ("provenance" in report["derived_metrics"])
+    assert "PRIVATE_EXCEPTION_BODY" not in json.dumps(report) + streams.err + streams.out
+
+
+@pytest.mark.parametrize("mode", ["preserve", "hash", "omit"])
+def test_phase4_step7_redacted_all_sinks_and_secret_reservations(tmp_path, capsys, mode):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    text = records.read_text().replace('"v1"', '"PRIVATE_VERSION"').replace('"A"', '"PRIVATE_STATE"')
+    records.write_text(text)
+    salt = tmp_path / "PRIVATE_SALT_PATH";salt.write_bytes(b"PRIVATE_SECRET_MATERIAL_123456789012")
+    code, report, streams = phase4_step7_invoke(args + ["--redacted", "--record-ids", mode, "--id-salt-file", str(salt)], tmp_path / "PRIVATE_OUT", capsys)
+    assert code == 0 and report["run"]["identifier_protection"]["stability_scope"] == "cross_run"
+    emitted = json.dumps(report) + streams.err + streams.out + (tmp_path / "PRIVATE_OUT/report.md").read_text()
+    assert "PRIVATE_" not in emitted and str(tmp_path) not in emitted
+    assert json.loads(streams.out)["reports"] == ["report.json", "report.md"]
+    assert report["run"]["resolved_options"]["record_id_mode"] == mode
+    assert report["run"]["network_call_count"] == 0
+
+
+def test_phase4_step7_publication_failure_does_not_overwrite_and_input_collision_fails(tmp_path, capsys):
+    from recursive_integrity_toolkit.cli import main
+    args, records, config = phase4_step7_inputs(tmp_path)
+    output = tmp_path / "out";output.mkdir();target = output / "report.json";target.write_bytes(b"KEEP")
+    code = main(["audit", *args, "--out", str(output)])
+    streams = capsys.readouterr()
+    assert code == 1 and streams.out == "" and "E_OUTPUT_EXISTS" in streams.err
+    assert target.read_bytes() == b"KEEP" and not (output / "report.md").exists()
+
+
+@pytest.mark.parametrize("codes,expected", [([], 0), ([0, 1], 1), ([1, 3], 3), ([3, 2], 2), ([1, 2, 3, 4], 4), ([4, 3, 2, 1], 4)])
+def test_phase4_step7_exit_precedence_is_order_independent(codes, expected):
+    from recursive_integrity_toolkit.cli import _exit_code
+    assert _exit_code(codes) == expected
+    assert _exit_code(tuple(reversed(codes))) == expected
+
+
+def test_phase4_step7_config_paths_are_relative_to_config_and_default_output_to_cwd(tmp_path, capsys, monkeypatch):
+    from recursive_integrity_toolkit.cli import main
+    controls = tmp_path / "controls";controls.mkdir()
+    args, records, config = phase4_step7_inputs(controls, provenance=True)
+    data = json.loads(config.read_text());data["inputs"] = {"provenance_manifest": "provenance.jsonl"}
+    data["output"] = {"directory": "reports"}
+    config.write_text(json.dumps(data))
+    monkeypatch.chdir(tmp_path)
+    assert main(["audit", "--records", str(records), "--config", str(config)]) == 0
+    capsys.readouterr()
+    report = json.loads((controls / "reports/report.json").read_bytes())
+    assert report["derived_metrics"]["closure_exposure"]["direct"]["lower_bound"]["value"] == 0.25
+    assert main(["validate", "--records", str(records)]) == 0
+    capsys.readouterr()
+    assert (tmp_path / "rit-report/report.json").is_file()
+
+
+def test_phase4_step7_config_and_input_resource_limits_are_enforced(tmp_path, capsys):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    config.write_text(json.dumps({"resource_limits": {"max_rows": 2}}))
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 1 and report["errors"][0]["code"] == "E_FILE_PARSE"
+
+
+def test_phase4_step7_help_and_version_execute_without_analytical_imports(subprocess_env, tmp_path):
+    import subprocess
+    import sys
+    program = '''import importlib.abc,sys
+class Block(importlib.abc.MetaPathFinder):
+ def find_spec(self,fullname,path=None,target=None):
+  if fullname.split('.')[0] in ('numpy','pandas','pyarrow') or fullname.startswith(('recursive_integrity_toolkit.io','recursive_integrity_toolkit.metrics','recursive_integrity_toolkit.reports','recursive_integrity_toolkit.config')):
+   raise AssertionError('startup crossed lazy boundary')
+sys.meta_path.insert(0,Block())
+from recursive_integrity_toolkit.cli import main
+for args in ([],['--help'],['--version'],['version'],['audit','--help'],['validate','--help']):
+ try: assert main(args)==0
+ except SystemExit as error: assert error.code==0
+'''
+    result = subprocess.run([sys.executable, "-c", program], cwd=tmp_path, env=subprocess_env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "0.1.0.dev2" in result.stdout and "--records" in result.stdout
+    assert not list(tmp_path.iterdir())
+
+
+def test_phase4_step7_ordinary_audit_with_network_operations_blocked(tmp_path, capsys, monkeypatch):
+    import socket
+    from recursive_integrity_toolkit.io import loaders
+    args, records, config = phase4_step7_inputs(tmp_path)
+    def denied(*args, **kwargs):
+        raise AssertionError("network or content-reference operation forbidden")
+    monkeypatch.setattr(socket, "socket", denied)
+    monkeypatch.setattr(socket, "getaddrinfo", denied)
+    monkeypatch.setattr(loaders, "load_content_reference", denied)
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 0 and report["run"]["network_call_count"] == 0
+
+@pytest.mark.parametrize("contents", [b'{"strict_mode":true,"strict_mode":false}', b'{"x":NaN}', b'{PRIVATE_CONFIG', b'\xff'])
+def test_phase4_step7_malformed_configuration_is_exit_two(tmp_path, capsys, contents):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    config.write_bytes(contents)
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 2 and report["errors"][0]["code"] == "E_CONFIG_INVALID"
+    assert "PRIVATE_CONFIG" not in streams.err + json.dumps(report)
+
+
+@pytest.mark.parametrize("unsupported,expected", [(False, 3), (True, 2)])
+def test_phase4_step7_existing_lineage_error_retains_metrics_and_precedence(tmp_path, capsys, unsupported, expected):
+    args, records, config = phase4_step7_inputs(tmp_path, provenance=True)
+    manifest = tmp_path / "provenance.jsonl"
+    rows = [json.loads(line) for line in manifest.read_text().splitlines()]
+    rows[0]["parent_ids"] = ["v1::too::many"]
+    manifest.write_text("\n".join(json.dumps(row) for row in rows))
+    if unsupported:
+        data = json.loads(config.read_text());data["representation"]["source"] = "unsupported"
+        config.write_text(json.dumps(data))
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == expected and report["run"]["run_status"] == "partial"
+    assert "E_PARENT_FORMAT" in {item["code"] for item in report["errors"]}
+    assert report["observed_facts"]["record_counts"]["v1"]["value"] == 4
+    assert "closure_exposure" in report["derived_metrics"]
+    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    if not unsupported:
+        assert report["derived_metrics"]["support"]["by_version"]["v1"]["support_size"]["value"] == 3
+
+
+def test_phase4_step7_salt_file_is_a_protected_input_target(tmp_path, capsys):
+    from recursive_integrity_toolkit.cli import main
+    args, records, config = phase4_step7_inputs(tmp_path)
+    output = tmp_path / "out";output.mkdir();salt = output / "report.json"
+    secret = b"PRIVATE_SECRET_INPUT_123456789012345"
+    salt.write_bytes(secret)
+    code = main(["audit", *args, "--redacted", "--id-salt-file", str(salt), "--out", str(output)])
+    streams = capsys.readouterr()
+    assert code == 1 and "E_OUTPUT_INPUT_COLLISION" in streams.err
+    assert streams.out == "" and "PRIVATE_SECRET_INPUT" not in streams.err
+    assert salt.read_bytes() == secret and not (output / "report.md").exists()
+
+
+def test_phase4_step7_outer_internal_failure_never_exposes_traceback(tmp_path, capsys, monkeypatch):
+    from recursive_integrity_toolkit import cli
+    def broken(*args, **kwargs):
+        raise RuntimeError("PRIVATE_INTERNAL_TRACEBACK")
+    monkeypatch.setattr(cli, "_execute", broken)
+    assert cli.main(["audit", "--records", str(tmp_path / "file")]) == 4
+    streams = capsys.readouterr()
+    assert streams.out == "" and "PRIVATE_INTERNAL_TRACEBACK" not in streams.err and "Traceback" not in streams.err
+
+
+def test_phase4_step7_module_invocation_executes_current_audit(tmp_path, subprocess_env):
+    import subprocess
+    import sys
+    args, records, config = phase4_step7_inputs(tmp_path)
+    output = tmp_path / "out"
+    result = subprocess.run([sys.executable, "-m", "recursive_integrity_toolkit", "audit", *args, "--out", str(output)],
+                            cwd=tmp_path, env=subprocess_env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    report = json.loads((output / "report.json").read_bytes())
+    assert report["derived_metrics"]["diversity"]["by_version"]["v1"]["gini_simpson_diversity"]["value"] == 0.625
+
+
+def test_phase4_step7_toml_configuration_preserves_explicit_selection(tmp_path, capsys):
+    args, records, config = phase4_step7_inputs(tmp_path)
+    toml = tmp_path / "config.toml"
+    toml.write_text('[representation]\nname = "topic"\nsource = "topic_field"\nfield = "topic"\nversion = "1"\nmissing_value_policy = "exclude"\n')
+    code, report, streams = phase4_step7_invoke(["--records", str(records), "--config", str(toml)], tmp_path / "out", capsys)
+    assert code == 0 and report["derived_metrics"]["support"]["by_version"]["v1"]["support_size"]["value"] == 3
+
+
+def test_phase4_step7_published_view_is_the_only_report_diagnostic_source(tmp_path, capsys, monkeypatch):
+    from recursive_integrity_toolkit.reports import assembly
+    from recursive_integrity_toolkit import cli
+    args, records, config = phase4_step7_inputs(tmp_path)
+    def broken(*args, **kwargs):
+        raise RuntimeError("PRIVATE_ASSEMBLY_EXCEPTION")
+    monkeypatch.setattr(assembly, "assemble_report", broken)
+    code, report, streams = phase4_step7_invoke(args + ["--redacted"], tmp_path / "out", capsys)
+    assert code == 4 and report["run"]["run_status"] == "failed"
+    assert report["observed_facts"] == report["derived_metrics"] == {} and report["errors"]
+    assert "PRIVATE_ASSEMBLY_EXCEPTION" not in streams.err + json.dumps(report)

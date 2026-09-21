@@ -5615,6 +5615,48 @@ def phase4_step6_main(step: int = 6) -> int:
     return 0
 
 
+PHASE4_STEP7_RUNTIME_AST_SHA256 = {'src/recursive_integrity_toolkit/cli.py': 'c1791ddf073a9ca5ddf08268b7a66e1a67f359a1b8d97a636d37e914dbb0f40b',
+ 'src/recursive_integrity_toolkit/config.py': 'cbb96ab25130e4fe45a94cc03299aaa27015a496e38e7dcc6bec1c5d2f7e2573'}
+
+PHASE4_STEP7_CONFIG_INHERITED_AST_SHA256 = '92fb35fe0895f799c0b90c20d80f0262c92da8afb2b96e17154a870837ed71d5'
+
+PHASE4_STEP7_CONFIG_INHERITED_NODES = 40
+
+def phase4_step7_runtime_boundary(path: Path, relative: str) -> None:
+    """Inspect fixed reviewed orchestration AST and unchanged inherited config."""
+    if relative not in PHASE4_STEP7_RUNTIME_AST_SHA256:
+        raise ValueError("Step 7 runtime is limited to CLI and additive configuration")
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, SyntaxError) as error:
+        raise ValueError("Step 7 runtime cannot be inspected") from error
+    doc = ast.get_docstring(tree) or ""
+    if "Owner IDs:" not in doc or "Current phase status:" not in doc or "PR-016" not in doc:
+        raise ValueError("Step 7 ownership documentation is missing")
+    body = tree.body[1:]
+    if _phase4_step4_ast_digest(body) != PHASE4_STEP7_RUNTIME_AST_SHA256[relative]:
+        raise ValueError("Step 7 runtime differs from the reviewed orchestration")
+    if relative.endswith("/config.py") and _phase4_step4_ast_digest(body[:PHASE4_STEP7_CONFIG_INHERITED_NODES]) != PHASE4_STEP7_CONFIG_INHERITED_AST_SHA256:
+        raise ValueError("Step 7 changed inherited configuration behavior")
+
+
+def phase4_step7_cli_boundary(root: Path) -> None:
+    for relative in sorted(PHASE4_STEP7_RUNTIME_AST_SHA256):
+        phase4_step7_runtime_boundary(root / relative, relative)
+    phase4_step6_output_boundary(root)
+
+
+def phase4_step7_main(step: int = 7) -> int:
+    import runpy
+    if type(step) is not int or step != 7:
+        raise ValueError("Only authorized Phase 4 Step 7 traceability is available")
+    control = runpy.run_path(str(ROOT / "scripts/release_check.py"), run_name="phase4_step7_traceability_control")
+    control["audit_phase4_step7"](step=step)
+    phase4_step7_cli_boundary(ROOT)
+    print("Phase 4 Step 7: local audit/validate orchestration and frozen calculation/report owners: PASS")
+    return 0
+
+
 def cli_main(argv: list[str] | None = None) -> int:
     """Select the active phase without changing historical checker semantics."""
     import argparse
@@ -5639,7 +5681,9 @@ def cli_main(argv: list[str] | None = None) -> int:
         return phase4_step5_main(step=args.step)
     if args.phase == 4 and args.step == 6:
         return phase4_step6_main(step=args.step)
-    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5 or --phase 4 --step 6")
+    if args.phase == 4 and args.step == 7:
+        return phase4_step7_main(step=args.step)
+    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5 or --phase 4 --step 6 or --phase 4 --step 7")
     return 2
 
 

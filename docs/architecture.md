@@ -412,3 +412,21 @@ Inherited helpers remain byte-preserved except module ownership documentation.
 The two output modules are the only runtime changes in this step. CLI wiring
 belongs to the separately authorized next step. See `privacy.md` for filesystem
 limits and `cli.md` for the helper contract and safe failure handling.
+
+
+## Phase 4 Step 7: single-version CLI orchestration
+
+`cli.py` lazily dispatches `audit`/`validate` into accepted input, calculation,
+assembly, privacy and safe paired-publication APIs. It owns call order and exit
+precedence, and introduces no formula. `config.py` adds only local control loading
+and effective validation settings. Prior configuration functions remain intact.
+Control bytes are read once, and their inventory is retained with the bundle.
+
+Calculation families return typed results or recorded failures. Independent
+families can survive and produce a partial report. Validate bypasses every
+calculation and clears analytical sections before canonical revalidation.
+All sinks consume the accepted protected report view or fixed operational
+publication diagnostics. Console path disclosure follows the selected privacy
+mode. No comparison, packaged resources, simulation, weights or general lineage
+work is enabled. The runtime module count remains 40 and the report schema stays
+unchanged. Help/version preserve the lazy, dependency-free startup boundary.

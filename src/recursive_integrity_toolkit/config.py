@@ -19,7 +19,7 @@ Limits:
     inference, metric, lineage, simulation, report assembly or remote access.
 
 Current phase status:
-    Phase 4 Step 4 additive adapter. Inherited Phase 2 parsing stays unchanged.
+    Phase 4 Step 7 invocation adapter. Inherited parsers remain unchanged.
 """
 
 from __future__ import annotations
@@ -646,3 +646,69 @@ def phase4_config_hash(options: Phase4Options) -> str:
     normalized["tail_rule"] = options.tail_rule
     normalized["tail_threshold"] = options.tail_threshold
     return sha256_canonical({"encoding": "rit.phase4.config.v1", "options": normalized})
+
+
+def load_phase4_invocation(*, cli: Mapping[str, Any], config_path: str | Path | None = None,
+                           base_directory: Path) -> tuple[Phase4Options, tuple]:
+    """Read one local control document, retaining its explicit-field provenance.
+
+    Reuse the accepted finite, unique-key control reader and its resource limits.
+    Config-declared paths are relative to the config file; invocation paths are
+    relative to the explicit working directory. No records or secrets are read.
+    The returned config inventory describes the exact bytes parsed here, so the
+    CLI passes detached declarations to validation without reopening the config.
+    """
+    from dataclasses import replace
+    from .errors import ToolkitError
+    from .io.validation import _bundle_control, _bundle_document
+
+    base = _phase4_option_path(base_directory)
+    if not base.is_absolute():
+        _invalid("Phase 4 invocation requires an absolute working directory")
+    raw, inventory, config_base = {}, (), base
+    if config_path is not None:
+        path = _phase4_option_path(config_path)
+        _phase4_literal(str(path))
+        source = InputSource(FileRole.CONFIG, path if path.is_absolute() else base / path)
+        try:
+            entry, text = _bundle_control(source, ResourceLimits())
+            raw = _bundle_document(text, source, ResourceLimits())
+        except ToolkitError:
+            raise ConfigurationError(ErrorCode.CONFIG_INVALID, "The local configuration cannot be parsed or read") from None
+        inventory, config_base = (entry,), entry.path.parent
+    options = resolve_phase4_options(raw, cli=cli)
+    if inventory:
+        limits = options.configuration.resource_limits
+        if limits.max_file_bytes is not None and inventory[0].size_bytes > limits.max_file_bytes:
+            _invalid("Phase 4 configuration exceeds its declared resource limit")
+        try:
+            _bundle_document(text, source, limits)
+        except ToolkitError:
+            raise ConfigurationError(ErrorCode.CONFIG_INVALID, "The local configuration violates its resource limits") from None
+    for path in (options.directory, *(source.path for source in options.inputs)):
+        _phase4_literal(str(path))
+    if options.id_salt_file is not None:
+        _phase4_literal(str(options.id_salt_file))
+    configured_roles = {source.role for source in options.configuration.inputs}
+    sources = tuple(InputSource(source.role, source.path if source.path.is_absolute() else
+                    (config_base if source.role in configured_roles else base) / source.path,
+                    source.declared_format) for source in options.inputs)
+    output = dict(options.configuration.output)
+    directory_base = config_base if "directory" in output else base
+    directory = options.directory if options.directory.is_absolute() else directory_base / options.directory
+    salt = options.id_salt_file
+    if salt is not None and not salt.is_absolute():
+        salt = (config_base if "id_salt_file" in output else base) / salt
+    return replace(options, inputs=sources, directory=directory, id_salt_file=salt), inventory
+
+
+def phase4_validation_configuration(options: Phase4Options) -> dict[str, Any]:
+    """Detach effective input settings without duplicating resolved source roles."""
+    if type(options) is not Phase4Options:
+        _invalid("validation requires resolved Phase 4 options")
+    data = _phase4_config_data(options.configuration)
+    data["inputs"] = {}
+    data["strict_mode"] = options.strict_mode
+    data["privacy_mode"] = options.privacy_mode
+    data["version_order"] = list(options.version_order)
+    return data

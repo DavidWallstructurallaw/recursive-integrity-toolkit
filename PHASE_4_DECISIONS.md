@@ -588,3 +588,128 @@ than counted as passing evidence. Exact source and test identities are sealed in
 the external Step 6 receipt. Review is consolidated assistant review, without a
 claim of independent human certification or whole-product performance acceptance.
 Stop after Step 6 acceptance.
+
+
+## Phase 4 Step 7 authorization and bounded implementation
+
+Actual user instruction, recorded 2026-09-21: `Phase 4 Step 7 继续`.
+Accepted Step 6 commit: `aa2355f2359c3af4fc05345c792f9903b0d5858c`;
+source tree: `d9b6910079f49a2c739f86eceec05040918a41a5`;
+test tree: `8d3a03c61da807d1fef8d26fc4af0d6f72e4546e`.
+The accepted baseline contains 228 files, 40 runtime modules, 3420 core tests
+and 3423 tests with real Parquet. The approved plan remains byte-identical.
+
+Step 7 implements P4-D06 single-version `audit` and input-only `validate`.
+The 31-path boundary is common G plus the two runtime paths `cli.py`, `config.py`,
+`tests/integration/test_cli_validation.py`, new `tests/integration/test_phase4_cli.py`,
+and `docs/cli.md`. Only CLI and additive configuration orchestration open.
+All inherited config code after its ownership header stays byte-identical.
+The other 38 runtime modules, all five schemas, dependencies, version dev2,
+Hero fixtures, formulas, oracles and authority sources remain frozen.
+Comparison, packaged example, Step 8, main merge, tags, distribution publication
+and Phase 4 completion remain outside this authorization.
+
+### Explicit orchestration decisions
+
+Both new commands require `--records`. Competing singleton declarations fail,
+including duplicates with equal values. Abbreviated options and unknown flags
+fail without echoing argv. One local JSON/TOML config is read using the accepted
+finite, unique-key control reader. Its hash describes the bytes actually read;
+config-declared paths use its parent, CLI paths use the working directory.
+The Phase 4 adapter preserves explicit-field provenance before resolving options.
+Validation receives detached effective settings and already resolved input roles,
+so it does not reopen the control document or silently override declarations.
+
+Audit calls accepted provenance/direct-bound kernels for one nonempty version.
+An explicit field or exact-content representation enables its accepted kernels;
+there is no implicit representation, weighting, missing-state sentinel or tail
+threshold. An absent provenance manifest retains the accepted unavailable direct
+bounds, rather than inventing endpoints. Independent valid families survive a
+failed calculation. A multiversion records input preserves inventory and counts,
+returns an input error, and triggers no analytical family. Empty inputs retain
+the existing input-empty failure and create no synthetic version identity.
+
+Validate calls only the accepted input pipeline and report assembly. It retains
+input observations/validation coverage and clears derived, proxy and simulation
+sections before canonical revalidation. No analytical kernel or local content
+reference reader executes. Tail requests on validate fail as unsupported work.
+Lineage input errors use the existing codes; no Phase 5 graph work is activated.
+
+The accepted privacy view protects the entire report before publication or
+console diagnostic output. Standard success prints final report paths in an
+ASCII-safe JSON line. Redacted success prints fixed `report.json`/`report.md`
+names relative to the selected output directory, keeping full paths out of
+stdout. The salt file joins all other input reservations. Failure reports with
+unresolved configuration use a fresh redacted/omit context and the explicit CLI
+output directory or local default; they do not claim resolved input evidence.
+Parser failures with unresolved declarations emit safe stderr only. Existing
+outputs are never replaced. Operational publication failures remain on stderr.
+
+Exit priority is `4 > 2 > 3 > 1 > 0`. Error-bearing useful evidence is partial;
+optional/deferred unavailable work alone does not force a nonzero exit. Fatal
+input or internal failures can publish the schema-conforming error-only pair
+when the destination is safe. No raw exception text or traceback is emitted.
+
+### Exact historical bindings
+
+P4-D10 and common G authorize twelve whole-definition source-binding changes,
+registered with exact before/after bytes in `PHASE4_STEP7_MIGRATIONS`. Seven Step 6
+unit definitions and three Step 6 integration definitions inspect the immutable
+Step 6 snapshot. Its 228-file mutation inventory comes from that snapshot rather
+than current Git's new 229-file inventory. The Step 4 AST injection definition
+uses Step 6 config only for its two config parameters; earlier logging bindings
+and every other current-module check remain intact. Names, parameters and all
+substantive assertions are preserved. Current Step 7 tests replace each opened
+guarantee, while all inherited identities must remain collected and executed.
+
+| File | Exact definition |
+|---|---|
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step6_current_runtime_opens_only_output_helpers_and_freezes_schema` |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step6_current_workflows_preserve_matrix_and_use_active_dispatch` |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step6_current_snapshot_checks_valid_tree_before_mutations` |
+| `tests/integration/test_phase4_gates.py` | `test_phase4_step4_privacy_ast_checks_current_source_before_rejecting_scope_injection` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step6_approved_control_keeps_independent_step5_anchors` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step6_control_rejects_forged_scope_and_stage` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step6_control_rejects_unapproved_dispatch` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step6_control_requires_explicit_approval_fields` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step6_control_cannot_mint_extra_permission` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step6_historical_bindings_preserve_assertions_and_headers` |
+| `tests/unit/test_phase4_contracts.py` | `test_phase4_step6_historical_guard_rejects_weakening` |
+
+The new fixture verifies the accepted commit, source/test trees and every Git
+blob before use and at teardown. Independent current constants fix authorization,
+allowed paths and reviewed runtime ASTs; they are not derived from mutable current
+code at gate time. Maintainer functions and constants are inherited unchanged
+except explicit dispatcher additions. CLI documentation retains its historical
+notes verbatim below a current usage section.
+
+### Verification and acceptance boundary
+
+Acceptance requires complete core, minimum-dependency and real-Parquet test runs;
+seven inherited identity generations; current CLI contract/failure/privacy tests;
+installed ordinary audit with core dependencies outside the checkout and blocked
+network; prior installed input/report/publication checks; and exact candidate
+archive bytes. The four workflow roles preserve the eight core OS/Python/dependency
+combinations, real Parquet, Hero/math, security and build jobs. Job budgets remain
+unchanged. All attempts, failures and repairs are retained in external evidence.
+Review is consolidated assistant review, not independent human certification.
+Acceptance and final source identities are recorded in the external Step 7
+receipt after the required checks pass. Stop before Step 8.
+
+### Additional obsolete Step 1 CLI assertion discovered during Step 7
+
+The complete initial focused regression ran 802 tests, with 801 passing. Its one
+failure was `test_phase4_step1_keeps_current_help_and_future_commands_unopened`,
+which requires the accepted scaffold help text. Before editing, the exact source
+binding was proposed in the work conversation. Under common G and P4-D10, its
+subprocess PYTHONPATH now selects the verified Step 6 snapshot. The existing test
+name, parameters and all assertions remain unchanged. The registry explicitly
+includes this twelfth definition. Current Step 7 help/audit/validate tests cover
+the newly authorized behavior; no global subprocess fixture is repurposed.
+
+Malformed or unreadable config files map to configuration exit 2. Accepted
+Phase 2 input readers remain unchanged. Known error locations are retained
+through the existing safe diagnostic adapter. The outer entry point emits a
+fixed safe internal error if command initialization itself fails. Run duration
+is captured after input/calculation work and before report assembly/publication;
+it is not the Step 10 end-to-end performance measurement.

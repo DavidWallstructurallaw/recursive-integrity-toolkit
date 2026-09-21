@@ -45,3 +45,11 @@ def test_phase4_cli_help_uses_current_source(subprocess_env) -> None:
     assert "version" in result.stdout
     assert "--help" in result.stdout
     assert result.stderr == ""
+
+
+def test_phase4_step7_current_help_documents_enabled_commands(subprocess_env) -> None:
+    result = subprocess.run([sys.executable, "-m", "recursive_integrity_toolkit", "--help"],
+                            capture_output=True, text=True, env=subprocess_env, check=False)
+    assert result.returncode == 0 and result.stderr == ""
+    assert "audit" in result.stdout and "validate" in result.stdout and "version" in result.stdout
+    assert "Analytical audit functionality is not implemented" not in result.stdout

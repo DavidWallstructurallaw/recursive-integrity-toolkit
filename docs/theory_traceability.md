@@ -355,3 +355,21 @@ JSON/Markdown and mathematical contracts remain unchanged. A publication failure
 is an operational outcome and cannot alter the report's analytical conclusions.
 The new output-safety test file, current runtime AST checks, preserved helper
 checks and isolated installed-wheel smoke exercise this boundary directly.
+
+
+## Phase 4 Step 7 CLI boundary
+
+P4-D06 maps to `cli.py` call orchestration and additive `config.py` input settings.
+PR-013/015/016/018 govern output, privacy, reproducibility and safe diagnostics.
+T1 support/diversity, T2 explicit tail selection and T3 provenance/direct bounds
+remain calls to their unchanged accepted owners. Explicit exact-content duplicate
+analysis remains PR-006 and describes record form only. No new formula, empirical
+claim, weighted interpretation or theoretical score is introduced.
+
+Current CLI tests include independently hand-counted support/diversity and direct
+bounds, absence of representation fallback, input-only execution with all metric
+functions blocked, failed-family evidence retention, safe privacy across sinks,
+configuration conflicts and exit precedence. Current AST and immutable historical
+bindings prevent scope growth. The installed smoke operates outside the source
+checkout with network operations blocked; it does not certify whole-product Hero
+performance or Phase 4 completion.
