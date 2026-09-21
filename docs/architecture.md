@@ -430,3 +430,17 @@ publication diagnostics. Console path disclosure follows the selected privacy
 mode. No comparison, packaged resources, simulation, weights or general lineage
 work is enabled. The runtime module count remains 40 and the report schema stays
 unchanged. Help/version preserve the lazy, dependency-free startup boundary.
+
+
+### Phase 4 Step 8: one explicit pair and installed example
+
+CLI selects one version per explicit records role and calls the accepted T1
+comparison kernel with retained order and shared literal meaning. Later-version
+provenance uses the existing scoped join; no mathematical or graph owner changes.
+The example extracts exact package resources with importlib.resources into a
+fresh workspace and calls the same audit path. Only CLI and additive config code
+open; 38 other runtime modules and all five schemas remain frozen. Package data
+contains six unchanged Hero files and the exact report schema, with 40 Python
+modules and unchanged dev2/dependencies. Full longitudinal orchestration and
+lineage remain deferred. Step 8 gates enforce resource equality and package-data
+only changes, with installed wheel and extracted sdist offline checks.

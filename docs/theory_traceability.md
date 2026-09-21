@@ -373,3 +373,17 @@ configuration conflicts and exit precedence. Current AST and immutable historica
 bindings prevent scope growth. The installed smoke operates outside the source
 checkout with network operations blocked; it does not certify whole-product Hero
 performance or Phase 4 completion.
+
+
+### Phase 4 Step 8 explicit-pair and example wiring
+
+P4-D03/P4-D09 authorize CLI composition only: T1's accepted F-005/F-006/F-018
+comparison fields and existing lost/added state sets; PR-013/015/016/018 govern
+safe local reports, privacy, determinism and limits. No new formula or report
+field is introduced. Independent CLI cases use A,B,C,D versus A,A,B,E: support
+delta -1, retention 1/2, diversity delta -1/8, lost C,D and added E. The separate
+Hero cases assert the approved plan section 8 targets, not generated goldens.
+Every comparison carries declared common representation, literal state meaning,
+selected versions and revalidated chronology. Input eligibility stays separate
+from performed analysis. Lineage, causal ancestor effects, model decline and
+universal conclusions retain their accepted deferred/unavailable classifications.

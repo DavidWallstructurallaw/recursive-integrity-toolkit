@@ -1,3 +1,69 @@
+# CLI (Phase 4 Step 8)
+
+`rit example --out ./hero-workspace` creates a fresh local workspace containing
+six exact packaged Hero files under `inputs/` and the audit's `report.json` and
+`report.md` under `reports/`. Its parent must already exist. Any existing workspace,
+including an empty directory, is rejected. Add `--redacted` to protect identifiers
+and paths in the reports and console diagnostics. Extracted inputs remain the
+public canonical Hero files; redaction applies to output reports.
+
+The example works from the installed package outside the source checkout, using
+core dependencies and local resources. It does not download data. The copied
+`inputs/EXPECTED_OUTPUTS.md` describes the full product, including future lineage
+targets. The actual Phase 4 report explicitly defers lineage execution.
+
+To audit your own explicitly ordered pair:
+
+```bash
+rit audit --records ./later.csv --compare ./earlier.csv --config ./config.json --version-order ./order.json --state-semantics "The same literal category definitions apply to both versions" --out ./pair-report
+```
+
+Each file must contain exactly one distinct dataset version. `--compare` is the
+earlier version and `--records` the later version; declared order must confirm
+this relationship. An order document uses the accepted `version_order`,
+`version_rank` or `version_timestamps` fields. No order is inferred from file names,
+argument order or lexical version labels. The shared representation comes from
+the explicit config, and `--state-semantics` declares the same literal meaning for
+both sides. Matching representation labels alone do not establish that meaning.
+This records the caller's assertion; the toolkit does not verify semantic truth.
+
+The report includes each version's support and diversity plus the existing
+kernel's support delta, retention, diversity delta and lost/added state counts and
+sets. Provenance composition, direct bounds, exact-content duplicates and any
+explicit tail selection describe the `--records` version. Every envelope retains
+its scope and denominator. Input inventory and input observability describe both
+files. A completed pair remains a partial *longitudinal capability execution*
+because the broader change families remain deferred; the run can still succeed.
+
+A requested pair that fails chronology or representation checks returns nonzero
+and preserves independently valid single-version evidence. Invalid chronology is
+reported as an error; revalidation without it makes no replacement ordering claim.
+Repeated singleton declarations, arbitrary maps, per-version compatibility
+assertions and conflicting meanings are rejected. No version sequence, automatic
+pair selection, provenance trajectory, relative-change formula or simulation runs.
+
+`rit validate` can inspect two files through `--records` and `--compare`; it accepts
+no `--state-semantics` or tail request and calls no calculation. Its analytical
+sections stay empty. Single-version commands retain their accepted behavior.
+The module invocation and `recursive-integrity` alias support the same commands.
+
+Hero expectations: supports 8 and 5; support delta -3; retention 5/8; diversities
+7/8 and 3/4; diversity delta -1/8; missing states battery, lizard and turtle; later
+human/synthetic shares each 1/2; direct interval [1/2, 1/2]. Lineage is deferred,
+input observability is Level 4, and default simulations are empty.
+
+Successful example stdout names the two report files. In redacted mode the fixed
+names are relative to the example's `reports/` directory. Example preparation
+failures emit safe stderr. A failed audit can leave extracted inputs and an error
+report for inspection. Extraction failures clean only files owned by that attempt;
+if cleanup is incomplete, stderr explicitly says so. Trusted stable parent
+directories are required, as for ordinary report publication.
+
+The following sections preserve earlier stage documentation as historical notes.
+Current Step 8 comparison/example behavior is defined above.
+
+---
+
 # CLI (Phase 4 Step 7)
 
 Current commands: `audit`, `validate`, `version`, `--version` and `--help`.

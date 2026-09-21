@@ -1148,8 +1148,8 @@ def test_phase4_step6_historical_guard_rejects_weakening(phase4_tools, phase4_st
         verify(path, before, after)
 
 
-def test_phase4_step7_approved_control_keeps_independent_step6_anchors(phase4_tools):
-    control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
+def test_phase4_step7_approved_control_keeps_independent_step6_anchors(phase4_tools, phase4_step7_snapshot):
+    control = json.loads((phase4_step7_snapshot / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
     assert phase4_tools["PHASE4_STEP6_FINAL"] == "aa2355f2359c3af4fc05345c792f9903b0d5858c"
     assert phase4_tools["PHASE4_STEP6_TREE"] == "d9b6910079f49a2c739f86eceec05040918a41a5"
     assert phase4_tools["PHASE4_STEP6_TEST_TREE"] == "8d3a03c61da807d1fef8d26fc4af0d6f72e4546e"
@@ -1192,8 +1192,8 @@ def test_phase4_step7_approved_control_keeps_independent_step6_anchors(phase4_to
     ("phase_complete", True), ("next_step_authorized", True),
     ("main_merge_authorized", True), ("publication_authorized", True),
 ])
-def test_phase4_step7_control_rejects_forged_scope_and_stage(phase4_tools, field, value):
-    control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
+def test_phase4_step7_control_rejects_forged_scope_and_stage(phase4_tools, field, value, phase4_step7_snapshot):
+    control = json.loads((phase4_step7_snapshot / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
     verify = phase4_tools["verify_phase4_step7_control"]
     verify(control, step=7)
     control[field] = value
@@ -1202,24 +1202,24 @@ def test_phase4_step7_control_rejects_forged_scope_and_stage(phase4_tools, field
 
 
 @pytest.mark.parametrize("step", [0, 1, 2, 3, 4, 5, 6, 8, 11, True, "7", None])
-def test_phase4_step7_control_rejects_unapproved_dispatch(phase4_tools, step):
-    control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
+def test_phase4_step7_control_rejects_unapproved_dispatch(phase4_tools, step, phase4_step7_snapshot):
+    control = json.loads((phase4_step7_snapshot / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
     phase4_tools["verify_phase4_step7_control"](control, step=7)
     with pytest.raises(ValueError):
         phase4_tools["verify_phase4_step7_control"](control, step=step)
 
 
 @pytest.mark.parametrize("field", ["active_step", "previous_step_commit", "runtime_paths_authorized", "schema_paths_authorized"])
-def test_phase4_step7_control_requires_explicit_approval_fields(phase4_tools, field):
-    control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
+def test_phase4_step7_control_requires_explicit_approval_fields(phase4_tools, field, phase4_step7_snapshot):
+    control = json.loads((phase4_step7_snapshot / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
     phase4_tools["verify_phase4_step7_control"](control)
     del control[field]
     with pytest.raises(ValueError):
         phase4_tools["verify_phase4_step7_control"](control)
 
 
-def test_phase4_step7_control_cannot_mint_extra_permission(phase4_tools):
-    control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
+def test_phase4_step7_control_cannot_mint_extra_permission(phase4_tools, phase4_step7_snapshot):
+    control = json.loads((phase4_step7_snapshot / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
     phase4_tools["verify_phase4_step7_control"](control)
     control["approved_scope_expansion"] = {"step": 7, "publication": True}
     with pytest.raises(ValueError):
@@ -1271,13 +1271,13 @@ def test_phase4_step7_diff_rejects_duplicate_operations(phase4_tools):
         phase4_tools["verify_phase4_step7_changes"]([("M", "docs/cli.md"), ("M", "docs/cli.md")])
 
 
-def test_phase4_step7_historical_bindings_preserve_assertions(phase4_tools, phase4_step6_snapshot):
+def test_phase4_step7_historical_bindings_preserve_assertions(phase4_tools, phase4_step6_snapshot, phase4_step7_snapshot):
     import ast
     registry = phase4_tools["PHASE4_STEP7_MIGRATIONS"]
     assert set(registry) == {"tests/unit/test_phase4_contracts.py", "tests/integration/test_phase4_gates.py"}
     assert sorted(len(rows) for rows in registry.values()) == [5, 7]
     for path, rows in registry.items():
-        phase4_tools["verify_phase4_step7_test_migration"](path, (phase4_step6_snapshot / path).read_bytes(), (ROOT / path).read_bytes())
+        phase4_tools["verify_phase4_step7_test_migration"](path, (phase4_step6_snapshot / path).read_bytes(), (phase4_step7_snapshot / path).read_bytes())
         for row in rows:
             trees = [ast.parse(row[key]) for key in ("old", "new")]
             assert trees[0].body[0].name == trees[1].body[0].name == row["node"]
@@ -1286,9 +1286,9 @@ def test_phase4_step7_historical_bindings_preserve_assertions(phase4_tools, phas
 
 
 @pytest.mark.parametrize("mutation", ["assertion", "binding", "config", "shadow", "default"])
-def test_phase4_step7_historical_guard_rejects_weakening(phase4_tools, phase4_step6_snapshot, mutation):
+def test_phase4_step7_historical_guard_rejects_weakening(phase4_tools, phase4_step6_snapshot, mutation, phase4_step7_snapshot):
     path = "tests/integration/test_phase4_gates.py" if mutation == "config" else "tests/unit/test_phase4_contracts.py"
-    before, after = (phase4_step6_snapshot / path).read_bytes(), (ROOT / path).read_bytes()
+    before, after = (phase4_step6_snapshot / path).read_bytes(), (phase4_step7_snapshot / path).read_bytes()
     verify = phase4_tools["verify_phase4_step7_test_migration"]
     verify(path, before, after)
     if mutation == "assertion":
@@ -1309,3 +1309,155 @@ def test_phase4_step7_historical_guard_rejects_weakening(phase4_tools, phase4_st
         after += b"\ndef test_phase4_step7_bad(value=globals().clear()):\n    pass\n"
     with pytest.raises(ValueError):
         verify(path, before, after)
+
+
+def test_phase4_step8_approved_control_keeps_independent_step7_anchors(phase4_tools):
+    control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
+    assert phase4_tools["PHASE4_STEP7_FINAL"] == "bacd33ae65e392872776c6d976401fdc3d565f63"
+    assert phase4_tools["PHASE4_STEP7_TREE"] == "4c16914bb0f0c5281efc36624efb8b1a1d4a174e"
+    assert phase4_tools["PHASE4_STEP7_TEST_TREE"] == "96317cb7b25236b79efc0f2d93e1e0f5f132fdb2"
+    assert control["active_phase"] == 4 and control["active_step"] == 8
+    assert control["approval_basis"] == "phase 4 step 8 开始"
+    assert control["baseline_commit"] == BASELINE
+    assert control["previous_step_commit"] == "bacd33ae65e392872776c6d976401fdc3d565f63"
+    assert control["previous_step_tree"] == "4c16914bb0f0c5281efc36624efb8b1a1d4a174e"
+    assert control["previous_step_test_tree"] == "96317cb7b25236b79efc0f2d93e1e0f5f132fdb2"
+    assert control["previous_step_core_tests"] == 3620
+    assert control["previous_step_parquet_tests"] == 3623
+    assert len(control["previous_step_files_sha256"]) == 229
+    assert set(control["runtime_paths_authorized"]) == {
+        "src/recursive_integrity_toolkit/cli.py",
+        "src/recursive_integrity_toolkit/config.py",
+    }
+    assert control["schema_changes_authorized"] is False
+    assert control["schema_paths_authorized"] == []
+    assert control["new_files_permitted"] == ['src/recursive_integrity_toolkit/data/hero/EXPECTED_OUTPUTS.md', 'src/recursive_integrity_toolkit/data/hero/config.json', 'src/recursive_integrity_toolkit/data/hero/provenance.csv', 'src/recursive_integrity_toolkit/data/hero/records_v1.csv', 'src/recursive_integrity_toolkit/data/hero/records_v2.csv', 'src/recursive_integrity_toolkit/data/hero/version_order.json', 'src/recursive_integrity_toolkit/data/report.schema.json']
+    for name in ("phase_complete", "next_step_authorized", "main_merge_authorized", "publication_authorized"):
+        assert control[name] is False
+    phase4_tools["verify_phase4_step8_control"](control, step=8)
+    with pytest.raises(ValueError):
+        phase4_tools["verify_phase4_step4_control"](control, step=4)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("active_phase", 3), ("active_phase", True),
+    ("active_step", 7), ("active_step", 9), ("active_step", True),
+    ("approval_basis", "approved by this manifest"),
+    ("previous_step_commit", "0000000000000000000000000000000000000000"),
+    ("previous_step_tree", "0000000000000000000000000000000000000000"),
+    ("previous_step_test_tree", "0000000000000000000000000000000000000000"),
+    ("previous_step_files_sha256", {}), ("baseline_files_sha256", {}),
+    ("previous_step_core_tests", 1), ("previous_step_parquet_tests", 1),
+    ("runtime_paths_authorized", ["src/recursive_integrity_toolkit/cli.py"]),
+    ("schema_changes_authorized", True), ("schema_paths_authorized", ["schemas/report.schema.json"]),
+    ("new_files_permitted", ["src/recursive_integrity_toolkit/reports/privacy.py"]),
+    ("permitted_paths", ["src/recursive_integrity_toolkit/cli.py"]),
+    ("phase_complete", True), ("next_step_authorized", True),
+    ("main_merge_authorized", True), ("publication_authorized", True),
+])
+def test_phase4_step8_control_rejects_forged_scope_and_stage(phase4_tools, field, value):
+    control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
+    verify = phase4_tools["verify_phase4_step8_control"]
+    verify(control, step=8)
+    control[field] = value
+    with pytest.raises(ValueError):
+        verify(control, step=8)
+
+
+@pytest.mark.parametrize("step", [0, 1, 2, 3, 4, 5, 6, 7, 9, 11, True, "8", None])
+def test_phase4_step8_control_rejects_unapproved_dispatch(phase4_tools, step):
+    control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
+    phase4_tools["verify_phase4_step8_control"](control, step=8)
+    with pytest.raises(ValueError):
+        phase4_tools["verify_phase4_step8_control"](control, step=step)
+
+
+@pytest.mark.parametrize("field", ["active_step", "previous_step_commit", "runtime_paths_authorized", "schema_paths_authorized"])
+def test_phase4_step8_control_requires_explicit_approval_fields(phase4_tools, field):
+    control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
+    phase4_tools["verify_phase4_step8_control"](control)
+    del control[field]
+    with pytest.raises(ValueError):
+        phase4_tools["verify_phase4_step8_control"](control)
+
+
+def test_phase4_step8_control_cannot_mint_extra_permission(phase4_tools):
+    control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
+    phase4_tools["verify_phase4_step8_control"](control)
+    control["approved_scope_expansion"] = {"step": 8, "publication": True}
+    with pytest.raises(ValueError):
+        phase4_tools["verify_phase4_step8_control"](control)
+
+
+def test_phase4_step8_fixed_boundary_opens_only_approved_existing_paths(phase4_tools):
+    approved = {
+        "PHASE_4_BASELINE.json", "PHASE_4_DECISIONS.md", "scripts/check_traceability.py",
+        "scripts/check_spec_consistency.py", "scripts/release_check.py", "tests/conftest.py",
+        "tests/unit/test_phase4_contracts.py", "tests/integration/test_phase4_gates.py",
+        "tests/integration/test_no_algorithms.py", "tests/integration/test_ci_workflows.py",
+        "tests/integration/test_repository_structure.py", "tests/integration/test_owner_ids.py",
+        "tests/integration/test_package_import.py", "tests/integration/test_package_install.py",
+        "tests/integration/test_optional_dependency.py", "tests/integration/test_no_network.py",
+        "tests/integration/test_schema_json.py", "tests/integration/test_hero_structure.py",
+        "tests/integration/test_prohibited_structure.py", "tests/integration/test_license_notices.py",
+        ".github/workflows/ci.yml", ".github/workflows/security.yml",
+        ".github/workflows/golden.yml", ".github/workflows/release.yml",
+        "docs/architecture.md", "docs/theory_traceability.md",
+        "src/recursive_integrity_toolkit/cli.py",
+        "src/recursive_integrity_toolkit/config.py", "pyproject.toml", "tests/integration/test_hero_end_to_end.py", "docs/cli.md",
+        "tests/integration/test_phase4_cli.py",
+    }
+    resources = {'src/recursive_integrity_toolkit/data/report.schema.json', 'src/recursive_integrity_toolkit/data/hero/version_order.json', 'src/recursive_integrity_toolkit/data/hero/config.json', 'src/recursive_integrity_toolkit/data/hero/EXPECTED_OUTPUTS.md', 'src/recursive_integrity_toolkit/data/hero/records_v2.csv', 'src/recursive_integrity_toolkit/data/hero/provenance.csv', 'src/recursive_integrity_toolkit/data/hero/records_v1.csv'}
+    approved.update(resources)
+    assert len(approved) == 39
+    assert set(phase4_tools["PHASE4_STEP8_ALLOWED"]) == approved
+    assert set(phase4_tools["PHASE4_STEP8_NEW"]) == resources
+    phase4_tools["verify_phase4_step8_changes"]([("A" if path in resources else "M", path) for path in sorted(approved)])
+
+
+@pytest.mark.parametrize("status,path", [
+    ("M", "src/recursive_integrity_toolkit/metrics/diversity.py"),
+    ("M", "src/recursive_integrity_toolkit/reports/assembly.py"),
+    ("M", "schemas/report.schema.json"), ("M", "examples/hero/config.json"),
+    ("M", "PHASE_4_PLAN.md"), ("A", "tests/integration/test_phase4_cli.py"),
+    ("M", "src/recursive_integrity_toolkit/data/hero/config.json"),
+    ("A", "src/recursive_integrity_toolkit/data/other.json"),
+    ("A", "PHASE_4_COMPLETION.md"), ("D", "docs/cli.md"),
+    ("R100", "pyproject.toml"), ("T", "scripts/release_check.py"),
+])
+def test_phase4_step8_diff_rejects_paths_and_operations(phase4_tools, status, path):
+    with pytest.raises(ValueError):
+        phase4_tools["verify_phase4_step8_changes"]([(status, path)])
+
+
+def test_phase4_step8_historical_bindings_preserve_assertions(phase4_tools, phase4_step7_snapshot):
+    import ast
+    registry = phase4_tools["PHASE4_STEP8_MIGRATIONS"]
+    assert sorted(len(rows) for rows in registry.values()) == [4, 7]
+    for path, rows in registry.items():
+        phase4_tools["verify_phase4_step8_test_migration"](path, (phase4_step7_snapshot / path).read_bytes(), (ROOT / path).read_bytes())
+        for row in rows:
+            trees = [ast.parse(row[key]) for key in ("old", "new")]
+            assert trees[0].body[0].name == trees[1].body[0].name == row["node"]
+            assert [[ast.dump(n) for n in ast.walk(t) if isinstance(n, ast.Assert)] for t in trees][0] == [[ast.dump(n) for n in ast.walk(t) if isinstance(n, ast.Assert)] for t in trees][1]
+
+
+@pytest.mark.parametrize("mutation", ["assertion", "binding", "shadow", "default"])
+def test_phase4_step8_historical_guard_rejects_weakening(phase4_tools, phase4_step7_snapshot, mutation):
+    path = "tests/unit/test_phase4_contracts.py"
+    before, after = (phase4_step7_snapshot / path).read_bytes(), (ROOT / path).read_bytes()
+    verify = phase4_tools["verify_phase4_step8_test_migration"]
+    verify(path, before, after)
+    if mutation == "assertion":
+        needle = b'    assert control["active_phase"] == 4 and control["active_step"] == 7\n'
+        assert after.count(needle) == 1
+        after = after.replace(needle, b"    assert True\n", 1)
+    elif mutation == "binding":
+        needle = b'json.loads((phase4_step7_snapshot / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))'
+        assert needle in after
+        after = after.replace(needle, needle.replace(b"phase4_step7_snapshot", b"ROOT"), 1)
+    elif mutation == "shadow":
+        after += b"\ndef test_phase4_step7_fixed_boundary_opens_only_approved_existing_paths():\n    assert True\n"
+    else:
+        after += b"\ndef test_phase4_step8_bad(value=globals().clear()):\n    pass\n"
+    with pytest.raises(ValueError): verify(path, before, after)

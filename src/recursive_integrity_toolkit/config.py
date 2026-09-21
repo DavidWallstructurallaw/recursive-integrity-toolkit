@@ -712,3 +712,23 @@ def phase4_validation_configuration(options: Phase4Options) -> dict[str, Any]:
     data["privacy_mode"] = options.privacy_mode
     data["version_order"] = list(options.version_order)
     return data
+
+
+def phase4_pair_requested(options: Phase4Options, *, operation: str) -> bool:
+    """Check explicit pair intent without inferring chronology or state meaning.
+
+    Input-only validation accepts two declared files without requesting a pair.
+    State-meaning declarations belong to audit/example calculation requests.
+    """
+    if type(options) is not Phase4Options or operation not in ("audit", "validate", "example"):
+        _invalid("invalid Phase 4 operation")
+    requested = any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs)
+    if operation == "validate":
+        if options.state_semantics is not None or options.tail_rule is not None:
+            _invalid("input-only validation cannot request calculations")
+        return False
+    if requested != (options.state_semantics is not None):
+        _invalid("comparison requires both an earlier input and one shared literal state meaning")
+    if options.state_semantics is not None and not options.state_semantics.strip():
+        _invalid("comparison state meaning must be nonblank")
+    return requested

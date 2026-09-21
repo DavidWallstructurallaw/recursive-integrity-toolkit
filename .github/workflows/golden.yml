@@ -1,4 +1,4 @@
-name: Phase 4 Step 7 Hero and Mathematical Contract
+name: Phase 4 Step 8 Hero and Mathematical Contract
 
 on:
   push:
@@ -28,22 +28,22 @@ jobs:
           python-version: "3.12"
       - name: Install approved test tools
         run: python -m pip install ".[test]"
-      - name: Verify Hero and frozen calculation oracles without generating a report
+      - name: Verify packaged Hero execution and frozen mathematical oracles
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-math"
-          python scripts/check_spec_consistency.py --phase 4 --step 7
-          python -m pytest -p no:cacheprovider -q tests/integration/test_hero_structure.py tests/integration/test_phase3_metric_pipeline.py tests/golden/test_phase3_math.py --junitxml="$RUNNER_TEMP/rit-math/math.xml" | tee "$RUNNER_TEMP/rit-math/phase4_math_validation.log"
-          python scripts/release_check.py --phase 4 --step 7 --junit "$RUNNER_TEMP/rit-math/math.xml"
-          python scripts/release_check.py --phase 4 --step 7 --diff
+          python scripts/check_spec_consistency.py --phase 4 --step 8
+          python -m pytest -p no:cacheprovider -q tests/integration/test_hero_structure.py tests/integration/test_hero_end_to_end.py tests/integration/test_phase3_metric_pipeline.py tests/golden/test_phase3_math.py --junitxml="$RUNNER_TEMP/rit-math/math.xml" | tee "$RUNNER_TEMP/rit-math/phase4_math_validation.log"
+          python scripts/release_check.py --phase 4 --step 8 --junit "$RUNNER_TEMP/rit-math/math.xml"
+          python scripts/release_check.py --phase 4 --step 8 --diff
       - name: Retain actual Hero and mathematical evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase4-step7-hero-mathematical
+          name: phase4-step8-hero-mathematical
           path: ${{ runner.temp }}/rit-math/
           if-no-files-found: error
           retention-days: 30
-# No build_golden.py, normalize_golden.py or analytical report is executed.
+# Frozen mathematical expectations are unchanged; Step 8 Hero reports use independent assertions.

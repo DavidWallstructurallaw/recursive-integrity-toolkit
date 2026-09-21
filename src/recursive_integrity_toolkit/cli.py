@@ -1,4 +1,4 @@
-"""Orchestrate explicit local single-version audits and input-only validation.
+"""Orchestrate local audits, one explicit pair and the packaged Hero example.
 
 Owner IDs:
     PR-013, PR-015, PR-016, PR-018; product orchestration only.
@@ -7,13 +7,13 @@ Inputs:
 Outputs:
     The accepted safe JSON/Markdown pair, safe diagnostics and declared exits.
 Assumptions:
-    Calculations use an explicitly declared representation and one input version.
+    Each calculated side uses one version and an explicitly declared representation.
 Limits:
     No formulas, implicit representation, weighting, content-reference resolution,
-    comparison, packaged example, simulation or Phase 5 graph execution. Help and
+    automatic pairs, trajectories, simulation or Phase 5 graph execution. Help and
     version import no analytical dependencies or input/report implementation.
 Current phase status:
-    Phase 4 Step 7. Comparison and example remain deferred to Step 8.
+    Phase 4 Step 8. Accepted kernels own every numerical result.
 """
 from __future__ import annotations
 
@@ -42,18 +42,22 @@ class _Once(argparse.Action):
 def build_parser() -> argparse.ArgumentParser:
     """Build import-safe declarations without reading files or executing work."""
     parser = _SafeParser(prog="rit", allow_abbrev=False,
-        description="Local single-version integrity audit and input validation.")
+        description="Local integrity audit, explicit version comparison and input validation.")
     parser.add_argument("--version", action="version", version=f"recursive-integrity-toolkit {__version__}")
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("version", help="Show the toolkit version.", allow_abbrev=False)
-    for command, description in (("audit", "Audit one dataset version using explicit declarations."),
+    example = commands.add_parser("example", help="Extract and audit the packaged local Hero.", allow_abbrev=False)
+    example.add_argument("--out", required=True, action=_Once, help="New example workspace; its parent must exist.")
+    example.add_argument("--redacted", action=_Once, nargs=0, help="Protect paths and identifiers in reports.")
+    for command, description in (("audit", "Audit one version or one explicitly declared earlier/later pair."),
                                  ("validate", "Validate inputs without running calculations.")):
         child = commands.add_parser(command, help=description, description=description, allow_abbrev=False)
         child.add_argument("--records", required=True, action=_Once, help="Local records file (CSV, JSONL or Parquet).")
         for flag, help_text in (
             ("provenance", "Local provenance manifest."), ("config", "Local JSON or TOML configuration."),
             ("schema-mapping", "Local declarative schema mapping."), ("version-order", "Local explicit version-order document."),
-            ("compare", "Unsupported until Phase 4 Step 8."), ("state-semantics", "Pair declaration; unsupported until Step 8."),
+            ("compare", "One local earlier-version file; --records is the later version."),
+            ("state-semantics", "Shared literal state meaning for the explicit pair; requires --compare."),
             ("missing-state-id", "Literal ID required only for explicit_missing_state."),
             ("out", "Output directory; default ./rit-report. Existing targets are never overwritten."),
             ("id-salt-file", "Local 32-4096 byte identifier secret, requiring --redacted."),
@@ -109,7 +113,7 @@ def _message_exits(messages):
 
 def _options(namespace):
     from pathlib import Path
-    from .config import load_phase4_invocation
+    from .config import load_phase4_invocation, phase4_pair_requested
     from .errors import ConfigurationError, ErrorCode
     from .models import FileRole
     declarations = {key: value for key, value in vars(namespace).items()
@@ -128,16 +132,11 @@ def _options(namespace):
             raise ConfigurationError(ErrorCode.CONFIG_INVALID, "Invalid tail threshold") from None
     options, inventory = load_phase4_invocation(cli=declarations, config_path=namespace.config,
                                                 base_directory=Path.cwd())
-    if options.state_semantics is not None or any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs):
-        import sys
-        sys.stderr.write("E_CONFIG_INVALID: Comparison requires Phase 4 Step 8.\n")
-        raise ConfigurationError(ErrorCode.CONFIG_INVALID, "Comparison is deferred to Step 8")
-    if namespace.command == "validate" and options.tail_rule is not None:
-        raise ConfigurationError(ErrorCode.CONFIG_INVALID, "Input-only validation does not request tail calculations")
+    phase4_pair_requested(options, operation=namespace.command)
     return options, inventory
 
 
-def _calculations(bundle, options):
+def _calculations(bundle, options, *, dataset_versions=None, content_only=False, record_role=None):
     """Call accepted single-family APIs and retain independent successful work."""
     from .errors import CanonicalValidationError, ErrorCode
     from .models import CalculationScope, CapabilityKey, ContentMode, TailSelectionOptions
@@ -150,7 +149,9 @@ def _calculations(bundle, options):
     from .representations.field import assign_field_states
     from .representations.content_hash import assign_content_states
     results, failures, exits = {}, [], []
-    versions = bundle.version_order.loaded_versions
+    versions = bundle.version_order.loaded_versions if dataset_versions is None else dataset_versions
+    records = tuple(row for row in bundle.records if record_role is None or row.location.file_role is record_role)
+    suffix = "-earlier" if content_only else ""
     if len(versions) > 1:
         error = CanonicalValidationError(ErrorCode.SCHEMA_TYPE, "Audit requires one dataset version", field="dataset_version")
         failures.append(FamilyFailure(CapabilityKey.INGESTION, (_message(error),)))
@@ -166,9 +167,16 @@ def _calculations(bundle, options):
             exits.append(_error_exit(error))
             return None
 
-    scope = CalculationScope(versions, tuple(row.record_key for row in bundle.records), (),
+    scope = CalculationScope(versions, tuple(row.record_key for row in records
+                             if row.record_key.dataset_version in versions), (),
                              "all_valid_records_in_selected_dataset_scope", "audit-provenance")
-    provenance = attempt(CapabilityKey.PROVENANCE, lambda: summarize_provenance(bundle.provenance_join, scope=scope))
+    def provenance_result():
+        from .io.validation import join_provenance
+        joined = bundle.provenance_join if dataset_versions is None else join_provenance(
+            bundle.records, bundle.provenance, dataset_versions=versions, strict_mode=options.strict_mode,
+            strict_warning_codes=options.configuration.strict_warning_codes)
+        return summarize_provenance(joined, scope=scope)
+    provenance = None if content_only else attempt(CapabilityKey.PROVENANCE, provenance_result)
     if provenance is not None:
         results["provenance"] = provenance
         closure = attempt(CapabilityKey.PROVENANCE, lambda: direct_closure_exposure(provenance))
@@ -181,27 +189,27 @@ def _calculations(bundle, options):
             def content():
                 if config.field not in (None, "content") or config.missing_value_policy not in (None, "error"):
                     raise CanonicalValidationError(ErrorCode.CONFIG_INVALID, "Exact content requires its accepted declaration")
-                return assign_content_states(bundle.records, dataset_versions=versions, scope_id="audit-content",
+                return assign_content_states(records, dataset_versions=versions, scope_id="audit-content" + suffix,
                     representation_name=config.name, representation_version=config.version,
                     normalization_profile=config.normalization_profile, content_mode=ContentMode.INLINE)
             exact = attempt(CapabilityKey.CONTENT_DIAGNOSTICS, content)
             if exact is not None:
                 represented = exact.representation
-                duplicates = attempt(CapabilityKey.CONTENT_DIAGNOSTICS, lambda: detect_exact_duplicates(
-                    bundle.records, dataset_versions=versions, scope_id="audit-content",
+                duplicates = None if content_only else attempt(CapabilityKey.CONTENT_DIAGNOSTICS, lambda: detect_exact_duplicates(
+                    records, dataset_versions=versions, scope_id="audit-content" + suffix,
                     representation_name=config.name, representation_version=config.version,
                     normalization_profile=config.normalization_profile, content_mode=ContentMode.INLINE))
                 if duplicates is not None:
                     results["duplicates"] = duplicates
         else:
             represented = attempt(CapabilityKey.CONTENT_DIAGNOSTICS, lambda: assign_field_states(
-                bundle.records, dataset_versions=versions, scope_id="audit-representation", config=config,
+                records, dataset_versions=versions, scope_id="audit-representation" + suffix, config=config,
                 missing_state_id=options.missing_state_id))
     if represented is not None:
         distribution = attempt(CapabilityKey.CONTENT_DIAGNOSTICS, lambda: calculate_state_distribution(represented))
         if distribution is not None:
             results["distributions"] = (distribution,)
-            if options.tail_rule is not None:
+            if options.tail_rule is not None and not content_only:
                 tail_options = TailSelectionOptions(options.tail_rule,
                     count_threshold=options.tail_threshold if options.tail_rule == "count_at_or_below" else None,
                     frequency_threshold=options.tail_threshold if options.tail_rule == "frequency_at_or_below" else None)
@@ -210,6 +218,46 @@ def _calculations(bundle, options):
                     results["tail"] = tail
     results["family_errors"] = tuple(failures)
     return results, tuple(exits)
+
+
+def _pair_calculations(bundle, options):
+    """Bind exactly two input roles to single-version results and accepted comparison."""
+    from .errors import CanonicalValidationError, ErrorCode
+    from .models import CapabilityKey, ExplicitPairContext, FileRole
+    from .metrics.diversity import compare_support
+    from .reports.assembly import FamilyFailure
+    sides = {role: tuple(sorted({row.record_key.dataset_version for row in bundle.records
+             if row.location.file_role is role})) for role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE)}
+    earlier, later = sides[FileRole.RECORDS_COMPARE], sides[FileRole.RECORDS_PRIMARY]
+    if earlier == later and len(earlier) == 1:
+        error = CanonicalValidationError(ErrorCode.VERSION_ORDER_CONFLICT,
+            "Comparison requires two distinct versions", field="pair_order")
+        return {"family_errors": (FamilyFailure(CapabilityKey.DATASET_LONGITUDINAL, (_message(error),)),)}, (1,)
+    results, exits = _calculations(bundle, options, dataset_versions=later,
+        record_role=FileRole.RECORDS_PRIMARY) if len(later) == 1 else ({}, ())
+    prior, prior_exits = _calculations(bundle, options, dataset_versions=earlier, content_only=True,
+        record_role=FileRole.RECORDS_COMPARE) if len(earlier) == 1 and earlier != later else ({}, ())
+    failures = results.get("family_errors", ()) + prior.get("family_errors", ())
+    a, b = prior.get("distributions", ()), results.get("distributions", ())
+    results["distributions"] = a + b if earlier != later else b
+    exits += prior_exits
+    try:
+        if len(earlier) != 1 or len(later) != 1:
+            raise CanonicalValidationError(ErrorCode.SCHEMA_TYPE,
+                "Each comparison input must contain exactly one version", field="dataset_version")
+        if not a or not b:
+            raise CanonicalValidationError(ErrorCode.REPRESENTATION_INCOMPATIBLE,
+                "Comparison requires a valid declared representation on both sides", field="representation_compatibility")
+        first, second = a[0].unweighted, b[0].unweighted
+        context = ExplicitPairContext(first.scope, second.scope, first.representation,
+                                      second.representation, bundle.version_order)
+        results["comparison"] = compare_support(first, second, context=context,
+            earlier_state_semantics=options.state_semantics, later_state_semantics=options.state_semantics)
+    except Exception as error:
+        failures += (FamilyFailure(CapabilityKey.DATASET_LONGITUDINAL, (_message(error),)),)
+        exits += (_error_exit(error),)
+    results["family_errors"] = failures
+    return results, exits
 
 
 def _run_metadata(options, operation, started_at, started_clock, *, status="complete"):
@@ -287,17 +335,39 @@ def _execute(namespace):
         if options.id_salt_file is not None:
             input_paths.append(options.id_salt_file)
         protection = IdentifierProtection.create(secret_file=options.id_salt_file)
-        bundle = validate_bundle(AuditBundle(options.inputs), configuration=phase4_validation_configuration(options),
-                                 base_directory=Path.cwd())
+        order_failure = ()
+        try:
+            bundle = validate_bundle(AuditBundle(options.inputs), configuration=phase4_validation_configuration(options),
+                                     base_directory=Path.cwd())
+        except Exception as order_error:
+            from .errors import ToolkitError, ErrorCode
+            from .models import CapabilityKey, FileRole
+            from .reports.assembly import FamilyFailure
+            if (not isinstance(order_error, ToolkitError) or order_error.code is not ErrorCode.VERSION_ORDER_CONFLICT
+                    or namespace.command == "validate"
+                    or not any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs)):
+                raise
+            # Invalid chronology cannot erase independently valid input evidence.
+            # Revalidate without an ordering claim; retain the original failure.
+            unordered = phase4_validation_configuration(options)
+            unordered["version_order"] = []
+            bundle = validate_bundle(AuditBundle(tuple(source for source in options.inputs
+                if source.role is not FileRole.VERSION_ORDER)), configuration=unordered, base_directory=Path.cwd())
+            order_failure = (FamilyFailure(CapabilityKey.DATASET_LONGITUDINAL, (_message(order_error),)),)
         if config_inventory:
             bundle = replace(bundle, inventory=tuple(sorted(bundle.inventory + config_inventory,
                 key=lambda entry: (entry.role.value, str(entry.path)))))
         exits = _message_exits(bundle.validation_messages)
         results = {}
-        if namespace.command == "audit":
-            results, calculation_exits = _calculations(bundle, options)
+        if namespace.command != "validate":
+            from .config import phase4_pair_requested
+            pair = phase4_pair_requested(options, operation=namespace.command)
+            results, calculation_exits = _pair_calculations(bundle, options) if pair else _calculations(bundle, options)
             exits += calculation_exits
-            if len(bundle.version_order.loaded_versions) > 1:
+            if order_failure:
+                results["family_errors"] = results.get("family_errors", ()) + order_failure
+                exits += (1,)
+            if not pair and len(bundle.version_order.loaded_versions) > 1:
                 sys.stderr.write("Audit requires one dataset_version; use rit validate to inspect multiple versions.\n")
         report = assemble_report(bundle, run=_run_metadata(options, namespace.command, started_at, started_clock), **results)
         if namespace.command == "validate":
@@ -324,6 +394,66 @@ def _execute(namespace):
             return _exit_code((*exits, _error_exit(reporting_error)))
 
 
+def _example(namespace):
+    """Extract fixed local resources into an exclusively created workspace.
+
+    Trusted stable ancestors use the accepted publication path checks. A failed
+    extraction removes only identity-matched files created by this invocation.
+    Already existing workspaces, including empty directories, are never reused.
+    """
+    from importlib.resources import files
+    import stat
+    import sys
+    from .utils.paths import (_OutputFailure, _output_local, _output_walk,
+        _output_info, _output_recheck, _output_write, _output_clean_stage)
+    workspace, root_chain, input_chain, owned = None, None, None, {}
+    try:
+        workspace = _output_local(namespace.out)
+        parent_chain, parent = _output_walk(workspace.parent)
+        if not stat.S_ISDIR(parent.st_mode):
+            raise _OutputFailure("E_OUTPUT_UNSAFE")
+        if _output_info(workspace) is not None:
+            raise _OutputFailure("E_OUTPUT_EXISTS")
+        names = ("config.json", "records_v1.csv", "records_v2.csv", "provenance.csv",
+                 "version_order.json", "EXPECTED_OUTPUTS.md")
+        resource = files("recursive_integrity_toolkit").joinpath("data", "hero")
+        payloads = {name: resource.joinpath(name).read_bytes() for name in names}
+        _output_recheck(parent_chain)
+        workspace.mkdir(mode=0o700)
+        root_chain, _ = _output_walk(workspace)
+        inputs = workspace / "inputs"
+        _output_recheck(root_chain)
+        inputs.mkdir(mode=0o700)
+        input_chain, _ = _output_walk(inputs)
+        for name, payload in payloads.items():
+            _output_recheck(input_chain)
+            _output_write(inputs / name, payload, owned)
+        _output_recheck(input_chain)
+        invocation = build_parser().parse_args(["audit", "--records", str(inputs / "records_v2.csv"),
+            "--compare", str(inputs / "records_v1.csv"), "--config", str(inputs / "config.json"),
+            "--provenance", str(inputs / "provenance.csv"), "--version-order", str(inputs / "version_order.json"),
+            "--state-semantics", "Hero topic labels retain their literal meaning across v1 and v2.",
+            "--out", str(workspace / "reports"), *(["--redacted"] if namespace.redacted else [])])
+        invocation.command = "example"
+    except Exception as error:
+        cleaned = True
+        if input_chain is not None:
+            cleaned = _output_clean_stage(workspace / "inputs", input_chain, owned)
+        if root_chain is not None:
+            try:
+                _output_recheck(root_chain)
+                workspace.rmdir()
+            except Exception:
+                cleaned = False
+        code = error.code if isinstance(error, _OutputFailure) else "E_OUTPUT_EXISTS" if isinstance(error, FileExistsError) else "E_OUTPUT_IO" if isinstance(error, OSError) else "E_INTERNAL"
+        sys.stderr.write(code + ": The example workspace could not be prepared.\n")
+        if not cleaned:
+            sys.stderr.write("E_OUTPUT_IO: Incomplete example files remain in the selected workspace; inspect it before retrying.\n")
+        return 4 if code == "E_INTERNAL" else 1
+    sys.stderr.write("Phase 4 example: lineage execution is deferred. inputs/EXPECTED_OUTPUTS.md is the full-product reference, not a claim of calculated lineage results.\n")
+    return _execute(invocation)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Dispatch supported local work, keeping startup commands import-safe."""
     parser = build_parser()
@@ -331,8 +461,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         namespace = parser.parse_args(argv)
     except _InvocationError:
         import sys
-        sys.stderr.write('E_CONFIG_INVALID: Invalid invocation; use rit audit --help or rit validate --help. '
-                         'Comparison and example require Phase 4 Step 8.\n')
+        sys.stderr.write('E_CONFIG_INVALID: Invalid invocation; use rit audit --help, rit validate --help or rit example --help.\n')
         return 2
     if namespace.command == "version":
         print(f"recursive-integrity-toolkit {__version__}")
@@ -341,7 +470,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.print_help()
         return 0
     try:
-        return _execute(namespace)
+        return _example(namespace) if namespace.command == "example" else _execute(namespace)
     except Exception:
         import sys
         sys.stderr.write("E_INTERNAL: The local command could not initialize; no exception details are emitted.\n")

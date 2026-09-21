@@ -447,3 +447,186 @@ def test_phase4_step7_published_view_is_the_only_report_diagnostic_source(tmp_pa
     assert code == 4 and report["run"]["run_status"] == "failed"
     assert report["observed_facts"] == report["derived_metrics"] == {} and report["errors"]
     assert "PRIVATE_ASSEMBLY_EXCEPTION" not in streams.err + json.dumps(report)
+
+
+
+def phase4_step8_pair_inputs(directory):
+    """Independent counts: A,B,C,D -> A,A,B,E; delta -1, retention 1/2."""
+    args, later, config = phase4_step7_inputs(directory)
+    rows = [{"dataset_version": "later", "record_id": "l" + str(i), "content": "PRIVATE_CONTENT", "topic": t}
+            for i, t in enumerate(("A", "A", "B", "E"))]
+    later.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+    earlier = directory / "earlier.jsonl"
+    earlier.write_text("\n".join(json.dumps({"dataset_version": "earlier", "record_id": "e" + str(i),
+        "content": "PRIVATE_CONTENT", "topic": t}) for i, t in enumerate(("A", "B", "C", "D"))), encoding="utf-8")
+    order = directory / "order.json"
+    order.write_text(json.dumps({"version_order": ["earlier", "later"]}), encoding="utf-8")
+    return args + ["--compare", str(earlier), "--version-order", str(order), "--state-semantics", "literal categories"], later, earlier, config, order
+
+
+def test_phase4_step8_explicit_pair_uses_hand_counts_and_keeps_scopes(tmp_path, capsys):
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    before = {p: p.read_bytes() for p in tmp_path.iterdir()}
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 0 and report["run"]["run_status"] == "complete"
+    support = report["derived_metrics"]["support"]
+    assert support["by_version"]["earlier"]["support_size"]["value"] == 4
+    assert support["by_version"]["later"]["support_size"]["value"] == 3
+    assert support["support_delta"]["value"] == -1
+    assert support["support_retention_ratio"]["value"] == 0.5
+    assert support["extinct_states"]["value"] == ["C", "D"]
+    assert support["added_states"]["value"] == ["E"]
+    assert support["support_loss_count"]["value"] == 2
+    assert support["support_added_count"]["value"] == 1
+    assert report["derived_metrics"]["diversity"]["gini_simpson_diversity_delta"]["value"] == -0.125
+    assert support["comparison_details"]["value"]["compatibility_method"] == "identical_declared_basis"
+    assert support["support_delta"]["scope"]["dataset_versions"] == ["earlier", "later"]
+    assert report["derived_metrics"]["closure_exposure"]["direct"]["lower_bound"]["scope"]["dataset_versions"] == ["later"]
+    assert report["capabilities"]["dataset_longitudinal"]["execution_status"] == "partial"
+    assert report["capabilities"]["dataset_longitudinal"]["execution_scope"] == ["supplied_explicit_pair_support_and_diversity"]
+    assert report["simulations"] == {} and "tail" not in report["derived_metrics"]
+    assert all(p.read_bytes() == raw for p, raw in before.items())
+
+
+@pytest.mark.parametrize("case", ["missing_order", "reverse", "omitted_version", "conflicting_sources", "same_version", "earlier_multiversion", "later_multiversion", "missing_representation", "earlier_missing_state"])
+def test_phase4_step8_pair_failure_retains_independent_evidence(tmp_path, capsys, case):
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    if case == "missing_order":
+        i = args.index("--version-order"); del args[i:i+2]
+    elif case == "reverse":
+        order.write_text(json.dumps({"version_order": ["later", "earlier"]}))
+    elif case == "omitted_version":
+        order.write_text(json.dumps({"version_order": ["earlier"]}))
+    elif case == "conflicting_sources":
+        order.write_text(json.dumps({"version_order": ["earlier", "later"], "version_rank": {"earlier": 1, "later": 0}}))
+    elif case == "same_version":
+        earlier.write_text(earlier.read_text().replace('"earlier"', '"later"'))
+    elif case in ("earlier_multiversion", "later_multiversion"):
+        path = earlier if case.startswith("earlier") else later
+        rows = [json.loads(line) for line in path.read_text().splitlines()]
+        rows[-1]["dataset_version"] = "third"
+        path.write_text("\n".join(json.dumps(row) for row in rows))
+        order.write_text(json.dumps({"version_order": ["earlier", "later", "third"]}))
+    elif case == "missing_representation":
+        config.write_text("{}")
+    else:
+        raw = json.loads(config.read_text()); raw["representation"]["missing_value_policy"] = "error"
+        config.write_text(json.dumps(raw))
+        rows = [json.loads(line) for line in earlier.read_text().splitlines()]; rows[0]["topic"] = None
+        earlier.write_text("\n".join(json.dumps(row) for row in rows))
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 1 and report["run"]["run_status"] == "partial"
+    assert report["observed_facts"]["record_counts"] and report["errors"]
+    assert "support_delta" not in report["derived_metrics"].get("support", {})
+    assert report["capabilities"]["dataset_longitudinal"]["execution_status"] == "failed"
+    if case not in ("same_version", "later_multiversion", "missing_representation"):
+        assert report["derived_metrics"]["support"]["by_version"]["later"]["support_size"]["value"] == 3
+    if case == "later_multiversion":
+        assert set(report["derived_metrics"]["support"]["by_version"]) == {"earlier"}
+    assert "PRIVATE_CONTENT" not in json.dumps(report) + streams.out + streams.err
+
+
+@pytest.mark.parametrize("case", ["absent_meaning", "blank_meaning", "duplicate_meaning", "mapping", "compatibility", "validate_meaning"])
+def test_phase4_step8_semantic_declarations_cannot_be_inferred_or_overridden(tmp_path, capsys, case):
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    if case == "absent_meaning":
+        i = args.index("--state-semantics"); del args[i:i+2]
+    elif case == "blank_meaning":
+        args[-1] = "   "
+    elif case == "duplicate_meaning":
+        args += ["--state-semantics", "different meaning"]
+    elif case in ("mapping", "compatibility"):
+        raw = json.loads(config.read_text())
+        raw["state_mapping" if case == "mapping" else "representation_compatibility"] = {"earlier": "meaning one", "later": "meaning two"}
+        config.write_text(json.dumps(raw))
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys,
+        command="validate" if case == "validate_meaning" else "audit")
+    assert code == 2
+    if report is not None:
+        assert report["run"]["run_status"] == "failed"
+        assert report["derived_metrics"] == {} and report["errors"]
+
+
+def test_phase4_step8_validate_two_inputs_never_dispatches_pair(tmp_path, capsys, monkeypatch):
+    from recursive_integrity_toolkit import cli
+    from recursive_integrity_toolkit.metrics import diversity
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    i = args.index("--state-semantics"); del args[i:i+2]
+    called = []
+    def denied(*args, **kwargs):
+        called.append(True)
+        raise AssertionError("unexpected calculation")
+    monkeypatch.setattr(cli, "_calculations", denied)
+    monkeypatch.setattr(cli, "_pair_calculations", denied)
+    monkeypatch.setattr(diversity, "compare_support", denied)
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys, command="validate")
+    assert code == 0 and called == []
+    assert report["derived_metrics"] == report["proxy_signals"] == report["simulations"] == {}
+    assert set(report["observed_facts"]["record_counts"]) == {"earlier", "later"}
+
+
+def test_phase4_step8_comparison_internal_failure_preserves_both_distributions(tmp_path, capsys, monkeypatch):
+    from recursive_integrity_toolkit.metrics import diversity
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    def broken(*args, **kwargs):
+        raise RuntimeError("PRIVATE_EXCEPTION")
+    monkeypatch.setattr(diversity, "compare_support", broken)
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 4 and report["run"]["run_status"] == "partial"
+    assert set(report["derived_metrics"]["support"]["by_version"]) == {"earlier", "later"}
+    assert "PRIVATE_EXCEPTION" not in json.dumps(report) + streams.err
+
+
+@pytest.mark.parametrize("mode", ["hash", "omit", "preserve"])
+def test_phase4_step8_pair_redaction_preserves_numbers_and_hides_semantics(tmp_path, capsys, mode):
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    args[-1] = "PRIVATE_MEANING"
+    for p in (earlier, later, order):
+        p.write_text(p.read_text().replace('"earlier"', '"PRIVATE_EARLIER"').replace('"later"', '"PRIVATE_LATER"').replace('"C"', '"PRIVATE_STATE"'))
+    code, report, streams = phase4_step7_invoke(args + ["--redacted", "--record-ids", mode], tmp_path / "out", capsys)
+    assert code == 0
+    support = report["derived_metrics"]["support"]
+    assert support["support_delta"]["value"] == -1 and support["support_retention_ratio"]["value"] == 0.5
+    emitted = json.dumps(report) + streams.out + streams.err + (tmp_path / "out/report.md").read_text()
+    assert "PRIVATE_" not in emitted and str(tmp_path) not in emitted
+
+
+def test_phase4_step8_pair_does_not_activate_other_calculation_families(tmp_path, capsys, monkeypatch):
+    import importlib
+    import inspect
+    import socket
+    import urllib.request
+    from recursive_integrity_toolkit.io import loaders
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    calls = []
+    def denied(*args, **kwargs):
+        calls.append(True)
+        raise AssertionError("unopened operation")
+    for name in ("metrics.resampling", "lineage.graph", "lineage.ancestry", "lineage.cycles"):
+        module = importlib.import_module("recursive_integrity_toolkit." + name)
+        for key, value in vars(module).copy().items():
+            if inspect.isfunction(value): monkeypatch.setattr(module, key, denied)
+    for owner, name in ((socket, "socket"), (socket, "getaddrinfo"), (urllib.request, "urlopen"), (loaders, "load_content_reference")):
+        monkeypatch.setattr(owner, name, denied)
+    code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys)
+    assert code == 0 and not calls and report["simulations"] == {}
+
+
+def test_phase4_step8_tail_stays_in_later_scope(tmp_path, capsys):
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    code, report, streams = phase4_step7_invoke(args + ["--tail-rule", "singleton_count"], tmp_path / "out", capsys)
+    assert code == 0
+    tail = report["derived_metrics"]["tail"]["tail_support_size"]
+    assert tail["value"] == 2 and tail["scope"]["dataset_versions"] == ["later"]
+
+
+def test_phase4_step8_config_declared_compare_uses_config_parent(tmp_path, capsys):
+    from recursive_integrity_toolkit.cli import main
+    args, later, earlier, config, order = phase4_step8_pair_inputs(tmp_path)
+    data = json.loads(config.read_text()); data["inputs"] = {"records_compare": earlier.name}
+    data["version_order"] = ["earlier", "later"]
+    config.write_text(json.dumps(data))
+    assert main(["audit", "--records", str(later), "--config", str(config), "--state-semantics", "literal categories", "--out", str(tmp_path / "out")]) == 0
+    capsys.readouterr()
+    report = json.loads((tmp_path / "out/report.json").read_bytes())
+    assert report["derived_metrics"]["support"]["support_delta"]["value"] == -1

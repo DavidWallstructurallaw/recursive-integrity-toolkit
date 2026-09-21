@@ -265,3 +265,137 @@ def test_phase2_step9_unsafe_mapping_cannot_execute(tmp_path):
         validate_bundle(AuditBundle((source, mapping)))
     assert caught.value.code is ErrorCode.MAPPING_UNSAFE_TRANSFORM
     assert 'UNSAFE_SENTINEL' not in str(caught.value)
+
+
+
+def phase4_step8_hero_values(report):
+    """Independent section 8 targets; no output-derived golden regeneration."""
+    support, diversity = report["derived_metrics"]["support"], report["derived_metrics"]["diversity"]
+    assert sorted(v["support_size"]["value"] for v in support["by_version"].values()) == [5, 8]
+    assert sorted(v["gini_simpson_diversity"]["value"] for v in diversity["by_version"].values()) == [0.75, 0.875]
+    assert support["support_delta"]["value"] == -3 and support["support_retention_ratio"]["value"] == 0.625
+    assert support["support_loss_count"]["value"] == 3 and support["support_added_count"]["value"] == 0
+    assert diversity["gini_simpson_diversity_delta"]["value"] == -0.125
+    assert report["derived_metrics"]["provenance"]["source_type_shares"]["value"] == {"human": 0.5, "synthetic": 0.5, "mixed": 0.0, "sensor": 0.0, "unknown": 0.0}
+    assert report["derived_metrics"]["provenance"]["missing_provenance_share"]["value"] == 0
+    for name in ("provenance_row_coverage", "provenance_required_field_coverage", "grounding_field_coverage"):
+        assert report["observed_facts"]["provenance"][name]["value"] == 1.0
+        assert report["observed_facts"]["provenance"][name]["scope"]["record_count"] == 8
+    direct = report["derived_metrics"]["closure_exposure"]["direct"]
+    assert [direct[n]["value"] for n in ("lower_bound", "upper_bound", "interval_width")] == [0.5, 0.5, 0]
+    assert report["observability"]["maximum_level"] == 4 and report["capabilities"] == report["observability"]["capabilities"]
+    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert report["capabilities"]["dataset_longitudinal"]["execution_status"] == "partial"
+    assert report["capabilities"]["model_longitudinal"]["status"] == "unavailable"
+    assert report["capabilities"]["intervention_simulation"]["status"] == "unavailable"
+    assert report["simulations"] == {} and report["errors"] == []
+    assert "lineage" not in report["derived_metrics"]["closure_exposure"]
+    assert "ancestry" not in report["derived_metrics"] and "shared_ancestry_dependence" not in report["proxy_signals"]
+    assert "support_contraction" in report["proxy_signals"]
+    assert {"model_performance_decline", "causal_ancestor_effect", "universal_integrity", "universal_collapse_prediction"} <= {item["conclusion"] for item in report["unavailable_conclusions"]}
+
+
+@pytest.mark.parametrize("redacted", [False, True])
+def test_phase4_step8_packaged_one_command_hero(repo_root, tmp_path, capsys, monkeypatch, redacted):
+    from recursive_integrity_toolkit.cli import main
+    from importlib.resources import files
+    import jsonschema
+    import urllib.request
+    def denied(*args, **kwargs):
+        raise AssertionError("network operation")
+    monkeypatch.setattr(socket, "socket", denied)
+    monkeypatch.setattr(socket, "getaddrinfo", denied)
+    monkeypatch.setattr(urllib.request, "urlopen", denied)
+    output = tmp_path / "PRIVATE_WORKSPACE"
+    assert main(["example", "--out", str(output), *(["--redacted"] if redacted else [])]) == 0
+    streams = capsys.readouterr()
+    report = json.loads((output / "reports/report.json").read_bytes())
+    phase4_step8_hero_values(report)
+    assert report["run"]["command"] == "rit example" + (" --redacted" if redacted else "")
+    assert "full-product reference" in streams.err and "lineage execution is deferred" in streams.err
+    assert len(list((output / "inputs").iterdir())) == 6
+    for path in (output / "inputs").iterdir():
+        assert path.read_bytes() == (repo_root / "examples/hero" / path.name).read_bytes()
+    schema = files("recursive_integrity_toolkit").joinpath("data", "report.schema.json").read_bytes()
+    assert schema == (repo_root / "schemas/report.schema.json").read_bytes()
+    jsonschema.Draft202012Validator(json.loads(schema)).validate(report)
+    markdown = (output / "reports/report.md").read_text(encoding="utf-8")
+    assert markdown.startswith("# Recursive Integrity Audit Report") and "deferred" in markdown
+    if redacted:
+        assert "PRIVATE_WORKSPACE" not in json.dumps(report) + markdown + streams.out + streams.err
+        assert str(tmp_path) not in json.dumps(report) + markdown + streams.out + streams.err
+    else:
+        assert report["derived_metrics"]["support"]["extinct_states"]["value"] == ["battery", "lizard", "turtle"]
+        assert [report["observed_facts"]["record_counts"][v]["value"] for v in ("v1", "v2")] == [8, 8]
+        assert {a["role"]:a["row_count"] for a in report["inputs"]["artifacts"] if a["role"] in ("records_primary", "records_compare", "provenance_manifest")} == {"records_primary":8,"records_compare":8,"provenance_manifest":16}
+
+
+@pytest.mark.parametrize("existing", ["empty", "file", "populated"])
+def test_phase4_step8_example_never_reuses_a_workspace(tmp_path, capsys, existing):
+    from recursive_integrity_toolkit.cli import main
+    output = tmp_path / "out"
+    if existing == "file": output.write_bytes(b"KEEP")
+    else:
+        output.mkdir()
+        if existing == "populated": (output / "sentinel").write_bytes(b"KEEP")
+    before = {p:p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    assert main(["example", "--out", str(output)]) == 1
+    streams = capsys.readouterr()
+    assert streams.out == "" and "E_OUTPUT_EXISTS" in streams.err
+    assert {p:p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()} == before
+
+
+@pytest.mark.parametrize("path", ["https://invalid.example/x", "//server/share/x", "\\\\server\\share", "../outside", "out/../outside", "NUL", "bad\\path", "bad\x00name"])
+def test_phase4_step8_example_rejects_unsafe_paths_before_resources(tmp_path, capsys, monkeypatch, path):
+    from recursive_integrity_toolkit.cli import main
+    import importlib.resources
+    monkeypatch.chdir(tmp_path)
+    accessed = []
+    def denied(*args, **kwargs):
+        accessed.append(True)
+        raise AssertionError("resources read before path rejection")
+    monkeypatch.setattr(importlib.resources, "files", denied)
+    assert main(["example", "--out", path]) == 1
+    streams = capsys.readouterr()
+    assert streams.out == "" and not accessed and not list(tmp_path.iterdir())
+
+
+def test_phase4_step8_example_extraction_failure_cleans_only_its_files(tmp_path, capsys, monkeypatch):
+    from recursive_integrity_toolkit.cli import main
+    from recursive_integrity_toolkit.utils import paths
+    original = paths._output_write
+    count = []
+    def fail(path, payload, owned):
+        original(path, payload, owned)
+        count.append(True)
+        if len(count) == 2: raise OSError("PRIVATE_DISK_ERROR")
+    monkeypatch.setattr(paths, "_output_write", fail)
+    assert main(["example", "--out", str(tmp_path / "out")]) == 1
+    streams = capsys.readouterr()
+    assert streams.out == "" and "PRIVATE_DISK_ERROR" not in streams.err
+    assert not (tmp_path / "out").exists()
+
+
+def test_phase4_step8_example_concurrent_reservation_does_not_overwrite(tmp_path, capsys, monkeypatch):
+    from pathlib import Path
+    from recursive_integrity_toolkit.cli import main
+    original = Path.mkdir
+    output = tmp_path / "out"
+    def race(path, *args, **kwargs):
+        if path == output:
+            original(path)
+            (path / "foreign").write_bytes(b"KEEP")
+        return original(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "mkdir", race)
+    assert main(["example", "--out", str(output)]) == 1
+    streams = capsys.readouterr()
+    assert streams.out == "" and (output / "foreign").read_bytes() == b"KEEP"
+    assert list(output.iterdir()) == [output / "foreign"]
+
+
+def test_phase4_step8_example_help_remains_lazy(tmp_path, subprocess_env):
+    import subprocess
+    import sys
+    program = "import importlib.abc,sys\nclass Block(importlib.abc.MetaPathFinder):\n def find_spec(self,fullname,path=None,target=None):\n  if fullname.startswith(('numpy','pandas','pyarrow','recursive_integrity_toolkit.io','recursive_integrity_toolkit.config','recursive_integrity_toolkit.reports')):raise AssertionError('eager execution')\nsys.meta_path.insert(0,Block())\nfrom recursive_integrity_toolkit.cli import main\ntry:main(['example','--help'])\nexcept SystemExit as e:assert e.code==0\n"
+    result = subprocess.run([sys.executable, "-c", program], cwd=tmp_path, env=subprocess_env, capture_output=True, text=True)
+    assert result.returncode == 0 and "--out" in result.stdout and not list(tmp_path.iterdir())

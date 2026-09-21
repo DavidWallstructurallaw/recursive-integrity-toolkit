@@ -734,3 +734,80 @@ snapshots. No runtime or mathematical code changes in this correction.
 The first run and its local acceptance evidence are retained as a prior attempt;
 all four workflow roles and complete local regressions execute on the corrected
 source before acceptance. No earlier success substitutes for the final commit.
+
+
+## Phase 4 Step 8 authorization and bounded implementation
+
+Actual user instruction, recorded 2026-09-21: `phase 4 step 8 开始`.
+Accepted Step 7 commit: `bacd33ae65e392872776c6d976401fdc3d565f63`;
+source tree: `4c16914bb0f0c5281efc36624efb8b1a1d4a174e`;
+test tree: `96317cb7b25236b79efc0f2d93e1e0f5f132fdb2`.
+The baseline has 229 files, 40 runtime modules, 3620 core tests and 3623
+real-Parquet tests. The approved plan bytes remain unchanged.
+
+Step 8 opens common G plus CLI/config, package-data declaration only in
+pyproject.toml, the two named CLI/Hero integration files, docs/cli.md and exactly
+seven packaged resource copies listed in the plan. This is a 39-path allowlist,
+with only those seven new paths and a 236-file candidate. No module, dependency,
+version, schema, mathematical definition, accepted kernel or canonical Hero source
+changes. Config extensions are additive; inherited code stays byte-identical.
+
+### Pair, example and failure choices
+
+Each records role selects one distinct version; no pooling or implicit selection.
+The earlier side is records_compare and the later side records_primary. The
+accepted representation and comparison APIs receive explicit scopes and retained
+chronology. Both sides receive the same user-supplied literal state meaning.
+Existing provenance joining selects the later version before the unchanged
+composition/bounds kernels execute. Tail and duplicate report slots also stay
+in the later scope. Both valid distributions survive pair-family failures.
+
+Missing/reversed chronology and incompatible/unavailable representations preserve
+usable evidence with errors and nonzero exit. A conflicting chronology document
+is retried through the accepted input pipeline without its ordering declaration;
+the original ordering error remains attached to the pair family. This makes no
+alternative ordering claim and does not silently infer chronology. Structural
+record parsing/identity failures retain the accepted fatal input behavior.
+State meaning is required for audit comparison, is never inferred from metadata,
+and is rejected on input-only validate, which can ingest two files without analysis.
+Arbitrary mappings and configured per-version compatibility claims remain rejected.
+No assertion of semantic truth follows from the user's literal declaration.
+
+The one-command example reads six exact resources with importlib.resources,
+reserves a new local workspace, writes inputs with exclusive creation and calls
+the same audit path. Safe path/ownership helpers are reused without modifying
+their accepted code. Existing workspaces, links/reparse points and network-looking
+paths fail. Extraction cleanup removes only owned identity-matched files. The
+full-product EXPECTED_OUTPUTS.md is copied unchanged and explicitly distinguished
+from actual Phase 4 output. Reports remain privacy-protected before all sinks.
+The packaged report schema exactly matches the root schema. Installed wheel and
+extracted sdist execution are checked outside the checkout with network blocked.
+
+### Exact historical bindings and independent current checks
+
+Eleven whole-definition migrations were proposed in the work conversation before
+editing, under P4-D10/common G. Seven unit definitions bind current-control and
+historical-migration source reads to the immutable Step 7 fixture. Four integration
+definitions bind Step 7 workflow, AST, test-file syntax and mutation-tree reads to
+that fixture. Their exact names and before/after bytes are registered in
+PHASE4_STEP8_MIGRATIONS. Every original assertion and parameter remains intact.
+The fixture checks commit/source/test trees and every regular blob before use and
+at teardown. No global fixture meaning changes. Config-prefix checks that remain
+valid continue to read current source. New Step 8 controls, AST checks, negative
+mutations and exact resource/package-data checks enforce the newly opened scope.
+Inherited maintainer definitions/constants remain exact except active dispatch.
+
+### Verification and stopping boundary
+
+Acceptance requires full core, minimum-dependency and real-Parquet regressions,
+eight inherited identity generations, all 20 frozen mathematical cases, independent
+pair/Hero/error/privacy/no-network cases, exact wheel/sdist resources, installed
+standard/redacted examples, and a source archive matching every candidate byte.
+The four workflow roles retain the eight core matrix combinations, real Parquet,
+Hero/math, security and build/candidate jobs. Budgets remain core60, Parquet20,
+Hero15, security20 and build40 minutes. The Hero selection adds the current Hero
+integration file; security retains it once with its expanded cases. All failed attempts/repairs remain in external
+evidence. The final receipt records actual results and source identities.
+Reviews are consolidated assistant checks, not independent human certification.
+No final-product performance acceptance is claimed; Step 10 owns end-to-end targets.
+Step 9, Phase 4 completion, main merge, tag and package publication remain unopened.

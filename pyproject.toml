@@ -80,6 +80,9 @@ package-dir = {"" = "src"}
 where = ["src"]
 include = ["recursive_integrity_toolkit*"]
 
+[tool.setuptools.package-data]
+recursive_integrity_toolkit = ["data/hero/*", "data/report.schema.json"]
+
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
