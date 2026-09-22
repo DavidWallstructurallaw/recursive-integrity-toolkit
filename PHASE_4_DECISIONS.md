@@ -965,3 +965,140 @@ Step 10 performance target. Acceptance still requires complete local,
 installed and all four remote workflow checks on one exact corrected source
 commit. Earlier successful jobs do not substitute for those final-source
 checks. Timeouts, partial evidence and retries are never treated as success.
+
+## Phase 4 Step 10 authorization and verification governance
+
+On 2026-09-22 the user authorized `Phase 4 Step 10 开始` after accepting
+Step 9 commit `ad2cb5d0cb34dac9036593bac4e91c9d993bcfc6`. That accepted source
+is the starting point for end-to-end Hero and metadata performance evidence.
+Step 10 completion remains pending actual measurements and review. Step 11,
+Phase 4 completion, merge, tag and package publication remain unopened.
+
+The user's intervening Verification Governance and Complexity Control
+instruction applies immediately. Product correctness and security boundaries
+remain highest priority. Compatibility, packaging and reproducibility checks
+remain required with full supported coverage primarily at PR and release
+candidates. Verification additions must detect a concrete failure that existing
+controls do not adequately detect, using the smallest sufficient control.
+
+New Tier D mechanisms require all five justifications: the exact failure, why
+product/security/compatibility checks cannot detect it, why Git history or
+archived evidence is insufficient, the long-term maintenance cost, and an exit
+or consolidation path. General claims of greater rigor do not justify additions.
+Historical behavioral guarantees remain protected; exact historical Python
+bodies, wrappers and fixture layouts do not automatically require indefinite
+active preservation. Consolidation at major milestones requires identified
+behavior, equivalent or stronger current coverage, recoverable old evidence,
+and unchanged scientific/security guarantees. Current regression, release
+verification and historical evidence should be maintained separately.
+
+This step therefore updates the existing active scope gate against the accepted
+Step 9 Git commit and current authorization. It does not add another historical
+snapshot fixture, migration registry, source-body chain or evidence-generation
+proof layer. Earlier records remain in Git and accepted archives. Current
+behavioral rejection checks retain unauthorized runtime/schema/dependency/
+golden/path mutations and unapproved stage transitions. The current control
+document records permissions; it cannot grant additional permissions itself.
+
+The new direct evidence covers complete Hero execution through JSON and
+Markdown publication, and a deterministic 100,000-record metadata input with
+five source classes and partial provenance. Independent aggregate expectations
+must remain explicit. Untraced elapsed time is measured separately from traced
+Python allocation peaks; RSS scope and tracing overhead are disclosed. All
+attempts, input sizes, report sizes, commands and environment observations are
+retained. No sparse-lineage run, later-phase calculation or fixed 100k throughput
+threshold is authorized. The under-five-second Hero target retains its stated
+hardware and Phase 4 scope limitations.
+
+Development checks follow actual impact: changed performance tests, adjacent
+CLI/report tests, current scope controls and frozen mathematical/report goldens.
+An ordinary Step 10 push uses bounded focused CI. Complete canonical regression
+and the supported matrix remain available at pull-request and explicit candidate
+dispatch gates, with final release verification in Step 11. Administrative or
+documentation changes do not automatically rerun a release matrix. Meaningful
+bounded mutation checks are preferred to raw test-count growth where they
+detect distinct defects. No existing product or scientific guarantee is waived.
+
+No runtime, mathematical, schema, package-resource, dependency or accepted
+golden mutation is authorized by this performance step. A demonstrated
+protected-owner repair must be described concretely and receive its required
+scoped approval before implementation; an unresolved performance defect cannot
+be converted into successful Step 10 acceptance.
+
+### Step 10 bounded investigation: protected report repair pending
+
+The complete Hero audit has executed successfully on the recorded container
+CPU, including publication of both reports. These observations do not certify
+all laptop hardware. The required 100,000-record fixture has not been executed
+or accepted: bounded report-path review found a concrete quadratic expansion.
+
+In `reports/assembly.py`, `_diagnostics` attaches the full input identity scope
+to every warning and uses linear list membership to deduplicate diagnostics.
+A bounded direct adapter probe with 100/400 records and 10/40 missing-row
+warnings produced 1,000/16,000 repeated scope identities. Separately,
+`_duplicates` rebuilds the entire scope set for every duplicate group; a
+100/400-record probe with 50/200 groups processed 5,000/80,000 scope keys.
+Both are sixteenfold work/data growth for a fourfold input increase.
+
+An unapplied repair proposal is retained with the external Step 10 review.
+It would keep warning scope identity/counts/denominator and exact locations,
+retain the full inventory in `inputs.scope`, use equality-preserving local
+diagnostic keys, and construct the duplicate scope set once. All warning entries,
+classification, counts, encounter order, errors and scientific values remain
+protected. The existing schema permits the proposed warning summary fields;
+no schema, oracle, dependency or mathematical change is proposed.
+
+The proposed runtime file is outside the original Step 10 permission set.
+No runtime repair has been applied, and no permission is inferred from this
+record. Step 10 remains blocked pending the scoped protected-owner decision,
+the actual 100,000-record measurements, relevant regression and final review.
+
+### Approved Step 10 protected-owner repair
+
+On 2026-09-22 the user replied `批准` to the delivered Step 10 repair review
+and `PHASE_4_STEP_10_PROPOSED_REPAIR.patch`. This explicitly authorizes the
+single additional runtime path `src/recursive_integrity_toolkit/reports/assembly.py`
+for the proposed warning-scope summary, equality-preserving local diagnostic
+deduplication and duplicate-group scope-set reuse, followed by real 100,000-record
+measurements and relevant regressions. The earlier pending status above records
+the investigation before this approval and is not the current permission state.
+
+The original reviewed patch is applied without expanding the runtime scope.
+Every warning's location, count, classification, encounter order and capability
+effects remain protected, with complete identities retained in inputs.scope.
+Scope identity, counts and denominator remain in every warning's affected_scope;
+its optional complete identity arrays are no longer repeated. This standard-mode
+representation change does not assert redaction or missing evidence. Formulae,
+denominators, unavailable states, evidence classes, privacy guarantees, schema,
+accepted golden oracles and dependencies remain unchanged.
+
+Current controls may synchronize this exact exception and directly test its
+behavior. No new historical migration chain, general runtime permission or
+later-step authorization is conferred. Step 10 acceptance remains pending the
+actual scale measurements and relevant correctness/security review.
+
+### Bounded allocation instrumentation for the actual 100k run
+
+After the approved repair, a matched 1,000-record pair measured about 7.774
+seconds without allocation tracing and 78.742 seconds with tracemalloc enabled,
+an observed 10.13-fold instrumentation overhead. These measurements describe
+that 1,000-record input only. They are not measured 100,000-record results.
+
+The formal 100,000-record run therefore retains the complete real CLI audit,
+publication and verification of both reports, untraced wall time, and fresh-child
+peak RSS, with its existing 1,800-second process guard. Its Python allocation
+peak is explicitly null and marked unmeasured. Hero retains three untraced runs
+and one separate traced run; the matched 1,000-record diagnostic retains its
+actual allocation peak and overhead. RSS and traced Python allocations have
+different scopes and are reported separately. No small-input result is
+extrapolated into a measured full-scale result.
+
+This bounded instrumentation choice follows the Phase 4 performance plan's
+separation of wall-time measurement from tracing and the user's complexity
+control policy. The plan requires actual end-to-end 100k time and memory
+observations; it does not require tracemalloc on every input size. Independent
+review confirmed this reading. Measured tracing overhead and the container's
+finite memory justify omitting the additional full-scale tracing pass. Actual
+100k RSS remains mandatory, and no throughput target, Hero target, report
+semantics, warning inventory or failure acceptance rule is relaxed. All raw
+attempts and their instrumentation modes remain recoverable in the evidence.

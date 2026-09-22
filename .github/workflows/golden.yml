@@ -1,7 +1,6 @@
-name: Phase 4 Step 9 Hero and Mathematical Contract
+name: Phase 4 Step 10 Hero and Mathematical Contract
 
 on:
-  push:
   pull_request:
   workflow_dispatch:
 
@@ -34,16 +33,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-math"
-          python scripts/check_spec_consistency.py --phase 4 --step 9
+          python scripts/check_spec_consistency.py --phase 4 --step 10
           python -m pytest -p no:cacheprovider -q tests/integration/test_hero_structure.py tests/integration/test_hero_end_to_end.py tests/integration/test_phase3_metric_pipeline.py tests/golden/test_phase3_math.py tests/golden/test_phase4_reports.py --junitxml="$RUNNER_TEMP/rit-math/math.xml" | tee "$RUNNER_TEMP/rit-math/phase4_math_validation.log"
-          python scripts/release_check.py --phase 4 --step 9 --golden-junit "$RUNNER_TEMP/rit-math/math.xml"
-          python scripts/release_check.py --phase 4 --step 9 --diff
+          python scripts/release_check.py --phase 4 --step 10 --golden-junit "$RUNNER_TEMP/rit-math/math.xml"
+          python scripts/release_check.py --phase 4 --step 10 --diff
       - name: Retain actual Hero and mathematical evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase4-step9-hero-mathematical
+          name: phase4-current-hero-mathematical
           path: ${{ runner.temp }}/rit-math/
           if-no-files-found: error
           retention-days: 30
-# Frozen mathematical expectations are unchanged; Step 9 Hero reports use independent assertions.
+# Frozen mathematical expectations are unchanged; Step 10 Hero reports use independent assertions.

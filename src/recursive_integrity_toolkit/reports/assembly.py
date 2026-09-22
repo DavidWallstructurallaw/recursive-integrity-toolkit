@@ -587,10 +587,11 @@ def _duplicates(payload, value, bundle):
     coverage = _coverage(value.coverage)
     groups = []
     seen = set()
+    scope_keys = set(value.scope.included_record_keys)
     for index, group in enumerate(value.exact_duplicate_groups):
         _typed(group, ExactDuplicateGroup, "duplicate group")
         _require(len(group.record_keys) >= 2 and len(set(group.record_keys)) == len(group.record_keys), "duplicate group must retain unique members")
-        _require(set(group.record_keys) <= set(value.scope.included_record_keys) and not seen.intersection(group.record_keys),
+        _require(set(group.record_keys) <= scope_keys and not seen.intersection(group.record_keys),
                  "duplicate groups overlap or leave their scope")
         seen.update(group.record_keys)
         groups.append({"group_id": "exact_duplicate_group_" + str(index + 1),
@@ -926,8 +927,31 @@ def _message_family(message):
     return ["ingestion"]
 
 
+def _diagnostic_equality_key(value):
+    """Hash literal diagnostic JSON with Python container equality semantics.
+
+    Numeric leaves preserve existing equality, including 1 == 1.0 == True;
+    canonical report validation independently rejects invalid field types.
+    Dictionary order is immaterial; list order remains significant.
+    """
+    if type(value) is dict:
+        return (0, frozenset((key, _diagnostic_equality_key(item))
+                             for key, item in value.items()))
+    if type(value) is list:
+        return (1, tuple(_diagnostic_equality_key(item) for item in value))
+    return (2, value)
+
+
 def _diagnostics(payload, messages, family=None):
     _require(type(messages) is tuple, "diagnostic collections must be immutable tuples")
+    # The complete record inventory remains in inputs.scope. Each diagnostic
+    # retains the same scope identity/counts and its exact record location,
+    # without copying every input identity into every warning.
+    warning_scope = {key: payload["inputs"]["scope"][key] for key in (
+        "dataset_versions", "record_count", "excluded_record_count",
+        "denominator_basis", "scope_id")}
+    warning_keys = {_diagnostic_equality_key(item) for item in payload["warnings"]}
+    error_keys = {_diagnostic_equality_key(item) for item in payload["errors"]}
     for message in messages:
         _typed(message, ValidationMessage, "validation message")
         _require(type(message.severity) is ValidationSeverity, "diagnostic severity requires accepted enum")
@@ -943,9 +967,11 @@ def _diagnostics(payload, messages, family=None):
                         "field": message.field, "record_key": None if message.record_key is None else _key(message.record_key),
                         "row_number": message.row_number, "line_number": message.line_number}
             item = {"code": message.code, "message": message.message, "count": 1,
-                    "affected_scope": payload["inputs"]["scope"], "representative_locations": [location],
+                    "affected_scope": warning_scope, "representative_locations": [location],
                     "effect_on_capabilities": effects, "remediation": [], "severity": "warning"}
-            if item not in payload["warnings"]:
+            identity = _diagnostic_equality_key(item)
+            if identity not in warning_keys:
+                warning_keys.add(identity)
                 payload["warnings"].append(item)
         else:
             item = {"code": message.code, "severity": message.severity.value, "message": message.message,
@@ -953,7 +979,9 @@ def _diagnostics(payload, messages, family=None):
                     "field": message.field, "record_key": None if message.record_key is None else _key(message.record_key),
                     "row_number": message.row_number, "effect_on_run": "partial" if payload["inputs"]["scope"]["record_count"] else "failed",
                     "effect_on_capabilities": effects, "remediation": []}
-            if item not in payload["errors"]:
+            identity = _diagnostic_equality_key(item)
+            if identity not in error_keys:
+                error_keys.add(identity)
                 payload["errors"].append(item)
 
 

@@ -862,3 +862,108 @@ def test_phase4_step9_hostile_state_labels_stay_inert_through_cli(
             except json.JSONDecodeError:
                 pass
         assert label in literals
+
+
+@pytest.mark.parametrize("mode", ["standard", "hash", "omit"])
+def test_phase4_step10_warning_scope_summary_preserves_diagnostics_and_privacy(tmp_path, capsys, mode):
+    """Missing-row warnings retain each location and each distinct capability effect."""
+    args, records, config = phase4_step7_inputs(tmp_path, provenance=True)
+    version = "PRIVATE_VERSION_STEP10"
+    rows = [json.loads(line) for line in records.read_text().splitlines()]
+    for index, row in enumerate(rows):
+        row.update(dataset_version=version, record_id=f"PRIVATE_RECORD_STEP10_{index}")
+    records.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+    provenance = tmp_path / "provenance.jsonl"
+    entries = [json.loads(line) for line in provenance.read_text().splitlines()][:2]
+    for index, row in enumerate(entries):
+        row.update(dataset_version=version, record_id=f"PRIVATE_RECORD_STEP10_{index}")
+    entries[1]["external_grounding"] = "unknown"
+    provenance.write_text("\n".join(json.dumps(row) for row in entries), encoding="utf-8")
+    extra = [] if mode == "standard" else ["--redacted", "--record-ids", mode]
+    output = tmp_path / "out"
+    code, report, streams = phase4_step7_invoke(args + extra, output, capsys)
+    assert code == 0 and report["run"]["run_status"] == "complete" and report["errors"] == []
+    expected = [
+        ("W_PROVENANCE_MISSING_ROW", None, ["ingestion"]),
+        ("W_PROVENANCE_MISSING_ROW", None, ["ingestion"]),
+        ("W_GROUNDING_UNKNOWN", 2, ["provenance"]),
+        ("W_PROVENANCE_MISSING_ROW", 3, ["ingestion"]),
+        ("W_PROVENANCE_MISSING_ROW", 4, ["ingestion"]),
+        ("W_PROVENANCE_MISSING_ROW", 3, ["provenance"]),
+        ("W_PROVENANCE_MISSING_ROW", 4, ["provenance"]),
+    ]
+    assert [(item["code"], item["representative_locations"][0]["row_number"],
+             item["effect_on_capabilities"]) for item in report["warnings"]] == expected
+    scope = report["inputs"]["scope"]
+    summary = {key: scope[key] for key in ("dataset_versions", "record_count", "excluded_record_count",
+                                          "denominator_basis", "scope_id")}
+    for item in report["warnings"]:
+        assert item["count"] == 1 and item["severity"] == "warning"
+        assert item["affected_scope"] == summary
+        assert len(item["representative_locations"]) == 1
+    facts = report["observed_facts"]["provenance"]
+    assert facts["source_type_counts"]["value"] == dict(human=1, synthetic=1, mixed=0, sensor=0, unknown=0)
+    assert facts["missing_provenance_count"]["value"] == 2
+    assert [facts[name]["value"] for name in ("known_open_count", "known_closed_count", "unresolved_grounding_count")] == [1, 0, 3]
+    direct = report["derived_metrics"]["closure_exposure"]["direct"]
+    assert [direct[name]["value"] for name in ("lower_bound", "upper_bound", "interval_width")] == [0, .75, .75]
+    assert all(direct[name]["denominator"] == 4 for name in ("lower_bound", "upper_bound", "interval_width"))
+    assert [json.loads(line) for line in streams.err.splitlines()] == report["warnings"]
+    markdown = (output / "report.md").read_text(encoding="utf-8")
+    for warning_code in ("W_PROVENANCE_MISSING_ROW", "W_GROUNDING_UNKNOWN"):
+        assert warning_code in markdown
+    locations = [item["representative_locations"][0] for item in report["warnings"]]
+    assert [location["file_role"] for location in locations] == [None, None, "provenance_manifest",
+                                                               "records_primary", "records_primary", "records_primary", "records_primary"]
+    assert [location["field"] for location in locations] == [None, None, "external_grounding", None, None, None, None]
+    assert all(location["line_number"] is None for location in locations)
+    if mode == "omit":
+        assert "included_record_keys" not in scope
+        assert all(location["record_key"] is None for location in locations)
+    else:
+        keys = scope["included_record_keys"]
+        assert len(keys) == 4 and len({(key["dataset_version"], key["record_id"]) for key in keys}) == 4
+        assert [location["record_key"] for location in locations] == [keys[index] for index in (2, 3, 1, 2, 3, 2, 3)]
+        if mode == "standard":
+            assert keys == [{"dataset_version": version, "record_id": row["record_id"]} for row in rows]
+        else:
+            assert all(key["record_id"].startswith("hmac-sha256:") for key in keys)
+    emitted = json.dumps(report) + streams.out + streams.err + markdown
+    assert "PRIVATE_CONTENT_" not in emitted
+    if mode != "standard":
+        assert "PRIVATE_VERSION_STEP10" not in emitted and "PRIVATE_RECORD_STEP10_" not in emitted
+        assert str(tmp_path) not in emitted
+
+
+def test_phase4_step10_diagnostic_deduplication_keeps_equality_order_and_context():
+    """Repeated adapter passes coalesce exact duplicates without merging contexts."""
+    from copy import deepcopy
+    from dataclasses import replace
+    from recursive_integrity_toolkit.models import FileRole, RecordKey, ValidationMessage, ValidationSeverity
+    from recursive_integrity_toolkit.reports.assembly import _diagnostics, _diagnostic_equality_key
+
+    scope = dict(dataset_versions=["v"], record_count=2, excluded_record_count=0,
+                 denominator_basis="all_validated_bundle_records", scope_id="validated_bundle",
+                 included_record_keys=[dict(dataset_version="v", record_id=key) for key in ("a", "b")],
+                 excluded_record_keys=[])
+    payload = {"inputs": {"scope": scope, "limitations": []}, "warnings": [], "errors": []}
+    first = ValidationMessage("W_PROVENANCE_MISSING_ROW", ValidationSeverity.WARNING,
+        "record has no matching provenance row", file_role=FileRole.RECORDS_PRIMARY,
+        record_key=RecordKey("v", "a"), row_number=1, line_number=1)
+    second = replace(first, record_key=RecordKey("v", "b"), row_number=2, line_number=2)
+    error = replace(first, code="E_SCHEMA_REQUIRED_FIELD", severity=ValidationSeverity.ERROR)
+    _diagnostics(payload, (first, second, first, error, error))
+    original = deepcopy(payload)
+    payload["warnings"][0] = dict(reversed(tuple(payload["warnings"][0].items())))
+    _diagnostics(payload, (second, first, error))
+    assert payload == original and payload["inputs"]["scope"] == scope
+    _diagnostics(payload, (first, first, error, error), family="provenance")
+    assert [warning["representative_locations"][0]["record_key"]["record_id"] for warning in payload["warnings"]] == ["a", "b", "a"]
+    assert [warning["effect_on_capabilities"] for warning in payload["warnings"]] == [["ingestion"], ["ingestion"], ["provenance"]]
+    assert [item["effect_on_capabilities"] for item in payload["errors"]] == [["ingestion"], ["provenance"]]
+    assert all(item["count"] == 1 for item in payload["warnings"])
+    # Preserve prior Python equality while canonical validation owns field types.
+    for left, right in (({"x": [1, None, True], "y": 2}, {"y": 2.0, "x": [1.0, None, 1]}),
+                        ({"x": [1, 2]}, {"x": [2, 1]}), ({"x": None}, {"x": False}),
+                        ({"x": []}, {"x": {}}), ({"x": "1"}, {"x": 1})):
+        assert (_diagnostic_equality_key(left) == _diagnostic_equality_key(right)) == (left == right)

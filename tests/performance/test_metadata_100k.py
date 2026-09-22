@@ -1,4 +1,4 @@
-"""Step 10 measured 100k calculation paths, with synthetic independent oracles.
+"""Retained Phase 3 calculations and Phase 4 complete 100k metadata audit.
 
 Performance observations are diagnostics, not a whole-report SLA. Synthetic input
 construction is recorded separately. No user data or sparse lineage is involved.
@@ -82,3 +82,150 @@ def test_phase3_duplicate_path_operation_growth_is_not_quadratic(pattern):
         measurements.append(counter[0])
     assert 0 < measurements[0] < measurements[1]
     assert measurements[1] <= 6 * measurements[0], measurements
+
+
+def _phase4_step10_metadata_inputs(directory, size=100000):
+    """Deterministic five-class metadata with 10% absent provenance rows.
+
+    A constant required content field is carried but never analyzed. No
+    randomness, parent graph, similarity or sparse-lineage work is requested.
+    Divisibility by 100 keeps the independent aggregate arithmetic exact.
+    """
+    import csv
+    import json
+    import time
+
+    assert size > 0 and size % 100 == 0
+    start = time.perf_counter()
+    records, provenance, config = (directory / name for name in ("records.csv", "provenance.csv", "config.json"))
+    sources = ("human", "synthetic", "mixed", "sensor", "unknown")
+    with records.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(("dataset_version", "record_id", "topic", "content"))
+        writer.writerows(("m", f"{i:06d}", f"s{i % 100:02d}", "synthetic metadata") for i in range(size))
+    with provenance.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(("dataset_version", "record_id", "source_type", "provenance_confidence", "external_grounding"))
+        for i in range(size):
+            if i % 10 == 9:
+                continue
+            source = sources[(i // 10) % 5]
+            grounding = "yes" if source in ("human", "sensor") else "no" if source == "synthetic" else "unknown"
+            writer.writerow(("m", f"{i:06d}", source, "confirmed", grounding))
+    config.write_text(json.dumps({"representation": {"name": "topic", "source": "topic_field",
+        "field": "topic", "version": "synthetic-topic-v1", "missing_value_policy": "error"}},
+        sort_keys=True) + "\n", encoding="utf-8")
+    return (["--records", str(records), "--provenance", str(provenance), "--config", str(config)],
+            [records, provenance, config], time.perf_counter() - start)
+
+
+def _phase4_step10_assert_metadata_report(path, size=100000):
+    """Arithmetic authored from the generator, without invoking metric helpers."""
+    import json
+
+    report = json.loads(path.read_bytes())
+    assert report["run"]["run_status"] == "complete" and not report["errors"]
+    metrics = report["derived_metrics"]
+    assert metrics["support"]["by_version"]["m"]["support_size"]["value"] == 100
+    assert abs(metrics["diversity"]["by_version"]["m"]["gini_simpson_diversity"]["value"] - float(Fraction(99, 100))) <= 1e-12
+    assert report["observed_facts"]["state_counts"]["by_version"]["m"]["value"] == [
+        {"state_id": f"s{i:02d}", "state_count": size // 100} for i in range(100)]
+    facts = report["observed_facts"]["provenance"]
+    assert facts["source_type_counts"]["value"] == {source: size * 18 // 100
+        for source in ("human", "synthetic", "mixed", "sensor", "unknown")}
+    assert metrics["provenance"]["source_type_shares"]["value"] == {source: .18
+        for source in ("human", "synthetic", "mixed", "sensor", "unknown")}
+    assert facts["missing_provenance_count"]["value"] == size // 10
+    assert metrics["provenance"]["missing_provenance_share"]["value"] == .1
+    assert facts["records_with_matching_rows"]["value"] == size * 9 // 10
+    for name in ("provenance_row_coverage", "provenance_required_field_coverage"):
+        assert facts[name]["value"] == .9 and facts[name]["denominator"] == size
+    assert [facts[name]["value"] for name in ("known_open_count", "known_closed_count", "unresolved_grounding_count")] == [size * 36 // 100, size * 18 // 100, size * 46 // 100]
+    direct = metrics["closure_exposure"]["direct"]
+    assert [direct[name]["value"] for name in ("lower_bound", "upper_bound", "interval_width")] == [.18, .64, .46]
+    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert report["capabilities"]["content_diagnostics"]["execution_status"] == "completed"
+    assert report["capabilities"]["content_diagnostics"]["execution_scope"] == ["supplied_distribution:audit-representation"]
+    assert set(metrics) == {"closure_exposure", "diversity", "provenance", "support"}
+    assert report["simulations"] == {}
+
+
+def test_phase4_step10_metadata_100k_complete_report_runtime(phase4_step10_measure_reports, tmp_path, request):
+    """Observe the required 100k metadata audit through published JSON/Markdown."""
+    import json
+
+    arguments, inputs, setup_seconds = _phase4_step10_metadata_inputs(tmp_path)
+    request.node.user_properties.append(("phase4_performance_setup", json.dumps(dict(
+        name="metadata_100k_csv_construction", elapsed_seconds=setup_seconds, record_count=100000,
+        measured_audit_excludes_setup=True), sort_keys=True)))
+    reports, _ = phase4_step10_measure_reports("metadata_100k_complete_reports", arguments,
+        inputs, record_count=100000, timeout_seconds=1800, trace_allocations=False)
+    for path in reports:
+        _phase4_step10_assert_metadata_report(path)
+
+
+def test_phase4_step10_partial_report_output_growth_is_bounded(tmp_path, capsys, request):
+    """Fourfold data growth cannot duplicate the whole scope per warning."""
+    import json
+    from recursive_integrity_toolkit.cli import main
+
+    observations = []
+    for size in (100, 400):
+        directory = tmp_path / str(size)
+        directory.mkdir()
+        arguments, _, _ = _phase4_step10_metadata_inputs(directory, size)
+        output = directory / "out"
+        assert main(["audit", *arguments, "--out", str(output)]) == 0
+        streams = capsys.readouterr()
+        _phase4_step10_assert_metadata_report(output / "report.json", size)
+        report = json.loads((output / "report.json").read_bytes())
+        # Each missing row retains generation, input-join and provenance contexts.
+        assert len(report["warnings"]) == size * 66 // 100
+        assert [json.loads(line) for line in streams.err.splitlines()] == report["warnings"]
+        assert len(report["inputs"]["scope"]["included_record_keys"]) == size
+        assert all("included_record_keys" not in item["affected_scope"] for item in report["warnings"])
+        observations.append({"records": size, "warnings": len(report["warnings"]),
+            "json_bytes": (output / "report.json").stat().st_size,
+            "markdown_bytes": (output / "report.md").stat().st_size,
+            "stderr_bytes": len(streams.err.encode("utf-8"))})
+    request.node.user_properties.append(("phase4_report_growth", json.dumps(observations, sort_keys=True)))
+    for key in ("json_bytes", "markdown_bytes", "stderr_bytes"):
+        assert 0 < observations[0][key] < observations[1][key] <= 6 * observations[0][key], observations
+
+
+def test_phase4_step10_duplicate_report_scope_is_indexed_once_and_boundaries_survive():
+    """Grouped duplicate reports reuse scope membership without relaxing checks."""
+    import builtins
+    from dataclasses import replace
+    from types import FunctionType
+    from recursive_integrity_toolkit.models import RecordKey
+    from recursive_integrity_toolkit.reports import assembly
+
+    for size in (100, 400):
+        records = tuple(normalize_row(dict(dataset_version="synthetic-v1", record_id=f"r{i:06d}",
+                        content=f"synthetic pair {i // 2}"), kind="records") for i in range(size))
+        result = _duplicates(records)
+        constructions = []
+        def counted_set(values=()):
+            if values is result.scope.included_record_keys:
+                constructions.append(len(values))
+            return builtins.set(values)
+        # Clone only the adapter globals so unrelated set use is not intercepted.
+        namespace = dict(assembly._duplicates.__globals__, set=counted_set)
+        adapter = FunctionType(assembly._duplicates.__code__, namespace)
+        payload = {"observed_facts": {}}
+        adapter(payload, result, None)
+        assert constructions == [size]
+        content = payload["observed_facts"]["content"]
+        assert content["duplicate_group_count"]["value"] == size // 2
+        assert content["duplicate_record_count"]["value"] == size // 2
+        groups = content["exact_duplicate_groups"]["value"]
+        assert [entry["record_keys"] for entry in groups] == [[
+            {"dataset_version": key.dataset_version, "record_id": key.record_id} for key in group.record_keys]
+            for group in result.exact_duplicate_groups]
+        first, second, *remaining = result.exact_duplicate_groups
+        overlap = replace(second, record_keys=first.record_keys)
+        outside = replace(first, record_keys=(first.record_keys[0], RecordKey("synthetic-v1", "outside")))
+        for changed in ((first, overlap, *remaining), (outside, second, *remaining)):
+            with pytest.raises(assembly.ReportAssemblyError, match="overlap or leave their scope"):
+                adapter({"observed_facts": {}}, replace(result, exact_duplicate_groups=changed), None)

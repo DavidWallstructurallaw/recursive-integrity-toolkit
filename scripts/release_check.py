@@ -10838,46 +10838,63 @@ def _phase4_step8_files():
     return MappingProxyType(files)
 
 
-def phase4_step9_expected_control() -> dict:
-    """Actual Step 9 approval is independent of the mutable control document."""
-    prior = _phase4_step8_files()
-    result = phase4_step8_expected_control()
+PHASE4_CURRENT_STEP = 10
+PHASE4_CURRENT_APPROVAL = "Phase 4 Step 10 开始"
+PHASE4_CURRENT_BASE = "ad2cb5d0cb34dac9036593bac4e91c9d993bcfc6"
+PHASE4_CURRENT_TREE = "64d81ceed83304dca5a5c2cfccf82641819549f1"
+PHASE4_CURRENT_ASSEMBLY = "src/recursive_integrity_toolkit/reports/assembly.py"
+PHASE4_CURRENT_ASSEMBLY_SHA256 = "28725f6b521713fe578d73ed43c1a0f7616496c497dc53414d475390843732e0"
+PHASE4_CURRENT_ALLOWED = PHASE4_G | {
+    PHASE4_CURRENT_ASSEMBLY,
+    "tests/performance/test_hero_runtime.py", "tests/performance/test_metadata_100k.py",
+    "tests/performance/README.md", "tests/integration/test_phase4_cli.py",
+}
+
+
+def _phase4_current_files() -> dict[str, bytes]:
+    """Use accepted Git content directly, without another source-hash registry."""
+    if git("rev-parse", PHASE4_CURRENT_BASE + "^{tree}").decode().strip() != PHASE4_CURRENT_TREE:
+        raise ValueError("Accepted Phase 4 source tree mismatch")
+    with zipfile.ZipFile(io.BytesIO(git("archive", "--format=zip", PHASE4_CURRENT_BASE))) as archive:
+        return {item.filename: archive.read(item) for item in archive.infolist() if not item.is_dir()}
+
+
+def phase4_current_expected_control() -> dict:
+    """Bind current permission to the user's authorization and accepted Git source."""
+    result = json.loads(git("show", PHASE4_CURRENT_BASE + ":PHASE_4_BASELINE.json"))
     result.update({
-        "control_version": "1.8", "active_step": 9,
-        "approval_date": PHASE4_STEP9_APPROVAL_DATE, "approval_basis": PHASE4_STEP9_APPROVAL,
-        "previous_step_commit": PHASE4_STEP8_FINAL,
-        "previous_step_tree": PHASE4_STEP8_TREE,
-        "previous_step_test_tree": PHASE4_STEP8_TEST_TREE,
-        "previous_step_core_tests": 3768, "previous_step_parquet_tests": 3771,
-        "previous_step_files_sha256": {p: hashlib.sha256(raw).hexdigest() for p, raw in sorted(prior.items())},
-        "permitted_paths": sorted(PHASE4_STEP9_ALLOWED), "new_files_permitted": list(PHASE4_STEP9_NEW),
-        "runtime_changes_authorized": False, "schema_changes_authorized": False,
-        "runtime_paths_authorized": sorted(p for p in PHASE4_STEP9_ALLOWED if p.startswith("src/") and p.endswith(".py")),
-        "schema_paths_authorized": [], "package_resource_copies": {},
-        "package_data_declaration_only": False, "report_goldens_authorized": True,
-        "step8_historical_binding_nodes": {p: sorted({r["node"] for r in rows})
-                                          for p, rows in sorted(PHASE4_STEP9_MIGRATIONS.items())},
+        "control_version": "1.9", "active_step": PHASE4_CURRENT_STEP,
+        "approval_date": "2026-09-22", "approval_basis": PHASE4_CURRENT_APPROVAL,
+        "previous_step_commit": PHASE4_CURRENT_BASE, "previous_step_tree": PHASE4_CURRENT_TREE,
+        "previous_step_test_tree": "a6c60ed13c274da73ad085d0989c6a7a4641e203",
+        "previous_step_core_tests": 3959, "previous_step_parquet_tests": 3962,
+        "permitted_paths": sorted(PHASE4_CURRENT_ALLOWED), "new_files_permitted": [],
+        "report_goldens_authorized": False,
+        "runtime_changes_authorized": True, "runtime_paths_authorized": [PHASE4_CURRENT_ASSEMBLY],
+        "runtime_repair_approval_basis": "批准",
     })
+    # Git preserves this accepted snapshot; avoid growing parallel hash registries.
+    result.pop("previous_step_files_sha256", None)
     return result
 
 
-def verify_phase4_step9_control(control: dict, step: int = 9) -> None:
-    if type(step) is not int or step != 9 or type(control) is not dict:
-        raise ValueError("Unsupported Phase 4 Step 9 stage/control")
+def verify_phase4_current_control(control: dict, step: int = PHASE4_CURRENT_STEP) -> None:
+    if type(step) is not int or step != PHASE4_CURRENT_STEP or type(control) is not dict:
+        raise ValueError("Unsupported current Phase 4 stage/control")
     try:
         actual = json.dumps(control, sort_keys=True, ensure_ascii=True, allow_nan=False)
-        expected = json.dumps(phase4_step9_expected_control(), sort_keys=True, ensure_ascii=True, allow_nan=False)
+        expected = json.dumps(phase4_current_expected_control(), sort_keys=True, ensure_ascii=True, allow_nan=False)
     except (TypeError, ValueError) as error:
-        raise ValueError("Invalid Phase 4 Step 9 control") from error
+        raise ValueError("Invalid current Phase 4 control") from error
     if actual != expected:
-        raise ValueError("Phase 4 control differs from the independently approved Step 9 contract")
+        raise ValueError("Phase 4 control differs from the independently authorized current scope")
 
 
-def verify_phase4_step9_changes(changes: list[tuple[str, str]]) -> None:
+def verify_phase4_current_changes(changes: list[tuple[str, str]]) -> None:
     seen = set()
     for status, path in changes:
-        if path in seen or path not in PHASE4_STEP9_ALLOWED or status != ("A" if path in PHASE4_STEP9_NEW else "M"):
-            raise ValueError(f"Unapproved Phase 4 Step 9 path/operation: {status} {path}")
+        if path in seen or path not in PHASE4_CURRENT_ALLOWED or status != "M":
+            raise ValueError(f"Unapproved current Phase 4 path/operation: {status} {path}")
         seen.add(path)
 
 
@@ -11041,51 +11058,38 @@ def phase4_step9_golden_contract(root: Path = ROOT) -> dict:
     return {"frozen_report_oracle_files": len(expected)}
 
 
-def verify_phase4_step9_snapshot(root: Path = ROOT) -> dict:
-    prior = _phase4_step8_files()
+def verify_phase4_current_snapshot(root: Path = ROOT) -> dict:
+    """Protect unchanged product/authority bytes with the accepted Git snapshot.
+
+    Current maintenance is reviewed and tested by behavior. Obsolete source forms
+    are retained in Git instead of adding another source-binding migration layer.
+    """
+    prior = _phase4_current_files()
     for path, raw in prior.items():
         target = root / path
         if not target.is_file() or target.is_symlink():
-            raise ValueError(f"Missing or aliased inherited Step 8 file: {path}")
-        current = target.read_bytes()
-        if path not in PHASE4_STEP9_ALLOWED and current != raw:
-            raise ValueError(f"Protected Step 8 bytes changed: {path}")
-        if path.startswith("tests/") and path.endswith(".py") and path in PHASE4_STEP9_ALLOWED:
-            _phase4_step9_check_test_migration(path, raw, current)
-        elif path in {"scripts/release_check.py", "scripts/check_spec_consistency.py", "scripts/check_traceability.py"}:
-            _phase4_step9_preserve_tooling(raw, current, path)
-        elif path in {"docs/architecture.md", "docs/theory_traceability.md", "PHASE_4_DECISIONS.md", "tests/golden/README.md"}:
-            if not current.startswith(raw):
-                raise ValueError(f"Step 8 historical documentation prefix changed: {path}")
-    for path in PHASE4_STEP9_NEW:
-        target = root / path
-        if not target.is_file() or target.is_symlink():
-            raise ValueError(f"Required Step 9 file missing or aliased: {path}")
-    actual_modules = {p.relative_to(root).as_posix() for p in (root / "src/recursive_integrity_toolkit").rglob("*.py")}
-    expected_modules = {p for p in prior if p.startswith("src/") and p.endswith(".py")}
-    if actual_modules != expected_modules or len(actual_modules) != 40:
-        raise ValueError("Step 9 cannot change the runtime module set")
-    if {p.name for p in (root / "schemas").iterdir()} != {Path(p).name for p in prior if p.startswith("schemas/")}:
-        raise ValueError("Step 9 cannot change the schema set")
-    resource_root = root / "src/recursive_integrity_toolkit/data"
-    if any(p.is_symlink() for p in resource_root.rglob("*")) or {p.relative_to(root).as_posix() for p in resource_root.rglob("*") if p.is_file()} != set(PHASE4_STEP8_RESOURCES):
-        raise ValueError("Step 9 cannot change the seven exact packaged resources")
-    if hashlib.sha256((root / "PHASE_4_PLAN.md").read_bytes()).hexdigest() != PHASE4_PLAN_SHA256:
-        raise ValueError("Approved Phase 4 plan changed")
-    verify_phase4_step9_control(json.loads((root / "PHASE_4_BASELINE.json").read_text(encoding="utf-8")))
+            raise ValueError(f"Missing or aliased accepted file: {path}")
+        if path == PHASE4_CURRENT_ASSEMBLY and hashlib.sha256(target.read_bytes()).hexdigest() != PHASE4_CURRENT_ASSEMBLY_SHA256:
+            raise ValueError("Assembly differs from the exact user-approved performance repair")
+        if path not in PHASE4_CURRENT_ALLOWED and target.read_bytes() != raw:
+            raise ValueError(f"Protected accepted bytes changed: {path}")
+    for prefix in ("src/recursive_integrity_toolkit/", "schemas/", "examples/hero/"):
+        paths = list((root / prefix).rglob("*"))
+        if any(path.is_symlink() for path in paths):
+            raise ValueError(f"Aliased protected content: {prefix}")
+        current = {path.relative_to(root).as_posix() for path in paths
+                   if path.is_file() and "__pycache__" not in path.parts}
+        if current != {path for path in prior if path.startswith(prefix)}:
+            raise ValueError(f"Protected accepted file set changed: {prefix}")
+    verify_phase4_current_control(json.loads((root / "PHASE_4_BASELINE.json").read_text(encoding="utf-8")))
     decisions = (root / "PHASE_4_DECISIONS.md").read_text(encoding="utf-8")
-    if PHASE4_STEP9_APPROVAL not in decisions or PHASE4_STEP8_FINAL not in decisions:
-        raise ValueError("Actual Step 9 authorization or Step 8 evidence anchor missing")
+    if PHASE4_CURRENT_APPROVAL not in decisions or PHASE4_CURRENT_BASE not in decisions:
+        raise ValueError("Actual authorization or accepted source anchor missing")
     if any((root / name).exists() for name in PHASE4_FORBIDDEN_OUTPUTS):
-        raise ValueError("Step 9 cannot create Phase 4 completion records or audit outputs")
-    oracles = phase4_step9_golden_contract(root)
-    return {"package_modules": 40, "frozen_runtime_modules": 40, "frozen_schemas": 5,
-            "hero_files_unchanged": 6, "packaged_resources": 7,
-            "historical_phase3_migrated_nodes": 16, "step8_historical_migrated_nodes": 9,
-            "phase_complete": False, "result_contracts_enabled": True,
-            "adapters_enabled": True, "privacy_views_enabled": True, "renderers_enabled": True,
-            "output_publication_enabled": True, "cli_analysis_enabled": True,
-            "comparison_enabled": True, "example_enabled": True, **oracles}
+        raise ValueError("Current intermediate step cannot create phase completion or audit outputs")
+    return {"package_modules": 40, "frozen_runtime_modules": 39, "approved_runtime_repairs": 1, "frozen_schemas": 5,
+            "hero_files_unchanged": 6, "packaged_resources": 7, "phase_complete": False,
+            **phase4_step9_golden_contract(root)}
 
 
 def phase4_step9_golden_evidence(junit: Path) -> dict:
@@ -11123,76 +11127,60 @@ def phase4_step9_golden_evidence(junit: Path) -> dict:
             "missing_nodeids": [], "golden_nodeids_sha256": hashlib.sha256(("\n".join(nodes) + "\n").encode()).hexdigest()}
 
 
-def audit_phase4_step9(step: int = 9) -> dict:
-    verify_phase4_step9_control(json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8")), step)
-    result = {"phase": 4, "active_step": step, **verify_phase4_step9_snapshot(),
+def audit_phase4_current(step: int = PHASE4_CURRENT_STEP) -> dict:
+    verify_phase4_current_control(json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8")), step)
+    result = {"phase": 4, "active_step": step, **verify_phase4_current_snapshot(),
               "phase0_hashes_verified": 16, "publication_authorized": False}
     print(json.dumps(result, indent=2))
     return result
 
 
-def audit_phase4_step9_diff(step: int = 9) -> dict:
-    if type(step) is not int or step != 9:
-        raise ValueError("Unsupported Phase 4 Step 9 stage")
-    _phase4_step8_files()
-    subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", PHASE4_STEP8_FINAL, "HEAD"], check=True)
-    raw = git("diff", "--name-status", "--no-renames", "-z", PHASE4_STEP8_FINAL, "--").split(b"\0")
-    raw = [part.decode("utf-8") for part in raw if part]
+def audit_phase4_current_diff(step: int = PHASE4_CURRENT_STEP) -> dict:
+    if type(step) is not int or step != PHASE4_CURRENT_STEP:
+        raise ValueError("Unsupported current Phase 4 stage")
+    subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", PHASE4_CURRENT_BASE, "HEAD"], check=True)
+    raw = [part.decode("utf-8") for part in git("diff", "--name-status", "--no-renames", "-z", PHASE4_CURRENT_BASE, "--").split(b"\0") if part]
     if len(raw) % 2:
-        raise ValueError("Malformed Step 9 Git difference records")
+        raise ValueError("Malformed current Git difference records")
     changes = list(zip(raw[::2], raw[1::2]))
     changes.extend(("A", p.decode()) for p in git("ls-files", "--others", "--exclude-standard", "-z").split(b"\0") if p)
-    verify_phase4_step9_changes(changes)
-    result = {"previous_step_commit": PHASE4_STEP8_FINAL, "changed_files": len(changes),
-              "changes": changes, "step": 9, "scope": "PASS"}
+    verify_phase4_current_changes(changes)
+    result = {"previous_step_commit": PHASE4_CURRENT_BASE, "changed_files": len(changes),
+              "changes": changes, "step": step, "scope": "PASS"}
     print(json.dumps(result, indent=2))
     return result
 
 
-def phase4_step9_baseline_evidence(output: Path) -> dict:
-    """Reconcile all inherited identities, including the accepted Step 8 suite."""
+def phase4_current_suite_evidence(output: Path) -> dict:
+    """Collect canonical current identities once; historical receipts remain archived."""
     output.mkdir(parents=True, exist_ok=True)
-    inherited = phase4_step8_baseline_evidence(output / "phase4-step8-inherited")
-    with tempfile.TemporaryDirectory(prefix="rit-p4-step8-identities-") as temp:
-        baseline = Path(temp)
-        for name, raw in _phase4_step8_files().items():
-            target = baseline / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(raw)
-        old, old_log = _collect(baseline)
-    current, current_log = _collect(ROOT)
-    expected = 3771 if os.environ.get("RIT_TEST_PARQUET") == "1" else 3768
-    if len(old) != expected or set(old) - set(current):
-        raise ValueError("Accepted Phase 4 Step 8 test identities were lost")
-    result = {"baseline_commit": PHASE4_STEP8_FINAL, "baseline_test_tree": PHASE4_STEP8_TEST_TREE,
-              "baseline_nodeids": old, "current_nodeids": current, "missing_nodeids": [],
-              "baseline_tests": len(old), "current_tests": len(current), "inherited": inherited,
-              "nodeids_sha256": hashlib.sha256(("\n".join(old)+"\n").encode()).hexdigest()}
-    (output / "phase4_step9_test_identity_manifest.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
-    (output / "phase4-step8-collection.log").write_text(old_log, encoding="utf-8")
-    (output / "phase4-step9-collection.log").write_text(current_log, encoding="utf-8")
-    print(json.dumps({k: result[k] for k in ("baseline_tests", "current_tests", "missing_nodeids")}, indent=2))
+    current, log = _collect(ROOT)
+    result = {"current_nodeids": current, "current_tests": len(current),
+              "nodeids_sha256": hashlib.sha256(("\n".join(current)+"\n").encode()).hexdigest()}
+    (output / "phase4_current_test_identity_manifest.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
+    (output / "phase4-current-collection.log").write_text(log, encoding="utf-8")
+    print(json.dumps({"current_tests": len(current)}, indent=2))
     return result
 
 
-def phase4_step9_candidate(output: Path, step: int = 9) -> None:
-    """Build tested Step 9 intermediate evidence without declaring Phase 4 complete."""
+def phase4_current_candidate(output: Path, step: int = PHASE4_CURRENT_STEP) -> None:
+    """Build tested current Phase 4 candidate evidence without declaring Phase 4 complete."""
     if os.environ.get("RIT_TEST_PARQUET") != "1" or importlib.util.find_spec("pyarrow") is None:
-        raise ValueError("Step 9 candidate evidence requires RIT_TEST_PARQUET=1 and real PyArrow")
+        raise ValueError("current Phase 4 candidate evidence requires RIT_TEST_PARQUET=1 and real PyArrow")
     output.mkdir(parents=True, exist_ok=True)
-    result = audit_phase4_step9(step)
-    result["diff"] = audit_phase4_step9_diff(step)
+    result = audit_phase4_current(step)
+    result["diff"] = audit_phase4_current_diff(step)
     if git("status", "--porcelain").strip():
-        raise ValueError("Step 9 candidate archive requires committed, clean source")
+        raise ValueError("current Phase 4 candidate archive requires committed, clean source")
     result["core"] = verify_junit(output / "core.xml", minimum=3768)
     result["parquet"] = verify_junit(output / "parquet.xml", require_parquet=True, minimum=3771)
-    result["core_math_measurements"] = verify_step10_evidence(output / "core.xml", output / "phase4-step9-core-observations.json")
-    result["parquet_math_measurements"] = verify_step10_evidence(output / "parquet.xml", output / "phase4-step9-parquet-observations.json")
+    result["core_math_measurements"] = verify_step10_evidence(output / "core.xml", output / "phase4-current-core-observations.json")
+    result["parquet_math_measurements"] = verify_step10_evidence(output / "parquet.xml", output / "phase4-current-parquet-observations.json")
     result["core_report_goldens"] = phase4_step9_golden_evidence(output / "core.xml")
     result["parquet_report_goldens"] = phase4_step9_golden_evidence(output / "parquet.xml")
     print(json.dumps({name: result[name] for name in ("core_report_goldens", "parquet_report_goldens")}, indent=2))
-    identity = phase4_step9_baseline_evidence(output)
-    result["test_identity"] = {k: identity[k] for k in ("baseline_tests", "current_tests", "nodeids_sha256")}
+    identity = phase4_current_suite_evidence(output)
+    result["test_identity"] = {k: identity[k] for k in ("current_tests", "nodeids_sha256")}
     expected = set()
     for node in identity["current_nodeids"]:
         base, bracket, parameter = node.partition("[")
@@ -11202,7 +11190,7 @@ def phase4_step9_candidate(output: Path, step: int = 9) -> None:
         cases = {(c.get("classname", ""), c.get("name", "")) for c in ET.parse(output / name).getroot().iter("testcase")}
         target = expected if parquet else {c for c in expected if c[1] not in PARQUET_CASES}
         if cases != target:
-            raise ValueError(f"Step 9 JUnit does not execute the entire current suite: {name}")
+            raise ValueError(f"current Phase 4 JUnit does not execute the entire current suite: {name}")
     wheel, sdist = phase4_step8_distributions(output / "dist")
     smoke_installed(wheel)
     smoke_installed_duplicates(wheel)
@@ -11214,36 +11202,36 @@ def phase4_step9_candidate(output: Path, step: int = 9) -> None:
     phase4_step7_installed_cli_smoke(wheel)
     phase4_step8_installed_example_smoke(wheel)
     phase4_step8_sdist_smoke(sdist)
-    archive = output / "recursive-integrity-toolkit-phase4-step9-candidate.zip"
+    archive = output / "recursive-integrity-toolkit-phase4-current-candidate.zip"
     subprocess.run(["git", "-C", str(ROOT), "archive", "--format=zip", "--prefix=recursive-integrity-toolkit/", "HEAD", "-o", str(archive.resolve())], check=True)
     tracked = {p for p in git("ls-files", "-z").decode().split("\0") if p}
     with zipfile.ZipFile(archive) as zipped:
         entries = [item.filename for item in zipped.infolist() if not item.is_dir()]
         prefix = "recursive-integrity-toolkit/"
         if (len(entries) != len(set(entries)) or any(not name.startswith(prefix) for name in entries)):
-            raise ValueError("Step 9 source archive has duplicate or unprefixed entries")
+            raise ValueError("current Phase 4 source archive has duplicate or unprefixed entries")
         names = {name.removeprefix(prefix) for name in entries}
         if names != tracked or len(tracked) != 243 or len(entries) != 243:
-            raise ValueError("Step 9 source archive file set mismatch")
+            raise ValueError("current Phase 4 source archive file set mismatch")
         for name in names:
             if zipped.read("recursive-integrity-toolkit/"+name) != (ROOT / name).read_bytes():
-                raise ValueError(f"Step 9 source archive byte mismatch: {name}")
+                raise ValueError(f"current Phase 4 source archive byte mismatch: {name}")
     result.update({"commit": git("rev-parse", "HEAD").decode().strip(),
                    "tree": git("rev-parse", "HEAD^{tree}").decode().strip(),
                    "source_archive": archive.name, "tracked_files": len(tracked),
                    "python": sys.version, "platform": sys.platform,
                    "versions": {name: importlib.metadata.version(name) for name in ("numpy", "pandas", "pytest")}})
-    (output / "phase4_step9_execution_metadata.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
-    (output / "phase4_step9_repository_files.sha256").write_text("".join(f"{hashlib.sha256((ROOT/name).read_bytes()).hexdigest()}  {name}\n" for name in sorted(tracked)), encoding="utf-8")
-    paths = sorted(p for p in output.rglob("*") if p.is_file() and p.name != "phase4_step9_artifacts.sha256")
-    (output / "phase4_step9_artifacts.sha256").write_text("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(output).as_posix()}\n" for p in paths), encoding="utf-8")
-    print(f"Phase 4 Step 9 candidate: {len(tracked)} source files verified; Phase 4 remains incomplete.")
+    (output / "phase4_current_execution_metadata.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
+    (output / "phase4_current_repository_files.sha256").write_text("".join(f"{hashlib.sha256((ROOT/name).read_bytes()).hexdigest()}  {name}\n" for name in sorted(tracked)), encoding="utf-8")
+    paths = sorted(p for p in output.rglob("*") if p.is_file() and p.name != "phase4_current_artifacts.sha256")
+    (output / "phase4_current_artifacts.sha256").write_text("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(output).as_posix()}\n" for p in paths), encoding="utf-8")
+    print(f"Phase 4 current candidate: {len(tracked)} source files verified; Phase 4 remains incomplete.")
 
 
-def phase4_step9_cli_main() -> int:
-    parser = argparse.ArgumentParser(description="Phase 4 Step 9 maintainer gate")
+def phase4_current_cli_main() -> int:
+    parser = argparse.ArgumentParser(description="Current Phase 4 maintainer gate")
     parser.add_argument("--phase", type=int, choices=(4,), required=True)
-    parser.add_argument("--step", type=int, choices=(9,), required=True)
+    parser.add_argument("--step", type=int, choices=(PHASE4_CURRENT_STEP,), required=True)
     parser.add_argument("--diff", action="store_true")
     parser.add_argument("--junit", type=Path)
     parser.add_argument("--golden-junit", type=Path)
@@ -11256,15 +11244,15 @@ def phase4_step9_cli_main() -> int:
     parser.add_argument("--delivery", type=Path)
     args = parser.parse_args()
     if args.delivery is not None:
-        raise ValueError("Phase 4 Step 9 cannot certify a final phase delivery")
+        raise ValueError("Current Phase 4 cannot certify a final phase delivery")
     if args.golden_junit is not None:
         print(json.dumps(phase4_step9_golden_evidence(args.golden_junit), indent=2))
     elif args.junit is not None:
         verify_junit(args.junit, require_parquet=args.require_parquet, minimum=args.minimum_tests)
     elif args.baseline_evidence is not None:
-        phase4_step9_baseline_evidence(args.baseline_evidence)
+        phase4_current_suite_evidence(args.baseline_evidence)
     elif args.dist is not None:
-        audit_phase4_step9(args.step)
+        audit_phase4_current(args.step)
         wheel, sdist = phase4_step8_distributions(args.dist)
         smoke_installed(wheel)
         smoke_installed_duplicates(wheel)
@@ -11279,11 +11267,11 @@ def phase4_step9_cli_main() -> int:
     elif args.smoke_wheel is not None:
         smoke_installed(args.smoke_wheel)
     elif args.candidate is not None:
-        phase4_step9_candidate(args.candidate, args.step)
+        phase4_current_candidate(args.candidate, args.step)
     else:
-        audit_phase4_step9(args.step)
+        audit_phase4_current(args.step)
         if args.diff:
-            audit_phase4_step9_diff(args.step)
+            audit_phase4_current_diff(args.step)
     return 0
 
 
@@ -11311,9 +11299,9 @@ def cli_main() -> int:
     explicit_step8 = "--step=8" in argv or any(a == "--step" and b == "8" for a, b in zip(argv, argv[1:]))
     if explicit_phase4 and explicit_step8:
         return phase4_step8_cli_main()
-    explicit_step9 = "--step=9" in argv or any(a == "--step" and b == "9" for a, b in zip(argv, argv[1:]))
-    if explicit_phase4 and explicit_step9:
-        return phase4_step9_cli_main()
+    explicit_current = "--step=10" in argv or any(a == "--step" and b == "10" for a, b in zip(argv, argv[1:]))
+    if explicit_phase4 and explicit_current:
+        return phase4_current_cli_main()
     return phase4_cli_main() if explicit_phase4 else main()
 
 

@@ -1,7 +1,6 @@
-name: Phase 4 Step 9 Build and Candidate Evidence
+name: Phase 4 Step 10 Build and Candidate Evidence
 
 on:
-  push:
   pull_request:
   workflow_dispatch:
 
@@ -37,45 +36,45 @@ jobs:
           RIT_TEST_PARQUET: "0"
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/rit-phase4-step9"
-          python -m pip freeze > "$RUNNER_TEMP/rit-phase4-step9/core-dependencies.txt"
+          mkdir -p "$RUNNER_TEMP/rit-phase4-current"
+          python -m pip freeze > "$RUNNER_TEMP/rit-phase4-current/core-dependencies.txt"
           python -m pip check
           python -c "import importlib.util; assert importlib.util.find_spec('pyarrow') is None"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-phase4-step9/core.xml" | tee "$RUNNER_TEMP/rit-phase4-step9/phase4_test_results.log"
-          python scripts/release_check.py --phase 4 --step 9 --junit "$RUNNER_TEMP/rit-phase4-step9/core.xml" --minimum-tests 3768
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-phase4-current/core.xml" | tee "$RUNNER_TEMP/rit-phase4-current/phase4_test_results.log"
+          python scripts/release_check.py --phase 4 --step 10 --junit "$RUNNER_TEMP/rit-phase4-current/core.xml" --minimum-tests 3768
       - name: Run complete real-Parquet regression
         env:
           RIT_TEST_PARQUET: "1"
         run: |
           set -euo pipefail
           python -m pip install ".[parquet]"
-          python -m pip freeze > "$RUNNER_TEMP/rit-phase4-step9/parquet-dependencies.txt"
+          python -m pip freeze > "$RUNNER_TEMP/rit-phase4-current/parquet-dependencies.txt"
           python -m pip check
           python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-phase4-step9/parquet.xml" | tee "$RUNNER_TEMP/rit-phase4-step9/phase4_parquet_results.log"
-          python scripts/release_check.py --phase 4 --step 9 --junit "$RUNNER_TEMP/rit-phase4-step9/parquet.xml" --require-parquet --minimum-tests 3771
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-phase4-current/parquet.xml" | tee "$RUNNER_TEMP/rit-phase4-current/phase4_parquet_results.log"
+          python scripts/release_check.py --phase 4 --step 10 --junit "$RUNNER_TEMP/rit-phase4-current/parquet.xml" --require-parquet --minimum-tests 3771
       - name: Check authority, declarations and current-step scope
         run: |
           set -euo pipefail
-          python scripts/check_spec_consistency.py --phase 4 --step 9
-          python scripts/check_traceability.py --phase 4 --step 9
-          python scripts/release_check.py --phase 4 --step 9 --diff
+          python scripts/check_spec_consistency.py --phase 4 --step 10
+          python scripts/check_traceability.py --phase 4 --step 10
+          python scripts/release_check.py --phase 4 --step 10 --diff
           rit version
-      - name: Build and verify the installed Step 9 baseline
+      - name: Build and verify the installed Step 10 baseline
         run: |
           set -euo pipefail
-          python -m build --outdir "$RUNNER_TEMP/rit-phase4-step9/dist" | tee "$RUNNER_TEMP/rit-phase4-step9/phase4_build_results.log"
-          python -m twine check --strict "$RUNNER_TEMP/rit-phase4-step9/dist/"*
-          python scripts/release_check.py --phase 4 --step 9 --dist "$RUNNER_TEMP/rit-phase4-step9/dist" | tee "$RUNNER_TEMP/rit-phase4-step9/installed-wheel.log"
-      - name: Produce the byte-verified Step 9 candidate archive
+          python -m build --outdir "$RUNNER_TEMP/rit-phase4-current/dist" | tee "$RUNNER_TEMP/rit-phase4-current/phase4_build_results.log"
+          python -m twine check --strict "$RUNNER_TEMP/rit-phase4-current/dist/"*
+          python scripts/release_check.py --phase 4 --step 10 --dist "$RUNNER_TEMP/rit-phase4-current/dist" | tee "$RUNNER_TEMP/rit-phase4-current/installed-wheel.log"
+      - name: Produce the byte-verified Step 10 candidate archive
         env:
           RIT_TEST_PARQUET: "1"
-        run: python scripts/release_check.py --phase 4 --step 9 --candidate "$RUNNER_TEMP/rit-phase4-step9"
+        run: python scripts/release_check.py --phase 4 --step 10 --candidate "$RUNNER_TEMP/rit-phase4-current"
       - name: Retain candidate or failure evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: recursive-integrity-toolkit-phase4-step9-candidate
-          path: ${{ runner.temp }}/rit-phase4-step9/
+          name: recursive-integrity-toolkit-phase4-current-candidate
+          path: ${{ runner.temp }}/rit-phase4-current/
           if-no-files-found: error
           retention-days: 90

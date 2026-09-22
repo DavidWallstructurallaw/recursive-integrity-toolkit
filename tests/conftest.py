@@ -830,3 +830,146 @@ def phase4_step8_snapshot(repo_root, tmp_path_factory):
     verify_unchanged()
     yield root
     verify_unchanged()
+
+
+@pytest.fixture
+def phase4_step10_measure_reports(request, tmp_path, subprocess_env):
+    """Measure complete CLI publication in fresh processes; retain every attempt.
+
+    Untraced wall time and separately traced Python allocation are distinct
+    observations. Process peak RSS includes interpreter/native allocations and
+    is a process high-water mark, never a per-operation allocation estimate.
+    """
+    import hashlib
+    import importlib.metadata
+    import json
+    import platform
+    import subprocess
+    import time
+
+    program = r'''
+import json, os, sys, time, tracemalloc
+from pathlib import Path
+
+def peak_rss():
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+        class Counters(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
+                ("PeakWorkingSetSize", ctypes.c_size_t), ("WorkingSetSize", ctypes.c_size_t),
+                ("QuotaPeakPagedPoolUsage", ctypes.c_size_t), ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t), ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t)]
+        counters = Counters()
+        counters.cb = ctypes.sizeof(counters)
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.GetCurrentProcess.restype = wintypes.HANDLE
+        psapi = ctypes.WinDLL("psapi", use_last_error=True)
+        psapi.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(Counters), wintypes.DWORD]
+        if not psapi.GetProcessMemoryInfo(kernel.GetCurrentProcess(), ctypes.byref(counters), counters.cb):
+            raise ctypes.WinError(ctypes.get_last_error())
+        return counters.PeakWorkingSetSize, "GetProcessMemoryInfo.PeakWorkingSetSize; whole fresh process"
+    import resource
+    raw = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return int(raw if sys.platform == "darwin" else raw * 1024), "getrusage(RUSAGE_SELF).ru_maxrss; whole fresh process"
+
+traced = sys.argv[1] == "traced"
+observation_path = Path(sys.argv[2])
+before, rss_method = peak_rss()
+if traced:
+    tracemalloc.start(1)
+start = time.perf_counter()
+code = None
+try:
+    from recursive_integrity_toolkit.cli import main
+    code = main(sys.argv[3:])
+finally:
+    elapsed = time.perf_counter() - start
+    current, peak = tracemalloc.get_traced_memory() if traced else (None, None)
+    if traced:
+        tracemalloc.stop()
+    after, _ = peak_rss()
+    observation_path.write_text(json.dumps(dict(cli_elapsed_seconds=elapsed,
+        tracing=traced, traced_current_bytes=current, traced_peak_bytes=peak,
+        rss_peak_before_cli_bytes=before, rss_peak_after_cli_bytes=after,
+        rss_method=rss_method, cli_exit_code=code), sort_keys=True) + "\n", encoding="utf-8")
+sys.exit(code)
+'''
+    versions = {}
+    for package in ("numpy", "pandas", "pytest", "pyarrow"):
+        try:
+            versions[package] = importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError:
+            versions[package] = None
+    cpu = platform.processor() or platform.machine()
+    cpuinfo = Path("/proc/cpuinfo")
+    if cpuinfo.is_file():
+        cpu = next((line.split(":", 1)[1].strip() for line in cpuinfo.read_text().splitlines()
+                    if line.startswith("model name")), cpu)
+    environment = dict(python=platform.python_version(), executable=sys.executable,
+        platform=platform.platform(), machine=platform.machine(), cpu=cpu,
+        logical_cpu_count=os.cpu_count(), versions=versions)
+
+    def measure(name, arguments, input_paths, *, record_count, untraced_attempts=1,
+                timeout_seconds=60, trace_allocations=True):
+        root = tmp_path / name
+        root.mkdir()
+        inputs = {str(path): dict(bytes=path.stat().st_size,
+                    sha256=hashlib.sha256(path.read_bytes()).hexdigest()) for path in input_paths}
+        assembly = SRC_ROOT / "recursive_integrity_toolkit/reports/assembly.py"
+        assembly_sha256 = hashlib.sha256(assembly.read_bytes()).hexdigest()
+        attempts, reports = [], []
+        modes = ["untraced"] * untraced_attempts + (["traced"] if trace_allocations else [])
+        for index, mode in enumerate(modes, 1):
+            destination = root / f"attempt-{index:02d}-{mode}"
+            measurement = root / f"attempt-{index:02d}-{mode}.json"
+            command = [sys.executable, "-c", program, mode, str(measurement),
+                       "audit", *arguments, "--out", str(destination)]
+            start = time.perf_counter()
+            timed_out = False
+            try:
+                completed = subprocess.run(command, env=subprocess_env, cwd=tmp_path,
+                    capture_output=True, text=True, check=False, timeout=timeout_seconds)
+            except subprocess.TimeoutExpired as error:
+                timed_out = True
+                def captured(value):
+                    return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else value or ""
+                completed = subprocess.CompletedProcess(command, -1, captured(error.stdout), captured(error.stderr))
+            elapsed = time.perf_counter() - start
+            observation = json.loads(measurement.read_text()) if measurement.exists() else {}
+            observation.update(name=name, attempt=index, record_count=record_count,
+                mode=mode, command=command, subprocess_wall_seconds=elapsed,
+                timed_out=timed_out, timeout_seconds=timeout_seconds,
+                process_exit_code=completed.returncode, stdout=completed.stdout, stderr=completed.stderr,
+                inputs=inputs, environment=environment,
+                assembly_source_path=str(assembly), assembly_source_sha256=assembly_sha256,
+                allocation_omission_reason=None if trace_allocations else
+                    "Full-scale Python allocation tracing was omitted to bound diagnostic runtime and memory; separately labeled bounded observations measure tracing overhead. Actual full-process peak RSS is recorded.",
+                includes="fresh interpreter startup, CLI import, loading, validation, metrics, JSON and Markdown publication; outer wall also includes measurement bookkeeping",
+                excludes="synthetic input construction, parent-side report assertions and environment discovery",
+                allocation_scope="tracemalloc(1), Python allocations during CLI import and audit; excludes untracked native allocations",
+                rss_scope="whole fresh process high-water mark; includes interpreter and native allocations; not a delta",
+                whole_product_report_target_certified=False,
+                report_bytes={filename: (destination / filename).stat().st_size
+                    for filename in ("report.json", "report.md") if (destination / filename).is_file()})
+            measurement.write_text(json.dumps(observation, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            request.node.user_properties.append(("phase4_performance", json.dumps(observation, sort_keys=True)))
+            attempts.append(observation)
+            assert completed.returncode == 0, observation
+            assert set(observation["report_bytes"]) == {"report.json", "report.md"}
+            with (destination / "report.md").open(encoding="utf-8") as markdown:
+                assert markdown.readline() == "# Recursive Integrity Audit Report\n"
+            reports.append(destination / "report.json")
+        summary = dict(name=name, all_attempts=[item["subprocess_wall_seconds"] for item in attempts],
+            tracing_overhead_ratio=(attempts[-1]["subprocess_wall_seconds"] / attempts[0]["subprocess_wall_seconds"]
+                                    if trace_allocations else None),
+            comparison=("one separate traced run divided by the first untraced run; descriptive, affected by scheduling and cache state"
+                        if trace_allocations else "no allocation-traced run of this workload; peak RSS remains measured"),
+            best_run_selection=False)
+        request.node.user_properties.append(("phase4_performance_summary", json.dumps(summary, sort_keys=True)))
+        assert inputs == {str(path): dict(bytes=path.stat().st_size,
+                    sha256=hashlib.sha256(path.read_bytes()).hexdigest()) for path in input_paths}
+        assert hashlib.sha256(assembly.read_bytes()).hexdigest() == assembly_sha256
+        return reports, attempts
+    return measure
