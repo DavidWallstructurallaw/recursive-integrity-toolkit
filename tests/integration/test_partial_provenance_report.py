@@ -657,3 +657,92 @@ def test_phase4_step3_source_counts_and_grounding_cannot_contradict_supplied_row
     for value in forged:
         with pytest.raises((TypeError, ValueError)):
             assemble_report(bundle, run=phase4_step3_run(), provenance=value)
+
+
+@pytest.mark.parametrize("redacted", [False, True])
+def test_phase4_step9_partial_provenance_reordering_preserves_evidence_not_inventory(
+        tmp_path, capsys, redacted):
+    import hashlib
+    import json
+    from recursive_integrity_toolkit.cli import main
+    from recursive_integrity_toolkit.result import validate_report
+
+    # Four records, three joined rows, two complete declarations, two known
+    # grounding values. P3-D08 keeps incomplete r1 unresolved: C=0, U=3.
+    # Unknown is r2; absent is r3; neither means human/open.
+    records = [{"dataset_version": "v1", "record_id": "r" + str(i),
+                "content": "NEVER_REPORT_CONTENT_917", "topic": label}
+               for i, label in enumerate(("A", "A", "B", "C"))]
+    provenance = phase4_step3_provenance_rows()[:3]
+    del provenance[1]["provenance_confidence"]
+    paths = [tmp_path / "records.jsonl", tmp_path / "provenance.jsonl"]
+    config = tmp_path / "config.json"
+    config.write_text(json.dumps({"representation": {"name": "topic", "source": "topic_field",
+        "field": "topic", "version": "taxonomy-v1", "missing_value_policy": "exclude"}}), encoding="utf-8")
+    salt = tmp_path / "salt.bin"
+    salt.write_bytes(b"fixed-step9-reorder-secret-32-bytes")
+    reports = []
+    for index in range(2):
+        for path, rows in zip(paths, (records, provenance)):
+            ordered = rows if index == 0 else list(reversed(rows))
+            path.write_text("\n".join(json.dumps(row) for row in ordered), encoding="utf-8")
+        before = {path: path.read_bytes() for path in (*paths, config, salt)}
+        output = tmp_path / ("out" + str(index))
+        args = ["audit", "--records", str(paths[0]), "--provenance", str(paths[1]),
+                "--config", str(config), "--out", str(output)]
+        if redacted:
+            args += ["--redacted", "--id-salt-file", str(salt)]
+        assert main(args) == 1
+        streams = capsys.readouterr()
+        report = json.loads((output / "report.json").read_bytes())
+        validate_report(report)
+        markdown = (output / "report.md").read_text(encoding="utf-8")
+        assert all(path.read_bytes() == raw for path, raw in before.items())
+        facts = report["observed_facts"]["provenance"]
+        assert [facts[name]["value"] for name in ("provenance_row_coverage",
+            "provenance_required_field_coverage", "grounding_field_coverage")] == [0.75, 0.5, 0.5]
+        assert facts["missing_provenance_count"]["value"] == 1
+        assert facts["source_type_counts"]["value"] == {"human": 1, "synthetic": 1,
+            "mixed": 0, "sensor": 0, "unknown": 1}
+        assert facts["provenance_confidence_counts"]["value"] is None
+        assert facts["provenance_confidence_counts"]["status"] == "unavailable"
+        direct = report["derived_metrics"]["closure_exposure"]["direct"]
+        assert [direct[key]["value"] for key in ("lower_bound", "upper_bound", "interval_width")] == [0, 0.75, 0.75]
+        assert [facts[key]["value"] for key in ("known_open_count", "known_closed_count",
+            "unresolved_grounding_count")] == [1, 0, 3]
+        assert "midpoint" not in direct
+        assert "- `\"direct\"` (ratio): 0.0 to 0.75; interval width: 0.75." in markdown
+        version = next(iter(report["derived_metrics"]["diversity"]["by_version"]))
+        assert report["derived_metrics"]["diversity"]["by_version"][version]["gini_simpson_diversity"]["value"] == 0.625
+        assert report["run"]["run_status"] == "partial"
+        required_errors = [error for error in report["errors"] if error["code"] == "E_SCHEMA_REQUIRED_FIELD"]
+        assert required_errors and all(error["field"] == "provenance_confidence" for error in required_errors)
+        assert "E_SCHEMA_REQUIRED_FIELD" in markdown and "Unavailable (null)" in markdown
+        assert [json.loads(line) for line in streams.err.splitlines()] == report["warnings"] + report["errors"]
+        assert "NEVER_REPORT_CONTENT_917" not in json.dumps(report) + markdown + streams.out + streams.err
+        artifacts = {entry["role"]: entry for entry in report["inputs"]["artifacts"]}
+        for role, path in zip(("records_primary", "provenance_manifest"), paths):
+            assert artifacts[role]["file_hash"] == hashlib.sha256(before[path]).hexdigest()
+        if redacted:
+            assert str(tmp_path) not in json.dumps(report) + markdown + streams.out + streams.err
+        reports.append(report)
+    # Row numbers describe physical input evidence. Aggregate sections and
+    # identities remain equal with one fixed protection key; file hashes do not.
+    for section in ("derived_metrics", "proxy_signals", "simulations", "capabilities"):
+        assert reports[0][section] == reports[1][section]
+    assert reports[0]["observed_facts"] == reports[1]["observed_facts"]
+    artifacts = [{item["role"]: item for item in report["inputs"]["artifacts"]} for report in reports]
+    for role in ("records_primary", "provenance_manifest"):
+        assert artifacts[0][role]["file_hash"] != artifacts[1][role]["file_hash"]
+    assert artifacts[0]["config"]["file_hash"] == artifacts[1]["config"]["file_hash"]
+    def semantic_diagnostics(report):
+        def without_positions(value):
+            if isinstance(value, dict):
+                return {key: without_positions(item) for key, item in value.items()
+                        if key not in {"row_number", "line_number"}}
+            if isinstance(value, list):
+                return [without_positions(item) for item in value]
+            return value
+        return without_positions(report["warnings"] + report["errors"])
+    assert semantic_diagnostics(reports[0]) == semantic_diagnostics(reports[1])
+    assert reports[0]["warnings"] != reports[1]["warnings"]

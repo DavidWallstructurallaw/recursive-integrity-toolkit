@@ -1,0 +1,3768 @@
+{
+  "schema_version": 1,
+  "status": "independently_authored_before_step9_output_comparison",
+  "base_commit": "63e347a785838b64a9c32e636ea48c664458cee4",
+  "expectations_generated_by_implementation": false,
+  "authority_sources": [
+    {
+      "path": "PHASE_4_PLAN.md",
+      "sha256": "5a6d65696720a426630e876d001937b2837d24774fcb6c2bd43b8e09f5ae93f0"
+    },
+    {
+      "path": "PROJECT_INSTRUCTIONS.md",
+      "sha256": "19137a3fd3cecb221ea02e2375239a5b20ceb27808dadc589cf693579debf84c"
+    },
+    {
+      "path": "docs/report_schema.md",
+      "sha256": "d47087eb56f466bc0d82e7882d8b6decc25d4cfe201f1c5e1afa5559669c4662"
+    },
+    {
+      "path": "schemas/report.schema.json",
+      "sha256": "34b7edb8e8672fca3f3d4f6fe647b4d8967acb6f0435544ba449c1c44f7bc1f6"
+    },
+    {
+      "path": "examples/hero/records_v1.csv",
+      "sha256": "b62c9aee057c61f641009b949acb110e003acbea6a399cc607a78ee6e6f0543d"
+    },
+    {
+      "path": "examples/hero/records_v2.csv",
+      "sha256": "d691605fd6bb37e785945ae34c8c18ea8409201f7d78449d39df08df7770599b"
+    },
+    {
+      "path": "examples/hero/provenance.csv",
+      "sha256": "fc4ed3921d087e37996228dd8a37c4c51a0a3c3c91ded3e62a21e1b10f407438"
+    },
+    {
+      "path": "examples/hero/config.json",
+      "sha256": "2e069eb9c0105bf05c145ca15eec47834eb66f4408e8cdde9ff4935f5b920241"
+    },
+    {
+      "path": "examples/hero/version_order.json",
+      "sha256": "3e33ca8b2095f35f55d22265071bce00119c9282b72bb02cee3275c646898387"
+    },
+    {
+      "path": "examples/hero/EXPECTED_OUTPUTS.md",
+      "sha256": "64d5e696c5e6067b7c34fe85b4d75760588c77fbf19bdd61ee18120385ce8c67"
+    },
+    {
+      "path": "tests/golden/phase3_math_cases.json",
+      "sha256": "b494d50a1a9bd1009c060c998e4cb3c7433d0e8949f73a8d627e538fa38884b2"
+    },
+    {
+      "path": "tests/golden/phase3_math_cases.md",
+      "sha256": "5f3603ad6ad8f2b1274547f2c239461e7ee8d3b7d552b04d0dd868b862af4044"
+    }
+  ],
+  "fixed_run_metadata": {
+    "run_id": "phase4-step9-golden",
+    "started_at": "2000-01-01T00:00:00+00:00",
+    "completed_at": "2000-01-01T00:00:00+00:00",
+    "duration_seconds": 0.0,
+    "python_version": "3.test",
+    "platform": "golden-test"
+  },
+  "fixed_test_secret_utf8": "phase4-step9-fixed-test-key-000000",
+  "json_section_order": [
+    "run",
+    "inputs",
+    "observability",
+    "capabilities",
+    "observed_facts",
+    "derived_metrics",
+    "proxy_signals",
+    "simulations",
+    "unavailable_conclusions",
+    "recommended_next_metadata",
+    "warnings",
+    "errors"
+  ],
+  "markdown_section_order": [
+    "Run metadata",
+    "Input inventory",
+    "Observability summary",
+    "Capability matrix",
+    "Observed facts",
+    "Derived metrics",
+    "Proxy signals",
+    "Simulations",
+    "Unavailable conclusions",
+    "Recommended next metadata",
+    "Warnings",
+    "Errors"
+  ],
+  "scalar_tolerances": {
+    "absolute": 1e-12,
+    "relative": 1e-12
+  },
+  "normalization_policy": {
+    "run_paths": [
+      "/run/run_id",
+      "/run/started_at",
+      "/run/completed_at",
+      "/run/duration_seconds",
+      "/run/python_version",
+      "/run/platform"
+    ],
+    "test_root_prefix": "{root}",
+    "path_slots": "Only explicitly enumerated inputs.artifacts[index].path and declared input/output path slots in the independent configuration-hash encoder. Preserve suffixes and all nonpath text.",
+    "config_hash": "First verify the original hash against independent canonical encoding of actual declared configuration. A stable comparison hash may encode that same declared configuration with only declared test-root prefixes replaced. Never assign the expected hash blindly.",
+    "input_hashes": "Independently SHA-256 the exact supplied bytes; never normalize or replace with canonical-resource hashes after row permutation.",
+    "forbidden_changes": [
+      "metrics",
+      "evidence_class",
+      "scope",
+      "denominator",
+      "coverage",
+      "reason_codes",
+      "required_evidence",
+      "status",
+      "execution_status",
+      "warnings",
+      "errors",
+      "unavailable_conclusions",
+      "configuration_meaning",
+      "arbitrary_ids_or_values"
+    ]
+  },
+  "common_contract": {
+    "all_sections_required": true,
+    "first_eight_section_type": "object",
+    "last_four_section_type": "array",
+    "capability_mirror_equal": true,
+    "network_blocked_during_execution": true,
+    "network_count_scope": "toolkit_managed_outbound_operations",
+    "unavailable_scalar_requires": {
+      "value": null,
+      "status": "unavailable",
+      "reason_codes": "nonempty",
+      "required_evidence": "nonempty"
+    },
+    "forbid_unregistered_analytical_fields": true,
+    "forbid_null_as_zero_or_interval_midpoint": true,
+    "raw_content_forbidden_in_all_sinks": true,
+    "no_human_independent_certification_claim": true
+  },
+  "cases": [
+    {
+      "case_id": "hero_normal",
+      "kind": "hero_normal",
+      "input_spec": {
+        "resource_set": "canonical_hero",
+        "argv": [
+          "example",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/run/report_schema_version": "1.0",
+        "/run/toolkit_version": "0.1.0.dev2",
+        "/run/run_status": "complete",
+        "/run/network_call_count": 0,
+        "/run/network_count_scope": "toolkit_managed_outbound_operations",
+        "/run/random_seed": null,
+        "/inputs/scope/record_count": 16,
+        "/inputs/version_order": [
+          "v1",
+          "v2"
+        ],
+        "/observability/maximum_level": 4,
+        "/observed_facts/record_counts/v1/value": 8,
+        "/observed_facts/record_counts/v2/value": 8,
+        "/derived_metrics/support/by_version/v1/support_size/value": 8,
+        "/derived_metrics/support/by_version/v2/support_size/value": 5,
+        "/derived_metrics/support/support_delta/value": -3,
+        "/derived_metrics/support/support_retention_ratio/value": 0.625,
+        "/derived_metrics/support/support_loss_count/value": 3,
+        "/derived_metrics/support/support_added_count/value": 0,
+        "/derived_metrics/support/extinct_states/value": [
+          "battery",
+          "lizard",
+          "turtle"
+        ],
+        "/derived_metrics/support/added_states/value": [],
+        "/derived_metrics/support/retained_states/value": [
+          "bird",
+          "cat",
+          "dog",
+          "fish",
+          "refund"
+        ],
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/value": 0.875,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/value": 0.125,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/value": 0.75,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/value": 0.25,
+        "/derived_metrics/diversity/gini_simpson_diversity_delta/value": -0.125,
+        "/observed_facts/provenance/analyzed_record_count/value": 8,
+        "/observed_facts/provenance/records_with_matching_rows/value": 8,
+        "/observed_facts/provenance/missing_provenance_count/value": 0,
+        "/observed_facts/provenance/known_open_count/value": 4,
+        "/observed_facts/provenance/known_closed_count/value": 4,
+        "/observed_facts/provenance/unresolved_grounding_count/value": 0,
+        "/observed_facts/provenance/source_type_counts/value": {
+          "human": 4,
+          "synthetic": 4,
+          "mixed": 0,
+          "sensor": 0,
+          "unknown": 0
+        },
+        "/derived_metrics/provenance/source_type_shares/value": {
+          "human": 0.5,
+          "synthetic": 0.5,
+          "mixed": 0.0,
+          "sensor": 0.0,
+          "unknown": 0.0
+        },
+        "/derived_metrics/provenance/missing_provenance_share/value": 0.0,
+        "/derived_metrics/closure_exposure/direct/lower_bound/value": 0.5,
+        "/derived_metrics/closure_exposure/direct/upper_bound/value": 0.5,
+        "/derived_metrics/closure_exposure/direct/interval_width/value": 0.0,
+        "/observed_facts/lineage/declared_parent_edge_count/value": 8,
+        "/observed_facts/lineage/resolved_parent_edge_count/value": 8,
+        "/observed_facts/lineage/unresolved_parent_edge_count/value": 0,
+        "/observed_facts/lineage/cycle_status/status": "unavailable",
+        "/observed_facts/lineage/cycle_status/value": null,
+        "/observed_facts/lineage/ordering_certificate/value/method": "declared_earlier_version_order",
+        "/observed_facts/lineage/ordering_certificate/value/version_order": [
+          "v1",
+          "v2"
+        ],
+        "/observed_facts/lineage/ordering_certificate/value/all_resolved_edges_follow_order": true,
+        "/proxy_signals/support_contraction/status": "available",
+        "/proxy_signals/support_contraction/evidence_class": "proxy_signal",
+        "/simulations": {},
+        "/warnings": [],
+        "/errors": [],
+        "/capabilities/ingestion/status": "available",
+        "/capabilities/content_diagnostics/status": "available",
+        "/capabilities/provenance/status": "available",
+        "/capabilities/lineage/status": "available",
+        "/capabilities/dataset_longitudinal/status": "available",
+        "/capabilities/model_longitudinal/status": "unavailable",
+        "/capabilities/intervention_simulation/status": "unavailable",
+        "/capabilities/ingestion/execution_status": "completed",
+        "/capabilities/content_diagnostics/execution_status": "completed",
+        "/capabilities/provenance/execution_status": "completed",
+        "/capabilities/lineage/execution_status": "deferred",
+        "/capabilities/dataset_longitudinal/execution_status": "partial",
+        "/capabilities/dataset_longitudinal/execution_scope": [
+          "supplied_explicit_pair_support_and_diversity"
+        ],
+        "/capabilities/model_longitudinal/execution_status": "deferred",
+        "/capabilities/intervention_simulation/execution_status": "not_requested",
+        "/observed_facts/provenance/provenance_row_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_row_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_row_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_row_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/provenance_required_field_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_required_field_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_required_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_required_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/grounding_field_coverage/value": 1.0,
+        "/observed_facts/provenance/grounding_field_coverage/denominator": 8,
+        "/observed_facts/provenance/grounding_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/grounding_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/source_type_field_coverage/value": 1.0,
+        "/observed_facts/provenance/source_type_field_coverage/denominator": 8,
+        "/observed_facts/provenance/source_type_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/source_type_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/provenance_confidence_field_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_confidence_field_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_confidence_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_confidence_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/state_counts/by_version/v1/value": [
+          {
+            "state_id": "battery",
+            "state_count": 1
+          },
+          {
+            "state_id": "bird",
+            "state_count": 1
+          },
+          {
+            "state_id": "cat",
+            "state_count": 1
+          },
+          {
+            "state_id": "dog",
+            "state_count": 1
+          },
+          {
+            "state_id": "fish",
+            "state_count": 1
+          },
+          {
+            "state_id": "lizard",
+            "state_count": 1
+          },
+          {
+            "state_id": "refund",
+            "state_count": 1
+          },
+          {
+            "state_id": "turtle",
+            "state_count": 1
+          }
+        ],
+        "/derived_metrics/support/by_version/v1/support_size/status": "available",
+        "/derived_metrics/support/by_version/v1/support_size/evidence_class": "derived_metric",
+        "/derived_metrics/support/by_version/v1/support_size/method_id": "F-002",
+        "/derived_metrics/support/by_version/v1/support_size/unit": "states",
+        "/derived_metrics/support/by_version/v1/support_size/scope/dataset_versions": [
+          "v1"
+        ],
+        "/derived_metrics/support/by_version/v1/support_size/scope/record_count": 8,
+        "/derived_metrics/support/by_version/v1/support_size/scope/excluded_record_count": 0,
+        "/derived_metrics/support/by_version/v1/support_size/denominator": 8,
+        "/derived_metrics/support/by_version/v1/support_size/representation/representation_name": "topic",
+        "/derived_metrics/support/by_version/v1/support_size/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/status": "available",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/method_id": "F-003",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/scope/dataset_versions": [
+          "v1"
+        ],
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/denominator": 8,
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/status": "available",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/method_id": "F-004",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/scope/dataset_versions": [
+          "v1"
+        ],
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/denominator": 8,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/representation/representation_version": "hero-topic-v1",
+        "/observed_facts/state_counts/by_version/v2/value": [
+          {
+            "state_id": "bird",
+            "state_count": 1
+          },
+          {
+            "state_id": "cat",
+            "state_count": 3
+          },
+          {
+            "state_id": "dog",
+            "state_count": 2
+          },
+          {
+            "state_id": "fish",
+            "state_count": 1
+          },
+          {
+            "state_id": "refund",
+            "state_count": 1
+          }
+        ],
+        "/derived_metrics/support/by_version/v2/support_size/status": "available",
+        "/derived_metrics/support/by_version/v2/support_size/evidence_class": "derived_metric",
+        "/derived_metrics/support/by_version/v2/support_size/method_id": "F-002",
+        "/derived_metrics/support/by_version/v2/support_size/unit": "states",
+        "/derived_metrics/support/by_version/v2/support_size/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/support/by_version/v2/support_size/scope/record_count": 8,
+        "/derived_metrics/support/by_version/v2/support_size/scope/excluded_record_count": 0,
+        "/derived_metrics/support/by_version/v2/support_size/denominator": 8,
+        "/derived_metrics/support/by_version/v2/support_size/representation/representation_name": "topic",
+        "/derived_metrics/support/by_version/v2/support_size/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/status": "available",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/method_id": "F-003",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/denominator": 8,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/status": "available",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/method_id": "F-004",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/denominator": 8,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/closure_exposure/direct/lower_bound/status": "available",
+        "/derived_metrics/closure_exposure/direct/lower_bound/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/lower_bound/method_id": "F-009",
+        "/derived_metrics/closure_exposure/direct/lower_bound/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/lower_bound/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/lower_bound/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/closure_exposure/direct/upper_bound/status": "available",
+        "/derived_metrics/closure_exposure/direct/upper_bound/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/upper_bound/method_id": "F-010",
+        "/derived_metrics/closure_exposure/direct/upper_bound/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/upper_bound/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/upper_bound/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/closure_exposure/direct/interval_width/status": "available",
+        "/derived_metrics/closure_exposure/direct/interval_width/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/interval_width/method_id": "T3.upper_minus_lower",
+        "/derived_metrics/closure_exposure/direct/interval_width/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/interval_width/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/interval_width/scope/dataset_versions": [
+          "v2"
+        ],
+        "/proxy_signals/support_contraction/level": "present"
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [
+        "/proxy_signals/shared_ancestry_dependence",
+        "/derived_metrics/tail"
+      ],
+      "nonempty_paths": [
+        "/capabilities/lineage/execution_reason_codes",
+        "/capabilities/dataset_longitudinal/execution_reason_codes"
+      ],
+      "unavailable_conclusions": [
+        "model_performance_decline",
+        "causal_ancestor_effect",
+        "universal_integrity",
+        "universal_collapse_prediction",
+        "lineage_analysis",
+        "lineage_closure_exposure",
+        "external_ancestry"
+      ],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Eight unique v1 topics give support 8 and D=1-8*(1/8)^2=7/8.",
+        "v2 topic counts cat=3,dog=2,bird=fish=refund=1 give support 5; sum squared frequencies=16/64=1/4 and D=3/4.",
+        "Earlier minus later is battery,lizard,turtle; intersection contains five states. Delta=5-8=-3, retention=5/8, diversity delta=3/4-7/8=-1/8.",
+        "The selected v2 scope has eight matching valid provenance rows: four human/yes and four synthetic/no. Each coverage is 8/8; each nonzero source share is 4/8. Direct interval=(closed/N,(closed+unresolved)/N)=[4/8,4/8].",
+        "All eight supplied v2 parent references resolve to explicitly earlier v1 records. This supports reference counts and a declared-order certificate only. Graph traversal and all ancestry metrics remain deferred."
+      ]
+    },
+    {
+      "case_id": "hero_redacted",
+      "kind": "hero_redacted",
+      "input_spec": {
+        "resource_set": "canonical_hero",
+        "argv": [
+          "example",
+          "--redacted",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/run/report_schema_version": "1.0",
+        "/run/toolkit_version": "0.1.0.dev2",
+        "/run/run_status": "complete",
+        "/run/network_call_count": 0,
+        "/run/network_count_scope": "toolkit_managed_outbound_operations",
+        "/run/random_seed": null,
+        "/inputs/scope/record_count": 16,
+        "/observability/maximum_level": 4,
+        "/derived_metrics/support/support_delta/value": -3,
+        "/derived_metrics/support/support_retention_ratio/value": 0.625,
+        "/derived_metrics/support/support_loss_count/value": 3,
+        "/derived_metrics/support/support_added_count/value": 0,
+        "/derived_metrics/support/added_states/value": [],
+        "/derived_metrics/diversity/gini_simpson_diversity_delta/value": -0.125,
+        "/observed_facts/provenance/analyzed_record_count/value": 8,
+        "/observed_facts/provenance/records_with_matching_rows/value": 8,
+        "/observed_facts/provenance/missing_provenance_count/value": 0,
+        "/observed_facts/provenance/known_open_count/value": 4,
+        "/observed_facts/provenance/known_closed_count/value": 4,
+        "/observed_facts/provenance/unresolved_grounding_count/value": 0,
+        "/observed_facts/provenance/source_type_counts/value": {
+          "human": 4,
+          "synthetic": 4,
+          "mixed": 0,
+          "sensor": 0,
+          "unknown": 0
+        },
+        "/derived_metrics/provenance/source_type_shares/value": {
+          "human": 0.5,
+          "synthetic": 0.5,
+          "mixed": 0.0,
+          "sensor": 0.0,
+          "unknown": 0.0
+        },
+        "/derived_metrics/provenance/missing_provenance_share/value": 0.0,
+        "/derived_metrics/closure_exposure/direct/lower_bound/value": 0.5,
+        "/derived_metrics/closure_exposure/direct/upper_bound/value": 0.5,
+        "/derived_metrics/closure_exposure/direct/interval_width/value": 0.0,
+        "/observed_facts/lineage/declared_parent_edge_count/value": 8,
+        "/observed_facts/lineage/resolved_parent_edge_count/value": 8,
+        "/observed_facts/lineage/unresolved_parent_edge_count/value": 0,
+        "/observed_facts/lineage/cycle_status/status": "unavailable",
+        "/observed_facts/lineage/cycle_status/value": null,
+        "/observed_facts/lineage/ordering_certificate/value/method": "declared_earlier_version_order",
+        "/observed_facts/lineage/ordering_certificate/value/all_resolved_edges_follow_order": true,
+        "/proxy_signals/support_contraction/status": "available",
+        "/proxy_signals/support_contraction/evidence_class": "proxy_signal",
+        "/simulations": {},
+        "/warnings": [],
+        "/errors": [],
+        "/capabilities/ingestion/status": "available",
+        "/capabilities/content_diagnostics/status": "available",
+        "/capabilities/provenance/status": "available",
+        "/capabilities/lineage/status": "available",
+        "/capabilities/dataset_longitudinal/status": "available",
+        "/capabilities/model_longitudinal/status": "unavailable",
+        "/capabilities/intervention_simulation/status": "unavailable",
+        "/capabilities/ingestion/execution_status": "completed",
+        "/capabilities/content_diagnostics/execution_status": "completed",
+        "/capabilities/provenance/execution_status": "completed",
+        "/capabilities/lineage/execution_status": "deferred",
+        "/capabilities/dataset_longitudinal/execution_status": "partial",
+        "/capabilities/dataset_longitudinal/execution_scope": [
+          "supplied_explicit_pair_support_and_diversity"
+        ],
+        "/capabilities/model_longitudinal/execution_status": "deferred",
+        "/capabilities/intervention_simulation/execution_status": "not_requested",
+        "/observed_facts/provenance/provenance_row_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_row_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_row_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_required_field_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_required_field_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_required_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/grounding_field_coverage/value": 1.0,
+        "/observed_facts/provenance/grounding_field_coverage/denominator": 8,
+        "/observed_facts/provenance/grounding_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/source_type_field_coverage/value": 1.0,
+        "/observed_facts/provenance/source_type_field_coverage/denominator": 8,
+        "/observed_facts/provenance/source_type_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_confidence_field_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_confidence_field_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_confidence_field_coverage/evidence_class": "observed_fact",
+        "/derived_metrics/closure_exposure/direct/lower_bound/status": "available",
+        "/derived_metrics/closure_exposure/direct/lower_bound/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/lower_bound/method_id": "F-009",
+        "/derived_metrics/closure_exposure/direct/lower_bound/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/lower_bound/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/upper_bound/status": "available",
+        "/derived_metrics/closure_exposure/direct/upper_bound/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/upper_bound/method_id": "F-010",
+        "/derived_metrics/closure_exposure/direct/upper_bound/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/upper_bound/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/interval_width/status": "available",
+        "/derived_metrics/closure_exposure/direct/interval_width/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/interval_width/method_id": "T3.upper_minus_lower",
+        "/derived_metrics/closure_exposure/direct/interval_width/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/interval_width/denominator": 8,
+        "/run/privacy_mode": "redacted",
+        "/run/redacted_mode": true,
+        "/run/identifier_protection/algorithm": "HMAC-SHA-256",
+        "/run/identifier_protection/stability_scope": "run",
+        "/run/identifier_protection/record_id_mode": "hash",
+        "/proxy_signals/support_contraction/level": "present"
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [
+        "/proxy_signals/shared_ancestry_dependence"
+      ],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [
+        "model_performance_decline",
+        "causal_ancestor_effect",
+        "universal_integrity",
+        "universal_collapse_prediction"
+      ],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Apply identifier protection after calculation. Every aggregate, denominator, status and evidence class retains the hero_normal value; identity fields use the fixed test key."
+      ],
+      "aggregate_parity_with": "hero_normal",
+      "forbidden_literals": [
+        "How to care for a house cat.",
+        "Battery overheating warning signs.",
+        "v1_01",
+        "v2_08",
+        "hero-topic-v1",
+        "phase4-step9-fixed-test-key-000000",
+        "{root}"
+      ]
+    },
+    {
+      "case_id": "hero_row_reordered",
+      "kind": "hero_reordered",
+      "input_spec": {
+        "resource_set": "canonical_hero",
+        "row_permutation": "reverse_data_rows_preserve_header",
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records_v2.csv",
+          "--compare",
+          "{root}/records_v1.csv",
+          "--provenance",
+          "{root}/provenance.csv",
+          "--config",
+          "{root}/config.json",
+          "--version-order",
+          "{root}/version_order.json",
+          "--state-semantics",
+          "literal Hero topic meanings",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/run/report_schema_version": "1.0",
+        "/run/toolkit_version": "0.1.0.dev2",
+        "/run/run_status": "complete",
+        "/run/network_call_count": 0,
+        "/run/network_count_scope": "toolkit_managed_outbound_operations",
+        "/run/random_seed": null,
+        "/inputs/scope/record_count": 16,
+        "/inputs/version_order": [
+          "v1",
+          "v2"
+        ],
+        "/observability/maximum_level": 4,
+        "/observed_facts/record_counts/v1/value": 8,
+        "/observed_facts/record_counts/v2/value": 8,
+        "/derived_metrics/support/by_version/v1/support_size/value": 8,
+        "/derived_metrics/support/by_version/v2/support_size/value": 5,
+        "/derived_metrics/support/support_delta/value": -3,
+        "/derived_metrics/support/support_retention_ratio/value": 0.625,
+        "/derived_metrics/support/support_loss_count/value": 3,
+        "/derived_metrics/support/support_added_count/value": 0,
+        "/derived_metrics/support/extinct_states/value": [
+          "battery",
+          "lizard",
+          "turtle"
+        ],
+        "/derived_metrics/support/added_states/value": [],
+        "/derived_metrics/support/retained_states/value": [
+          "bird",
+          "cat",
+          "dog",
+          "fish",
+          "refund"
+        ],
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/value": 0.875,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/value": 0.125,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/value": 0.75,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/value": 0.25,
+        "/derived_metrics/diversity/gini_simpson_diversity_delta/value": -0.125,
+        "/observed_facts/provenance/analyzed_record_count/value": 8,
+        "/observed_facts/provenance/records_with_matching_rows/value": 8,
+        "/observed_facts/provenance/missing_provenance_count/value": 0,
+        "/observed_facts/provenance/known_open_count/value": 4,
+        "/observed_facts/provenance/known_closed_count/value": 4,
+        "/observed_facts/provenance/unresolved_grounding_count/value": 0,
+        "/observed_facts/provenance/source_type_counts/value": {
+          "human": 4,
+          "synthetic": 4,
+          "mixed": 0,
+          "sensor": 0,
+          "unknown": 0
+        },
+        "/derived_metrics/provenance/source_type_shares/value": {
+          "human": 0.5,
+          "synthetic": 0.5,
+          "mixed": 0.0,
+          "sensor": 0.0,
+          "unknown": 0.0
+        },
+        "/derived_metrics/provenance/missing_provenance_share/value": 0.0,
+        "/derived_metrics/closure_exposure/direct/lower_bound/value": 0.5,
+        "/derived_metrics/closure_exposure/direct/upper_bound/value": 0.5,
+        "/derived_metrics/closure_exposure/direct/interval_width/value": 0.0,
+        "/observed_facts/lineage/declared_parent_edge_count/value": 8,
+        "/observed_facts/lineage/resolved_parent_edge_count/value": 8,
+        "/observed_facts/lineage/unresolved_parent_edge_count/value": 0,
+        "/observed_facts/lineage/cycle_status/status": "unavailable",
+        "/observed_facts/lineage/cycle_status/value": null,
+        "/observed_facts/lineage/ordering_certificate/value/method": "declared_earlier_version_order",
+        "/observed_facts/lineage/ordering_certificate/value/version_order": [
+          "v1",
+          "v2"
+        ],
+        "/observed_facts/lineage/ordering_certificate/value/all_resolved_edges_follow_order": true,
+        "/proxy_signals/support_contraction/status": "available",
+        "/proxy_signals/support_contraction/evidence_class": "proxy_signal",
+        "/simulations": {},
+        "/warnings": [],
+        "/errors": [],
+        "/capabilities/ingestion/status": "available",
+        "/capabilities/content_diagnostics/status": "available",
+        "/capabilities/provenance/status": "available",
+        "/capabilities/lineage/status": "available",
+        "/capabilities/dataset_longitudinal/status": "available",
+        "/capabilities/model_longitudinal/status": "unavailable",
+        "/capabilities/intervention_simulation/status": "unavailable",
+        "/capabilities/ingestion/execution_status": "completed",
+        "/capabilities/content_diagnostics/execution_status": "completed",
+        "/capabilities/provenance/execution_status": "completed",
+        "/capabilities/lineage/execution_status": "deferred",
+        "/capabilities/dataset_longitudinal/execution_status": "partial",
+        "/capabilities/dataset_longitudinal/execution_scope": [
+          "supplied_explicit_pair_support_and_diversity"
+        ],
+        "/capabilities/model_longitudinal/execution_status": "deferred",
+        "/capabilities/intervention_simulation/execution_status": "not_requested",
+        "/observed_facts/provenance/provenance_row_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_row_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_row_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_row_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/provenance_required_field_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_required_field_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_required_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_required_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/grounding_field_coverage/value": 1.0,
+        "/observed_facts/provenance/grounding_field_coverage/denominator": 8,
+        "/observed_facts/provenance/grounding_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/grounding_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/source_type_field_coverage/value": 1.0,
+        "/observed_facts/provenance/source_type_field_coverage/denominator": 8,
+        "/observed_facts/provenance/source_type_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/source_type_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/provenance_confidence_field_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_confidence_field_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_confidence_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_confidence_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/state_counts/by_version/v1/value": [
+          {
+            "state_id": "battery",
+            "state_count": 1
+          },
+          {
+            "state_id": "bird",
+            "state_count": 1
+          },
+          {
+            "state_id": "cat",
+            "state_count": 1
+          },
+          {
+            "state_id": "dog",
+            "state_count": 1
+          },
+          {
+            "state_id": "fish",
+            "state_count": 1
+          },
+          {
+            "state_id": "lizard",
+            "state_count": 1
+          },
+          {
+            "state_id": "refund",
+            "state_count": 1
+          },
+          {
+            "state_id": "turtle",
+            "state_count": 1
+          }
+        ],
+        "/derived_metrics/support/by_version/v1/support_size/status": "available",
+        "/derived_metrics/support/by_version/v1/support_size/evidence_class": "derived_metric",
+        "/derived_metrics/support/by_version/v1/support_size/method_id": "F-002",
+        "/derived_metrics/support/by_version/v1/support_size/unit": "states",
+        "/derived_metrics/support/by_version/v1/support_size/scope/dataset_versions": [
+          "v1"
+        ],
+        "/derived_metrics/support/by_version/v1/support_size/scope/record_count": 8,
+        "/derived_metrics/support/by_version/v1/support_size/scope/excluded_record_count": 0,
+        "/derived_metrics/support/by_version/v1/support_size/denominator": 8,
+        "/derived_metrics/support/by_version/v1/support_size/representation/representation_name": "topic",
+        "/derived_metrics/support/by_version/v1/support_size/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/status": "available",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/method_id": "F-003",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/scope/dataset_versions": [
+          "v1"
+        ],
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/denominator": 8,
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/status": "available",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/method_id": "F-004",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/scope/dataset_versions": [
+          "v1"
+        ],
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/denominator": 8,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/representation/representation_version": "hero-topic-v1",
+        "/observed_facts/state_counts/by_version/v2/value": [
+          {
+            "state_id": "bird",
+            "state_count": 1
+          },
+          {
+            "state_id": "cat",
+            "state_count": 3
+          },
+          {
+            "state_id": "dog",
+            "state_count": 2
+          },
+          {
+            "state_id": "fish",
+            "state_count": 1
+          },
+          {
+            "state_id": "refund",
+            "state_count": 1
+          }
+        ],
+        "/derived_metrics/support/by_version/v2/support_size/status": "available",
+        "/derived_metrics/support/by_version/v2/support_size/evidence_class": "derived_metric",
+        "/derived_metrics/support/by_version/v2/support_size/method_id": "F-002",
+        "/derived_metrics/support/by_version/v2/support_size/unit": "states",
+        "/derived_metrics/support/by_version/v2/support_size/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/support/by_version/v2/support_size/scope/record_count": 8,
+        "/derived_metrics/support/by_version/v2/support_size/scope/excluded_record_count": 0,
+        "/derived_metrics/support/by_version/v2/support_size/denominator": 8,
+        "/derived_metrics/support/by_version/v2/support_size/representation/representation_name": "topic",
+        "/derived_metrics/support/by_version/v2/support_size/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/status": "available",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/method_id": "F-003",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/denominator": 8,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/status": "available",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/method_id": "F-004",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/denominator": 8,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/closure_exposure/direct/lower_bound/status": "available",
+        "/derived_metrics/closure_exposure/direct/lower_bound/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/lower_bound/method_id": "F-009",
+        "/derived_metrics/closure_exposure/direct/lower_bound/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/lower_bound/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/lower_bound/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/closure_exposure/direct/upper_bound/status": "available",
+        "/derived_metrics/closure_exposure/direct/upper_bound/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/upper_bound/method_id": "F-010",
+        "/derived_metrics/closure_exposure/direct/upper_bound/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/upper_bound/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/upper_bound/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/closure_exposure/direct/interval_width/status": "available",
+        "/derived_metrics/closure_exposure/direct/interval_width/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/interval_width/method_id": "T3.upper_minus_lower",
+        "/derived_metrics/closure_exposure/direct/interval_width/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/interval_width/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/interval_width/scope/dataset_versions": [
+          "v2"
+        ],
+        "/proxy_signals/support_contraction/level": "present"
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [
+        "model_performance_decline",
+        "causal_ancestor_effect",
+        "universal_integrity",
+        "universal_collapse_prediction"
+      ],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "A bijective row permutation preserves records, counts, selected ordered versions and every statistic. Input byte hashes must be recomputed from the permuted files and are expected to differ; do not normalize those hashes."
+      ],
+      "aggregate_parity_with": "hero_normal"
+    },
+    {
+      "case_id": "records_only_missing_representation",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "B"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "C"
+              }
+            ]
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/run/run_status": "complete",
+        "/inputs/representation": null,
+        "/inputs/scope/record_count": 4,
+        "/observed_facts/record_counts/sample/value": 4,
+        "/simulations": {},
+        "/errors": []
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [
+        "/derived_metrics/support",
+        "/derived_metrics/diversity",
+        "/proxy_signals/support_contraction"
+      ],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "No representation is declared. Four valid records support inventory evidence, but no state assignment or topic/hash fallback is authorized."
+      ]
+    },
+    {
+      "case_id": "no_provenance",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "B"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/derived_metrics/support/by_version/sample/support_size/value": 3,
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/value": 0.625,
+        "/derived_metrics/diversity/by_version/sample/simpson_concentration/value": 0.375,
+        "/derived_metrics/support/by_version/sample/support_size/scope/record_count": 4,
+        "/run/run_status": "complete",
+        "/observed_facts/provenance/provenance_row_coverage/value": 0.0,
+        "/observed_facts/provenance/missing_provenance_count/value": 4,
+        "/observed_facts/provenance/source_type_counts/value/unknown": 0,
+        "/derived_metrics/provenance/missing_provenance_share/value": 1.0,
+        "/capabilities/provenance/status": "unavailable",
+        "/derived_metrics/closure_exposure/direct/lower_bound/value": null,
+        "/derived_metrics/closure_exposure/direct/lower_bound/status": "unavailable",
+        "/derived_metrics/closure_exposure/direct/upper_bound/value": null,
+        "/derived_metrics/closure_exposure/direct/upper_bound/status": "unavailable",
+        "/derived_metrics/closure_exposure/direct/interval_width/value": null,
+        "/derived_metrics/closure_exposure/direct/interval_width/status": "unavailable"
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [
+        "W_PROVENANCE_MISSING_ROW"
+      ],
+      "absent_paths": [],
+      "nonempty_paths": [
+        "/derived_metrics/closure_exposure/direct/lower_bound/reason_codes",
+        "/derived_metrics/closure_exposure/direct/lower_bound/required_evidence"
+      ],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "A,A,B,C gives support3 and D=1-(4+1+1)/16=5/8.",
+        "No matching rows gives row coverage0, missing share1, explicit unknown source count0. Dataset-facing direct bounds are unavailable because no usable required-provenance row exists; the distinct explicit count-envelope API is not invoked."
+      ]
+    },
+    {
+      "case_id": "matched_missing_and_unknown_provenance",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "B"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "provenance.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "source_type": "human",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "yes"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "source_type": "synthetic",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "no"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "source_type": "unknown",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "unknown"
+              }
+            ]
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--provenance",
+          "{root}/provenance.jsonl",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/derived_metrics/support/by_version/sample/support_size/value": 3,
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/value": 0.625,
+        "/derived_metrics/diversity/by_version/sample/simpson_concentration/value": 0.375,
+        "/derived_metrics/support/by_version/sample/support_size/scope/record_count": 4,
+        "/run/run_status": "complete",
+        "/observed_facts/provenance/analyzed_record_count/value": 4,
+        "/observed_facts/provenance/records_with_matching_rows/value": 3,
+        "/observed_facts/provenance/missing_provenance_count/value": 1,
+        "/observed_facts/provenance/provenance_row_coverage/value": 0.75,
+        "/observed_facts/provenance/provenance_required_field_coverage/value": 0.75,
+        "/observed_facts/provenance/grounding_field_coverage/value": 0.5,
+        "/observed_facts/provenance/source_type_counts/value": {
+          "human": 1,
+          "synthetic": 1,
+          "mixed": 0,
+          "sensor": 0,
+          "unknown": 1
+        },
+        "/derived_metrics/provenance/source_type_shares/value": {
+          "human": 0.25,
+          "synthetic": 0.25,
+          "mixed": 0.0,
+          "sensor": 0.0,
+          "unknown": 0.25
+        },
+        "/derived_metrics/provenance/missing_provenance_share/value": 0.25,
+        "/observed_facts/provenance/known_open_count/value": 1,
+        "/observed_facts/provenance/known_closed_count/value": 1,
+        "/observed_facts/provenance/unresolved_grounding_count/value": 2,
+        "/derived_metrics/closure_exposure/direct/lower_bound/value": 0.25,
+        "/derived_metrics/closure_exposure/direct/upper_bound/value": 0.75,
+        "/derived_metrics/closure_exposure/direct/interval_width/value": 0.5,
+        "/proxy_signals/provenance_uncertainty/status": "available",
+        "/errors": [],
+        "/proxy_signals/provenance_uncertainty/level": "present"
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [
+        "W_PROVENANCE_MISSING_ROW",
+        "W_GROUNDING_UNKNOWN"
+      ],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Four selected records have human/yes, synthetic/no, unknown/unknown, and one missing row. Matching and valid required rows=3, resolved grounding=2. Distinct coverage denominators all retain4.",
+        "One closed and two unresolved records give [1/4,3/4], width1/2. Each declared nonzero category and missing share is1/4. Unknown source remains separate from absence."
+      ]
+    },
+    {
+      "case_id": "invalid_required_provenance_retains_content",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "B"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "provenance.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "source_type": "human",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "yes"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "source_type": "synthetic",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "no"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "source_type": "unknown",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "unknown"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "no"
+              }
+            ]
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--provenance",
+          "{root}/provenance.jsonl",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {
+        "/derived_metrics/support/by_version/sample/support_size/value": 3,
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/value": 0.625,
+        "/derived_metrics/diversity/by_version/sample/simpson_concentration/value": 0.375,
+        "/derived_metrics/support/by_version/sample/support_size/scope/record_count": 4,
+        "/run/run_status": "partial",
+        "/observed_facts/provenance/provenance_row_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_required_field_coverage/value": 0.75,
+        "/observed_facts/provenance/grounding_field_coverage/value": 0.75,
+        "/observed_facts/provenance/missing_provenance_count/value": 0,
+        "/derived_metrics/closure_exposure/direct/lower_bound/value": 0.25,
+        "/derived_metrics/closure_exposure/direct/upper_bound/value": 0.75,
+        "/derived_metrics/closure_exposure/direct/interval_width/value": 0.5
+      },
+      "required_error_codes": [
+        "E_SCHEMA_REQUIRED_FIELD"
+      ],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "All four identities match; s3 lacks required source_type. Row coverage1 differs from required coverage3/4. Three grounding cells are yes/no, giving field coverage3/4 independently of validity of the complete row.",
+        "Invalid required provenance cannot erase A,A,B,C content metrics, turn s3 into human/unknown source, or remove its error.",
+        "The fully usable rows supply one open, one closed and one explicitly unknown record; the incomplete source-type row is unresolved. Thus direct bounds are [1/4,(1+2)/4]=[1/4,3/4]. Its supplied no cell does not override the incomplete-row boundary."
+      ]
+    },
+    {
+      "case_id": "valid_unknown_grounding",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "B"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "provenance.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "source_type": "human",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "unknown"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "source_type": "human",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "unknown"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "source_type": "synthetic",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "unknown"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "source_type": "sensor",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "unknown"
+              }
+            ]
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--provenance",
+          "{root}/provenance.jsonl",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/derived_metrics/support/by_version/sample/support_size/value": 3,
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/value": 0.625,
+        "/derived_metrics/diversity/by_version/sample/simpson_concentration/value": 0.375,
+        "/derived_metrics/support/by_version/sample/support_size/scope/record_count": 4,
+        "/run/run_status": "complete",
+        "/observed_facts/provenance/provenance_row_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_required_field_coverage/value": 1.0,
+        "/observed_facts/provenance/grounding_field_coverage/value": 0.0,
+        "/observed_facts/provenance/source_type_counts/value/unknown": 0,
+        "/observed_facts/provenance/known_open_count/value": 0,
+        "/observed_facts/provenance/known_closed_count/value": 0,
+        "/observed_facts/provenance/unresolved_grounding_count/value": 4,
+        "/derived_metrics/closure_exposure/direct/lower_bound/value": 0.0,
+        "/derived_metrics/closure_exposure/direct/upper_bound/value": 1.0,
+        "/derived_metrics/closure_exposure/direct/interval_width/value": 1.0
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [
+        "W_GROUNDING_UNKNOWN"
+      ],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Four valid rows explicitly declare unknown grounding. Required coverage1 permits [0/4,4/4]; no source category or confidence declaration imputes grounding. This differs from no_provenance, whose dataset-facing bounds are null."
+      ]
+    },
+    {
+      "case_id": "empty_records",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": []
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {
+        "/run/run_status": "failed",
+        "/inputs": {},
+        "/observed_facts": {},
+        "/derived_metrics": {},
+        "/simulations": {}
+      },
+      "required_error_codes": [
+        "E_EMPTY_DATASET"
+      ],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Zero input rows fail ingestion. No version, distribution, zero diversity or zero direct interval may be invented."
+      ]
+    },
+    {
+      "case_id": "all_representation_values_excluded",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": null
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": null
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": null
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": null
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "provenance.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "source_type": "human",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "yes"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "source_type": "synthetic",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "no"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "source_type": "unknown",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "unknown"
+              }
+            ]
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--provenance",
+          "{root}/provenance.jsonl",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/run/run_status": "complete",
+        "/inputs/scope/record_count": 4,
+        "/observed_facts/provenance/provenance_row_coverage/denominator": 4,
+        "/observed_facts/provenance/provenance_row_coverage/value": 0.75,
+        "/derived_metrics/support/by_version/sample/support_size/value": null,
+        "/derived_metrics/support/by_version/sample/support_size/status": "unavailable",
+        "/derived_metrics/support/by_version/sample/support_size/scope/record_count": 0,
+        "/derived_metrics/support/by_version/sample/support_size/scope/excluded_record_count": 4,
+        "/derived_metrics/support/by_version/sample/support_size/reason_codes": [
+          "R_CALC_ALL_EXCLUDED"
+        ],
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/value": null,
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/status": "unavailable",
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/scope/record_count": 0,
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/scope/excluded_record_count": 4,
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/reason_codes": [
+          "R_CALC_ALL_EXCLUDED"
+        ]
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Explicit exclude policy excludes four missing topic values; included representation scope0, excluded4, so support/diversity are unavailable with R_CALC_ALL_EXCLUDED.",
+        "Provenance retains the original four-record scope and matching coverage3/4. Representation exclusion never narrows its denominator."
+      ]
+    },
+    {
+      "case_id": "singleton_scope",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/derived_metrics/support/by_version/sample/support_size/value": 1,
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/value": 0.0,
+        "/derived_metrics/diversity/by_version/sample/simpson_concentration/value": 1.0,
+        "/derived_metrics/support/by_version/sample/support_size/scope/record_count": 1,
+        "/run/run_status": "complete",
+        "/derived_metrics/support/by_version/sample/support_size/status": "available",
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/status": "available"
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "One positive state among one included record: K=1, concentration1, diversity1-1=0. This zero is an available result, not missing evidence."
+      ]
+    },
+    {
+      "case_id": "missing_pair_chronology",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "later",
+                "record_id": "l0",
+                "content": "PAIR_L_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "later",
+                "record_id": "l1",
+                "content": "PAIR_L_1",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "earlier.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "earlier",
+                "record_id": "e0",
+                "content": "PAIR_E_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "earlier",
+                "record_id": "e1",
+                "content": "PAIR_E_1",
+                "topic": "B"
+              }
+            ]
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--compare",
+          "{root}/earlier.jsonl",
+          "--state-semantics",
+          "literal category labels",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {
+        "/derived_metrics/support/by_version/later/support_size/value": 2,
+        "/derived_metrics/diversity/by_version/later/gini_simpson_diversity/value": 0.5,
+        "/derived_metrics/diversity/by_version/later/simpson_concentration/value": 0.5,
+        "/derived_metrics/support/by_version/later/support_size/scope/record_count": 2,
+        "/run/run_status": "partial",
+        "/capabilities/dataset_longitudinal/execution_status": "failed"
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [
+        "/derived_metrics/support/support_delta",
+        "/derived_metrics/diversity/gini_simpson_diversity_delta",
+        "/proxy_signals/support_contraction"
+      ],
+      "nonempty_paths": [
+        "/errors"
+      ],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Each side independently has two distinct states and D=1/2. An explicit pair requires a supplied order consistent with earlier then later. No pair value or contraction signal follows from missing/reversed chronology."
+      ]
+    },
+    {
+      "case_id": "reversed_pair_chronology",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "later",
+                "record_id": "l0",
+                "content": "PAIR_L_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "later",
+                "record_id": "l1",
+                "content": "PAIR_L_1",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "earlier.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "earlier",
+                "record_id": "e0",
+                "content": "PAIR_E_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "earlier",
+                "record_id": "e1",
+                "content": "PAIR_E_1",
+                "topic": "B"
+              }
+            ]
+          },
+          "order.json": {
+            "format": "json",
+            "value": {
+              "version_order": [
+                "later",
+                "earlier"
+              ]
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--compare",
+          "{root}/earlier.jsonl",
+          "--state-semantics",
+          "literal category labels",
+          "--version-order",
+          "{root}/order.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {
+        "/derived_metrics/support/by_version/later/support_size/value": 2,
+        "/derived_metrics/diversity/by_version/later/gini_simpson_diversity/value": 0.5,
+        "/derived_metrics/diversity/by_version/later/simpson_concentration/value": 0.5,
+        "/derived_metrics/support/by_version/later/support_size/scope/record_count": 2,
+        "/run/run_status": "partial",
+        "/capabilities/dataset_longitudinal/execution_status": "failed"
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [
+        "/derived_metrics/support/support_delta",
+        "/derived_metrics/diversity/gini_simpson_diversity_delta",
+        "/proxy_signals/support_contraction"
+      ],
+      "nonempty_paths": [
+        "/errors"
+      ],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Each side independently has two distinct states and D=1/2. An explicit pair requires a supplied order consistent with earlier then later. No pair value or contraction signal follows from missing/reversed chronology."
+      ]
+    },
+    {
+      "case_id": "pair_missing_representation",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "later",
+                "record_id": "l0",
+                "content": "PAIR_L_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "later",
+                "record_id": "l1",
+                "content": "PAIR_L_1",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {}
+          },
+          "earlier.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "earlier",
+                "record_id": "e0",
+                "content": "PAIR_E_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "earlier",
+                "record_id": "e1",
+                "content": "PAIR_E_1",
+                "topic": "B"
+              }
+            ]
+          },
+          "order.json": {
+            "format": "json",
+            "value": {
+              "version_order": [
+                "earlier",
+                "later"
+              ]
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--compare",
+          "{root}/earlier.jsonl",
+          "--state-semantics",
+          "literal category labels",
+          "--version-order",
+          "{root}/order.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {
+        "/run/run_status": "partial",
+        "/inputs/scope/record_count": 4,
+        "/inputs/representation": null
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [
+        "/derived_metrics/support",
+        "/proxy_signals/support_contraction"
+      ],
+      "nonempty_paths": [
+        "/errors"
+      ],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Declared order cannot replace a declared representation. Preserve four validated input records and fail the requested pair."
+      ]
+    },
+    {
+      "case_id": "contradictory_state_meanings",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "later",
+                "record_id": "l0",
+                "content": "PAIR_L_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "later",
+                "record_id": "l1",
+                "content": "PAIR_L_1",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              },
+              "representation_compatibility": {
+                "earlier": "meaning one",
+                "later": "meaning two"
+              }
+            }
+          },
+          "earlier.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "earlier",
+                "record_id": "e0",
+                "content": "PAIR_E_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "earlier",
+                "record_id": "e1",
+                "content": "PAIR_E_1",
+                "topic": "B"
+              }
+            ]
+          },
+          "order.json": {
+            "format": "json",
+            "value": {
+              "version_order": [
+                "earlier",
+                "later"
+              ]
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--compare",
+          "{root}/earlier.jsonl",
+          "--state-semantics",
+          "literal category labels",
+          "--version-order",
+          "{root}/order.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 2,
+      "expected": {
+        "/run/run_status": "failed",
+        "/derived_metrics": {},
+        "/simulations": {}
+      },
+      "required_error_codes": [
+        "E_CONFIG_INVALID"
+      ],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "The bounded CLI accepts one shared literal meaning and does not authorize arbitrary compatibility declarations. Conflicting configured meanings are invalid invocation/configuration, never inferred compatible."
+      ]
+    },
+    {
+      "case_id": "requested_unsupported_simulation",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "B"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              },
+              "simulation": {
+                "enabled": true,
+                "seed": 7
+              }
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 2,
+      "expected": {
+        "/run/run_status": "failed",
+        "/derived_metrics": {},
+        "/simulations": {}
+      },
+      "required_error_codes": [
+        "E_CONFIG_INVALID"
+      ],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Simulation activation is explicitly unsupported by this CLI stage. A request must return configuration exit2; the default unrequested Hero is complete with an empty simulations section. No experimental result is fabricated."
+      ]
+    },
+    {
+      "case_id": "partial_parent_validation",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "later",
+                "record_id": "l0",
+                "content": "PAIR_L_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "later",
+                "record_id": "l1",
+                "content": "PAIR_L_1",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "earlier.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "earlier",
+                "record_id": "e0",
+                "content": "PAIR_E_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "earlier",
+                "record_id": "e1",
+                "content": "PAIR_E_1",
+                "topic": "B"
+              }
+            ]
+          },
+          "order.json": {
+            "format": "json",
+            "value": {
+              "version_order": [
+                "earlier",
+                "later"
+              ]
+            }
+          },
+          "provenance.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "earlier",
+                "record_id": "e0",
+                "source_type": "human",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "yes",
+                "parent_ids": []
+              },
+              {
+                "dataset_version": "earlier",
+                "record_id": "e1",
+                "source_type": "human",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "yes",
+                "parent_ids": []
+              },
+              {
+                "dataset_version": "later",
+                "record_id": "l0",
+                "source_type": "synthetic",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "no",
+                "parent_ids": [
+                  "earlier::e0"
+                ]
+              },
+              {
+                "dataset_version": "later",
+                "record_id": "l1",
+                "source_type": "synthetic",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "no",
+                "parent_ids": [
+                  "earlier::absent"
+                ]
+              }
+            ]
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--compare",
+          "{root}/earlier.jsonl",
+          "--state-semantics",
+          "literal category labels",
+          "--version-order",
+          "{root}/order.json",
+          "--provenance",
+          "{root}/provenance.jsonl",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/derived_metrics/support/by_version/later/support_size/value": 2,
+        "/derived_metrics/diversity/by_version/later/gini_simpson_diversity/value": 0.5,
+        "/derived_metrics/diversity/by_version/later/simpson_concentration/value": 0.5,
+        "/derived_metrics/support/by_version/later/support_size/scope/record_count": 2,
+        "/run/run_status": "complete",
+        "/observability/maximum_level": 4,
+        "/capabilities/lineage/status": "partial",
+        "/capabilities/lineage/execution_status": "deferred",
+        "/observed_facts/lineage/declared_parent_edge_count/value": 2,
+        "/observed_facts/lineage/resolved_parent_edge_count/value": 1,
+        "/observed_facts/lineage/unresolved_parent_edge_count/value": 1,
+        "/observed_facts/lineage/cycle_status/value": null,
+        "/derived_metrics/support/support_delta/value": 0,
+        "/derived_metrics/support/support_retention_ratio/value": 0.5,
+        "/errors": []
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [
+        "W_PARENT_UNRESOLVED"
+      ],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [
+        "lineage_analysis",
+        "external_ancestry",
+        "lineage_closure_exposure"
+      ],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Of two later parent references one resolves and one is absent: 2 declared,1 resolved,1 unresolved. Missing references retain a warning and cannot become external roots. One valid resolved path and one unresolved reference give partial input capability under the frozen lineage classification; execution remains deferred.",
+        "Independent ordered supports {A,B} and {A,C} both have size2, intersection1, retention1/2; lineage execution remains deferred."
+      ]
+    },
+    {
+      "case_id": "invalid_parent_retains_independent_metrics",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "later",
+                "record_id": "l0",
+                "content": "PAIR_L_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "later",
+                "record_id": "l1",
+                "content": "PAIR_L_1",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "earlier.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "earlier",
+                "record_id": "e0",
+                "content": "PAIR_E_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "earlier",
+                "record_id": "e1",
+                "content": "PAIR_E_1",
+                "topic": "B"
+              }
+            ]
+          },
+          "order.json": {
+            "format": "json",
+            "value": {
+              "version_order": [
+                "earlier",
+                "later"
+              ]
+            }
+          },
+          "provenance.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "earlier",
+                "record_id": "e0",
+                "source_type": "human",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "yes",
+                "parent_ids": []
+              },
+              {
+                "dataset_version": "earlier",
+                "record_id": "e1",
+                "source_type": "human",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "yes",
+                "parent_ids": []
+              },
+              {
+                "dataset_version": "later",
+                "record_id": "l0",
+                "source_type": "synthetic",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "no",
+                "parent_ids": [
+                  "earlier::e0"
+                ]
+              },
+              {
+                "dataset_version": "later",
+                "record_id": "l1",
+                "source_type": "synthetic",
+                "provenance_confidence": "confirmed",
+                "external_grounding": "no",
+                "parent_ids": [
+                  "later::l1"
+                ]
+              }
+            ]
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--compare",
+          "{root}/earlier.jsonl",
+          "--state-semantics",
+          "literal category labels",
+          "--version-order",
+          "{root}/order.json",
+          "--provenance",
+          "{root}/provenance.jsonl",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 3,
+      "expected": {
+        "/derived_metrics/support/by_version/later/support_size/value": 2,
+        "/derived_metrics/diversity/by_version/later/gini_simpson_diversity/value": 0.5,
+        "/derived_metrics/diversity/by_version/later/simpson_concentration/value": 0.5,
+        "/derived_metrics/support/by_version/later/support_size/scope/record_count": 2,
+        "/run/run_status": "partial",
+        "/observability/maximum_level": 4,
+        "/capabilities/lineage/execution_status": "deferred"
+      },
+      "required_error_codes": [
+        "E_LINEAGE_CYCLE"
+      ],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "An explicit self-parent violates existing parent validation and gives lineage-family exit3. Later content still has K2,D1/2 and dataset observability remains4. No Phase5 graph traversal is invoked."
+      ]
+    },
+    {
+      "case_id": "malformed_records",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "text",
+            "text": "{ORACLE_PRIVATE_MALFORMED_CONTENT\n"
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {
+        "/run/run_status": "failed",
+        "/inputs": {},
+        "/observed_facts": {},
+        "/derived_metrics": {},
+        "/simulations": {}
+      },
+      "required_error_codes": [
+        "E_FILE_PARSE"
+      ],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Invalid JSONL syntax is a known input parse failure. Safe diagnostics must not echo the offending bytes."
+      ],
+      "forbidden_literals": [
+        "ORACLE_PRIVATE_MALFORMED_CONTENT"
+      ]
+    },
+    {
+      "case_id": "malformed_config_duplicate_key",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "B"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "text",
+            "text": "{\"strict_mode\":true,\"strict_mode\":false}"
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 2,
+      "expected": {
+        "/run/run_status": "failed",
+        "/derived_metrics": {},
+        "/simulations": {}
+      },
+      "required_error_codes": [
+        "E_CONFIG_INVALID"
+      ],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Duplicate singleton configuration keys cannot select a winner silently. Reject as exit2 before analysis."
+      ]
+    },
+    {
+      "case_id": "unsafe_mapping",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "B"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "mapping.json": {
+            "format": "json",
+            "value": {
+              "schema_version": "1.0",
+              "records": {
+                "fields": {
+                  "topic": {
+                    "source": "content",
+                    "operations": [
+                      {
+                        "op": "python",
+                        "expression": "ORACLE_PRIVATE_EXEC_CODE"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--schema-mapping",
+          "{root}/mapping.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {
+        "/run/run_status": "failed",
+        "/derived_metrics": {},
+        "/simulations": {}
+      },
+      "required_error_codes": [
+        "E_MAPPING_UNSAFE_TRANSFORM"
+      ],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [
+        "/errors"
+      ],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Only the approved finite mapping operation vocabulary may execute. An executable Python transform fails schema-mapping input validation with E_MAPPING_UNSAFE_TRANSFORM and exit1; its payload must never be executed or printed. Unsupported CLI activation/configuration remains the separate exit2 class."
+      ],
+      "forbidden_literals": [
+        "ORACLE_PRIVATE_EXEC_CODE"
+      ]
+    },
+    {
+      "case_id": "duplicate_record_identity",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {
+        "/run/run_status": "failed",
+        "/derived_metrics": {}
+      },
+      "required_error_codes": [
+        "E_RECORD_DUPLICATE_ID"
+      ],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Two records with the same (dataset_version,record_id) are invalid even when their raw content differs. No silently deduplicated support result is allowed."
+      ]
+    },
+    {
+      "case_id": "output_collision",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "B"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "reports/report.json": {
+            "format": "text",
+            "text": "KEEP_EXISTING_REPORT"
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {},
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Publication cannot overwrite an existing report target. Leave its bytes unchanged, publish no peer report and return output-I/O exit1."
+      ],
+      "no_report": true,
+      "stderr_codes": [
+        "E_OUTPUT_EXISTS"
+      ],
+      "files_unchanged": {
+        "reports/report.json": "KEEP_EXISTING_REPORT"
+      },
+      "files_absent": [
+        "reports/report.md"
+      ]
+    },
+    {
+      "case_id": "output_missing_parent",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "A"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "B"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "C"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--out",
+          "{root}/missing_parent/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {},
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "Only the resolved output leaf may be created; a nonexistent parent is an I/O failure. No success path or fabricated report is announced."
+      ],
+      "no_report": true,
+      "stderr_codes": [
+        "E_OUTPUT_IO"
+      ],
+      "files_absent": [
+        "missing_parent/reports/report.json",
+        "missing_parent/reports/report.md"
+      ]
+    },
+    {
+      "case_id": "hostile_label_control_characters",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "sample",
+                "record_id": "s0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "TOPIC`|<script>ORACLE_LABEL</script>\n## Injected‮"
+              },
+              {
+                "dataset_version": "sample",
+                "record_id": "s1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "ordinary"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/derived_metrics/support/by_version/sample/support_size/value": 2,
+        "/derived_metrics/diversity/by_version/sample/gini_simpson_diversity/value": 0.5,
+        "/derived_metrics/diversity/by_version/sample/simpson_concentration/value": 0.5,
+        "/derived_metrics/support/by_version/sample/support_size/scope/record_count": 2
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "The hostile topic is a literal state distinct from ordinary: K2,D1/2. Markdown must encode control/markup characters as literal JSON data, preserving value meaning and the twelve section boundaries."
+      ],
+      "markdown_forbidden_literals": [
+        "<script>",
+        "\n## Injected",
+        "‮"
+      ]
+    },
+    {
+      "case_id": "redacted_nested_error",
+      "kind": "cli",
+      "input_spec": {
+        "files": {
+          "records.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "ORACLE_PRIVATE_VERSION",
+                "record_id": "ORACLE_PRIVATE_ID_0",
+                "content": "ORACLE_RAW_CONTENT_0",
+                "topic": "ORACLE_PRIVATE_STATE_0"
+              },
+              {
+                "dataset_version": "ORACLE_PRIVATE_VERSION",
+                "record_id": "ORACLE_PRIVATE_ID_1",
+                "content": "ORACLE_RAW_CONTENT_1",
+                "topic": "ORACLE_PRIVATE_STATE_1"
+              },
+              {
+                "dataset_version": "ORACLE_PRIVATE_VERSION",
+                "record_id": "ORACLE_PRIVATE_ID_2",
+                "content": "ORACLE_RAW_CONTENT_2",
+                "topic": "ORACLE_PRIVATE_STATE_2"
+              },
+              {
+                "dataset_version": "ORACLE_PRIVATE_VERSION",
+                "record_id": "ORACLE_PRIVATE_ID_3",
+                "content": "ORACLE_RAW_CONTENT_3",
+                "topic": "ORACLE_PRIVATE_STATE_3"
+              }
+            ]
+          },
+          "config.json": {
+            "format": "json",
+            "value": {
+              "representation": {
+                "name": "topic",
+                "source": "topic_field",
+                "field": "topic",
+                "version": "oracle-topic-v1",
+                "missing_value_policy": "exclude"
+              }
+            }
+          },
+          "provenance.jsonl": {
+            "format": "jsonl",
+            "rows": [
+              {
+                "dataset_version": "ORACLE_PRIVATE_VERSION",
+                "record_id": "ORACLE_PRIVATE_ID_0",
+                "source_type": "human",
+                "external_grounding": "yes"
+              }
+            ]
+          }
+        },
+        "argv": [
+          "audit",
+          "--records",
+          "{root}/records.jsonl",
+          "--config",
+          "{root}/config.json",
+          "--provenance",
+          "{root}/provenance.jsonl",
+          "--redacted",
+          "--out",
+          "{root}/reports"
+        ]
+      },
+      "expected_exit": 1,
+      "expected": {
+        "/run/run_status": "partial",
+        "/run/privacy_mode": "redacted",
+        "/run/redacted_mode": true,
+        "/run/network_call_count": 0,
+        "/inputs/scope/record_count": 4
+      },
+      "required_error_codes": [
+        "E_SCHEMA_REQUIRED_FIELD"
+      ],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "The first provenance row lacks required confidence. Retain the error and usable four-state content metrics while protecting version, record, state, scope and nested diagnostic identities in JSON, Markdown, stdout and stderr."
+      ],
+      "forbidden_literals": [
+        "ORACLE_PRIVATE_",
+        "ORACLE_RAW_CONTENT_",
+        "{root}"
+      ]
+    },
+    {
+      "case_id": "nonfinite_supplied_result_nan",
+      "kind": "canonical_rejection",
+      "input_spec": {
+        "baseline": "hero_normal",
+        "mutations": {
+          "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/value": {
+            "$nonfinite": "NaN"
+          }
+        }
+      },
+      "expected_exit": null,
+      "expected": {},
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "The canonical report accepts only finite JSON numbers. Reject the supplied nonfinite result without rounding, replacement or rendering."
+      ],
+      "expected_exception": "ValueError"
+    },
+    {
+      "case_id": "nonfinite_supplied_result_positive_infinity",
+      "kind": "canonical_rejection",
+      "input_spec": {
+        "baseline": "hero_normal",
+        "mutations": {
+          "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/value": {
+            "$nonfinite": "Infinity"
+          }
+        }
+      },
+      "expected_exit": null,
+      "expected": {},
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "The canonical report accepts only finite JSON numbers. Reject the supplied nonfinite result without rounding, replacement or rendering."
+      ],
+      "expected_exception": "ValueError"
+    },
+    {
+      "case_id": "nonfinite_supplied_result_negative_infinity",
+      "kind": "canonical_rejection",
+      "input_spec": {
+        "baseline": "hero_normal",
+        "mutations": {
+          "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/value": {
+            "$nonfinite": "-Infinity"
+          }
+        }
+      },
+      "expected_exit": null,
+      "expected": {},
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "The canonical report accepts only finite JSON numbers. Reject the supplied nonfinite result without rounding, replacement or rendering."
+      ],
+      "expected_exception": "ValueError"
+    },
+    {
+      "case_id": "corrupted_capability_mirror",
+      "kind": "canonical_rejection",
+      "input_spec": {
+        "baseline": "hero_normal",
+        "mutations": {
+          "/observability/capabilities/lineage/execution_status": "completed"
+        }
+      },
+      "expected_exit": null,
+      "expected": {},
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "The compatibility mirror must be exactly equal to the canonical matrix. Also, completed lineage analysis is beyond Phase4. Reject the mutation before serialization."
+      ],
+      "expected_exception": "ValueError"
+    },
+    {
+      "case_id": "incompatible_representation",
+      "kind": "pair_api_rejection",
+      "input_spec": {
+        "earlier_counts": {
+          "A": 1,
+          "B": 1
+        },
+        "later_counts": {
+          "A": 1,
+          "C": 1
+        },
+        "earlier_version": "earlier",
+        "later_version": "later",
+        "version_order": [
+          "earlier",
+          "later"
+        ],
+        "earlier_representation": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "meaning-v1",
+          "missing_value_policy": "error"
+        },
+        "later_representation": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "meaning-v2",
+          "missing_value_policy": "error"
+        },
+        "state_semantics": "literal category labels"
+      },
+      "expected_exit": null,
+      "expected": {},
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "The CLI only accepts one shared representation, so distinct declared versions exercise the accepted explicit-pair API boundary. Each independent two-state distribution has D1/2, but no compatible pair exists without an approved harmonization declaration."
+      ],
+      "expected_exception": "CanonicalValidationError",
+      "expected_error_code": "E_REPRESENTATION_INCOMPATIBLE"
+    },
+    {
+      "case_id": "installed_without_pyarrow",
+      "kind": "installed_hero",
+      "input_spec": {
+        "command": [
+          "python",
+          "-I",
+          "-m",
+          "recursive_integrity_toolkit",
+          "example",
+          "--out",
+          "{root}/reports"
+        ],
+        "pyarrow_import": "blocked",
+        "resource_set": "installed_wheel"
+      },
+      "expected_exit": 0,
+      "expected": {
+        "/inputs/scope/record_count": 16,
+        "/inputs/version_order": [
+          "v1",
+          "v2"
+        ],
+        "/observability/maximum_level": 4,
+        "/observed_facts/record_counts/v1/value": 8,
+        "/observed_facts/record_counts/v2/value": 8,
+        "/derived_metrics/support/by_version/v1/support_size/value": 8,
+        "/derived_metrics/support/by_version/v2/support_size/value": 5,
+        "/derived_metrics/support/support_delta/value": -3,
+        "/derived_metrics/support/support_retention_ratio/value": 0.625,
+        "/derived_metrics/support/support_loss_count/value": 3,
+        "/derived_metrics/support/support_added_count/value": 0,
+        "/derived_metrics/support/extinct_states/value": [
+          "battery",
+          "lizard",
+          "turtle"
+        ],
+        "/derived_metrics/support/added_states/value": [],
+        "/derived_metrics/support/retained_states/value": [
+          "bird",
+          "cat",
+          "dog",
+          "fish",
+          "refund"
+        ],
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/value": 0.875,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/value": 0.125,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/value": 0.75,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/value": 0.25,
+        "/derived_metrics/diversity/gini_simpson_diversity_delta/value": -0.125,
+        "/observed_facts/provenance/analyzed_record_count/value": 8,
+        "/observed_facts/provenance/records_with_matching_rows/value": 8,
+        "/observed_facts/provenance/missing_provenance_count/value": 0,
+        "/observed_facts/provenance/known_open_count/value": 4,
+        "/observed_facts/provenance/known_closed_count/value": 4,
+        "/observed_facts/provenance/unresolved_grounding_count/value": 0,
+        "/observed_facts/provenance/source_type_counts/value": {
+          "human": 4,
+          "synthetic": 4,
+          "mixed": 0,
+          "sensor": 0,
+          "unknown": 0
+        },
+        "/derived_metrics/provenance/source_type_shares/value": {
+          "human": 0.5,
+          "synthetic": 0.5,
+          "mixed": 0.0,
+          "sensor": 0.0,
+          "unknown": 0.0
+        },
+        "/derived_metrics/provenance/missing_provenance_share/value": 0.0,
+        "/derived_metrics/closure_exposure/direct/lower_bound/value": 0.5,
+        "/derived_metrics/closure_exposure/direct/upper_bound/value": 0.5,
+        "/derived_metrics/closure_exposure/direct/interval_width/value": 0.0,
+        "/observed_facts/lineage/declared_parent_edge_count/value": 8,
+        "/observed_facts/lineage/resolved_parent_edge_count/value": 8,
+        "/observed_facts/lineage/unresolved_parent_edge_count/value": 0,
+        "/observed_facts/lineage/cycle_status/status": "unavailable",
+        "/observed_facts/lineage/cycle_status/value": null,
+        "/observed_facts/lineage/ordering_certificate/value/method": "declared_earlier_version_order",
+        "/observed_facts/lineage/ordering_certificate/value/version_order": [
+          "v1",
+          "v2"
+        ],
+        "/observed_facts/lineage/ordering_certificate/value/all_resolved_edges_follow_order": true,
+        "/proxy_signals/support_contraction/status": "available",
+        "/proxy_signals/support_contraction/evidence_class": "proxy_signal",
+        "/simulations": {},
+        "/warnings": [],
+        "/errors": [],
+        "/capabilities/ingestion/status": "available",
+        "/capabilities/content_diagnostics/status": "available",
+        "/capabilities/provenance/status": "available",
+        "/capabilities/lineage/status": "available",
+        "/capabilities/dataset_longitudinal/status": "available",
+        "/capabilities/model_longitudinal/status": "unavailable",
+        "/capabilities/intervention_simulation/status": "unavailable",
+        "/capabilities/ingestion/execution_status": "completed",
+        "/capabilities/content_diagnostics/execution_status": "completed",
+        "/capabilities/provenance/execution_status": "completed",
+        "/capabilities/lineage/execution_status": "deferred",
+        "/capabilities/dataset_longitudinal/execution_status": "partial",
+        "/capabilities/dataset_longitudinal/execution_scope": [
+          "supplied_explicit_pair_support_and_diversity"
+        ],
+        "/capabilities/model_longitudinal/execution_status": "deferred",
+        "/capabilities/intervention_simulation/execution_status": "not_requested",
+        "/observed_facts/provenance/provenance_row_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_row_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_row_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_row_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/provenance_required_field_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_required_field_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_required_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_required_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/grounding_field_coverage/value": 1.0,
+        "/observed_facts/provenance/grounding_field_coverage/denominator": 8,
+        "/observed_facts/provenance/grounding_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/grounding_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/source_type_field_coverage/value": 1.0,
+        "/observed_facts/provenance/source_type_field_coverage/denominator": 8,
+        "/observed_facts/provenance/source_type_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/source_type_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/provenance/provenance_confidence_field_coverage/value": 1.0,
+        "/observed_facts/provenance/provenance_confidence_field_coverage/denominator": 8,
+        "/observed_facts/provenance/provenance_confidence_field_coverage/evidence_class": "observed_fact",
+        "/observed_facts/provenance/provenance_confidence_field_coverage/scope/dataset_versions": [
+          "v2"
+        ],
+        "/observed_facts/state_counts/by_version/v1/value": [
+          {
+            "state_id": "battery",
+            "state_count": 1
+          },
+          {
+            "state_id": "bird",
+            "state_count": 1
+          },
+          {
+            "state_id": "cat",
+            "state_count": 1
+          },
+          {
+            "state_id": "dog",
+            "state_count": 1
+          },
+          {
+            "state_id": "fish",
+            "state_count": 1
+          },
+          {
+            "state_id": "lizard",
+            "state_count": 1
+          },
+          {
+            "state_id": "refund",
+            "state_count": 1
+          },
+          {
+            "state_id": "turtle",
+            "state_count": 1
+          }
+        ],
+        "/derived_metrics/support/by_version/v1/support_size/status": "available",
+        "/derived_metrics/support/by_version/v1/support_size/evidence_class": "derived_metric",
+        "/derived_metrics/support/by_version/v1/support_size/method_id": "F-002",
+        "/derived_metrics/support/by_version/v1/support_size/unit": "states",
+        "/derived_metrics/support/by_version/v1/support_size/scope/dataset_versions": [
+          "v1"
+        ],
+        "/derived_metrics/support/by_version/v1/support_size/scope/record_count": 8,
+        "/derived_metrics/support/by_version/v1/support_size/scope/excluded_record_count": 0,
+        "/derived_metrics/support/by_version/v1/support_size/denominator": 8,
+        "/derived_metrics/support/by_version/v1/support_size/representation/representation_name": "topic",
+        "/derived_metrics/support/by_version/v1/support_size/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/status": "available",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/method_id": "F-003",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/scope/dataset_versions": [
+          "v1"
+        ],
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/denominator": 8,
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v1/gini_simpson_diversity/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/status": "available",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/method_id": "F-004",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/scope/dataset_versions": [
+          "v1"
+        ],
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/denominator": 8,
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v1/simpson_concentration/representation/representation_version": "hero-topic-v1",
+        "/observed_facts/state_counts/by_version/v2/value": [
+          {
+            "state_id": "bird",
+            "state_count": 1
+          },
+          {
+            "state_id": "cat",
+            "state_count": 3
+          },
+          {
+            "state_id": "dog",
+            "state_count": 2
+          },
+          {
+            "state_id": "fish",
+            "state_count": 1
+          },
+          {
+            "state_id": "refund",
+            "state_count": 1
+          }
+        ],
+        "/derived_metrics/support/by_version/v2/support_size/status": "available",
+        "/derived_metrics/support/by_version/v2/support_size/evidence_class": "derived_metric",
+        "/derived_metrics/support/by_version/v2/support_size/method_id": "F-002",
+        "/derived_metrics/support/by_version/v2/support_size/unit": "states",
+        "/derived_metrics/support/by_version/v2/support_size/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/support/by_version/v2/support_size/scope/record_count": 8,
+        "/derived_metrics/support/by_version/v2/support_size/scope/excluded_record_count": 0,
+        "/derived_metrics/support/by_version/v2/support_size/denominator": 8,
+        "/derived_metrics/support/by_version/v2/support_size/representation/representation_name": "topic",
+        "/derived_metrics/support/by_version/v2/support_size/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/status": "available",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/method_id": "F-003",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/denominator": 8,
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v2/gini_simpson_diversity/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/status": "available",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/evidence_class": "derived_metric",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/method_id": "F-004",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/unit": "dimensionless",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/scope/record_count": 8,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/scope/excluded_record_count": 0,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/denominator": 8,
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/representation/representation_name": "topic",
+        "/derived_metrics/diversity/by_version/v2/simpson_concentration/representation/representation_version": "hero-topic-v1",
+        "/derived_metrics/closure_exposure/direct/lower_bound/status": "available",
+        "/derived_metrics/closure_exposure/direct/lower_bound/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/lower_bound/method_id": "F-009",
+        "/derived_metrics/closure_exposure/direct/lower_bound/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/lower_bound/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/lower_bound/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/closure_exposure/direct/upper_bound/status": "available",
+        "/derived_metrics/closure_exposure/direct/upper_bound/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/upper_bound/method_id": "F-010",
+        "/derived_metrics/closure_exposure/direct/upper_bound/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/upper_bound/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/upper_bound/scope/dataset_versions": [
+          "v2"
+        ],
+        "/derived_metrics/closure_exposure/direct/interval_width/status": "available",
+        "/derived_metrics/closure_exposure/direct/interval_width/evidence_class": "derived_metric",
+        "/derived_metrics/closure_exposure/direct/interval_width/method_id": "T3.upper_minus_lower",
+        "/derived_metrics/closure_exposure/direct/interval_width/unit": "ratio",
+        "/derived_metrics/closure_exposure/direct/interval_width/denominator": 8,
+        "/derived_metrics/closure_exposure/direct/interval_width/scope/dataset_versions": [
+          "v2"
+        ],
+        "/proxy_signals/support_contraction/level": "present"
+      },
+      "required_error_codes": [],
+      "required_warning_codes": [],
+      "absent_paths": [],
+      "nonempty_paths": [],
+      "unavailable_conclusions": [
+        "model_performance_decline",
+        "causal_ancestor_effect",
+        "universal_integrity",
+        "universal_collapse_prediction"
+      ],
+      "forbidden_claims": [
+        "universal_integrity_score",
+        "universal_collapse_probability",
+        "causal_contribution_score"
+      ],
+      "markdown_requirements": [
+        "all_twelve_sections_in_order",
+        "json_value_evidence_status_parity"
+      ],
+      "numeric_rationale": [
+        "The packaged CSV/JSON Hero needs core dependencies only. The installed command must retain all Hero values and both reports when optional PyArrow is absent."
+      ]
+    }
+  ]
+}

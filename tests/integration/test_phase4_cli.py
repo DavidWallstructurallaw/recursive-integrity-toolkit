@@ -704,3 +704,161 @@ def test_phase4_step8_changed_rejected_order_never_claims_a_stale_hash(tmp_path,
     assert report["inputs"] == report["derived_metrics"] == {}
     assert report["errors"][0]["code"] == "E_FILE_PARSE"
     assert "PRIVATE_CHANGED_INPUT" not in json.dumps(report) + streams.out + streams.err
+
+
+def phase4_step9_block_network(monkeypatch):
+    import socket
+    import urllib.request
+
+    attempts = []
+    def blocked(*args, **kwargs):
+        attempts.append(True)
+        raise AssertionError("Step 9 intercepted an outbound operation")
+    for owner, name in ((socket, "socket"), (socket, "create_connection"),
+                        (socket, "getaddrinfo"), (socket, "gethostbyname"),
+                        (urllib.request, "urlopen"), (urllib.request.OpenerDirector, "open")):
+        monkeypatch.setattr(owner, name, blocked)
+    return attempts
+
+
+@pytest.mark.parametrize("redacted", [False, True])
+@pytest.mark.parametrize("case,expected_exit", [
+    ("complete", 0), ("malformed_input", 1), ("malformed_config", 2),
+    ("duplicate_identity", 1), ("family_internal", 4), ("publication_io", 1),
+])
+def test_phase4_step9_offline_privacy_covers_every_cli_sink_on_failure(
+        tmp_path, capsys, caplog, monkeypatch, redacted, case, expected_exit):
+    from recursive_integrity_toolkit.metrics import bounds
+    from recursive_integrity_toolkit.utils import paths
+
+    args, records, config = phase4_step7_inputs(tmp_path, provenance=True)
+    rows = [json.loads(line) for line in records.read_text().splitlines()]
+    for row in rows:
+        row["content"] = "CONTENT_NEVER_PUBLISH_583"
+        row["notes"] = "NOTES_NEVER_PUBLISH_583"
+    records.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+    manifest = tmp_path / "provenance.jsonl"
+    rows = [json.loads(line) for line in manifest.read_text().splitlines()]
+    for row in rows:
+        row["source_uri"] = "https://invalid.example/REMOTE_METADATA_NEVER_PUBLISH_583"
+        row["notes"] = "NOTES_NEVER_PUBLISH_583"
+    manifest.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+    salt = tmp_path / "SALT_PATH_NEVER_PUBLISH_583"
+    salt.write_bytes(b"SECRET_NEVER_PUBLISH_583_0123456789")
+    if redacted:
+        args += ["--redacted", "--id-salt-file", str(salt)]
+    if case == "malformed_input":
+        records.write_bytes(b'{"CONTENT_NEVER_PUBLISH_583":')
+    elif case == "malformed_config":
+        config.write_bytes(b'{"NOTES_NEVER_PUBLISH_583":')
+    elif case == "duplicate_identity":
+        records.write_bytes(records.read_bytes() + b"\n" + records.read_bytes().splitlines()[0])
+    elif case == "family_internal":
+        def broken(*args, **kwargs):
+            raise RuntimeError({"nested": ["EXCEPTION_NEVER_PUBLISH_583"]})
+        monkeypatch.setattr(bounds, "direct_closure_exposure", broken)
+    before = {path: path.read_bytes() for path in (records, config, manifest, salt)}
+    staged = []
+    original_write = paths._output_write
+    def inspect_write(path, payload, owned):
+        staged.append((path.name, payload.decode("utf-8")))
+        original_write(path, payload, owned)
+        if case == "publication_io" and path.name == "report.md":
+            raise OSError("EXCEPTION_NEVER_PUBLISH_583")
+    monkeypatch.setattr(paths, "_output_write", inspect_write)
+    attempts = phase4_step9_block_network(monkeypatch)
+    output = tmp_path / "PRIVATE_OUTPUT_583"
+    code, report, streams = phase4_step7_invoke(args, output, capsys)
+    assert code == expected_exit and attempts == []
+    assert all(path.read_bytes() == raw for path, raw in before.items())
+    retained = [path for path in tmp_path.rglob("*") if path.is_file() and path not in before]
+    sinks = streams.out + streams.err + caplog.text
+    sinks += "".join(text for _, text in staged)
+    sinks += "".join(path.read_text(encoding="utf-8") for path in retained)
+    for secret in ("CONTENT_NEVER_PUBLISH_583", "NOTES_NEVER_PUBLISH_583",
+                   "REMOTE_METADATA_NEVER_PUBLISH_583", "SECRET_NEVER_PUBLISH_583",
+                   "EXCEPTION_NEVER_PUBLISH_583", "SALT_PATH_NEVER_PUBLISH_583"):
+        assert secret not in sinks
+    assert "Traceback" not in sinks
+    assert not any(path.name.startswith(".rit-stage-") for path in tmp_path.rglob("*"))
+    if redacted:
+        assert str(tmp_path) not in sinks and "PRIVATE_OUTPUT_583" not in sinks
+    if case == "publication_io":
+        assert report is None and retained == [] and streams.out == ""
+        assert [name for name, _ in staged] == ["report.json", "report.md"]
+        assert "E_OUTPUT_IO" in streams.err
+    else:
+        assert {path.name for path in retained} == {"report.json", "report.md"}
+        assert report["run"]["network_call_count"] == 0
+        if case == "complete":
+            assert report["run"]["run_status"] == "complete" and report["errors"] == []
+        elif case == "family_internal":
+            assert report["run"]["run_status"] == "partial"
+            values = report["derived_metrics"]["support"]["by_version"].values()
+            assert [item["support_size"]["value"] for item in values] == [3]
+            # P4-D04 protects unregistered diagnostic identifiers in both modes.
+            assert len(report["errors"]) == 1
+            assert report["errors"][0]["code"].startswith("hmac-sha256:")
+            assert report["errors"][0]["severity"] == "error"
+            assert report["errors"][0]["effect_on_capabilities"] == ["provenance"]
+        else:
+            expected = {"malformed_input": "E_FILE_PARSE", "malformed_config": "E_CONFIG_INVALID",
+                        "duplicate_identity": "E_RECORD_DUPLICATE_ID"}[case]
+            assert expected in {item["code"] for item in report["errors"]}
+            assert report["run"]["run_status"] == "failed"
+        diagnostics = [json.loads(line) for line in streams.err.splitlines()]
+        assert diagnostics == report["warnings"] + report["errors"]
+
+
+@pytest.mark.parametrize("redacted", [False, True])
+@pytest.mark.parametrize("label", [
+    "<script>FORGED_583</script>|`[x](javascript:alert(1))",
+    "state\n## FORGED_583\n| field | invented |\x1b[31m",
+    "café 状态\u202eFORGED_583\u2066x\u2069\u2028end",
+])
+def test_phase4_step9_hostile_state_labels_stay_inert_through_cli(
+        tmp_path, capsys, monkeypatch, redacted, label):
+    import re
+    import unicodedata
+
+    args, records, config = phase4_step7_inputs(tmp_path)
+    rows = [json.loads(line) for line in records.read_text().splitlines()]
+    for row in rows[:2]:
+        row["topic"] = label
+    records.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+    before = records.read_bytes()
+    attempts = phase4_step9_block_network(monkeypatch)
+    output = tmp_path / "out"
+    code, report, streams = phase4_step7_invoke(args + (["--redacted"] if redacted else []), output, capsys)
+    assert code == 0 and attempts == [] and records.read_bytes() == before
+    version = next(iter(report["derived_metrics"]["support"]["by_version"]))
+    assert report["derived_metrics"]["support"]["by_version"][version]["support_size"]["value"] == 3
+    assert report["derived_metrics"]["diversity"]["by_version"][version]["gini_simpson_diversity"]["value"] == 0.625
+    markdown = (output / "report.md").read_text(encoding="utf-8")
+    assert len([line for line in markdown.splitlines() if line.startswith("## ")]) == 12
+    assert "<script>" not in markdown and not re.search(r"^#{1,6} FORGED_583", markdown, re.MULTILINE)
+    outside_code = re.sub(r"`[^`\n]*`", "", markdown)
+    assert "javascript:" not in outside_code
+    assert all(character == "\n" or unicodedata.category(character) not in
+               {"Cc", "Cf", "Cs", "Zl", "Zp"} for character in markdown)
+    if redacted:
+        assert "FORGED_583" not in json.dumps(report) + markdown + streams.out + streams.err
+    else:
+        def strings(node):
+            if isinstance(node, str):
+                yield node
+            elif isinstance(node, dict):
+                for key, value in node.items():
+                    yield key
+                    yield from strings(value)
+            elif isinstance(node, list):
+                for value in node:
+                    yield from strings(value)
+        assert label in set(strings(report))
+        literals = []
+        for span in re.findall(r"`([^`\n]*)`", markdown):
+            try:
+                literals.extend(strings(json.loads(span)))
+            except json.JSONDecodeError:
+                pass
+        assert label in literals

@@ -5699,6 +5699,17 @@ def phase4_step8_main(step: int = 8) -> int:
     return 0
 
 
+def phase4_step9_main(step: int = 9) -> int:
+    import runpy
+    if type(step) is not int or step != 9:
+        raise ValueError("Only authorized Phase 4 Step 9 traceability is available")
+    control = runpy.run_path(str(ROOT / "scripts/release_check.py"), run_name="phase4_step9_traceability_control")
+    control["audit_phase4_step9"](step=step)
+    phase4_step8_cli_boundary(ROOT)
+    print("Phase 4 Step 9: independent report goldens and adversarial checks; all runtime and schemas frozen: PASS")
+    return 0
+
+
 def cli_main(argv: list[str] | None = None) -> int:
     """Select the active phase without changing historical checker semantics."""
     import argparse
@@ -5727,7 +5738,9 @@ def cli_main(argv: list[str] | None = None) -> int:
         return phase4_step7_main(step=args.step)
     if args.phase == 4 and args.step == 8:
         return phase4_step8_main(step=args.step)
-    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5 or --phase 4 --step 6 or --phase 4 --step 7 or --phase 4 --step 8")
+    if args.phase == 4 and args.step == 9:
+        return phase4_step9_main(step=args.step)
+    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5 or --phase 4 --step 6 or --phase 4 --step 7 or --phase 4 --step 8 or --phase 4 --step 9")
     return 2
 
 

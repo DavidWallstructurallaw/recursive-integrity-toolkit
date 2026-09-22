@@ -405,3 +405,51 @@ def test_phase4_step8_example_help_remains_lazy(tmp_path, subprocess_env):
     program = "import importlib.abc,sys\nclass Block(importlib.abc.MetaPathFinder):\n def find_spec(self,fullname,path=None,target=None):\n  if fullname.startswith(('numpy','pandas','pyarrow','recursive_integrity_toolkit.io','recursive_integrity_toolkit.config','recursive_integrity_toolkit.reports')):raise AssertionError('eager execution')\nsys.meta_path.insert(0,Block())\nfrom recursive_integrity_toolkit.cli import main\ntry:main(['example','--help'])\nexcept SystemExit as e:assert e.code==0\n"
     result = subprocess.run([sys.executable, "-c", program], cwd=tmp_path, env=subprocess_env, capture_output=True, text=True)
     assert result.returncode == 0 and "--out" in result.stdout and not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize("redacted", [False, True])
+def test_phase4_step9_example_report_write_failure_preserves_inputs_and_no_network(
+        repo_root, tmp_path, capsys, caplog, monkeypatch, redacted):
+    import urllib.request
+    from recursive_integrity_toolkit.cli import main
+    from recursive_integrity_toolkit.utils import paths
+
+    canonical = repo_root / "examples/hero"
+    before = {path.name: path.read_bytes() for path in canonical.iterdir() if path.is_file()}
+    calls = []
+    def blocked(*args, **kwargs):
+        calls.append(True)
+        raise AssertionError("example attempted outbound operation")
+    for owner, name in ((socket, "socket"), (socket, "create_connection"),
+                        (socket, "getaddrinfo"), (socket, "gethostbyname"),
+                        (urllib.request, "urlopen"), (urllib.request.OpenerDirector, "open")):
+        monkeypatch.setattr(owner, name, blocked)
+    staged_reports = []
+    original = paths._output_write
+    def fail_report(path, payload, owned):
+        original(path, payload, owned)
+        if path.name in {"report.json", "report.md"}:
+            staged_reports.append(payload.decode("utf-8"))
+        if path.name == "report.md":
+            raise OSError("PRIVATE_EXAMPLE_DISK_DIAGNOSTIC_852")
+    monkeypatch.setattr(paths, "_output_write", fail_report)
+    output = tmp_path / "PRIVATE_EXAMPLE_DIRECTORY_852"
+    args = ["example", "--out", str(output)] + (["--redacted"] if redacted else [])
+    assert main(args) == 1
+    streams = capsys.readouterr()
+    assert calls == [] and streams.out == "" and "E_OUTPUT_IO" in streams.err
+    assert len(staged_reports) == 2
+    report = json.loads(staged_reports[0])
+    phase4_step8_hero_values(report)
+    assert report["run"]["network_call_count"] == 0
+    assert "## Errors" in staged_reports[1] and "deferred" in staged_reports[1]
+    extracted = {path.name: path.read_bytes() for path in (output / "inputs").iterdir()}
+    assert len(extracted) == 6
+    assert all(raw == before[name] for name, raw in extracted.items())
+    assert {path.name: path.read_bytes() for path in canonical.iterdir() if path.is_file()} == before
+    assert not any(path.is_file() for path in (output / "reports").rglob("*"))
+    assert not any(path.name.startswith(".rit-stage-") for path in output.rglob("*"))
+    sinks = "".join(staged_reports) + streams.err + caplog.text
+    assert "PRIVATE_EXAMPLE_DISK_DIAGNOSTIC_852" not in sinks and "Traceback" not in sinks
+    if redacted:
+        assert str(tmp_path) not in sinks and "PRIVATE_EXAMPLE_DIRECTORY_852" not in sinks

@@ -205,3 +205,67 @@ def test_phase4_step3_assembly_never_traverses_or_revalidates_lineage(tmp_path, 
     report = phase4_step3_schema(assembly.assemble_report(bundle, run=phase4_step3_run()), repo_root)
     assert report["observability"]["maximum_level"] == 4
     assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+
+
+@pytest.mark.parametrize("redacted", [False, True])
+@pytest.mark.parametrize("parents,expected_code,expected_exit", [
+    (["v1::absent"], "W_PARENT_UNRESOLVED", 0),
+    (["v2::c"], "E_LINEAGE_CYCLE", 3),
+    (["bad::format::x"], "E_PARENT_FORMAT", 3),
+])
+def test_phase4_step9_parent_failure_survives_pair_cli_and_both_formats(
+        tmp_path, capsys, redacted, parents, expected_code, expected_exit):
+    from recursive_integrity_toolkit.cli import main
+    from recursive_integrity_toolkit.result import validate_report
+
+    bundle = _bundle(tmp_path, parents)
+    combined = tmp_path / "records.jsonl"
+    rows = [json.loads(line) for line in combined.read_text().splitlines()]
+    earlier = _put(tmp_path / "earlier.jsonl", rows[:1])
+    later = _put(tmp_path / "later.jsonl", rows[1:])
+    config = tmp_path / "config.json"
+    config.write_text(json.dumps(_config()), encoding="utf-8")
+    output = tmp_path / "out"
+    args = ["audit", "--records", str(later), "--compare", str(earlier),
+        "--provenance", str(tmp_path / "prov.jsonl"), "--config", str(config),
+        "--state-semantics", "literal animal categories", "--out", str(output)]
+    if redacted:
+        args.append("--redacted")
+    before = {path: path.read_bytes() for path in tmp_path.iterdir() if path.is_file()}
+    assert main(args) == expected_exit
+    streams = capsys.readouterr()
+    report = json.loads((output / "report.json").read_bytes())
+    validate_report(report)
+    markdown = (output / "report.md").read_text(encoding="utf-8")
+    assert all(path.read_bytes() == raw for path, raw in before.items())
+    assert report["observability"]["maximum_level"] == 4
+    lineage = report["capabilities"]["lineage"]
+    assert lineage["status"] == "unavailable" and lineage["execution_status"] == "deferred"
+    assert lineage == report["observability"]["capabilities"]["lineage"]
+    support = report["derived_metrics"]["support"]
+    assert support["support_delta"]["value"] == 0
+    assert support["support_retention_ratio"]["value"] == 0
+    assert [value["support_size"]["value"] for value in support["by_version"].values()] == [1, 1]
+    assert report["derived_metrics"]["diversity"]["gini_simpson_diversity_delta"]["value"] == 0
+    direct = report["derived_metrics"]["closure_exposure"]["direct"]
+    assert [direct[key]["value"] for key in ("lower_bound", "upper_bound", "interval_width")] == [1, 1, 0]
+    assert "lineage" not in report["derived_metrics"]["closure_exposure"]
+    assert "ancestry" not in report["derived_metrics"] and report["simulations"] == {}
+    diagnostics = report["warnings"] + report["errors"]
+    affected = [item for item in diagnostics if item["code"] == expected_code]
+    assert affected and expected_code in markdown
+    assert [json.loads(line) for line in streams.err.splitlines()] == diagnostics
+    assert report["run"]["run_status"] == ("complete" if expected_exit == 0 else "partial")
+    assert bool(report["errors"]) == bool(expected_exit)
+    assert {"lineage_analysis", "external_ancestry", "causal_ancestor_effect"} <= {
+        item["conclusion"] for item in report["unavailable_conclusions"]}
+    assert "deferred" in markdown and len([line for line in markdown.splitlines() if line.startswith("## ")]) == 12
+    if redacted:
+        assert str(tmp_path) not in json.dumps(report) + markdown + streams.out + streams.err
+        for item in affected:
+            locations = item.get("representative_locations", [item])
+            for location in locations:
+                key = location.get("record_key")
+                if key is not None:
+                    assert key["record_id"] not in {"p", "c"}
+                    assert key["dataset_version"] not in {"v1", "v2"}

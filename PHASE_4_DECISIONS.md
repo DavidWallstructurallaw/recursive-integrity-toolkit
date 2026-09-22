@@ -848,3 +848,87 @@ approved I/O exit code 1. POSIX rejects the spelling with configuration exit cod
 2. Keep the frozen path implementation, preserve the parameterized test identity,
 and assert both platform-specific results occur before resource reads or writes.
 The failed Windows attempt is retained and the complete final-source gates rerun.
+
+## Phase 4 Step 9 authorization and independent report verification
+
+On 2026-09-22 the user authorized `Phase 4  **Step 9**  开始` after accepted
+Step 8 commit `63e347a785838b64a9c32e636ea48c664458cee4`, source tree
+`3ac450b5f67cad738849de18601999fefee98f63` and tests tree
+`ddaaab24d83080b7c1a27229c15e6e4a3f5b3cd8`. The inherited accepted suite contains
+3,768 core/minimum cases and 3,771 real-Parquet cases. Step 9 opens the 26 common G
+paths and exactly fourteen additional paths in plan section 6, a 40-path allowlist.
+Only the seven named new golden files may be added, yielding a 243-file candidate.
+All forty runtime modules, five schemas, seven packaged resources, canonical Hero
+inputs, mathematical oracles, dependencies, packaging and version remain frozen.
+
+### Historical source bindings and active guarantees
+
+Before editing, nine exact source-binding changes were proposed in the work
+conversation under common G and P4-D10. Seven unit definitions for Step 8 control
+approval, forged scope, stage dispatch, required fields, extra permission and both
+historical migration checks now read the pinned Step 8 snapshot. The two Step 8
+integration definitions for active workflows and mutation-tree source read that
+same snapshot. Their exact names and full before/after definitions are registered
+in PHASE4_STEP9_MIGRATIONS. Every inherited assertion, test name and parametrization
+is unchanged. The new session fixture verifies commit, source/test trees and every
+regular-file Git blob at creation and teardown; shared fixture meanings stay intact.
+Runtime checks that remain valid continue to read current source.
+
+The active control independently enforces actual authorization, exact path/operation
+permissions, immutable runtime/schema/resource bytes, historical source prefixes,
+exact listed migrations, safe appended test definitions and preserved maintainer
+statements except the explicit Step 9 dispatch additions. New mutation checks cover
+substantive oracles, schema, resources, runtime, dependency/version, test binding,
+old assertions, old tooling, forged permission and premature completion/output.
+
+### Report oracle and execution evidence
+
+The rationale, hand-authored expected values and four literal Hero report files are
+frozen by six explicit SHA-256 identities after independent expectation review.
+Candidate generation uses only an explicitly requested new scratch destination;
+accepted golden files are never an output target. Normalization follows P4-D08,
+and adversarial checks reject substantive-value erasure and unsupported claims.
+JSON and Markdown are both reviewed. All new report golden tests and the unchanged
+twenty mathematical cases must appear in the retained JUnit evidence, verified
+against actual collection. Full-suite candidate evidence also matches every current
+core and real-Parquet test identity and preserves the inherited identity generations.
+
+The four workflow roles retain read-only permissions, eight core matrix combinations,
+real Parquet, Hero/report goldens/math, security and build/candidate jobs. Budgets
+remain core 60, Parquet 20, Hero 15, security 20 and build 40 minutes. Both Hero and
+security explicitly select the new report-golden module; no case is filtered out.
+Installed smoke verification retains every accepted runtime behavior through Step 8.
+Failures and repairs remain in the external execution evidence. Reviews are assistant
+checks and do not constitute independent human certification. No end-to-end performance
+claim is made here. Stop after Step 9 acceptance: Step 10, Phase 4 completion, main
+merge, tag and package publication remain unopened.
+
+### Independent oracle review corrections before the final seal
+
+The first frozen expectation set and both initial candidate/replay attempts are
+retained in external evidence. Review of frozen P4-D02 and the inherited validator
+confirmed two hand-authored synthetic expectations required correction: a supplied
+partial-parent row makes input lineage observability partial, and an unknown schema
+mapping remains an input validation failure with exit 1. Exactly those two expected
+outcomes and their rationales were revised, with unchanged case identities and Hero
+literals. This adjudication follows the accepted contracts and validator behavior;
+no runtime change or numerical expectation was introduced. The 32-case oracle and
+four literal files received their final independent review before the six hashes
+were sealed in PHASE4_STEP9_GOLDEN_SHA256.
+
+A new governance inventory test initially included editable-install metadata under
+`src/`; its scope was corrected to the exact package directory while retaining all
+runtime, schema, Hero and dependency equality assertions. Its failing execution and
+passing repair remain distinct evidence. Golden generation, normalization and test
+harness repairs likewise retain their initial failures and successful replays; the
+receipt records their actual outcomes without treating a generated candidate as its
+own numerical authority.
+
+The first golden-JUnit gate draft incorrectly equated the mathematical module's
+node count with its twenty parametrized cases. The inherited module also contains
+one registry test. Root review found this before source acceptance. The gate now
+verifies the frozen mathematical JSON hash, requires the exact twenty named case
+identities plus the separate unchanged registry node, and reports the report-golden
+count independently. The initial control-suite attempt was interrupted with exit
+130 before this correction and is retained without an acceptance claim. Verification
+includes the real 92-node golden JUnit and a missing-registry negative case.

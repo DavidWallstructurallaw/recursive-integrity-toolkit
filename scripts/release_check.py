@@ -9808,6 +9808,1485 @@ def phase4_step8_sdist_smoke(sdist: Path) -> None:
 
 
 
+# Phase 4 Step 9: independently authored report oracles and adversarial integration.
+
+
+PHASE4_STEP8_FINAL = '63e347a785838b64a9c32e636ea48c664458cee4'
+
+
+PHASE4_STEP8_TREE = '3ac450b5f67cad738849de18601999fefee98f63'
+
+
+PHASE4_STEP8_TEST_TREE = 'ddaaab24d83080b7c1a27229c15e6e4a3f5b3cd8'
+
+
+PHASE4_STEP9_APPROVAL = 'Phase 4  **Step 9**  开始'
+
+
+PHASE4_STEP9_APPROVAL_DATE = '2026-09-22'
+
+
+PHASE4_STEP9_NEW = ('tests/golden/phase4_hero_redacted.json',
+ 'tests/golden/phase4_hero_redacted.md',
+ 'tests/golden/phase4_hero_report.json',
+ 'tests/golden/phase4_hero_report.md',
+ 'tests/golden/phase4_report_cases.md',
+ 'tests/golden/phase4_report_expected.json',
+ 'tests/golden/test_phase4_reports.py')
+
+
+PHASE4_STEP9_ALLOWED = {'.github/workflows/ci.yml',
+ '.github/workflows/golden.yml',
+ '.github/workflows/release.yml',
+ '.github/workflows/security.yml',
+ 'PHASE_4_BASELINE.json',
+ 'PHASE_4_DECISIONS.md',
+ 'docs/architecture.md',
+ 'docs/theory_traceability.md',
+ 'scripts/build_golden.py',
+ 'scripts/check_spec_consistency.py',
+ 'scripts/check_traceability.py',
+ 'scripts/normalize_golden.py',
+ 'scripts/release_check.py',
+ 'tests/conftest.py',
+ 'tests/golden/README.md',
+ 'tests/golden/phase4_hero_redacted.json',
+ 'tests/golden/phase4_hero_redacted.md',
+ 'tests/golden/phase4_hero_report.json',
+ 'tests/golden/phase4_hero_report.md',
+ 'tests/golden/phase4_report_cases.md',
+ 'tests/golden/phase4_report_expected.json',
+ 'tests/golden/test_phase4_reports.py',
+ 'tests/integration/test_ci_workflows.py',
+ 'tests/integration/test_hero_end_to_end.py',
+ 'tests/integration/test_hero_structure.py',
+ 'tests/integration/test_license_notices.py',
+ 'tests/integration/test_no_algorithms.py',
+ 'tests/integration/test_no_network.py',
+ 'tests/integration/test_optional_dependency.py',
+ 'tests/integration/test_owner_ids.py',
+ 'tests/integration/test_package_import.py',
+ 'tests/integration/test_package_install.py',
+ 'tests/integration/test_partial_lineage_report.py',
+ 'tests/integration/test_partial_provenance_report.py',
+ 'tests/integration/test_phase4_cli.py',
+ 'tests/integration/test_phase4_gates.py',
+ 'tests/integration/test_prohibited_structure.py',
+ 'tests/integration/test_repository_structure.py',
+ 'tests/integration/test_schema_json.py',
+ 'tests/unit/test_phase4_contracts.py'}
+
+
+PHASE4_STEP9_MIGRATIONS = {'tests/integration/test_phase4_gates.py': [{'new': 'def '
+                                                    'test_phase4_step8_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, '
+                                                    'phase4_step8_snapshot):\n'
+                                                    '    repo_root = phase4_step8_snapshot\n'
+                                                    '    names = {"ci.yml", "golden.yml", '
+                                                    '"security.yml", "release.yml"}\n'
+                                                    '    root = repo_root / ".github/workflows"\n'
+                                                    '    expected_timeouts = {"ci.yml": [60, 20], '
+                                                    '"golden.yml": [15], "security.yml": [20], '
+                                                    '"release.yml": [40]}\n'
+                                                    '    assert {path.name for path in '
+                                                    'root.glob("*.yml")} == names\n'
+                                                    '    for name in sorted(names):\n'
+                                                    '        text = (root / '
+                                                    'name).read_text(encoding="utf-8")\n'
+                                                    '        assert [int(line.split(":", 1)[1]) '
+                                                    'for line in text.splitlines()\n'
+                                                    '                if '
+                                                    'line.strip().startswith("timeout-minutes:")] '
+                                                    '== expected_timeouts[name]\n'
+                                                    '        assert "Phase 4 Step 8" in text, '
+                                                    'name\n'
+                                                    '        assert "--phase 4 --step 8" in text, '
+                                                    'name\n'
+                                                    '        for older in ("--phase 4 --step 7", '
+                                                    '"--phase 4 --step 6", "--phase 4 --step 5", '
+                                                    '"--phase 4 --step 4", "--phase 4 --step 3", '
+                                                    '"--phase 4 --step 2", "--phase 4 --step 1", '
+                                                    '"--phase 3 --step 11"):\n'
+                                                    '            assert older not in text, (name, '
+                                                    'older)\n'
+                                                    '        assert "permissions:\\n  contents: '
+                                                    'read" in text\n'
+                                                    '        assert "persist-credentials: false" '
+                                                    'in text\n'
+                                                    '        assert "timeout-minutes:" in text and '
+                                                    '"set -euo pipefail" in text\n'
+                                                    '        assert "actions/upload-artifact@v4" '
+                                                    'in text and "if-no-files-found: error" in '
+                                                    'text\n'
+                                                    '        for line in text.splitlines():\n'
+                                                    '            if "python '
+                                                    'scripts/release_check.py" in line:\n'
+                                                    '                assert "--phase 4 --step 8" '
+                                                    'in line, (name, line)\n'
+                                                    '        for forbidden in '
+                                                    '("continue-on-error:", "|| true", "contents: '
+                                                    'write", "id-token: write", "twine upload", '
+                                                    '"git push"):\n'
+                                                    '            assert forbidden not in text, '
+                                                    '(name, forbidden)\n'
+                                                    '    ci = (root / '
+                                                    '"ci.yml").read_text(encoding="utf-8")\n'
+                                                    "    for required in ('os: [ubuntu-latest, "
+                                                    'windows-latest]\', \'python-version: ["3.11", '
+                                                    '"3.12"]\',\n'
+                                                    "                     'dependencies: [current, "
+                                                    'minimum]\', \'"numpy==2.0.0" '
+                                                    '"pandas==2.2.2"\',\n'
+                                                    "                     'RIT_TEST_PARQUET: "
+                                                    '"0"\', \'RIT_TEST_PARQUET: "1"\', '
+                                                    "'--require-parquet',\n"
+                                                    "                     '--baseline-evidence', "
+                                                    "'python -m pip check',\n"
+                                                    "                     '--minimum-tests 3620', "
+                                                    "'--minimum-tests 3623',\n"
+                                                    '                     "find_spec(\'pyarrow\') '
+                                                    'is None", \'import pyarrow\'):\n'
+                                                    '        assert required in ci\n'
+                                                    '    assert ci.count("python -m pytest -p '
+                                                    'no:cacheprovider -q --junitxml=") == 2\n'
+                                                    '    assert " -k " not in ci\n'
+                                                    '    golden = (root / '
+                                                    '"golden.yml").read_text(encoding="utf-8")\n'
+                                                    '    for required in '
+                                                    '("tests/golden/test_phase3_math.py", '
+                                                    '"tests/integration/test_hero_structure.py",\n'
+                                                    '                     '
+                                                    '"tests/integration/test_phase3_metric_pipeline.py", '
+                                                    '"tests/integration/test_hero_end_to_end.py"):\n'
+                                                    '        assert required in golden\n'
+                                                    '    security = (root / '
+                                                    '"security.yml").read_text(encoding="utf-8")\n'
+                                                    '    for required in '
+                                                    "('tests/integration/test_no_network.py', "
+                                                    "'tests/integration/test_optional_dependency.py',\n"
+                                                    '                     '
+                                                    "'tests/unit/test_PR012_evidence_classes.py', "
+                                                    "'tests/unit/test_PR013_report_schema.py',\n"
+                                                    '                     '
+                                                    "'tests/unit/test_PR014_unavailable.py', "
+                                                    "'tests/unit/test_PR015_redaction.py',\n"
+                                                    '                     '
+                                                    "'tests/unit/test_PR016_determinism.py', "
+                                                    "'tests/unit/test_PR018_language.py',\n"
+                                                    '                     '
+                                                    "'tests/integration/test_partial_provenance_report.py',\n"
+                                                    '                     '
+                                                    "'tests/integration/test_partial_lineage_report.py',\n"
+                                                    '                     '
+                                                    "'tests/integration/test_phase4_cli.py', "
+                                                    "'tests/unit/test_phase4_output_safety.py', "
+                                                    "'tests/unit/test_phase4_contracts.py', "
+                                                    "'tests/integration/test_phase4_gates.py'):\n"
+                                                    '        assert required in security\n'
+                                                    '    release = (root / '
+                                                    '"release.yml").read_text(encoding="utf-8")\n'
+                                                    '    assert "python -m build" in release and '
+                                                    '"python -m twine check --strict" in release\n'
+                                                    '    assert "--dist" in release and '
+                                                    '"--candidate" in release\n'
+                                                    '    assert "--delivery" not in release\n'
+                                                    '    assert '
+                                                    '"recursive-integrity-toolkit-phase4-step8-candidate" '
+                                                    'in release\n'
+                                                    '    assert "rit-phase4-step4" not in release\n'
+                                                    '    assert "--minimum-tests 3620" in release '
+                                                    'and "--minimum-tests 3623" in release\n'
+                                                    '    assert release.count("python -m pytest -p '
+                                                    'no:cacheprovider -q --junitxml=") == 2',
+                                             'node': 'test_phase4_step8_current_workflows_preserve_matrix_and_use_active_dispatch',
+                                             'old': 'def '
+                                                    'test_phase4_step8_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root):\n'
+                                                    '    names = {"ci.yml", "golden.yml", '
+                                                    '"security.yml", "release.yml"}\n'
+                                                    '    root = repo_root / ".github/workflows"\n'
+                                                    '    expected_timeouts = {"ci.yml": [60, 20], '
+                                                    '"golden.yml": [15], "security.yml": [20], '
+                                                    '"release.yml": [40]}\n'
+                                                    '    assert {path.name for path in '
+                                                    'root.glob("*.yml")} == names\n'
+                                                    '    for name in sorted(names):\n'
+                                                    '        text = (root / '
+                                                    'name).read_text(encoding="utf-8")\n'
+                                                    '        assert [int(line.split(":", 1)[1]) '
+                                                    'for line in text.splitlines()\n'
+                                                    '                if '
+                                                    'line.strip().startswith("timeout-minutes:")] '
+                                                    '== expected_timeouts[name]\n'
+                                                    '        assert "Phase 4 Step 8" in text, '
+                                                    'name\n'
+                                                    '        assert "--phase 4 --step 8" in text, '
+                                                    'name\n'
+                                                    '        for older in ("--phase 4 --step 7", '
+                                                    '"--phase 4 --step 6", "--phase 4 --step 5", '
+                                                    '"--phase 4 --step 4", "--phase 4 --step 3", '
+                                                    '"--phase 4 --step 2", "--phase 4 --step 1", '
+                                                    '"--phase 3 --step 11"):\n'
+                                                    '            assert older not in text, (name, '
+                                                    'older)\n'
+                                                    '        assert "permissions:\\n  contents: '
+                                                    'read" in text\n'
+                                                    '        assert "persist-credentials: false" '
+                                                    'in text\n'
+                                                    '        assert "timeout-minutes:" in text and '
+                                                    '"set -euo pipefail" in text\n'
+                                                    '        assert "actions/upload-artifact@v4" '
+                                                    'in text and "if-no-files-found: error" in '
+                                                    'text\n'
+                                                    '        for line in text.splitlines():\n'
+                                                    '            if "python '
+                                                    'scripts/release_check.py" in line:\n'
+                                                    '                assert "--phase 4 --step 8" '
+                                                    'in line, (name, line)\n'
+                                                    '        for forbidden in '
+                                                    '("continue-on-error:", "|| true", "contents: '
+                                                    'write", "id-token: write", "twine upload", '
+                                                    '"git push"):\n'
+                                                    '            assert forbidden not in text, '
+                                                    '(name, forbidden)\n'
+                                                    '    ci = (root / '
+                                                    '"ci.yml").read_text(encoding="utf-8")\n'
+                                                    "    for required in ('os: [ubuntu-latest, "
+                                                    'windows-latest]\', \'python-version: ["3.11", '
+                                                    '"3.12"]\',\n'
+                                                    "                     'dependencies: [current, "
+                                                    'minimum]\', \'"numpy==2.0.0" '
+                                                    '"pandas==2.2.2"\',\n'
+                                                    "                     'RIT_TEST_PARQUET: "
+                                                    '"0"\', \'RIT_TEST_PARQUET: "1"\', '
+                                                    "'--require-parquet',\n"
+                                                    "                     '--baseline-evidence', "
+                                                    "'python -m pip check',\n"
+                                                    "                     '--minimum-tests 3620', "
+                                                    "'--minimum-tests 3623',\n"
+                                                    '                     "find_spec(\'pyarrow\') '
+                                                    'is None", \'import pyarrow\'):\n'
+                                                    '        assert required in ci\n'
+                                                    '    assert ci.count("python -m pytest -p '
+                                                    'no:cacheprovider -q --junitxml=") == 2\n'
+                                                    '    assert " -k " not in ci\n'
+                                                    '    golden = (root / '
+                                                    '"golden.yml").read_text(encoding="utf-8")\n'
+                                                    '    for required in '
+                                                    '("tests/golden/test_phase3_math.py", '
+                                                    '"tests/integration/test_hero_structure.py",\n'
+                                                    '                     '
+                                                    '"tests/integration/test_phase3_metric_pipeline.py", '
+                                                    '"tests/integration/test_hero_end_to_end.py"):\n'
+                                                    '        assert required in golden\n'
+                                                    '    security = (root / '
+                                                    '"security.yml").read_text(encoding="utf-8")\n'
+                                                    '    for required in '
+                                                    "('tests/integration/test_no_network.py', "
+                                                    "'tests/integration/test_optional_dependency.py',\n"
+                                                    '                     '
+                                                    "'tests/unit/test_PR012_evidence_classes.py', "
+                                                    "'tests/unit/test_PR013_report_schema.py',\n"
+                                                    '                     '
+                                                    "'tests/unit/test_PR014_unavailable.py', "
+                                                    "'tests/unit/test_PR015_redaction.py',\n"
+                                                    '                     '
+                                                    "'tests/unit/test_PR016_determinism.py', "
+                                                    "'tests/unit/test_PR018_language.py',\n"
+                                                    '                     '
+                                                    "'tests/integration/test_partial_provenance_report.py',\n"
+                                                    '                     '
+                                                    "'tests/integration/test_partial_lineage_report.py',\n"
+                                                    '                     '
+                                                    "'tests/integration/test_phase4_cli.py', "
+                                                    "'tests/unit/test_phase4_output_safety.py', "
+                                                    "'tests/unit/test_phase4_contracts.py', "
+                                                    "'tests/integration/test_phase4_gates.py'):\n"
+                                                    '        assert required in security\n'
+                                                    '    release = (root / '
+                                                    '"release.yml").read_text(encoding="utf-8")\n'
+                                                    '    assert "python -m build" in release and '
+                                                    '"python -m twine check --strict" in release\n'
+                                                    '    assert "--dist" in release and '
+                                                    '"--candidate" in release\n'
+                                                    '    assert "--delivery" not in release\n'
+                                                    '    assert '
+                                                    '"recursive-integrity-toolkit-phase4-step8-candidate" '
+                                                    'in release\n'
+                                                    '    assert "rit-phase4-step4" not in release\n'
+                                                    '    assert "--minimum-tests 3620" in release '
+                                                    'and "--minimum-tests 3623" in release\n'
+                                                    '    assert release.count("python -m pytest -p '
+                                                    'no:cacheprovider -q --junitxml=") == 2'},
+                                            {'new': 'def '
+                                                    'test_phase4_step8_current_snapshot_checks_valid_tree_before_mutations(repo_root, '
+                                                    'tmp_path, phase4_gate_tools, mutation, '
+                                                    'phase4_step8_snapshot):\n'
+                                                    '    import json\n'
+                                                    '\n'
+                                                    '    paths = '
+                                                    '{path.relative_to(phase4_step8_snapshot).as_posix()\n'
+                                                    '             for path in '
+                                                    'phase4_step8_snapshot.rglob("*") if '
+                                                    'path.is_file()}\n'
+                                                    '    assert len(paths) == 236\n'
+                                                    '    for relative in sorted(paths):\n'
+                                                    '        destination = tmp_path / relative\n'
+                                                    '        '
+                                                    'destination.parent.mkdir(parents=True, '
+                                                    'exist_ok=True)\n'
+                                                    '        shutil.copyfile(phase4_step8_snapshot '
+                                                    '/ relative, destination)\n'
+                                                    '    verify = '
+                                                    'phase4_gate_tools["verify_phase4_step8_snapshot"]\n'
+                                                    '    baseline = verify(tmp_path)\n'
+                                                    '    assert baseline["package_modules"] == 40\n'
+                                                    '    assert baseline["frozen_runtime_modules"] '
+                                                    '== 38\n'
+                                                    '    assert baseline["frozen_schemas"] == 5\n'
+                                                    '    assert '
+                                                    'baseline["result_contracts_enabled"] is True\n'
+                                                    '    assert baseline["adapters_enabled"] is '
+                                                    'True\n'
+                                                    '    assert baseline["privacy_views_enabled"] '
+                                                    'is True\n'
+                                                    '    assert baseline["renderers_enabled"] is '
+                                                    'True\n'
+                                                    '    assert '
+                                                    'baseline["output_publication_enabled"] is '
+                                                    'True\n'
+                                                    '    assert baseline["cli_analysis_enabled"] '
+                                                    'is True\n'
+                                                    '    assert baseline["phase_complete"] is '
+                                                    'False\n'
+                                                    '    if mutation == "unchanged":\n'
+                                                    '        return\n'
+                                                    '    replacements = {\n'
+                                                    '        "formula": '
+                                                    '("src/recursive_integrity_toolkit/metrics/diversity.py",\n'
+                                                    '                    b"diversity = 1.0 - '
+                                                    'concentration", b"diversity = 0.5 - '
+                                                    'concentration"),\n'
+                                                    '        "math_oracle": '
+                                                    '("tests/golden/phase3_math_cases.json", '
+                                                    'b\'"v2_support":5\', b\'"v2_support":3\'),\n'
+                                                    '        "hero": '
+                                                    '("examples/hero/records_v2.csv", '
+                                                    'b"v2_08,v2,", b"v2_99,v2,"),\n'
+                                                    '        "dependency": ("pyproject.toml", '
+                                                    'b"numpy>=2.0", b"numpy>=3.0"),\n'
+                                                    '        "historical_assertion": '
+                                                    '("tests/unit/test_phase4_contracts.py",\n'
+                                                    "                                 b'    assert "
+                                                    'control["active_phase"] == 4 and '
+                                                    'control["active_step"] == 4\\n\',\n'
+                                                    '                                 b"    assert '
+                                                    'True\\n"),\n'
+                                                    '        "historical_tooling": '
+                                                    '("scripts/release_check.py",\n'
+                                                    '                               b"def '
+                                                    'verify_phase4_step4_control(control: dict, '
+                                                    'step: int = 4) -> None:",\n'
+                                                    '                               b"def '
+                                                    'verify_phase4_step4_control(control: dict, '
+                                                    'step: int = 4) -> None:\\n    return"),\n'
+                                                    '        "historical_binding": '
+                                                    '("tests/integration/test_phase4_gates.py",\n'
+                                                    '                               b"def '
+                                                    'test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, '
+                                                    'phase4_step4_snapshot):\\n    repo_root = '
+                                                    'phase4_step4_snapshot\\n",\n'
+                                                    '                               b"def '
+                                                    'test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, '
+                                                    'phase4_step4_snapshot):\\n"),\n'
+                                                    '        "historical_document": '
+                                                    '("docs/cli.md", b"# CLI\\n",\n'
+                                                    '                                b"# '
+                                                    'Unauthorized historical document\\n"),\n'
+                                                    '        "input_hash_helper": '
+                                                    '("src/recursive_integrity_toolkit/utils/hashing.py",\n'
+                                                    '                              b"return '
+                                                    'hashlib.sha256(data).hexdigest()", b"return '
+                                                    'hashlib.sha256(b\'changed\').hexdigest()"),\n'
+                                                    '        "config_resolver_helper": '
+                                                    '("src/recursive_integrity_toolkit/config.py",\n'
+                                                    '                                   b"def '
+                                                    'resolve_config(", b"def '
+                                                    'resolve_config_disabled("),\n'
+                                                    '    }\n'
+                                                    '    appended = {\n'
+                                                    '        "frozen_model": '
+                                                    '"src/recursive_integrity_toolkit/models.py",\n'
+                                                    '        "frozen_schema": '
+                                                    '"schemas/report.schema.json",\n'
+                                                    '        "plan": "PHASE_4_PLAN.md",\n'
+                                                    '        "cli": '
+                                                    '"src/recursive_integrity_toolkit/cli.py",\n'
+                                                    '        "html": '
+                                                    '"src/recursive_integrity_toolkit/reports/html_report.py",\n'
+                                                    '        "assembly": '
+                                                    '"src/recursive_integrity_toolkit/reports/assembly.py",\n'
+                                                    '        "result": '
+                                                    '"src/recursive_integrity_toolkit/result.py",\n'
+                                                    '        "config": '
+                                                    '"src/recursive_integrity_toolkit/config.py",\n'
+                                                    '        "hashing": '
+                                                    '"src/recursive_integrity_toolkit/utils/hashing.py",\n'
+                                                    '        "logging": '
+                                                    '"src/recursive_integrity_toolkit/utils/logging.py",\n'
+                                                    '        "output_paths": '
+                                                    '"src/recursive_integrity_toolkit/utils/paths.py",\n'
+                                                    '    }\n'
+                                                    '    added = {\n'
+                                                    '        "unknown_runtime": '
+                                                    '"src/recursive_integrity_toolkit/reports/unauthorized.py",\n'
+                                                    '        "premature_completion": '
+                                                    '"PHASE_4_COMPLETION.md", "premature_report": '
+                                                    '"report.json",\n'
+                                                    '    }\n'
+                                                    '    if mutation in replacements:\n'
+                                                    '        relative, original, replacement = '
+                                                    'replacements[mutation]\n'
+                                                    '        path = tmp_path / relative\n'
+                                                    '        source = path.read_bytes()\n'
+                                                    '        assert source.count(original) == 1\n'
+                                                    '        '
+                                                    'path.write_bytes(source.replace(original, '
+                                                    'replacement, 1))\n'
+                                                    '    elif mutation in appended:\n'
+                                                    '        path = tmp_path / appended[mutation]\n'
+                                                    '        path.write_bytes(path.read_bytes() + '
+                                                    'b"\\nUnauthorized Step 8 mutation\\n")\n'
+                                                    '    elif mutation in added:\n'
+                                                    '        path = tmp_path / added[mutation]\n'
+                                                    '        assert not path.exists()\n'
+                                                    '        path.write_text("Unauthorized '
+                                                    'later-stage file\\n", encoding="utf-8")\n'
+                                                    '    elif mutation == "missing_runtime":\n'
+                                                    '        (tmp_path / '
+                                                    '"src/recursive_integrity_toolkit/metrics/bounds.py").unlink()\n'
+                                                    '    elif mutation.startswith("control_"):\n'
+                                                    '        path = tmp_path / '
+                                                    '"PHASE_4_BASELINE.json"\n'
+                                                    '        control = '
+                                                    'json.loads(path.read_text(encoding="utf-8"))\n'
+                                                    '        if mutation == "control_step":\n'
+                                                    '            control["active_step"] = 9\n'
+                                                    '        elif mutation == "control_scope":\n'
+                                                    '            '
+                                                    'control["runtime_paths_authorized"].append("src/recursive_integrity_toolkit/reports/assembly.py")\n'
+                                                    '        else:\n'
+                                                    '            '
+                                                    'control["schema_changes_authorized"] = True\n'
+                                                    '            '
+                                                    'control["schema_paths_authorized"].append("schemas/report.schema.json")\n'
+                                                    '        path.write_text(json.dumps(control), '
+                                                    'encoding="utf-8")\n'
+                                                    '    else:\n'
+                                                    '        raise AssertionError(f"Unknown active '
+                                                    'mutation case: {mutation}")\n'
+                                                    '    with pytest.raises(ValueError):\n'
+                                                    '        verify(tmp_path)',
+                                             'node': 'test_phase4_step8_current_snapshot_checks_valid_tree_before_mutations',
+                                             'old': 'def '
+                                                    'test_phase4_step8_current_snapshot_checks_valid_tree_before_mutations(repo_root, '
+                                                    'tmp_path, phase4_gate_tools, mutation):\n'
+                                                    '    import json\n'
+                                                    '\n'
+                                                    '    tracked = subprocess.check_output(["git", '
+                                                    '"-C", str(repo_root), "ls-files", "-z"])\n'
+                                                    '    paths = '
+                                                    'set(tracked.decode().split("\\0")) - {""}\n'
+                                                    '    assert len(paths) == 236\n'
+                                                    '    for relative in sorted(paths):\n'
+                                                    '        destination = tmp_path / relative\n'
+                                                    '        '
+                                                    'destination.parent.mkdir(parents=True, '
+                                                    'exist_ok=True)\n'
+                                                    '        shutil.copyfile(repo_root / relative, '
+                                                    'destination)\n'
+                                                    '    verify = '
+                                                    'phase4_gate_tools["verify_phase4_step8_snapshot"]\n'
+                                                    '    baseline = verify(tmp_path)\n'
+                                                    '    assert baseline["package_modules"] == 40\n'
+                                                    '    assert baseline["frozen_runtime_modules"] '
+                                                    '== 38\n'
+                                                    '    assert baseline["frozen_schemas"] == 5\n'
+                                                    '    assert '
+                                                    'baseline["result_contracts_enabled"] is True\n'
+                                                    '    assert baseline["adapters_enabled"] is '
+                                                    'True\n'
+                                                    '    assert baseline["privacy_views_enabled"] '
+                                                    'is True\n'
+                                                    '    assert baseline["renderers_enabled"] is '
+                                                    'True\n'
+                                                    '    assert '
+                                                    'baseline["output_publication_enabled"] is '
+                                                    'True\n'
+                                                    '    assert baseline["cli_analysis_enabled"] '
+                                                    'is True\n'
+                                                    '    assert baseline["phase_complete"] is '
+                                                    'False\n'
+                                                    '    if mutation == "unchanged":\n'
+                                                    '        return\n'
+                                                    '    replacements = {\n'
+                                                    '        "formula": '
+                                                    '("src/recursive_integrity_toolkit/metrics/diversity.py",\n'
+                                                    '                    b"diversity = 1.0 - '
+                                                    'concentration", b"diversity = 0.5 - '
+                                                    'concentration"),\n'
+                                                    '        "math_oracle": '
+                                                    '("tests/golden/phase3_math_cases.json", '
+                                                    'b\'"v2_support":5\', b\'"v2_support":3\'),\n'
+                                                    '        "hero": '
+                                                    '("examples/hero/records_v2.csv", '
+                                                    'b"v2_08,v2,", b"v2_99,v2,"),\n'
+                                                    '        "dependency": ("pyproject.toml", '
+                                                    'b"numpy>=2.0", b"numpy>=3.0"),\n'
+                                                    '        "historical_assertion": '
+                                                    '("tests/unit/test_phase4_contracts.py",\n'
+                                                    "                                 b'    assert "
+                                                    'control["active_phase"] == 4 and '
+                                                    'control["active_step"] == 4\\n\',\n'
+                                                    '                                 b"    assert '
+                                                    'True\\n"),\n'
+                                                    '        "historical_tooling": '
+                                                    '("scripts/release_check.py",\n'
+                                                    '                               b"def '
+                                                    'verify_phase4_step4_control(control: dict, '
+                                                    'step: int = 4) -> None:",\n'
+                                                    '                               b"def '
+                                                    'verify_phase4_step4_control(control: dict, '
+                                                    'step: int = 4) -> None:\\n    return"),\n'
+                                                    '        "historical_binding": '
+                                                    '("tests/integration/test_phase4_gates.py",\n'
+                                                    '                               b"def '
+                                                    'test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, '
+                                                    'phase4_step4_snapshot):\\n    repo_root = '
+                                                    'phase4_step4_snapshot\\n",\n'
+                                                    '                               b"def '
+                                                    'test_phase4_step4_current_workflows_preserve_matrix_and_use_active_dispatch(repo_root, '
+                                                    'phase4_step4_snapshot):\\n"),\n'
+                                                    '        "historical_document": '
+                                                    '("docs/cli.md", b"# CLI\\n",\n'
+                                                    '                                b"# '
+                                                    'Unauthorized historical document\\n"),\n'
+                                                    '        "input_hash_helper": '
+                                                    '("src/recursive_integrity_toolkit/utils/hashing.py",\n'
+                                                    '                              b"return '
+                                                    'hashlib.sha256(data).hexdigest()", b"return '
+                                                    'hashlib.sha256(b\'changed\').hexdigest()"),\n'
+                                                    '        "config_resolver_helper": '
+                                                    '("src/recursive_integrity_toolkit/config.py",\n'
+                                                    '                                   b"def '
+                                                    'resolve_config(", b"def '
+                                                    'resolve_config_disabled("),\n'
+                                                    '    }\n'
+                                                    '    appended = {\n'
+                                                    '        "frozen_model": '
+                                                    '"src/recursive_integrity_toolkit/models.py",\n'
+                                                    '        "frozen_schema": '
+                                                    '"schemas/report.schema.json",\n'
+                                                    '        "plan": "PHASE_4_PLAN.md",\n'
+                                                    '        "cli": '
+                                                    '"src/recursive_integrity_toolkit/cli.py",\n'
+                                                    '        "html": '
+                                                    '"src/recursive_integrity_toolkit/reports/html_report.py",\n'
+                                                    '        "assembly": '
+                                                    '"src/recursive_integrity_toolkit/reports/assembly.py",\n'
+                                                    '        "result": '
+                                                    '"src/recursive_integrity_toolkit/result.py",\n'
+                                                    '        "config": '
+                                                    '"src/recursive_integrity_toolkit/config.py",\n'
+                                                    '        "hashing": '
+                                                    '"src/recursive_integrity_toolkit/utils/hashing.py",\n'
+                                                    '        "logging": '
+                                                    '"src/recursive_integrity_toolkit/utils/logging.py",\n'
+                                                    '        "output_paths": '
+                                                    '"src/recursive_integrity_toolkit/utils/paths.py",\n'
+                                                    '    }\n'
+                                                    '    added = {\n'
+                                                    '        "unknown_runtime": '
+                                                    '"src/recursive_integrity_toolkit/reports/unauthorized.py",\n'
+                                                    '        "premature_completion": '
+                                                    '"PHASE_4_COMPLETION.md", "premature_report": '
+                                                    '"report.json",\n'
+                                                    '    }\n'
+                                                    '    if mutation in replacements:\n'
+                                                    '        relative, original, replacement = '
+                                                    'replacements[mutation]\n'
+                                                    '        path = tmp_path / relative\n'
+                                                    '        source = path.read_bytes()\n'
+                                                    '        assert source.count(original) == 1\n'
+                                                    '        '
+                                                    'path.write_bytes(source.replace(original, '
+                                                    'replacement, 1))\n'
+                                                    '    elif mutation in appended:\n'
+                                                    '        path = tmp_path / appended[mutation]\n'
+                                                    '        path.write_bytes(path.read_bytes() + '
+                                                    'b"\\nUnauthorized Step 8 mutation\\n")\n'
+                                                    '    elif mutation in added:\n'
+                                                    '        path = tmp_path / added[mutation]\n'
+                                                    '        assert not path.exists()\n'
+                                                    '        path.write_text("Unauthorized '
+                                                    'later-stage file\\n", encoding="utf-8")\n'
+                                                    '    elif mutation == "missing_runtime":\n'
+                                                    '        (tmp_path / '
+                                                    '"src/recursive_integrity_toolkit/metrics/bounds.py").unlink()\n'
+                                                    '    elif mutation.startswith("control_"):\n'
+                                                    '        path = tmp_path / '
+                                                    '"PHASE_4_BASELINE.json"\n'
+                                                    '        control = '
+                                                    'json.loads(path.read_text(encoding="utf-8"))\n'
+                                                    '        if mutation == "control_step":\n'
+                                                    '            control["active_step"] = 9\n'
+                                                    '        elif mutation == "control_scope":\n'
+                                                    '            '
+                                                    'control["runtime_paths_authorized"].append("src/recursive_integrity_toolkit/reports/assembly.py")\n'
+                                                    '        else:\n'
+                                                    '            '
+                                                    'control["schema_changes_authorized"] = True\n'
+                                                    '            '
+                                                    'control["schema_paths_authorized"].append("schemas/report.schema.json")\n'
+                                                    '        path.write_text(json.dumps(control), '
+                                                    'encoding="utf-8")\n'
+                                                    '    else:\n'
+                                                    '        raise AssertionError(f"Unknown active '
+                                                    'mutation case: {mutation}")\n'
+                                                    '    with pytest.raises(ValueError):\n'
+                                                    '        verify(tmp_path)'}],
+ 'tests/unit/test_phase4_contracts.py': [{'new': 'def '
+                                                 'test_phase4_step8_approved_control_keeps_independent_step7_anchors(phase4_tools, '
+                                                 'phase4_step8_snapshot):\n'
+                                                 '    control = json.loads((phase4_step8_snapshot '
+                                                 '/ '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\n'
+                                                 '    assert phase4_tools["PHASE4_STEP7_FINAL"] == '
+                                                 '"bacd33ae65e392872776c6d976401fdc3d565f63"\n'
+                                                 '    assert phase4_tools["PHASE4_STEP7_TREE"] == '
+                                                 '"4c16914bb0f0c5281efc36624efb8b1a1d4a174e"\n'
+                                                 '    assert '
+                                                 'phase4_tools["PHASE4_STEP7_TEST_TREE"] == '
+                                                 '"96317cb7b25236b79efc0f2d93e1e0f5f132fdb2"\n'
+                                                 '    assert control["active_phase"] == 4 and '
+                                                 'control["active_step"] == 8\n'
+                                                 '    assert control["approval_basis"] == "phase 4 '
+                                                 'step 8 开始"\n'
+                                                 '    assert control["baseline_commit"] == '
+                                                 'BASELINE\n'
+                                                 '    assert control["previous_step_commit"] == '
+                                                 '"bacd33ae65e392872776c6d976401fdc3d565f63"\n'
+                                                 '    assert control["previous_step_tree"] == '
+                                                 '"4c16914bb0f0c5281efc36624efb8b1a1d4a174e"\n'
+                                                 '    assert control["previous_step_test_tree"] == '
+                                                 '"96317cb7b25236b79efc0f2d93e1e0f5f132fdb2"\n'
+                                                 '    assert control["previous_step_core_tests"] '
+                                                 '== 3620\n'
+                                                 '    assert '
+                                                 'control["previous_step_parquet_tests"] == 3623\n'
+                                                 '    assert '
+                                                 'len(control["previous_step_files_sha256"]) == '
+                                                 '229\n'
+                                                 '    assert '
+                                                 'set(control["runtime_paths_authorized"]) == {\n'
+                                                 '        '
+                                                 '"src/recursive_integrity_toolkit/cli.py",\n'
+                                                 '        '
+                                                 '"src/recursive_integrity_toolkit/config.py",\n'
+                                                 '    }\n'
+                                                 '    assert control["schema_changes_authorized"] '
+                                                 'is False\n'
+                                                 '    assert control["schema_paths_authorized"] == '
+                                                 '[]\n'
+                                                 '    assert control["new_files_permitted"] == '
+                                                 "['src/recursive_integrity_toolkit/data/hero/EXPECTED_OUTPUTS.md', "
+                                                 "'src/recursive_integrity_toolkit/data/hero/config.json', "
+                                                 "'src/recursive_integrity_toolkit/data/hero/provenance.csv', "
+                                                 "'src/recursive_integrity_toolkit/data/hero/records_v1.csv', "
+                                                 "'src/recursive_integrity_toolkit/data/hero/records_v2.csv', "
+                                                 "'src/recursive_integrity_toolkit/data/hero/version_order.json', "
+                                                 "'src/recursive_integrity_toolkit/data/report.schema.json']\n"
+                                                 '    for name in ("phase_complete", '
+                                                 '"next_step_authorized", "main_merge_authorized", '
+                                                 '"publication_authorized"):\n'
+                                                 '        assert control[name] is False\n'
+                                                 '    '
+                                                 'phase4_tools["verify_phase4_step8_control"](control, '
+                                                 'step=8)\n'
+                                                 '    with pytest.raises(ValueError):\n'
+                                                 '        '
+                                                 'phase4_tools["verify_phase4_step4_control"](control, '
+                                                 'step=4)',
+                                          'node': 'test_phase4_step8_approved_control_keeps_independent_step7_anchors',
+                                          'old': 'def '
+                                                 'test_phase4_step8_approved_control_keeps_independent_step7_anchors(phase4_tools):\n'
+                                                 '    control = json.loads((ROOT / '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\n'
+                                                 '    assert phase4_tools["PHASE4_STEP7_FINAL"] == '
+                                                 '"bacd33ae65e392872776c6d976401fdc3d565f63"\n'
+                                                 '    assert phase4_tools["PHASE4_STEP7_TREE"] == '
+                                                 '"4c16914bb0f0c5281efc36624efb8b1a1d4a174e"\n'
+                                                 '    assert '
+                                                 'phase4_tools["PHASE4_STEP7_TEST_TREE"] == '
+                                                 '"96317cb7b25236b79efc0f2d93e1e0f5f132fdb2"\n'
+                                                 '    assert control["active_phase"] == 4 and '
+                                                 'control["active_step"] == 8\n'
+                                                 '    assert control["approval_basis"] == "phase 4 '
+                                                 'step 8 开始"\n'
+                                                 '    assert control["baseline_commit"] == '
+                                                 'BASELINE\n'
+                                                 '    assert control["previous_step_commit"] == '
+                                                 '"bacd33ae65e392872776c6d976401fdc3d565f63"\n'
+                                                 '    assert control["previous_step_tree"] == '
+                                                 '"4c16914bb0f0c5281efc36624efb8b1a1d4a174e"\n'
+                                                 '    assert control["previous_step_test_tree"] == '
+                                                 '"96317cb7b25236b79efc0f2d93e1e0f5f132fdb2"\n'
+                                                 '    assert control["previous_step_core_tests"] '
+                                                 '== 3620\n'
+                                                 '    assert '
+                                                 'control["previous_step_parquet_tests"] == 3623\n'
+                                                 '    assert '
+                                                 'len(control["previous_step_files_sha256"]) == '
+                                                 '229\n'
+                                                 '    assert '
+                                                 'set(control["runtime_paths_authorized"]) == {\n'
+                                                 '        '
+                                                 '"src/recursive_integrity_toolkit/cli.py",\n'
+                                                 '        '
+                                                 '"src/recursive_integrity_toolkit/config.py",\n'
+                                                 '    }\n'
+                                                 '    assert control["schema_changes_authorized"] '
+                                                 'is False\n'
+                                                 '    assert control["schema_paths_authorized"] == '
+                                                 '[]\n'
+                                                 '    assert control["new_files_permitted"] == '
+                                                 "['src/recursive_integrity_toolkit/data/hero/EXPECTED_OUTPUTS.md', "
+                                                 "'src/recursive_integrity_toolkit/data/hero/config.json', "
+                                                 "'src/recursive_integrity_toolkit/data/hero/provenance.csv', "
+                                                 "'src/recursive_integrity_toolkit/data/hero/records_v1.csv', "
+                                                 "'src/recursive_integrity_toolkit/data/hero/records_v2.csv', "
+                                                 "'src/recursive_integrity_toolkit/data/hero/version_order.json', "
+                                                 "'src/recursive_integrity_toolkit/data/report.schema.json']\n"
+                                                 '    for name in ("phase_complete", '
+                                                 '"next_step_authorized", "main_merge_authorized", '
+                                                 '"publication_authorized"):\n'
+                                                 '        assert control[name] is False\n'
+                                                 '    '
+                                                 'phase4_tools["verify_phase4_step8_control"](control, '
+                                                 'step=8)\n'
+                                                 '    with pytest.raises(ValueError):\n'
+                                                 '        '
+                                                 'phase4_tools["verify_phase4_step4_control"](control, '
+                                                 'step=4)'},
+                                         {'new': 'def '
+                                                 'test_phase4_step8_control_rejects_forged_scope_and_stage(phase4_tools, '
+                                                 'field, value, phase4_step8_snapshot):\n'
+                                                 '    control = json.loads((phase4_step8_snapshot '
+                                                 '/ '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\n'
+                                                 '    verify = '
+                                                 'phase4_tools["verify_phase4_step8_control"]\n'
+                                                 '    verify(control, step=8)\n'
+                                                 '    control[field] = value\n'
+                                                 '    with pytest.raises(ValueError):\n'
+                                                 '        verify(control, step=8)',
+                                          'node': 'test_phase4_step8_control_rejects_forged_scope_and_stage',
+                                          'old': 'def '
+                                                 'test_phase4_step8_control_rejects_forged_scope_and_stage(phase4_tools, '
+                                                 'field, value):\n'
+                                                 '    control = json.loads((ROOT / '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\n'
+                                                 '    verify = '
+                                                 'phase4_tools["verify_phase4_step8_control"]\n'
+                                                 '    verify(control, step=8)\n'
+                                                 '    control[field] = value\n'
+                                                 '    with pytest.raises(ValueError):\n'
+                                                 '        verify(control, step=8)'},
+                                         {'new': 'def '
+                                                 'test_phase4_step8_control_rejects_unapproved_dispatch(phase4_tools, '
+                                                 'step, phase4_step8_snapshot):\n'
+                                                 '    control = json.loads((phase4_step8_snapshot '
+                                                 '/ '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\n'
+                                                 '    '
+                                                 'phase4_tools["verify_phase4_step8_control"](control, '
+                                                 'step=8)\n'
+                                                 '    with pytest.raises(ValueError):\n'
+                                                 '        '
+                                                 'phase4_tools["verify_phase4_step8_control"](control, '
+                                                 'step=step)',
+                                          'node': 'test_phase4_step8_control_rejects_unapproved_dispatch',
+                                          'old': 'def '
+                                                 'test_phase4_step8_control_rejects_unapproved_dispatch(phase4_tools, '
+                                                 'step):\n'
+                                                 '    control = json.loads((ROOT / '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\n'
+                                                 '    '
+                                                 'phase4_tools["verify_phase4_step8_control"](control, '
+                                                 'step=8)\n'
+                                                 '    with pytest.raises(ValueError):\n'
+                                                 '        '
+                                                 'phase4_tools["verify_phase4_step8_control"](control, '
+                                                 'step=step)'},
+                                         {'new': 'def '
+                                                 'test_phase4_step8_control_requires_explicit_approval_fields(phase4_tools, '
+                                                 'field, phase4_step8_snapshot):\n'
+                                                 '    control = json.loads((phase4_step8_snapshot '
+                                                 '/ '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\n'
+                                                 '    '
+                                                 'phase4_tools["verify_phase4_step8_control"](control)\n'
+                                                 '    del control[field]\n'
+                                                 '    with pytest.raises(ValueError):\n'
+                                                 '        '
+                                                 'phase4_tools["verify_phase4_step8_control"](control)',
+                                          'node': 'test_phase4_step8_control_requires_explicit_approval_fields',
+                                          'old': 'def '
+                                                 'test_phase4_step8_control_requires_explicit_approval_fields(phase4_tools, '
+                                                 'field):\n'
+                                                 '    control = json.loads((ROOT / '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\n'
+                                                 '    '
+                                                 'phase4_tools["verify_phase4_step8_control"](control)\n'
+                                                 '    del control[field]\n'
+                                                 '    with pytest.raises(ValueError):\n'
+                                                 '        '
+                                                 'phase4_tools["verify_phase4_step8_control"](control)'},
+                                         {'new': 'def '
+                                                 'test_phase4_step8_control_cannot_mint_extra_permission(phase4_tools, '
+                                                 'phase4_step8_snapshot):\n'
+                                                 '    control = json.loads((phase4_step8_snapshot '
+                                                 '/ '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\n'
+                                                 '    '
+                                                 'phase4_tools["verify_phase4_step8_control"](control)\n'
+                                                 '    control["approved_scope_expansion"] = '
+                                                 '{"step": 8, "publication": True}\n'
+                                                 '    with pytest.raises(ValueError):\n'
+                                                 '        '
+                                                 'phase4_tools["verify_phase4_step8_control"](control)',
+                                          'node': 'test_phase4_step8_control_cannot_mint_extra_permission',
+                                          'old': 'def '
+                                                 'test_phase4_step8_control_cannot_mint_extra_permission(phase4_tools):\n'
+                                                 '    control = json.loads((ROOT / '
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\n'
+                                                 '    '
+                                                 'phase4_tools["verify_phase4_step8_control"](control)\n'
+                                                 '    control["approved_scope_expansion"] = '
+                                                 '{"step": 8, "publication": True}\n'
+                                                 '    with pytest.raises(ValueError):\n'
+                                                 '        '
+                                                 'phase4_tools["verify_phase4_step8_control"](control)'},
+                                         {'new': 'def '
+                                                 'test_phase4_step8_historical_bindings_preserve_assertions(phase4_tools, '
+                                                 'phase4_step7_snapshot, phase4_step8_snapshot):\n'
+                                                 '    import ast\n'
+                                                 '    registry = '
+                                                 'phase4_tools["PHASE4_STEP8_MIGRATIONS"]\n'
+                                                 '    assert sorted(len(rows) for rows in '
+                                                 'registry.values()) == [4, 7]\n'
+                                                 '    for path, rows in registry.items():\n'
+                                                 '        '
+                                                 'phase4_tools["verify_phase4_step8_test_migration"](path, '
+                                                 '(phase4_step7_snapshot / path).read_bytes(), '
+                                                 '(phase4_step8_snapshot / path).read_bytes())\n'
+                                                 '        for row in rows:\n'
+                                                 '            trees = [ast.parse(row[key]) for key '
+                                                 'in ("old", "new")]\n'
+                                                 '            assert trees[0].body[0].name == '
+                                                 'trees[1].body[0].name == row["node"]\n'
+                                                 '            assert [[ast.dump(n) for n in '
+                                                 'ast.walk(t) if isinstance(n, ast.Assert)] for t '
+                                                 'in trees][0] == [[ast.dump(n) for n in '
+                                                 'ast.walk(t) if isinstance(n, ast.Assert)] for t '
+                                                 'in trees][1]',
+                                          'node': 'test_phase4_step8_historical_bindings_preserve_assertions',
+                                          'old': 'def '
+                                                 'test_phase4_step8_historical_bindings_preserve_assertions(phase4_tools, '
+                                                 'phase4_step7_snapshot):\n'
+                                                 '    import ast\n'
+                                                 '    registry = '
+                                                 'phase4_tools["PHASE4_STEP8_MIGRATIONS"]\n'
+                                                 '    assert sorted(len(rows) for rows in '
+                                                 'registry.values()) == [4, 7]\n'
+                                                 '    for path, rows in registry.items():\n'
+                                                 '        '
+                                                 'phase4_tools["verify_phase4_step8_test_migration"](path, '
+                                                 '(phase4_step7_snapshot / path).read_bytes(), '
+                                                 '(ROOT / path).read_bytes())\n'
+                                                 '        for row in rows:\n'
+                                                 '            trees = [ast.parse(row[key]) for key '
+                                                 'in ("old", "new")]\n'
+                                                 '            assert trees[0].body[0].name == '
+                                                 'trees[1].body[0].name == row["node"]\n'
+                                                 '            assert [[ast.dump(n) for n in '
+                                                 'ast.walk(t) if isinstance(n, ast.Assert)] for t '
+                                                 'in trees][0] == [[ast.dump(n) for n in '
+                                                 'ast.walk(t) if isinstance(n, ast.Assert)] for t '
+                                                 'in trees][1]'},
+                                         {'new': 'def '
+                                                 'test_phase4_step8_historical_guard_rejects_weakening(phase4_tools, '
+                                                 'phase4_step7_snapshot, mutation, '
+                                                 'phase4_step8_snapshot):\n'
+                                                 '    path = '
+                                                 '"tests/unit/test_phase4_contracts.py"\n'
+                                                 '    before, after = (phase4_step7_snapshot / '
+                                                 'path).read_bytes(), (phase4_step8_snapshot / '
+                                                 'path).read_bytes()\n'
+                                                 '    verify = '
+                                                 'phase4_tools["verify_phase4_step8_test_migration"]\n'
+                                                 '    verify(path, before, after)\n'
+                                                 '    if mutation == "assertion":\n'
+                                                 "        needle = b'    assert "
+                                                 'control["active_phase"] == 4 and '
+                                                 'control["active_step"] == 7\\n\'\n'
+                                                 '        assert after.count(needle) == 1\n'
+                                                 '        after = after.replace(needle, b"    '
+                                                 'assert True\\n", 1)\n'
+                                                 '    elif mutation == "binding":\n'
+                                                 '        needle = '
+                                                 "b'json.loads((phase4_step7_snapshot / "
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\'\n'
+                                                 '        assert needle in after\n'
+                                                 '        after = after.replace(needle, '
+                                                 'needle.replace(b"phase4_step7_snapshot", '
+                                                 'b"ROOT"), 1)\n'
+                                                 '    elif mutation == "shadow":\n'
+                                                 '        after += b"\\ndef '
+                                                 'test_phase4_step7_fixed_boundary_opens_only_approved_existing_paths():\\n    '
+                                                 'assert True\\n"\n'
+                                                 '    else:\n'
+                                                 '        after += b"\\ndef '
+                                                 'test_phase4_step8_bad(value=globals().clear()):\\n    '
+                                                 'pass\\n"\n'
+                                                 '    with pytest.raises(ValueError): verify(path, '
+                                                 'before, after)',
+                                          'node': 'test_phase4_step8_historical_guard_rejects_weakening',
+                                          'old': 'def '
+                                                 'test_phase4_step8_historical_guard_rejects_weakening(phase4_tools, '
+                                                 'phase4_step7_snapshot, mutation):\n'
+                                                 '    path = '
+                                                 '"tests/unit/test_phase4_contracts.py"\n'
+                                                 '    before, after = (phase4_step7_snapshot / '
+                                                 'path).read_bytes(), (ROOT / path).read_bytes()\n'
+                                                 '    verify = '
+                                                 'phase4_tools["verify_phase4_step8_test_migration"]\n'
+                                                 '    verify(path, before, after)\n'
+                                                 '    if mutation == "assertion":\n'
+                                                 "        needle = b'    assert "
+                                                 'control["active_phase"] == 4 and '
+                                                 'control["active_step"] == 7\\n\'\n'
+                                                 '        assert after.count(needle) == 1\n'
+                                                 '        after = after.replace(needle, b"    '
+                                                 'assert True\\n", 1)\n'
+                                                 '    elif mutation == "binding":\n'
+                                                 '        needle = '
+                                                 "b'json.loads((phase4_step7_snapshot / "
+                                                 '"PHASE_4_BASELINE.json").read_text(encoding="utf-8"))\'\n'
+                                                 '        assert needle in after\n'
+                                                 '        after = after.replace(needle, '
+                                                 'needle.replace(b"phase4_step7_snapshot", '
+                                                 'b"ROOT"), 1)\n'
+                                                 '    elif mutation == "shadow":\n'
+                                                 '        after += b"\\ndef '
+                                                 'test_phase4_step7_fixed_boundary_opens_only_approved_existing_paths():\\n    '
+                                                 'assert True\\n"\n'
+                                                 '    else:\n'
+                                                 '        after += b"\\ndef '
+                                                 'test_phase4_step8_bad(value=globals().clear()):\\n    '
+                                                 'pass\\n"\n'
+                                                 '    with pytest.raises(ValueError): verify(path, '
+                                                 'before, after)'}]}
+
+
+PHASE4_STEP9_GOLDEN_SHA256 = {'tests/golden/phase4_hero_redacted.json': 'd2138b4f982d09c967cc3268323511ba29add6420ed6b64d91cf13379652e523',
+ 'tests/golden/phase4_hero_redacted.md': 'df9a0cfabf6eb95f2f494eddf23adb55cc161e2df197b16fbcc36b654eeba3f9',
+ 'tests/golden/phase4_hero_report.json': 'ce259014260e296e13707693745308c958b829c26373a0ed27c0826690abe633',
+ 'tests/golden/phase4_hero_report.md': 'bcab1cf1c3008ec86ee1c2a11cac0b130d668911f8e00868209451d74807da80',
+ 'tests/golden/phase4_report_cases.md': '3ca7005e2dddc990ea1c18fa3408343f9b51a943e0210fe0f611771111ce9709',
+ 'tests/golden/phase4_report_expected.json': '94fb170bc4095a8f765f23c9b8b87ffb784020734315d0704f36ec4ba3eba10f'}
+
+
+def _phase4_step8_files():
+    """Read the exact accepted Step 8 Git tree and verify every blob identity."""
+    for suffix, expected in (("^{commit}", PHASE4_STEP8_FINAL), ("^{tree}", PHASE4_STEP8_TREE),
+                             (":tests", PHASE4_STEP8_TEST_TREE)):
+        if git("rev-parse", PHASE4_STEP8_FINAL + suffix).decode().strip() != expected:
+            raise ValueError("Pinned Phase 4 Step 8 identity mismatch")
+    objects = {}
+    for entry in git("ls-tree", "-rz", PHASE4_STEP8_FINAL).split(b"\0"):
+        if not entry:
+            continue
+        metadata, raw_path = entry.split(b"\t", 1)
+        mode, kind, oid = metadata.split()
+        path = raw_path.decode("utf-8")
+        if (mode not in (b"100644", b"100755") or kind != b"blob" or path in objects
+                or path.startswith("/") or ".." in path.split("/") or ".git" in path.split("/")):
+            raise ValueError("Unsafe pinned Step 8 Git object")
+        objects[path] = oid.decode("ascii")
+    if len(objects) != 236:
+        raise ValueError("Pinned Step 8 must contain exactly 236 files")
+    files = {}
+    with zipfile.ZipFile(io.BytesIO(git("archive", "--format=zip", PHASE4_STEP8_FINAL))) as archive:
+        names = [item.filename for item in archive.infolist() if not item.is_dir()]
+        if len(names) != len(objects) or set(names) != set(objects):
+            raise ValueError("Pinned Step 8 archive identity mismatch")
+        for name in names:
+            raw = archive.read(name)
+            oid = hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + b"\0" + raw).hexdigest()
+            if oid != objects[name]:
+                raise ValueError(f"Pinned Step 8 blob mismatch: {name}")
+            files[name] = raw
+    return MappingProxyType(files)
+
+
+def phase4_step9_expected_control() -> dict:
+    """Actual Step 9 approval is independent of the mutable control document."""
+    prior = _phase4_step8_files()
+    result = phase4_step8_expected_control()
+    result.update({
+        "control_version": "1.8", "active_step": 9,
+        "approval_date": PHASE4_STEP9_APPROVAL_DATE, "approval_basis": PHASE4_STEP9_APPROVAL,
+        "previous_step_commit": PHASE4_STEP8_FINAL,
+        "previous_step_tree": PHASE4_STEP8_TREE,
+        "previous_step_test_tree": PHASE4_STEP8_TEST_TREE,
+        "previous_step_core_tests": 3768, "previous_step_parquet_tests": 3771,
+        "previous_step_files_sha256": {p: hashlib.sha256(raw).hexdigest() for p, raw in sorted(prior.items())},
+        "permitted_paths": sorted(PHASE4_STEP9_ALLOWED), "new_files_permitted": list(PHASE4_STEP9_NEW),
+        "runtime_changes_authorized": False, "schema_changes_authorized": False,
+        "runtime_paths_authorized": sorted(p for p in PHASE4_STEP9_ALLOWED if p.startswith("src/") and p.endswith(".py")),
+        "schema_paths_authorized": [], "package_resource_copies": {},
+        "package_data_declaration_only": False, "report_goldens_authorized": True,
+        "step8_historical_binding_nodes": {p: sorted({r["node"] for r in rows})
+                                          for p, rows in sorted(PHASE4_STEP9_MIGRATIONS.items())},
+    })
+    return result
+
+
+def verify_phase4_step9_control(control: dict, step: int = 9) -> None:
+    if type(step) is not int or step != 9 or type(control) is not dict:
+        raise ValueError("Unsupported Phase 4 Step 9 stage/control")
+    try:
+        actual = json.dumps(control, sort_keys=True, ensure_ascii=True, allow_nan=False)
+        expected = json.dumps(phase4_step9_expected_control(), sort_keys=True, ensure_ascii=True, allow_nan=False)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Invalid Phase 4 Step 9 control") from error
+    if actual != expected:
+        raise ValueError("Phase 4 control differs from the independently approved Step 9 contract")
+
+
+def verify_phase4_step9_changes(changes: list[tuple[str, str]]) -> None:
+    seen = set()
+    for status, path in changes:
+        if path in seen or path not in PHASE4_STEP9_ALLOWED or status != ("A" if path in PHASE4_STEP9_NEW else "M"):
+            raise ValueError(f"Unapproved Phase 4 Step 9 path/operation: {status} {path}")
+        seen.add(path)
+
+
+def _phase4_step9_header(node, path):
+    """Allow explicit test parametrization/fixtures, never definition-time effects."""
+    for decorator in node.decorator_list:
+        if not isinstance(decorator, ast.Call) or ast.unparse(decorator.func) not in {
+                "pytest.fixture", "pytest.mark.parametrize"}:
+            raise ValueError(f"Unapproved Step 9 test decorator: {path}:{node.name}")
+        if ast.unparse(decorator.func) == "pytest.fixture" and not node.name.startswith("phase4_step"):
+            raise ValueError("A Step 9 fixture must have an explicit scoped name")
+        if any(keyword.arg is None for keyword in decorator.keywords):
+            raise ValueError("Decorator expansion is outside the Step 9 contract")
+        for value in [*decorator.args, *(keyword.value for keyword in decorator.keywords)]:
+            try:
+                ast.literal_eval(value)
+            except (ValueError, TypeError, SyntaxError) as error:
+                raise ValueError("Step 9 decorator arguments must be literal") from error
+    clone = ast.parse(ast.unparse(node)).body[0]
+    clone.decorator_list = []
+    _phase4_preserve_function_header(clone, path)
+
+
+def _phase4_step9_append_only(before: bytes, after: bytes, path: str) -> None:
+    if not after.startswith(before):
+        raise ValueError(f"Inherited Step 8 prefix changed: {path}")
+    old, new = ast.parse(before), ast.parse(after)
+    bindings = set()
+    for node in old.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            bindings.add(node.name)
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            bindings.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            bindings.update(child.id for target in targets for child in ast.walk(target) if isinstance(child, ast.Name))
+    for node in new.body[len(old.body):]:
+        if not isinstance(node, ast.FunctionDef) or node.name in bindings:
+            raise ValueError(f"Step 9 addition executes, rebinds or shadows inherited source: {path}")
+        allowed_snapshot = path == "tests/conftest.py" and node.name == "phase4_step8_snapshot"
+        if not allowed_snapshot and not node.name.startswith(("test_phase4_step9_", "phase4_step9_")):
+            raise ValueError(f"Step 9 added test/helper is not explicitly scoped: {path}:{node.name}")
+        if path == "tests/conftest.py" and node.name != "phase4_step8_snapshot":
+            raise ValueError("Only the pinned Step 8 shared fixture is authorized")
+        bindings.add(node.name)
+        _phase4_step9_header(node, path)
+
+
+def verify_phase4_step9_test_migration(path: str, before: bytes, after: bytes) -> None:
+    prior = _phase4_step8_files()
+    if path not in prior or path not in PHASE4_STEP9_ALLOWED or before != prior[path] or not path.startswith("tests/"):
+        raise ValueError("Step 9 migration requires the exact named Step 8 source")
+    _phase4_step9_check_test_migration(path, before, after)
+
+
+def _phase4_step9_check_test_migration(path: str, before: bytes, after: bytes) -> None:
+    """Check a source already read from the verified Step 8 immutable mapping."""
+    expected = before
+    for row in PHASE4_STEP9_MIGRATIONS.get(path, []):
+        old, new = row["old"].encode(), row["new"].encode()
+        if expected.count(old) != 1:
+            raise ValueError("Step 8 historical binding is not unique")
+        expected = expected.replace(old, new, 1)
+    _phase4_step9_append_only(expected, after, path)
+
+
+def _phase4_step9_preserve_tooling(before: bytes, after: bytes, path: str) -> None:
+    """Preserve exact inherited statements using one source-line split per tree."""
+    if path == "scripts/release_check.py":
+        old = '    return phase4_cli_main() if explicit_phase4 else main()'
+        new = ('    explicit_step9 = "--step=9" in argv or any(a == "--step" and b == "9" for a, b in zip(argv, argv[1:]))\n'
+               '    if explicit_phase4 and explicit_step9:\n'
+               '        return phase4_step9_cli_main()\n' + old)
+        # Earlier preserved dispatch functions contain this source too; bind cli_main only.
+        parsed = ast.parse(before)
+        entry = next(node for node in parsed.body if isinstance(node, ast.FunctionDef) and node.name == "cli_main")
+        old_entry = ast.get_source_segment(before.decode(), entry)
+        if old_entry.count(old) != 1:
+            raise ValueError("Step 8 release dispatcher identity mismatch")
+        replacements = [(old_entry, old_entry.replace(old, new, 1))]
+    else:
+        old = '    if args.phase == 4 and args.step == 8:\n        return phase4_step8_main(step=args.step)\n'
+        new = old + '    if args.phase == 4 and args.step == 9:\n        return phase4_step9_main(step=args.step)\n'
+        replacements = [(old, new),
+                        ('Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5 or --phase 4 --step 6 or --phase 4 --step 7 or --phase 4 --step 8',
+                         'Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5 or --phase 4 --step 6 or --phase 4 --step 7 or --phase 4 --step 8 or --phase 4 --step 9')]
+    expected = before
+    for old, new in replacements:
+        if expected.count(old.encode()) != 1:
+            raise ValueError(f"Historical dispatcher identity mismatch: {path}")
+        expected = expected.replace(old.encode(), new.encode(), 1)
+    trees = [ast.parse(expected), ast.parse(after)]
+    lines = [expected.splitlines(keepends=True), after.splitlines(keepends=True)]
+    def segment(index, node):
+        if node.lineno == node.end_lineno:
+            return lines[index][node.lineno - 1][node.col_offset:node.end_col_offset]
+        return (lines[index][node.lineno - 1][node.col_offset:]
+                + b"".join(lines[index][node.lineno:node.end_lineno - 1])
+                + lines[index][node.end_lineno - 1][:node.end_col_offset])
+    def entry_guard(node):
+        return isinstance(node, ast.If) and isinstance(node.test, ast.Compare) and "__name__" in ast.unparse(node.test)
+    guards = [n for n in trees[1].body if entry_guard(n)]
+    expected_guard = ast.parse('if __name__ == "__main__":\n    raise SystemExit(cli_main())').body[0]
+    if len(guards) != 1 or ast.dump(guards[0]) != ast.dump(expected_guard):
+        raise ValueError(f"Unapproved Step 9 maintainer entrypoint: {path}")
+    historical = [n for n in trees[0].body if not entry_guard(n)]
+    current = [n for n in trees[1].body if not entry_guard(n)]
+    old_entries = [(segment(0, n), ast.dump(n)) for n in historical]
+    cursor = 0
+    for node in current:
+        if cursor < len(old_entries) and (segment(1, node), ast.dump(node)) == old_entries[cursor]:
+            cursor += 1
+            continue
+        if isinstance(node, ast.FunctionDef) and (node.name == "_phase4_step8_files" or node.name.startswith(
+                ("phase4_step9_", "_phase4_step9_", "verify_phase4_step9_", "audit_phase4_step9"))):
+            _phase4_preserve_function_header(node, path)
+            continue
+        if isinstance(node, ast.Assign) and all(isinstance(target, ast.Name) and target.id.startswith(
+                ("PHASE4_STEP9_", "PHASE4_STEP8_")) for target in node.targets):
+            try:
+                ast.literal_eval(node.value)
+            except (ValueError, TypeError, SyntaxError) as error:
+                raise ValueError(f"Nonliteral added Step 9 maintainer constant: {path}") from error
+            continue
+        raise ValueError(f"Unapproved Step 9 maintainer addition: {path}")
+    if cursor != len(historical):
+        raise ValueError(f"Inherited Step 8 maintainer statement changed: {path}")
+    def binding_counts(tree):
+        counts = {}
+        for node in tree.body:
+            names = []
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names = [node.name]
+            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                names = [child.id for target in targets for child in ast.walk(target) if isinstance(child, ast.Name)]
+            elif isinstance(node, (ast.Import, ast.ImportFrom)):
+                names = [alias.asname or alias.name.split(".")[0] for alias in node.names]
+            for name in names:
+                counts[name] = counts.get(name, 0) + 1
+        return counts
+    inherited_counts = binding_counts(trees[0])
+    for name, count in binding_counts(trees[1]).items():
+        if count > inherited_counts.get(name, 1):
+            raise ValueError(f"Duplicate Step 9 maintainer binding: {path}:{name}")
+
+
+def phase4_step9_golden_contract(root: Path = ROOT) -> dict:
+    """Check separately frozen rationale and literal expected reports byte for byte."""
+    expected = {
+        "tests/golden/phase4_report_cases.md", "tests/golden/phase4_report_expected.json",
+        "tests/golden/phase4_hero_report.json", "tests/golden/phase4_hero_report.md",
+        "tests/golden/phase4_hero_redacted.json", "tests/golden/phase4_hero_redacted.md",
+    }
+    if set(PHASE4_STEP9_GOLDEN_SHA256) != expected:
+        raise ValueError("Step 9 independently authored golden identities are not frozen")
+    for name, digest in PHASE4_STEP9_GOLDEN_SHA256.items():
+        path = root / name
+        if not path.is_file() or path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+            raise ValueError(f"Step 9 golden rationale or expected bytes changed: {name}")
+    return {"frozen_report_oracle_files": len(expected)}
+
+
+def verify_phase4_step9_snapshot(root: Path = ROOT) -> dict:
+    prior = _phase4_step8_files()
+    for path, raw in prior.items():
+        target = root / path
+        if not target.is_file() or target.is_symlink():
+            raise ValueError(f"Missing or aliased inherited Step 8 file: {path}")
+        current = target.read_bytes()
+        if path not in PHASE4_STEP9_ALLOWED and current != raw:
+            raise ValueError(f"Protected Step 8 bytes changed: {path}")
+        if path.startswith("tests/") and path.endswith(".py") and path in PHASE4_STEP9_ALLOWED:
+            _phase4_step9_check_test_migration(path, raw, current)
+        elif path in {"scripts/release_check.py", "scripts/check_spec_consistency.py", "scripts/check_traceability.py"}:
+            _phase4_step9_preserve_tooling(raw, current, path)
+        elif path in {"docs/architecture.md", "docs/theory_traceability.md", "PHASE_4_DECISIONS.md", "tests/golden/README.md"}:
+            if not current.startswith(raw):
+                raise ValueError(f"Step 8 historical documentation prefix changed: {path}")
+    for path in PHASE4_STEP9_NEW:
+        target = root / path
+        if not target.is_file() or target.is_symlink():
+            raise ValueError(f"Required Step 9 file missing or aliased: {path}")
+    actual_modules = {p.relative_to(root).as_posix() for p in (root / "src/recursive_integrity_toolkit").rglob("*.py")}
+    expected_modules = {p for p in prior if p.startswith("src/") and p.endswith(".py")}
+    if actual_modules != expected_modules or len(actual_modules) != 40:
+        raise ValueError("Step 9 cannot change the runtime module set")
+    if {p.name for p in (root / "schemas").iterdir()} != {Path(p).name for p in prior if p.startswith("schemas/")}:
+        raise ValueError("Step 9 cannot change the schema set")
+    resource_root = root / "src/recursive_integrity_toolkit/data"
+    if any(p.is_symlink() for p in resource_root.rglob("*")) or {p.relative_to(root).as_posix() for p in resource_root.rglob("*") if p.is_file()} != set(PHASE4_STEP8_RESOURCES):
+        raise ValueError("Step 9 cannot change the seven exact packaged resources")
+    if hashlib.sha256((root / "PHASE_4_PLAN.md").read_bytes()).hexdigest() != PHASE4_PLAN_SHA256:
+        raise ValueError("Approved Phase 4 plan changed")
+    verify_phase4_step9_control(json.loads((root / "PHASE_4_BASELINE.json").read_text(encoding="utf-8")))
+    decisions = (root / "PHASE_4_DECISIONS.md").read_text(encoding="utf-8")
+    if PHASE4_STEP9_APPROVAL not in decisions or PHASE4_STEP8_FINAL not in decisions:
+        raise ValueError("Actual Step 9 authorization or Step 8 evidence anchor missing")
+    if any((root / name).exists() for name in PHASE4_FORBIDDEN_OUTPUTS):
+        raise ValueError("Step 9 cannot create Phase 4 completion records or audit outputs")
+    oracles = phase4_step9_golden_contract(root)
+    return {"package_modules": 40, "frozen_runtime_modules": 40, "frozen_schemas": 5,
+            "hero_files_unchanged": 6, "packaged_resources": 7,
+            "historical_phase3_migrated_nodes": 16, "step8_historical_migrated_nodes": 9,
+            "phase_complete": False, "result_contracts_enabled": True,
+            "adapters_enabled": True, "privacy_views_enabled": True, "renderers_enabled": True,
+            "output_publication_enabled": True, "cli_analysis_enabled": True,
+            "comparison_enabled": True, "example_enabled": True, **oracles}
+
+
+def phase4_step9_golden_evidence(junit: Path) -> dict:
+    """Require all collected report goldens and all twenty unchanged math cases."""
+    verify_junit(junit)
+    selected = ["tests/golden/test_phase4_reports.py", "tests/golden/test_phase3_math.py"]
+    process = subprocess.run([sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "--collect-only", "-q", *selected], cwd=ROOT, capture_output=True, text=True, check=True)
+    nodes = [line.strip() for line in process.stdout.splitlines() if line.startswith("tests/") and "::" in line]
+    oracle_path = "tests/golden/phase3_math_cases.json"
+    oracle_bytes = (ROOT / oracle_path).read_bytes()
+    if hashlib.sha256(oracle_bytes).hexdigest() != STEP10_FROZEN_FILES[oracle_path]:
+        raise ValueError("Step 9 mathematical oracle bytes differ from the frozen authority")
+    expected_math = {selected[1] + "::test_phase3_frozen_case[" + case["case_id"] + "]"
+                     for case in json.loads(oracle_bytes)["cases"]}
+    registry = selected[1] + "::test_phase3_all_twenty_oracles_have_unique_traceable_identity"
+    actual_math = {n for n in nodes if n.startswith(selected[1] + "::")}
+    if len(nodes) != len(set(nodes)) or len(expected_math) != 20 or actual_math != expected_math | {registry}:
+        raise ValueError("Step 9 golden collection lost mathematical cases or their registry identity")
+    if not any(n.startswith(selected[0] + "::") for n in nodes):
+        raise ValueError("Step 9 report golden suite is empty")
+    expected = set()
+    for node in nodes:
+        base, bracket, parameter = node.partition("[")
+        owner, name = base.rsplit("::", 1)
+        expected.add((owner.removesuffix(".py").replace("/", ".").replace("::", "."), name + bracket + parameter))
+    cases = {(c.get("classname", ""), c.get("name", "")) for c in ET.parse(junit).getroot().iter("testcase")}
+    selected_owners = {p.removesuffix(".py").replace("/", ".") for p in selected}
+    actual = {case for case in cases if case[0] in selected_owners}
+    if actual != expected:
+        raise ValueError("Step 9 JUnit does not execute every collected golden and mathematical case")
+    return {"mathematical_cases": 20, "report_golden_tests": sum(n.startswith(selected[0] + "::") for n in nodes),
+            "report_golden_nodeids": [n for n in nodes if n.startswith(selected[0] + "::")],
+            "mathematical_nodeids": [n for n in nodes if n in expected_math],
+            "mathematical_registry_nodeid": registry,
+            "missing_nodeids": [], "golden_nodeids_sha256": hashlib.sha256(("\n".join(nodes) + "\n").encode()).hexdigest()}
+
+
+def audit_phase4_step9(step: int = 9) -> dict:
+    verify_phase4_step9_control(json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8")), step)
+    result = {"phase": 4, "active_step": step, **verify_phase4_step9_snapshot(),
+              "phase0_hashes_verified": 16, "publication_authorized": False}
+    print(json.dumps(result, indent=2))
+    return result
+
+
+def audit_phase4_step9_diff(step: int = 9) -> dict:
+    if type(step) is not int or step != 9:
+        raise ValueError("Unsupported Phase 4 Step 9 stage")
+    _phase4_step8_files()
+    subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", PHASE4_STEP8_FINAL, "HEAD"], check=True)
+    raw = git("diff", "--name-status", "--no-renames", "-z", PHASE4_STEP8_FINAL, "--").split(b"\0")
+    raw = [part.decode("utf-8") for part in raw if part]
+    if len(raw) % 2:
+        raise ValueError("Malformed Step 9 Git difference records")
+    changes = list(zip(raw[::2], raw[1::2]))
+    changes.extend(("A", p.decode()) for p in git("ls-files", "--others", "--exclude-standard", "-z").split(b"\0") if p)
+    verify_phase4_step9_changes(changes)
+    result = {"previous_step_commit": PHASE4_STEP8_FINAL, "changed_files": len(changes),
+              "changes": changes, "step": 9, "scope": "PASS"}
+    print(json.dumps(result, indent=2))
+    return result
+
+
+def phase4_step9_baseline_evidence(output: Path) -> dict:
+    """Reconcile all inherited identities, including the accepted Step 8 suite."""
+    output.mkdir(parents=True, exist_ok=True)
+    inherited = phase4_step8_baseline_evidence(output / "phase4-step8-inherited")
+    with tempfile.TemporaryDirectory(prefix="rit-p4-step8-identities-") as temp:
+        baseline = Path(temp)
+        for name, raw in _phase4_step8_files().items():
+            target = baseline / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
+        old, old_log = _collect(baseline)
+    current, current_log = _collect(ROOT)
+    expected = 3771 if os.environ.get("RIT_TEST_PARQUET") == "1" else 3768
+    if len(old) != expected or set(old) - set(current):
+        raise ValueError("Accepted Phase 4 Step 8 test identities were lost")
+    result = {"baseline_commit": PHASE4_STEP8_FINAL, "baseline_test_tree": PHASE4_STEP8_TEST_TREE,
+              "baseline_nodeids": old, "current_nodeids": current, "missing_nodeids": [],
+              "baseline_tests": len(old), "current_tests": len(current), "inherited": inherited,
+              "nodeids_sha256": hashlib.sha256(("\n".join(old)+"\n").encode()).hexdigest()}
+    (output / "phase4_step9_test_identity_manifest.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
+    (output / "phase4-step8-collection.log").write_text(old_log, encoding="utf-8")
+    (output / "phase4-step9-collection.log").write_text(current_log, encoding="utf-8")
+    print(json.dumps({k: result[k] for k in ("baseline_tests", "current_tests", "missing_nodeids")}, indent=2))
+    return result
+
+
+def phase4_step9_candidate(output: Path, step: int = 9) -> None:
+    """Build tested Step 9 intermediate evidence without declaring Phase 4 complete."""
+    if os.environ.get("RIT_TEST_PARQUET") != "1" or importlib.util.find_spec("pyarrow") is None:
+        raise ValueError("Step 9 candidate evidence requires RIT_TEST_PARQUET=1 and real PyArrow")
+    output.mkdir(parents=True, exist_ok=True)
+    result = audit_phase4_step9(step)
+    result["diff"] = audit_phase4_step9_diff(step)
+    if git("status", "--porcelain").strip():
+        raise ValueError("Step 9 candidate archive requires committed, clean source")
+    result["core"] = verify_junit(output / "core.xml", minimum=3768)
+    result["parquet"] = verify_junit(output / "parquet.xml", require_parquet=True, minimum=3771)
+    result["core_math_measurements"] = verify_step10_evidence(output / "core.xml", output / "phase4-step9-core-observations.json")
+    result["parquet_math_measurements"] = verify_step10_evidence(output / "parquet.xml", output / "phase4-step9-parquet-observations.json")
+    result["core_report_goldens"] = phase4_step9_golden_evidence(output / "core.xml")
+    result["parquet_report_goldens"] = phase4_step9_golden_evidence(output / "parquet.xml")
+    print(json.dumps({name: result[name] for name in ("core_report_goldens", "parquet_report_goldens")}, indent=2))
+    identity = phase4_step9_baseline_evidence(output)
+    result["test_identity"] = {k: identity[k] for k in ("baseline_tests", "current_tests", "nodeids_sha256")}
+    expected = set()
+    for node in identity["current_nodeids"]:
+        base, bracket, parameter = node.partition("[")
+        owner, name = base.rsplit("::", 1)
+        expected.add((owner.removesuffix(".py").replace("/", ".").replace("::", "."), name + bracket + parameter))
+    for name, parquet in (("core.xml", False), ("parquet.xml", True)):
+        cases = {(c.get("classname", ""), c.get("name", "")) for c in ET.parse(output / name).getroot().iter("testcase")}
+        target = expected if parquet else {c for c in expected if c[1] not in PARQUET_CASES}
+        if cases != target:
+            raise ValueError(f"Step 9 JUnit does not execute the entire current suite: {name}")
+    wheel, sdist = phase4_step8_distributions(output / "dist")
+    smoke_installed(wheel)
+    smoke_installed_duplicates(wheel)
+    phase4_step2_installed_contract_smoke(wheel)
+    phase4_step3_installed_assembly_smoke(wheel)
+    phase4_step4_installed_privacy_smoke(wheel)
+    phase4_step5_installed_renderers_smoke(wheel)
+    phase4_step6_installed_publication_smoke(wheel)
+    phase4_step7_installed_cli_smoke(wheel)
+    phase4_step8_installed_example_smoke(wheel)
+    phase4_step8_sdist_smoke(sdist)
+    archive = output / "recursive-integrity-toolkit-phase4-step9-candidate.zip"
+    subprocess.run(["git", "-C", str(ROOT), "archive", "--format=zip", "--prefix=recursive-integrity-toolkit/", "HEAD", "-o", str(archive.resolve())], check=True)
+    tracked = {p for p in git("ls-files", "-z").decode().split("\0") if p}
+    with zipfile.ZipFile(archive) as zipped:
+        entries = [item.filename for item in zipped.infolist() if not item.is_dir()]
+        prefix = "recursive-integrity-toolkit/"
+        if (len(entries) != len(set(entries)) or any(not name.startswith(prefix) for name in entries)):
+            raise ValueError("Step 9 source archive has duplicate or unprefixed entries")
+        names = {name.removeprefix(prefix) for name in entries}
+        if names != tracked or len(tracked) != 243 or len(entries) != 243:
+            raise ValueError("Step 9 source archive file set mismatch")
+        for name in names:
+            if zipped.read("recursive-integrity-toolkit/"+name) != (ROOT / name).read_bytes():
+                raise ValueError(f"Step 9 source archive byte mismatch: {name}")
+    result.update({"commit": git("rev-parse", "HEAD").decode().strip(),
+                   "tree": git("rev-parse", "HEAD^{tree}").decode().strip(),
+                   "source_archive": archive.name, "tracked_files": len(tracked),
+                   "python": sys.version, "platform": sys.platform,
+                   "versions": {name: importlib.metadata.version(name) for name in ("numpy", "pandas", "pytest")}})
+    (output / "phase4_step9_execution_metadata.json").write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
+    (output / "phase4_step9_repository_files.sha256").write_text("".join(f"{hashlib.sha256((ROOT/name).read_bytes()).hexdigest()}  {name}\n" for name in sorted(tracked)), encoding="utf-8")
+    paths = sorted(p for p in output.rglob("*") if p.is_file() and p.name != "phase4_step9_artifacts.sha256")
+    (output / "phase4_step9_artifacts.sha256").write_text("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(output).as_posix()}\n" for p in paths), encoding="utf-8")
+    print(f"Phase 4 Step 9 candidate: {len(tracked)} source files verified; Phase 4 remains incomplete.")
+
+
+def phase4_step9_cli_main() -> int:
+    parser = argparse.ArgumentParser(description="Phase 4 Step 9 maintainer gate")
+    parser.add_argument("--phase", type=int, choices=(4,), required=True)
+    parser.add_argument("--step", type=int, choices=(9,), required=True)
+    parser.add_argument("--diff", action="store_true")
+    parser.add_argument("--junit", type=Path)
+    parser.add_argument("--golden-junit", type=Path)
+    parser.add_argument("--require-parquet", action="store_true")
+    parser.add_argument("--minimum-tests", type=int, default=1)
+    parser.add_argument("--baseline-evidence", type=Path)
+    parser.add_argument("--dist", type=Path)
+    parser.add_argument("--smoke-wheel", type=Path)
+    parser.add_argument("--candidate", type=Path)
+    parser.add_argument("--delivery", type=Path)
+    args = parser.parse_args()
+    if args.delivery is not None:
+        raise ValueError("Phase 4 Step 9 cannot certify a final phase delivery")
+    if args.golden_junit is not None:
+        print(json.dumps(phase4_step9_golden_evidence(args.golden_junit), indent=2))
+    elif args.junit is not None:
+        verify_junit(args.junit, require_parquet=args.require_parquet, minimum=args.minimum_tests)
+    elif args.baseline_evidence is not None:
+        phase4_step9_baseline_evidence(args.baseline_evidence)
+    elif args.dist is not None:
+        audit_phase4_step9(args.step)
+        wheel, sdist = phase4_step8_distributions(args.dist)
+        smoke_installed(wheel)
+        smoke_installed_duplicates(wheel)
+        phase4_step2_installed_contract_smoke(wheel)
+        phase4_step3_installed_assembly_smoke(wheel)
+        phase4_step4_installed_privacy_smoke(wheel)
+        phase4_step5_installed_renderers_smoke(wheel)
+        phase4_step6_installed_publication_smoke(wheel)
+        phase4_step7_installed_cli_smoke(wheel)
+        phase4_step8_installed_example_smoke(wheel)
+        phase4_step8_sdist_smoke(sdist)
+    elif args.smoke_wheel is not None:
+        smoke_installed(args.smoke_wheel)
+    elif args.candidate is not None:
+        phase4_step9_candidate(args.candidate, args.step)
+    else:
+        audit_phase4_step9(args.step)
+        if args.diff:
+            audit_phase4_step9_diff(args.step)
+    return 0
+
+
 def cli_main() -> int:
     argv = sys.argv[1:]
     explicit_phase4 = "--phase=4" in argv or any(a == "--phase" and b == "4" for a, b in zip(argv, argv[1:]))
@@ -9832,6 +11311,9 @@ def cli_main() -> int:
     explicit_step8 = "--step=8" in argv or any(a == "--step" and b == "8" for a, b in zip(argv, argv[1:]))
     if explicit_phase4 and explicit_step8:
         return phase4_step8_cli_main()
+    explicit_step9 = "--step=9" in argv or any(a == "--step" and b == "9" for a, b in zip(argv, argv[1:]))
+    if explicit_phase4 and explicit_step9:
+        return phase4_step9_cli_main()
     return phase4_cli_main() if explicit_phase4 else main()
 
 
