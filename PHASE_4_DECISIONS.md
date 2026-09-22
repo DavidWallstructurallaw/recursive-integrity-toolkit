@@ -1183,3 +1183,33 @@ Collection, supported profiles, successful-run counts and the exact identity
 gate remain unchanged. A partial failed run cannot satisfy acceptance. Matrix
 `fail-fast: false` remains in place so other environments can expose distinct
 failures; the security role retains its complete diagnostic failure list.
+
+
+### Step 11 bounded full-suite job budget repair
+
+Repaired candidate `2ca1c9cff5f362a4771aa04987507e9af3738af0` passed
+eight complete environment profiles, Hero (203 cases) and security (3,277 cases).
+Windows/Python 3.11 minimum job 106900007615 was cancelled near the existing
+75-minute core job limit, without a final pytest summary or complete JUnit.
+Its log contains 1,223 passing progress markers and no failure marker; mapping
+to the unchanged collected order places the next case at the complete 100k
+audit. This partial progress is not a complete pass or a measured 100k result.
+The dependent delivery job was skipped, so this candidate remains unaccepted.
+The first candidate also exhausted the same core budget on Windows/Python 3.11.
+
+The existing core job allowance becomes 105 minutes, with its existing current
+workflow assertion synchronized. Parquet remains at 75 minutes. This is bounded
+headroom for an observed incomplete full-suite execution; no additional job,
+profile, test, retry mechanism or registry is introduced. A per-profile timeout
+expression would require extra matrix/contract logic, so the existing single
+literal remains the smallest sufficient control. Jobs finish as soon as their
+work completes; the maximum extra allowance is 30 minutes per core job.
+
+All product bytes, test selection, mathematical expectations, identity/count
+gates and fail-closed behavior remain unchanged. The 100k subprocess retains
+its 1,800-second guard, and Hero targets and other workflow budgets stay intact.
+The logs do not establish an individual slow-test cause, an out-of-memory event
+or a product assertion failure. No performance result is waived. Since workflow
+and current contract bytes change, the corrected candidate must complete its
+required gates before acceptance. A further budget failure requires inspection
+of the actual result rather than an automatic retry or another allowance rise.

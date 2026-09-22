@@ -22,7 +22,7 @@ jobs:
   core:
     name: Core (${{ matrix.dependencies }}) on ${{ matrix.os }} with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 75
+    timeout-minutes: 105
     strategy:
       fail-fast: false
       matrix:

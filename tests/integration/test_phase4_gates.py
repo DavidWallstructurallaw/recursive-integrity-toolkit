@@ -1727,7 +1727,7 @@ def test_phase4_step9_current_workflows_preserve_matrix_and_use_active_dispatch(
     import re
     names = {"ci.yml", "golden.yml", "security.yml", "release.yml"}
     root = repo_root / ".github/workflows"
-    expected_timeouts = {"ci.yml": [75, 75], "golden.yml": [15], "security.yml": [20], "release.yml": [40]}
+    expected_timeouts = {"ci.yml": [105, 75], "golden.yml": [15], "security.yml": [20], "release.yml": [40]}
     assert {path.name for path in root.glob("*.yml")} == names
     for name in sorted(names):
         text = (root / name).read_text(encoding="utf-8")

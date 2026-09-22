@@ -14,7 +14,7 @@ Starting commit: `9142b344bfc2dc2b33dbc696159f07bbc81b223a`.
 | Boundaries | Privacy, local-only execution, malformed input, safe paired output and current unauthorized-mutation checks | Pending |
 | Packages | Wheel/sdist metadata, 40 modules, seven resource files, clean installed commands and package payloads | Pending |
 | Examples | Documented Python and CLI examples outside the checkout | 18 commands passed using installed dev3; 11 JSON/Markdown pairs retained |
-| Security | Required boundary/security workflow | First candidate failed historical stage preconditions; repair verification pending |
+| Security | Required boundary/security workflow | Repaired candidate passed 3,277 cases; final budget-corrected candidate pending |
 | Source integrity | Exact tracked source archive, current scope and frozen authority | Pending |
 
 The minimum profile uses NumPy 2.0.0 and pandas 2.2.2, the documented jointly
@@ -45,6 +45,23 @@ also failed only these ten historical cases. Focused repair verification passed
 control attempt was interrupted after partial progress; it is not recorded as a
 complete pass. Full repaired remote gates remain required. Full remote logs and
 every attempt remain in the external evidence.
+
+## Repaired candidate and bounded budget correction
+
+Candidate `2ca1c9cff5f362a4771aa04987507e9af3738af0` passed seven core
+profiles with 3,965 cases each, the real-Parquet profile with 3,968 cases,
+Hero/mathematics with 203 cases and security with 3,277 cases. These successful
+jobs also passed their subsequent scope and evidence checks. Both complete
+controller modules ran within security, resolving the local execution gap
+without reclassifying either incomplete local attempt as a pass.
+
+Windows/Python 3.11 minimum was cancelled near the 75-minute outer job limit.
+Its 1,223 passing progress markers do not constitute a complete JUnit result,
+and the 100k case cannot be declared complete from that partial log. Delivery
+was skipped, so the repaired candidate is not accepted. The existing core job
+budget is corrected to 105 minutes; all profiles, cases and identity gates remain
+required, with the 100k subprocess still limited to 1,800 seconds. The final
+budget-corrected candidate gates remain pending. Every attempt is retained.
 
 ## Accepted prior measurements
 
