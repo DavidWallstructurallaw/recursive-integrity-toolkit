@@ -932,3 +932,36 @@ identities plus the separate unchanged registry node, and reports the report-gol
 count independently. The initial control-suite attempt was interrupted with exit
 130 before this correction and is retained without an acceptance claim. Verification
 includes the real 92-node golden JUnit and a missing-registry negative case.
+
+### Observed CI budget correction within common G
+
+The initial budgets recorded above applied to source commit
+`36d6f5da537b427606adae82149d7331b505ee4e`. In CI run `35698828150`, the first
+real-Parquet job `106651721071` passed all 3,962 cases in 1,100.83 seconds,
+then exhausted its 20-minute job limit during inherited identity evidence
+generation. One same-source retry, job `106669886339` in attempt 2 of that
+run, passed the same 3,962 cases in 1,094.76 seconds and again timed out
+during the subsequent evidence step. Neither cancelled job is accepted as a
+successful workflow, and both raw logs and attempt identities are retained.
+
+The first Windows Python 3.11 minimum-dependency job `106651721351` in the
+same run exhausted its 60-minute limit after pytest reached 92 percent.
+It produced no final passing summary and is not counted as a passed suite.
+Its same-source attempt-2 job `106669886825` was still running when this
+budget correction was prepared; its eventual outcome remains separate
+evidence and cannot accept the corrected source.
+
+Common G now gives the eight core matrix jobs a bounded 75-minute limit and
+the real-Parquet job a bounded 30-minute limit. The active Step 9 workflow
+assertion requires those exact values. Hero 15, security 20 and build 40
+remain unchanged. Test selections, assertions, matrix combinations,
+dependency versions, runtime behavior, golden expectations and current case
+counts are unchanged. Historical Step 1 through Step 8 budget assertions and
+their pinned source bindings remain intact; no additional historical test
+migration is introduced.
+
+This correction changes maintainer verification resource limits, not any
+Step 10 performance target. Acceptance still requires complete local,
+installed and all four remote workflow checks on one exact corrected source
+commit. Earlier successful jobs do not substitute for those final-source
+checks. Timeouts, partial evidence and retries are never treated as success.

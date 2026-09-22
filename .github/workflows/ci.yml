@@ -16,7 +16,7 @@ jobs:
   core:
     name: Core (${{ matrix.dependencies }}) on ${{ matrix.os }} with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
@@ -78,7 +78,7 @@ jobs:
   parquet:
     name: Real optional Parquet on Ubuntu with Python 3.12
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       PYTHONDONTWRITEBYTECODE: "1"
       RIT_TEST_PARQUET: "1"
