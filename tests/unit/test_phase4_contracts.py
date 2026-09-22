@@ -153,10 +153,10 @@ def test_phase4_registered_migrations_accept_only_the_approved_inventory(phase4_
 
 
 @pytest.mark.parametrize("mutation", ["assertion", "wrong_baseline", "duplicate_node", "unlisted_path"])
-def test_phase4_migration_guard_rejects_weakening_or_wrong_identity(phase4_tools, phase3_final_snapshot, mutation):
+def test_phase4_migration_guard_rejects_weakening_or_wrong_identity(phase4_tools, phase3_final_snapshot, mutation, phase4_step1_snapshot):
     path = "tests/integration/test_cli_validation.py"
     before = (phase3_final_snapshot / path).read_bytes()
-    after = (ROOT / path).read_bytes()
+    after = (phase4_step1_snapshot / path).read_bytes()
     verify = phase4_tools["verify_phase4_test_migration"]
     verify(path, before, after)
     if mutation == "assertion":

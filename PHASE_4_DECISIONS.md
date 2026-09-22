@@ -1157,3 +1157,29 @@ receipt framework or evidence-of-evidence layer is introduced. Existing direct
 mutation rejection checks remain canonical; obsolete implementation forms are
 recoverable from Git and archived phase evidence. Phase 5, merging main, tags
 and package publication require later authorization.
+
+### Step 11 first full-candidate findings
+
+Candidate `0c2f5e4b5bb4730923ea87e54086fb077a66e996` passed the remote
+Hero/mathematical job, while security job 106880586538 recorded 3,267 passes and
+10 failures. The failures expose historical test preconditions still tied to
+moving current files: four Step 1 CLI migration cases require dev2, a Step 1
+assertion forbids completion records, three Step 4 assembly cases require the
+source form preceding the approved Step 10 repair, and Step 7/8 module-difference
+assertions omit later approved changes. This is a failed candidate, retained in
+the evidence. No product failure is waived or converted to acceptance.
+
+Five existing test functions may use their already available accepted stage
+fixtures for these historical preconditions. Their mutation cases and behavioral
+assertions remain intact, and canonical current tests continue to protect current
+runtime, schema, privacy and unauthorized-mutation boundaries. This is the
+user-authorized consolidation of historical implementation forms, without new
+fixtures, source registries, migration chains or runtime changes. The affected
+control suites and required repaired candidate gates must pass before completion.
+
+The two complete CI suite commands also use pytest `--maxfail=1` so a known
+invalid environment stops before spending further time on expensive cases.
+Collection, supported profiles, successful-run counts and the exact identity
+gate remain unchanged. A partial failed run cannot satisfy acceptance. Matrix
+`fail-fast: false` remains in place so other environments can expose distinct
+failures; the security role retains its complete diagnostic failure list.

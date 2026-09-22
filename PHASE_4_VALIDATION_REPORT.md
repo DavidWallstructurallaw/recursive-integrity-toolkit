@@ -11,10 +11,10 @@ Starting commit: `9142b344bfc2dc2b33dbc696159f07bbc81b223a`.
 | Canonical regression | Complete suite on Ubuntu/Windows, Python 3.11/3.12, current/minimum dependencies | Pending |
 | Real Parquet | Complete extra-enabled suite and all three real-Parquet cases | Pending |
 | Scientific fidelity | All 20 frozen mathematical cases and current report goldens | Pending |
-| Boundaries | Privacy, local-only execution, malformed input, atomic output and current unauthorized-mutation checks | Pending |
+| Boundaries | Privacy, local-only execution, malformed input, safe paired output and current unauthorized-mutation checks | Pending |
 | Packages | Wheel/sdist metadata, 40 modules, seven resource files, clean installed commands and package payloads | Pending |
 | Examples | Documented Python and CLI examples outside the checkout | 18 commands passed using installed dev3; 11 JSON/Markdown pairs retained |
-| Security | Required dependency/security workflow | Pending |
+| Security | Required boundary/security workflow | First candidate failed historical stage preconditions; repair verification pending |
 | Source integrity | Exact tracked source archive, current scope and frozen authority | Pending |
 
 The minimum profile uses NumPy 2.0.0 and pandas 2.2.2, the documented jointly
@@ -29,6 +29,22 @@ their first attempt. Specification, traceability, current scope, whitespace and
 document-link checks passed. These selections do not replace the pending full
 supported-environment matrix. The installed example commands ran outside the
 checkout with package origin verified in site-packages.
+
+The first published candidate `0c2f5e4b5bb4730923ea87e54086fb077a66e996`
+passed the remote Hero/mathematical job (203 tests). Its security job recorded
+3,267 passes and 10 failures in 920.72 seconds. Those failures concern five
+historical stage preconditions that still inspect the moving checkout: the
+dev2 CLI migration, absence of Step 1 completion records, pre-repair assembly
+bytes and the Step 7/8 module-change sets. This candidate is not accepted.
+The repair binds those historical checks to already available accepted stage
+snapshots, retaining their assertions and mutation cases. Current Step 11
+behavior and unauthorized-mutation checks continue to inspect current source.
+The Ubuntu current/minimum, Windows minimum and real-Parquet complete runs
+also failed only these ten historical cases. Focused repair verification passed
+118 affected cases plus 143 related historical/workflow cases. A broader local
+control attempt was interrupted after partial progress; it is not recorded as a
+complete pass. Full repaired remote gates remain required. Full remote logs and
+every attempt remain in the external evidence.
 
 ## Accepted prior measurements
 

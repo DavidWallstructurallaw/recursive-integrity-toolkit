@@ -172,7 +172,8 @@ def test_phase4_step1_keeps_current_help_and_future_commands_unopened(subprocess
     assert set(tmp_path.iterdir()) == before
 
 
-def test_phase4_step1_has_no_completion_records_or_reports(repo_root):
+def test_phase4_step1_has_no_completion_records_or_reports(repo_root, phase4_step1_snapshot):
+    repo_root = phase4_step1_snapshot
     for relative in ("PHASE_4_COMPLETION.md", "PHASE_4_VALIDATION_REPORT.md",
                      "PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md", "report.json", "report.md"):
         assert not (repo_root / relative).exists(), relative
@@ -765,7 +766,7 @@ def test_phase4_step4_privacy_ast_checks_current_source_before_rejecting_scope_i
     checker = runpy.run_path(str(repo_root / "scripts/check_traceability.py"), run_name="phase4_step4_ast_tests")
     verify = checker["phase4_step4_runtime_boundary"]
     repository_path = "src/recursive_integrity_toolkit/" + relative
-    current = (phase4_step5_snapshot if relative == "utils/logging.py" else phase4_step6_snapshot if relative == "config.py" else repo_root) / repository_path
+    current = (phase4_step5_snapshot if relative in ("utils/logging.py", "reports/assembly.py") else phase4_step6_snapshot if relative == "config.py" else repo_root) / repository_path
     verify(current, repository_path)
     copy = tmp_path / "source.py"
     copy.write_bytes(current.read_bytes() + injection)
@@ -1268,7 +1269,8 @@ def test_phase4_step6_new_test_file_rejects_definition_effects(repo_root, phase4
         verify(raw + injection, path)
 
 
-def test_phase4_step7_current_runtime_opens_only_cli_configuration_and_freezes_schema(repo_root, phase4_step6_snapshot):
+def test_phase4_step7_current_runtime_opens_only_cli_configuration_and_freezes_schema(repo_root, phase4_step6_snapshot, phase4_step7_snapshot):
+    repo_root = phase4_step7_snapshot
     package = "src/recursive_integrity_toolkit"
     current = {path.relative_to(repo_root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
                for path in (repo_root / package).rglob("*.py")}
@@ -1490,7 +1492,8 @@ def test_phase4_step7_new_cli_tests_reject_definition_effects(repo_root, phase4_
         verify(raw + injection, path)
 
 
-def test_phase4_step8_current_runtime_opens_only_cli_configuration_and_freezes_schema(repo_root, phase4_step7_snapshot):
+def test_phase4_step8_current_runtime_opens_only_cli_configuration_and_freezes_schema(repo_root, phase4_step7_snapshot, phase4_step8_snapshot):
+    repo_root = phase4_step8_snapshot
     package = "src/recursive_integrity_toolkit"
     current = {path.relative_to(repo_root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
                for path in (repo_root / package).rglob("*.py")}

@@ -7,9 +7,10 @@ Accepted starting commit: `9142b344bfc2dc2b33dbc696159f07bbc81b223a`.
 
 Phase 4 provides local CLI validation and audit, JSON and Markdown reports,
 explicit comparison context, evidence classifications, unavailable-state
-reporting, privacy redaction, atomic publication and the packaged Hero example.
+reporting, privacy redaction, safe local publication and the packaged Hero example.
 The current Hero reports support 8 and 5, diversity 0.875 and 0.75, and retention
-5/8. Lineage-derived ancestry, simulation and HTML output remain deferred.
+5/8. Lineage-derived ancestry, CLI simulation orchestration and HTML output remain
+deferred. Explicit Python mathematical scenarios remain available.
 
 Step 11 updates public usage documentation, synchronizes version metadata and
 current expectations, and closes out the existing release checks. The only

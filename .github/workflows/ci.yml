@@ -70,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-core"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" | tee "$RUNNER_TEMP/rit-core/phase4_test_results.log"
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" --maxfail=1 | tee "$RUNNER_TEMP/rit-core/phase4_test_results.log"
           python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 3768
       - name: Check current authorized scope and canonical suite
         run: |
@@ -117,7 +117,7 @@ jobs:
           python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
           git rev-parse HEAD > "$RUNNER_TEMP/rit-parquet/source-commit.txt"
           free --bytes | tee "$RUNNER_TEMP/rit-parquet/host-memory-bytes.txt"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" | tee "$RUNNER_TEMP/rit-parquet/phase4_parquet_results.log"
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" --maxfail=1 | tee "$RUNNER_TEMP/rit-parquet/phase4_parquet_results.log"
           python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 3771
           python scripts/release_check.py --phase 4 --step 11 --baseline-evidence "$RUNNER_TEMP/rit-parquet"
       - name: Retain Parquet evidence without masking failure

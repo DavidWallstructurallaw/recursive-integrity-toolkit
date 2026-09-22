@@ -15,7 +15,8 @@ The shipped report has stable JSON and Markdown forms. Comparison requires
 explicit version-order and state-semantics context. Privacy redaction preserves
 analytical values while suppressing protected report details. Local-only and
 safe-publication boundaries remain covered by direct product tests. Lineage,
-ancestry, simulations, embeddings and HTML remain outside this phase.
+ancestry, CLI simulation orchestration, embeddings and HTML remain outside this
+phase. Explicit Python mathematical scenarios remain available.
 
 Step 11 changes only the package version literal in runtime source. The other
 39 runtime modules, all schemas, seven package resources and literal golden
@@ -58,6 +59,13 @@ Explicit current-version expectations and the existing historical snapshot
 resolved those issues; frozen oracle bytes and normalizer bytes were verified
 unchanged. Workflow review confirmed that complete suites remain in all nine
 required profiles, with build evidence reused from the same candidate run.
+
+The complete security run subsequently exposed ten stale historical preconditions
+across five existing test functions. Their protected behavior is retained against
+the already available accepted stage fixtures, while current direct checks still
+reject unauthorized product changes. No historical test-body registry or successor
+migration layer is added to accommodate these fixes. The first failed candidate
+and its raw log remain archived; acceptance waits for successful repaired gates.
 
 The measured 100k report remains large and memory intensive; the Step 10 result
 does not establish an all-hardware SLA. Final platform outcomes remain pending.
