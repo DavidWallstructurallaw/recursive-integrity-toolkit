@@ -1,7 +1,8 @@
 # Phase 4 architecture compliance report
 
-Status: candidate review in progress; final verification pending.
+Status: review complete; all required candidate gates passed.
 Starting commit: `9142b344bfc2dc2b33dbc696159f07bbc81b223a`.
+Accepted candidate: `ceb0cf702284dbdbe50b14722026ec26fbcc21ba`.
 
 ## Product and scientific boundaries
 
@@ -34,7 +35,7 @@ added during Step 11.
 
 Existing historical package tests use their already available accepted snapshot.
 Current direct mutation rejection remains active. Complete candidate suites
-execute once per required profile, and the build role consumes the same run's
+execute once per required profile per candidate attempt, and the build role consumes the same run's
 core and Parquet evidence. Administrative acceptance edits do not automatically
 repeat the full environment matrix when executable/authoritative bytes are
 unchanged. These choices implement the user's verification governance policy.
@@ -49,7 +50,7 @@ three realistic defects. No general mutation framework was added.
 Assistant agents perform implementation/control review, workflow/package review,
 public documentation review and independent version/scientific/privacy review.
 These are AI-assisted reviews. No human signature or external scientific review
-is claimed. Actual findings and resolutions will be recorded in final evidence.
+is claimed. Actual findings and resolutions are retained in the Step 11 evidence.
 
 Initial independent review confirmed the Hero values, explicit unavailable
 states, input-only validation, deferred lineage/simulation execution and
@@ -65,9 +66,17 @@ across five existing test functions. Their protected behavior is retained agains
 the already available accepted stage fixtures, while current direct checks still
 reject unauthorized product changes. No historical test-body registry or successor
 migration layer is added to accommodate these fixes. The first failed candidate
-and its raw log remain archived; acceptance waits for successful repaired gates.
+and its raw log remain archived. The second candidate passed eight matrix profiles
+but exceeded the 75-minute budget in Windows/Python 3.11 minimum. The existing
+core limit was corrected to 105 minutes, without changing product/performance
+bytes, test cases or the 1,800-second real-audit limit. The third candidate passed
+all nine matrix profiles, Hero, security and dependent delivery, 12 jobs in total.
+No further budget increase, retry layer or new verification framework was needed.
 
 The measured 100k report remains large and memory intensive; the Step 10 result
-does not establish an all-hardware SLA. Final platform outcomes remain pending.
-Completion, publication authority and permission for Phase 5 are separate
-decisions. This report grants none of them.
+does not establish an all-hardware SLA. Actual platform outcomes and failed
+attempts are recorded in the validation report. Phase 4 completion is accepted
+on the verified candidate; this final successor changes only three descriptive
+reports and reuses its evidence after focused checks. The authorization baseline
+is unchanged. The draft pull request remains unmerged; package publication and
+permission for Phase 5 remain outside this completed action.
