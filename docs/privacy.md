@@ -1,6 +1,6 @@
 # Privacy and Local Input Boundaries
 
-Status: Phase 3 development milestone. `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
+Status: Phase 4 development milestone (`0.1.0.dev3`). `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
 
 Package import does not contact a network, open user audit files, require optional PyArrow or start a service. Runtime operates on explicitly supplied local files and declarations. No telemetry, background worker, plugin, cloud client, database, model download or LLM service exists. CI/package installation acquire dependencies separately; CI uses synthetic fixtures only.
 
@@ -22,9 +22,9 @@ Configured bases and directory trees must be trusted and stable while reading. P
 
 Table loading, mapping, normalization, joins and generation checks do not automatically follow reference-valued metadata. validate_bundle requires LOCAL_REF and resolve_local_content=True before invoking PR-017. Each record uses its source-file directory when no explicit base is supplied.
 
-Content failures preserve metadata and enter diagnostics. Independent capabilities can remain usable, but errors remain visible. Output paths are not executed and no report is written. Resource controls are explicit per-file/row/depth limits, not a total-bundle memory or decompression sandbox.
+Content failures preserve metadata and enter diagnostics. Independent capabilities can remain usable, but errors remain visible. The input-only Python bundle workflow writes no report; CLI publication is a separate explicit layer. Resource controls are explicit per-file/row/depth limits, not a total-bundle memory or decompression sandbox.
 
-Internal results retain records, provenance, file inventory and private source locations. Default repr excludes payloads, while aggregate messages redact paths. Explicit object serialization can still expose sensitive local data. Redacted public report generation is deferred; handle these internal objects under the governing data policy.
+Internal results retain records, provenance, file inventory and private source locations. Default repr excludes payloads, while aggregate messages redact paths. Explicit object serialization can still expose sensitive local data. Use the explicit safe report view described below for public output; handle original internal objects under the governing data policy.
 
 ## Development evidence
 
@@ -32,10 +32,10 @@ Tests use synthetic data and verify offline behavior, unchanged sources, rejecte
 
 Delivery bundles contain separate tracked-source archives, project wheel/sdist and synthetic test evidence. Git internals, environments, caches, private data and full theory PDFs are excluded. No third-party source, datasets, models or fonts are bundled. Metadata lists actual installed tool versions and their declared license metadata; this is not an independent vulnerability or legal audit.
 
-The completion record reports failures, repairs and unexecuted checks separately. No production security certification is claimed. Only explicitly authorized Phase 3 steps may add bounded calculation behavior.
+The completion record reports failures, repairs and unexecuted checks separately. No production security certification is claimed. Later functionality requires its own approved scope; documentation does not authorize new calculations.
 
 
-## Phase 3 Step 3 exact-content privacy
+## Exact-content privacy
 
 Exact hashing and duplicate grouping operate solely on explicitly supplied memory.
 LOCAL_REF paths are never opened or hashed by this layer. The existing safe reader
@@ -52,7 +52,7 @@ it must not be described as a redacted record ID or proof of origin.
 Tests use synthetic text, independent copies, supplied local-reference payloads,
 Unicode and newline variants, artificial digest collisions, and no-I/O/no-logging
 checks. Errors use static messages; collision failures do not echo the conflicting
-text. Public report serialization and redaction remain deferred to Phase 4.
+text. Public serialization and redaction use the separate safe-view and renderer layers below.
 
 ## Explicit mathematical invocation
 
@@ -62,11 +62,10 @@ Sampled closed resampling creates one explicitly seeded local PCG64 generator pe
 
 Scopes, state IDs, source declarations, weights, content digests and original distributions can be sensitive. Default repr suppression and static errors reduce accidental disclosure, but deliberate serialization or inspection of these internal objects can expose caller data. They are not redacted public reports. Missing provenance and errors remain visible; no inference of authorship, external truth, semantic independence or safe deployment is performed. Evidence bundles use only repository-owned synthetic fixtures.
 
-## Phase 4 Step 4: explicit safe report views
+## Explicit safe report views
 
-The Step 4 APIs implement approved P4-D05 and P4-D08, with PR-015 privacy and
-PR-016 reproducibility ownership. The earlier paragraphs describe their accepted
-historical stages. `assemble_report` continues to assemble standard internal
+These APIs implement approved P4-D05 and P4-D08, with PR-015 privacy and
+PR-016 reproducibility ownership. `assemble_report` continues to assemble standard internal
 evidence. Its `CanonicalReport` validates structure and evidence semantics;
 validation alone is not a privacy transformation. After calculation and assembly,
 call `reports.assembly.privacy_view` to create an immutable `SafeReportView` for
@@ -123,11 +122,10 @@ privacy are selected; inherited debug labels do not activate raw-content output.
 
 These views provide identifier and content protection, not statistical anonymity,
 small-cell suppression, evidence authentication or protection from deliberate
-inspection of the caller's original internal objects. Step 4 does not implement
-renderers, CLI analysis or output publication. Those later sinks must consume the
-validated privacy view before emitting a report or diagnostic.
+inspection of the caller's original internal objects. Renderers and the installed
+CLI consume the validated privacy view before emitting reports and diagnostics.
 
-## Phase 4 Step 6 safe local output
+## Safe local output
 
 The output helper consumes a validated SafeReportView. Redaction, record-ID
 protection and analytical content are already fixed before publication. JSON
@@ -165,3 +163,29 @@ privileged actor swapping directories in a race window or remapping a mount.
 No cross-platform pair crash-durability guarantee is made. File fsync does not
 flush all directory metadata. Do not interpret target existence as successful
 publication; require a `complete` result and use a fresh destination after failure.
+
+
+## Installed command behavior
+
+`rit audit`, `rit validate` and `rit example` apply standard output privacy by
+default. `--redacted` selects protected structural identifiers and hash-mode record
+IDs. Audit/validate additionally accept `--record-ids preserve|hash|omit` and
+`--id-salt-file`; both require redacted mode. Without a supplied secret, pseudonyms
+are stable only within that run. Fresh runs keep analytical values stable while
+changing their pseudonyms. Example supports `--redacted` with its default record-ID
+mode, and always extracts the unchanged public Hero inputs.
+
+Console stderr and both report formats preserve diagnostic severity, code, counts
+and safe locations. Warning scopes contain version/count/denominator/scope-ID
+summaries rather than complete repeated identity lists. Each distinct context is
+retained. Full input identity lists remain in the appropriate report scope unless
+the selected privacy mode omits them. The scope summary is a report-size control
+and does not provide additional anonymity.
+
+These CLI commands never activate content-reference resolution. They neither
+modify inputs nor execute strings embedded in metadata, mappings or reports.
+Standard output may retain local paths and structural identifiers, so choose the
+privacy mode appropriate to the destination before sharing a report. Redacted
+output still contains aggregate counts and linkable input/configuration digests.
+Large reports consume memory during in-memory construction and rendering;
+per-file input limits do not bound total report memory or size.

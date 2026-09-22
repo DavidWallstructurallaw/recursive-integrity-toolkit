@@ -1,7 +1,14 @@
-name: Phase 4 Step 10 Security Boundary
+name: Phase 4 Step 11 Security Boundary
 
 on:
   pull_request:
+    paths-ignore:
+      - README.md
+      - CHANGELOG.md
+      - "docs/**"
+      - PHASE_4_COMPLETION.md
+      - PHASE_4_VALIDATION_REPORT.md
+      - PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md
   workflow_dispatch:
 
 permissions:
@@ -22,6 +29,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Set up Python
@@ -68,9 +76,9 @@ jobs:
             tests/unit/test_phase4_contracts.py \
             tests/integration/test_phase4_gates.py \
             --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/phase4_current_security_results.log"
-          python scripts/release_check.py --phase 4 --step 10 --junit "$RUNNER_TEMP/rit-security/security.xml"
-          python scripts/check_traceability.py --phase 4 --step 10
-          python scripts/release_check.py --phase 4 --step 10
+          python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-security/security.xml"
+          python scripts/check_traceability.py --phase 4 --step 11
+          python scripts/release_check.py --phase 4 --step 11
       - name: Retain actual security test evidence
         if: always()
         uses: actions/upload-artifact@v4

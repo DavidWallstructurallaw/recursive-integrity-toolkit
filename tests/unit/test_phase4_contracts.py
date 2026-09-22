@@ -1465,23 +1465,23 @@ def test_phase4_step8_historical_guard_rejects_weakening(phase4_tools, phase4_st
 
 def test_phase4_step9_control_keeps_step8_acceptance_and_freezes_runtime(phase4_tools):
     control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
-    assert control["active_phase"] == 4 and control["active_step"] == 10
-    assert control["approval_basis"] == "Phase 4 Step 10 开始"
-    assert control["previous_step_commit"] == "ad2cb5d0cb34dac9036593bac4e91c9d993bcfc6"
-    assert control["previous_step_tree"] == "64d81ceed83304dca5a5c2cfccf82641819549f1"
-    assert control["previous_step_test_tree"] == "a6c60ed13c274da73ad085d0989c6a7a4641e203"
-    assert control["previous_step_core_tests"] == 3959
-    assert control["previous_step_parquet_tests"] == 3962
+    assert control["active_phase"] == 4 and control["active_step"] == 11
+    assert control["approval_basis"] == "继续 Phase 4 Step 11"
+    assert control["previous_step_commit"] == "9142b344bfc2dc2b33dbc696159f07bbc81b223a"
+    assert control["previous_step_tree"] == "a485078d3e7cf739e10b087acb604f317ee19854"
+    assert control["previous_step_test_tree"] == "2fc4e86c4dee9f069f93af59caab138f0ea63224"
+    assert "previous_step_core_tests" not in control
+    assert "previous_step_parquet_tests" not in control
     assert "previous_step_files_sha256" not in control
-    assert control["runtime_paths_authorized"] == ["src/recursive_integrity_toolkit/reports/assembly.py"]
+    assert control["runtime_paths_authorized"] == ["src/recursive_integrity_toolkit/__init__.py"]
     assert control["schema_paths_authorized"] == []
     assert control["runtime_changes_authorized"] is True
-    assert control["runtime_repair_approval_basis"] == "批准"
+    assert "runtime_repair_approval_basis" not in control
     assert control["package_resource_copies"] == {}
     assert control["report_goldens_authorized"] is False
     for key in ("schema_changes_authorized", "package_data_declaration_only", "phase_complete", "next_step_authorized", "main_merge_authorized", "publication_authorized"):
         assert control[key] is False
-    phase4_tools["verify_phase4_current_control"](control, step=10)
+    phase4_tools["verify_phase4_current_control"](control, step=11)
     with pytest.raises(ValueError):
         phase4_tools["verify_phase4_step8_control"](control, step=8)
 
@@ -1506,7 +1506,7 @@ def test_phase4_step9_control_rejects_forged_permission(phase4_tools, field, val
         verify(control)
 
 
-@pytest.mark.parametrize("step", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, True, "10", None])
+@pytest.mark.parametrize("step", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, True, "11", None])
 def test_phase4_step9_control_requires_exact_stage(phase4_tools, step):
     control = json.loads((ROOT / "PHASE_4_BASELINE.json").read_text(encoding="utf-8"))
     with pytest.raises(ValueError):
@@ -1514,21 +1514,25 @@ def test_phase4_step9_control_requires_exact_stage(phase4_tools, step):
 
 
 def test_phase4_step9_allowlist_is_exact_common_g_plus_named_report_paths(phase4_tools):
-    """The current canonical scope permits Step 10 performance, common maintenance and the approved assembly repair."""
-    additional = {"tests/performance/test_hero_runtime.py", "tests/performance/test_metadata_100k.py",
-                  "tests/performance/README.md", "tests/integration/test_phase4_cli.py",
-                  "src/recursive_integrity_toolkit/reports/assembly.py"}
+    """Current scope permits final documentation, exact version literals and common maintenance."""
+    additional = {"README.md", "CHANGELOG.md", "docs/cli.md", "docs/report_schema.md",
+                  "docs/data_schema.md", "docs/privacy.md", "docs/release_process.md",
+                  "pyproject.toml", "src/recursive_integrity_toolkit/__init__.py",
+                  "tests/integration/test_cli_validation.py", "tests/integration/test_phase4_cli.py",
+                  "tests/golden/test_phase4_reports.py", "PHASE_4_COMPLETION.md",
+                  "PHASE_4_VALIDATION_REPORT.md", "PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md"}
     allowed = phase4_tools["PHASE4_G"] | additional
-    assert len(allowed) == 31
+    assert len(allowed) == 41
     assert phase4_tools["PHASE4_CURRENT_ALLOWED"] == allowed
-    phase4_tools["verify_phase4_current_changes"]([("M", p) for p in sorted(allowed)])
+    phase4_tools["verify_phase4_current_changes"]([
+        ("A" if p in phase4_tools["PHASE4_CURRENT_NEW"] else "M", p) for p in sorted(allowed)])
 
 
 @pytest.mark.parametrize("status,path", [
     ("M", "src/recursive_integrity_toolkit/cli.py"), ("M", "schemas/report.schema.json"),
-    ("M", "src/recursive_integrity_toolkit/data/hero/config.json"), ("M", "pyproject.toml"),
+    ("M", "src/recursive_integrity_toolkit/data/hero/config.json"), ("M", "src/recursive_integrity_toolkit/reports/assembly.py"),
     ("M", "PHASE_4_PLAN.md"), ("M", "tests/golden/phase3_math_cases.json"),
-    ("M", "tests/golden/test_phase4_reports.py"), ("A", "PHASE_4_COMPLETION.md"),
+    ("M", "tests/performance/test_hero_runtime.py"), ("M", "PHASE_4_COMPLETION.md"),
     ("A", "scripts/build_golden.py"), ("M", "tests/golden/phase4_hero_report.json"),
     ("D", "tests/golden/README.md"), ("R100", "scripts/release_check.py"),
     ("T", "scripts/normalize_golden.py"), ("M", "./scripts/build_golden.py"),
@@ -1540,7 +1544,7 @@ def test_phase4_step9_diff_rejects_wrong_paths_or_operations(phase4_tools, statu
 
 def test_phase4_step9_rejects_duplicate_diff_entries(phase4_tools):
     with pytest.raises(ValueError):
-        phase4_tools["verify_phase4_current_changes"]([("M", "tests/performance/test_hero_runtime.py"), ("M", "tests/performance/test_hero_runtime.py")])
+        phase4_tools["verify_phase4_current_changes"]([("M", "README.md"), ("M", "README.md")])
 
 
 def test_phase4_step9_exact_historical_migrations_preserve_assertions_and_parameters(phase4_tools, phase4_step8_snapshot):
@@ -1548,7 +1552,7 @@ def test_phase4_step9_exact_historical_migrations_preserve_assertions_and_parame
     registry = phase4_tools["PHASE4_STEP9_MIGRATIONS"]
     assert sorted(len(rows) for rows in registry.values()) == [2, 7]
     for path, rows in registry.items():
-        phase4_tools["verify_phase4_step9_test_migration"](path, (phase4_step8_snapshot / path).read_bytes(), (ROOT / path).read_bytes())
+        phase4_tools["verify_phase4_step9_test_migration"](path, (phase4_step8_snapshot / path).read_bytes(), phase4_tools["_phase4_current_files"]()[path])
         for row in rows:
             old, new = [ast.parse(row[k]) for k in ("old", "new")]
             assert old.body[0].name == new.body[0].name == row["node"]
@@ -1559,7 +1563,7 @@ def test_phase4_step9_exact_historical_migrations_preserve_assertions_and_parame
 @pytest.mark.parametrize("mutation", ["assertion", "binding", "shadow", "default", "decorator", "import"])
 def test_phase4_step9_historical_migration_rejects_weakening(phase4_tools, phase4_step8_snapshot, mutation):
     path = "tests/unit/test_phase4_contracts.py"
-    before, after = (phase4_step8_snapshot / path).read_bytes(), (ROOT / path).read_bytes()
+    before, after = (phase4_step8_snapshot / path).read_bytes(), phase4_tools["_phase4_current_files"]()[path]
     verify = phase4_tools["verify_phase4_step9_test_migration"]
     verify(path, before, after)
     if mutation == "assertion":

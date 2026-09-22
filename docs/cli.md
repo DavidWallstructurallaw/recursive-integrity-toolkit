@@ -1,96 +1,33 @@
-# CLI (Phase 4 Step 8)
+# CLI
 
-`rit example --out ./hero-workspace` creates a fresh local workspace containing
-six exact packaged Hero files under `inputs/` and the audit's `report.json` and
-`report.md` under `reports/`. Its parent must already exist. Any existing workspace,
-including an empty directory, is rejected. Add `--redacted` to protect identifiers
-and paths in the reports and console diagnostics. Extracted inputs remain the
-public canonical Hero files; redaction applies to output reports.
+Development version `0.1.0.dev3` supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
 
-The example works from the installed package outside the source checkout, using
-core dependencies and local resources. It does not download data. The copied
-`inputs/EXPECTED_OUTPUTS.md` describes the full product, including future lineage
-targets. The actual Phase 4 report explicitly defers lineage execution.
-
-To audit your own explicitly ordered pair:
+## Packaged local example
 
 ```bash
-rit audit --records ./later.csv --compare ./earlier.csv --config ./config.json --version-order ./order.json --state-semantics "The same literal category definitions apply to both versions" --out ./pair-report
+rit example --out ./hero-workspace
 ```
 
-Each file must contain exactly one distinct dataset version. `--compare` is the
-earlier version and `--records` the later version; declared order must confirm
-this relationship. An order document uses the accepted `version_order`,
-`version_rank` or `version_timestamps` fields. No order is inferred from file names,
-argument order or lexical version labels. The shared representation comes from
-the explicit config, and `--state-semantics` declares the same literal meaning for
-both sides. Matching representation labels alone do not establish that meaning.
-This records the caller's assertion; the toolkit does not verify semantic truth.
+Run after installation from a trusted local directory. The workspace must be new and its parent must already exist. Even an existing empty workspace is rejected. Six exact packaged Hero files are copied under `inputs/`; `report.json` and `report.md` appear under `reports/`. No data download occurs. Add `--redacted` to protect identifiers and paths in reports and console diagnostics. Extracted inputs remain the public canonical Hero files.
 
-The report includes each version's support and diversity plus the existing
-kernel's support delta, retention, diversity delta and lost/added state counts and
-sets. Provenance composition, direct bounds, exact-content duplicates and any
-explicit tail selection describe the `--records` version. Every envelope retains
-its scope and denominator. Input inventory and input observability describe both
-files. A completed pair remains a partial *longitudinal capability execution*
-because the broader change families remain deferred; the run can still succeed.
+The copied `inputs/EXPECTED_OUTPUTS.md` includes full-product lineage targets. Phase 4 reports explicitly defer lineage calculation. Their current targets are support 8 and 5, delta -3, retention 5/8, diversity 7/8 and 3/4, delta -1/8, and missing states `battery`, `lizard`, `turtle`. Later human/synthetic shares are each 1/2 and direct exposure is [1/2, 1/2]. Input observability is Level 4 and default simulations are empty.
 
-A requested pair that fails chronology or representation checks returns nonzero
-and preserves independently valid single-version evidence. Invalid chronology is
-reported as an error; revalidation without it makes no replacement ordering claim.
-Repeated singleton declarations, arbitrary maps, per-version compatibility
-assertions and conflicting meanings are rejected. No version sequence, automatic
-pair selection, provenance trajectory, relative-change formula or simulation runs.
+Successful stdout names both report files. In redacted mode the fixed names are relative to the example's `reports/` directory. An audit failure may leave extracted inputs and an error report. Extraction failures clean only files owned by that attempt; incomplete cleanup is disclosed on stderr. Inspect a failed destination and choose a fresh one for retry.
 
-When two input roles claim the same version and their record identities are valid,
-the pair is rejected while usable later-side results remain scoped to `--records`.
-A rejected chronology file remains in the report input evidence. Invalid example
-output paths use configuration exit 2; existing destinations and I/O failures use
-exit 1, and internal failures use exit 4.
+## Audit and validate
 
-`rit validate` can inspect two files through `--records` and `--compare`; it accepts
-no `--state-semantics` or tail request and calls no calculation. Its analytical
-sections stay empty. Single-version commands retain their accepted behavior.
-The module invocation and `recursive-integrity` alias support the same commands.
-
-Hero expectations: supports 8 and 5; support delta -3; retention 5/8; diversities
-7/8 and 3/4; diversity delta -1/8; missing states battery, lizard and turtle; later
-human/synthetic shares each 1/2; direct interval [1/2, 1/2]. Lineage is deferred,
-input observability is Level 4, and default simulations are empty.
-
-Successful example stdout names the two report files. In redacted mode the fixed
-names are relative to the example's `reports/` directory. Example preparation
-failures emit safe stderr. A failed audit can leave extracted inputs and an error
-report for inspection. Extraction failures clean only files owned by that attempt;
-if cleanup is incomplete, stderr explicitly says so. Trusted stable parent
-directories are required, as for ordinary report publication.
-
-The following sections preserve earlier stage documentation as historical notes.
-Current Step 8 comparison/example behavior is defined above.
-
----
-
-# CLI (Phase 4 Step 7)
-
-Current commands: `audit`, `validate`, `version`, `--version` and `--help`.
-The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use
-the same entry point. Comparison and packaged `example` require Step 8.
+After creating the example above, these commands use its local inputs and separate destinations:
 
 ```bash
-rit audit --records ./records.csv --out ./audit-report
-rit validate --records ./records.csv --out ./validation-report
-rit audit --records ./records.csv --config ./config.json --out ./audit-topic
-rit audit --records ./records.csv --config ./config.json --tail-rule singleton_count --out ./audit-tail
-rit audit --records ./records.csv --config ./config.json --redacted --out ./audit-redacted
+rit validate --records ./hero-workspace/inputs/records_v2.csv --out ./validation-report
+rit audit --records ./hero-workspace/inputs/records_v2.csv --config ./hero-workspace/inputs/config.json --out ./topic-report
+rit audit --records ./hero-workspace/inputs/records_v2.csv --config ./hero-workspace/inputs/config.json --tail-rule singleton_count --out ./tail-report
+rit audit --records ./hero-workspace/inputs/records_v2.csv --config ./hero-workspace/inputs/config.json --redacted --record-ids omit --out ./redacted-report
 ```
 
-Only `--records` is mandatory. CSV, UTF-8 JSONL and optional-Parquet inputs use the
-accepted input validation rules. Supply local paths explicitly. Config paths are
-relative to the config file; CLI paths are relative to the working directory.
-There is no environment-variable or home-directory expansion. Local content
-reference reading is never activated by these commands.
+Only `--records` is mandatory. CSV, UTF-8 JSONL and optional Parquet follow the accepted input rules. Config is JSON or TOML. Config paths resolve relative to the config file and CLI paths relative to the working directory. Environment variables and `~` are literal text. These commands do not resolve content references.
 
-An example explicit field declaration in JSON config:
+Audit calculates only an explicitly declared representation. A field config has this form:
 
 ```json
 {
@@ -104,129 +41,65 @@ An example explicit field declaration in JSON config:
 }
 ```
 
-Without a representation, audit produces input/provenance evidence and explains
-unavailable representation-dependent analyses. No default topic or content hash
-is selected. Exact-content analysis requires `source: content_hash`, an explicit
-name/version and `normalization_profile: exact_utf8_v1`; its canonical field is
-content and its missing policy is error. It reports record-form support and exact
-duplicates. Neither field nor hash states establish semantic validity.
+Without a representation, audit retains input/provenance evidence and explains unavailable representation-dependent analyses. Exact-content analysis needs `source: content_hash`, an explicit name/version and `normalization_profile: exact_utf8_v1`; its canonical field is `content` and its missing policy is `error`. It reports record-form support and exact duplicates. Neither field nor hash states certify semantic validity.
 
-| Options | Contract |
+| Option | Contract |
 |---|---|
-| `--provenance`, `--config`, `--schema-mapping`, `--version-order` | Explicit local inputs; config is JSON or TOML |
-| `--out DIR` | Default `./rit-report`; its parent must exist |
-| `--redacted` | Protect full paths and nested identifiers across all sinks |
-| `--record-ids preserve|hash|omit` | Requires redacted output; default hash in redacted mode |
-| `--id-salt-file PATH` | Requires redacted mode; explicit local 32-4096 byte secret for cross-run identifiers |
+| `--provenance`, `--config`, `--schema-mapping`, `--version-order` | Explicit local input/control files |
+| `--out DIR` | Default `./rit-report`; parent must exist; targets never overwritten |
+| `--redacted` | Protect full paths and nested identifiers across output sinks |
+| `--record-ids preserve\|hash\|omit` | Requires redacted output; default `hash` there |
+| `--id-salt-file PATH` | Requires redacted mode; local 32-4096 byte secret for cross-run identifier stability |
 | `--strict` | Promote only configured `strict_warning_codes` |
 | `--missing-state-id TEXT` | Required exactly for `explicit_missing_state`; collisions fail |
 | `--tail-rule singleton_count` | Audit only; rejects a threshold |
 | `--tail-rule count_at_or_below --tail-threshold N` | Audit only; nonnegative integer |
-| `--tail-rule frequency_at_or_below --tail-threshold P` | Audit only; finite value in [0,1] |
-| `--compare`, `--state-semantics`, `example` | Unsupported until Step 8 |
+| `--tail-rule frequency_at_or_below --tail-threshold P` | Audit only; finite number in [0,1] |
+| `--compare FILE` | One earlier-version records file; current records are the later side |
+| `--state-semantics TEXT` | Audit pair only; explicit shared literal meaning across both sides |
 
-Competing CLI/config singleton declarations and repeated flags fail, even if
-values match. Config output permits only `directory`, `record_id_mode` and
-`id_salt_file`. Debug output, simulations and state mappings are unsupported.
-The CLI performs disclosed unweighted calculations even if input weights exist.
-It applies no default tail threshold, state-list selection or simulation.
+Repeated flags and competing CLI/config singleton declarations fail even if values match. Config output allows only `directory`, `record_id_mode` and `id_salt_file`. The CLI performs unweighted calculations even when weights are present and applies no implicit representation, tail threshold or simulation. Debug output, simulation requests, state-list tail selection and arbitrary state maps are unsupported.
 
-Audit requires one dataset version. Multiversion inputs retain valid inventory
-and counts but return an input error without pooling or choosing a version.
-Validate can inspect multiversion inputs; its derived-metric, proxy-signal and
-simulation sections remain empty. Both commands retain all twelve report sections.
-An absent manifest leaves direct closure bounds unavailable. Empty or malformed
-inputs can produce an error-only report, without invented versions or values.
+An ordinary audit requires one dataset version. Multiple versions in a side cause an input error without pooling or choosing one. Validate can inspect multiple versions and two files through `--records`/`--compare`; it rejects state-semantics and tail requests. Its `derived_metrics`, `proxy_signals` and `simulations` stay empty. Empty/malformed input can produce an error-only report. Missing provenance never becomes supplied unknown or fabricated source evidence.
 
-Reports are `report.json` and `report.md`, published through the accepted safe
-paired-output helper. Existing targets and unsafe paths fail without replacement.
-Success prints one JSON line containing final paths. Redacted mode prints the two
-fixed filenames relative to the selected output directory, omitting full paths.
-Warnings/errors are safe structured stderr entries. Failure may preserve useful
-partial evidence; a nonzero exit must be checked even when reports exist.
+## Explicit earlier/later pair
+
+```bash
+rit audit --records ./hero-workspace/inputs/records_v2.csv --compare ./hero-workspace/inputs/records_v1.csv --provenance ./hero-workspace/inputs/provenance.csv --config ./hero-workspace/inputs/config.json --version-order ./hero-workspace/inputs/version_order.json --state-semantics "Hero topic labels retain their literal meaning across v1 and v2." --out ./pair-report
+```
+
+Each file must contain exactly one distinct dataset version. `--compare` is earlier and `--records` later, and declared chronology must confirm that relation. An order document uses accepted `version_order`, `version_rank` or `version_timestamps` fields. Filenames, argument order and lexical labels cannot supply chronology.
+
+The shared representation comes from config. `--state-semantics` records the caller's declaration that literal states mean the same thing in both versions. Matching representation labels alone do not establish semantic compatibility, and the declaration does not authenticate semantic truth.
+
+Both versions receive support/diversity values. The pair adds support delta, retention, diversity delta and lost/added/retained state sets and counts. Provenance composition, direct bounds, exact-content duplicate summary and any requested tail describe the later `--records` side. Envelopes keep their scope and denominator. Input inventory and input observability cover both files.
+
+A completed pair still has `dataset_longitudinal.execution_status: partial`, because other change families remain deferred; this alone does not make the run fail. Invalid chronology or representation gives a nonzero exit while preserving independently valid single-version results. Revalidation after a chronology error makes no replacement ordering claim. A rejected chronology file remains input evidence. Same-version sides are rejected. No automatic pairing, version trajectory, provenance/lineage trend, arbitrary map, relative-change formula or simulation runs.
+
+## Reports, diagnostics and exits
+
+All twelve report sections remain present in JSON and Markdown. Success emits one stdout JSON line containing final report paths. Redacted mode emits fixed filenames relative to the selected output directory. Warnings and errors appear as content-safe structured stderr entries. Report and console diagnostics retain their code, severity, counts and safe locations; distinct warning contexts remain distinct.
+
+Warnings carry an `affected_scope` summary of versions, record/exclusion counts, denominator basis and scope ID. Full input identities remain in `inputs.scope` when the selected privacy mode permits them. This avoids repeating all record identities in every warning while retaining diagnostic locations and meaning.
 
 | Exit | Meaning |
 |---|---|
-| 0 | Supported work completed, no error-severity diagnostics |
-| 1 | Input/validation or output IO failure |
+| 0 | Supported work completed without error-severity diagnostics |
+| 1 | Input/validation or output I/O failure |
 | 2 | Invalid invocation/configuration or unsupported request |
-| 3 | Existing validated lineage-family error |
+| 3 | Existing immediate-parent/lineage-family validation error |
 | 4 | Internal or invariant failure |
 
-Precedence is 4, then 2, then 3, then 1. Warnings alone return 0 unless configured
-strict promotion applies. Deferred lineage or optional unavailable analyses do
-not alone make a report partial. Invalid parser declarations emit safe stderr.
-Other fatal failures attempt a protected, schema-conforming error-only pair when
-the destination is safe. If config resolution failed, the explicit CLI destination
-or local default is used with a fresh redacted/omit context. No traceback, raw
-input content, salt material or full configuration is emitted.
+Precedence is 4, then 2, then 3, then 1. Warnings alone return 0 unless configured strict promotion applies. Deferred/optional unavailable analyses alone do not cause a partial run. A report may contain useful results despite a nonzero exit, so file presence is insufficient to establish success.
 
-Run duration is captured after input/calculation work, before report assembly
-and publication. End-to-end performance acceptance belongs to Step 10.
+Parser errors use safe stderr. Other fatal failures attempt a protected, schema-conforming error-only pair when the destination is safe. If config resolution fails, the explicit CLI destination or local default is used with fresh redacted/omit protection. No traceback, raw input content, secret material or full configuration is emitted.
 
-The reported network count covers toolkit-managed outbound operations. It is not
-an operating-system network monitor. See the retained output-helper notes below
-and `privacy.md` for publication race/crash limits.
+`run.duration_seconds` stops after input/calculation work and before assembly/publication. Use externally recorded complete-process timings for end-to-end performance. The network count covers `toolkit_managed_outbound_operations`; it is not an operating-system network monitor.
 
-## Historical notes through Step 6
+## Publication boundary
 
-The following original documentation records the earlier accepted stages.
+The output directory's existing ancestors must be stable and trusted. Ordinary audit/validate may use a new leaf or an existing directory with neither report target present. Existing `report.json` or `report.md` always causes failure. URI/UNC/device paths, unsupported path spellings, symlink/reparse paths, source aliases and unsafe targets are rejected. There is no overwrite option.
 
-# CLI
+The Python helper `utils.paths.publish_reports(safe_view, output_directory, input_paths=...)` consumes a validated `SafeReportView`; supply every input path, including declared missing inputs. A `complete` result means both exact reports were verified and private staging removed. `E_OUTPUT_PATH_INVALID` maps to exit 2; collision, existing/unsafe target, I/O or cleanup failure maps to 1; rendering/invariant failure maps to 4.
 
-Status: Phase 1 scaffold.
-
-Available commands:
-
-```bash
-rit --help
-rit version
-python -m recursive_integrity_toolkit --help
-python -m recursive_integrity_toolkit version
-```
-
-The CLI reports scaffold status only. It does not load datasets or produce analytical audit results in Phase 1.
-
-## Phase 4 Step 6: output helper available for later CLI wiring
-
-The CLI remains at its previously accepted behavior. This step adds the Python
-publication helper; CLI analysis and audit commands require Step 7 authorization.
-
-```python
-from recursive_integrity_toolkit.utils.paths import publish_reports
-from recursive_integrity_toolkit.utils.logging import emit_publication_diagnostic
-
-# safe_view is the already constructed, validated SafeReportView.
-result = publish_reports(safe_view, "./output/run-001", input_paths=(records_path,))
-if result.status != "complete":
-    emit_publication_diagnostic(result, stream=error_stream)
-```
-
-Supply every caller input path explicitly, including declared inputs that do not
-currently exist. The parent directory must exist; the final output directory may
-be new or may already exist with neither report target present. The only final
-names are `report.json` and `report.md`, containing the exact accepted renderer
-UTF-8 bytes. Existing targets cause a failure and remain untouched. No force or
-overwrite option exists. Input path validation does not open source contents.
-
-| Result | Meaning | Exit code |
-|---|---|---|
-| `complete` | Both exact outputs verified and private staging removed | 0 |
-| `E_OUTPUT_PATH_INVALID` | Invalid or unsupported local path spelling/configuration | 2 |
-| `E_OUTPUT_INPUT_COLLISION`, `E_OUTPUT_EXISTS`, `E_OUTPUT_UNSAFE`, `E_OUTPUT_IO` | Reserved input collision, existing target, unsafe filesystem path or IO failure | 1 |
-| `E_OUTPUT_CLEANUP` | Published outputs remain but staging cleanup is incomplete | 1 |
-| `E_OUTPUT_RENDER`, `E_OUTPUT_INTERNAL` | Rendering validation or an internal invariant failed | 4 |
-
-On handled partial failures, only files still identified as belonging to the
-attempt are removed. `failed` means no known attempt output/staging remains;
-`incomplete` signals remaining or uncertain cleanup, even when both reports are
-present. `published_files` is publication history, not current directory state.
-`residual_files` contains only the two fixed output names when their cleanup is
-unconfirmed; `temporary_cleanup_complete` separately covers private staging.
-A conflicting file owned by someone else is not listed as this attempt's file.
-
-Treat failure as a failed operation, inspect incomplete destinations, and choose
-a fresh explicit directory. Do not claim pair atomicity, durable completion after
-power loss or protection from hostile ancestor swaps. See `privacy.md` for the
-supported filesystem boundary. The result and diagnostic are operational data;
-they are not inserted into the canonical report or used to change its conclusions.
+Handled partial failures clean only files still identified as belonging to the attempt. An `incomplete` result discloses remaining or uncertain cleanup. Pair publication is not a filesystem transaction: another reader or process crash may observe one report before the other. See [privacy and filesystem limits](privacy.md) for platform permissions and race/crash boundaries. HTML, general ancestry and simulation orchestration remain deferred.

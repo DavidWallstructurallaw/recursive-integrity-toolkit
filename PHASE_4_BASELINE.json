@@ -1,7 +1,7 @@
 {
-  "control_version": "1.9",
+  "control_version": "1.10",
   "active_phase": 4,
-  "active_step": 10,
+  "active_step": 11,
   "baseline_commit": "e3ffb8c0a88bfe31f669f9662d9b5213da628b3a",
   "baseline_tree": "e2a25f8cfdc66c3317809c479f80fdae162e6ba9",
   "baseline_test_tree": "6ab22cb9197a8f094f455b29a07a851062bb26c9",
@@ -10,7 +10,7 @@
   "main_at_authorization": "cfe1bd0941c1125498ac3d9d9ebf3adafa2c2fcb",
   "approved_plan_sha256": "5a6d65696720a426630e876d001937b2837d24774fcb6c2bd43b8e09f5ae93f0",
   "approval_date": "2026-09-22",
-  "approval_basis": "Phase 4 Step 10 开始",
+  "approval_basis": "继续 Phase 4 Step 11",
   "approved_decisions": [
     "P4-D01",
     "P4-D02",
@@ -276,16 +276,29 @@
     ".github/workflows/golden.yml",
     ".github/workflows/release.yml",
     ".github/workflows/security.yml",
+    "CHANGELOG.md",
+    "PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md",
     "PHASE_4_BASELINE.json",
+    "PHASE_4_COMPLETION.md",
     "PHASE_4_DECISIONS.md",
+    "PHASE_4_VALIDATION_REPORT.md",
+    "README.md",
     "docs/architecture.md",
+    "docs/cli.md",
+    "docs/data_schema.md",
+    "docs/privacy.md",
+    "docs/release_process.md",
+    "docs/report_schema.md",
     "docs/theory_traceability.md",
+    "pyproject.toml",
     "scripts/check_spec_consistency.py",
     "scripts/check_traceability.py",
     "scripts/release_check.py",
-    "src/recursive_integrity_toolkit/reports/assembly.py",
+    "src/recursive_integrity_toolkit/__init__.py",
     "tests/conftest.py",
+    "tests/golden/test_phase4_reports.py",
     "tests/integration/test_ci_workflows.py",
+    "tests/integration/test_cli_validation.py",
     "tests/integration/test_hero_structure.py",
     "tests/integration/test_license_notices.py",
     "tests/integration/test_no_algorithms.py",
@@ -299,12 +312,13 @@
     "tests/integration/test_prohibited_structure.py",
     "tests/integration/test_repository_structure.py",
     "tests/integration/test_schema_json.py",
-    "tests/performance/README.md",
-    "tests/performance/test_hero_runtime.py",
-    "tests/performance/test_metadata_100k.py",
     "tests/unit/test_phase4_contracts.py"
   ],
-  "new_files_permitted": [],
+  "new_files_permitted": [
+    "PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md",
+    "PHASE_4_COMPLETION.md",
+    "PHASE_4_VALIDATION_REPORT.md"
+  ],
   "historical_migration_nodes": {
     "tests/integration/test_ci_workflows.py": [
       "test_workflows_preserve_phase_boundary",
@@ -349,13 +363,11 @@
   "next_step_authorized": false,
   "main_merge_authorized": false,
   "publication_authorized": false,
-  "previous_step_commit": "ad2cb5d0cb34dac9036593bac4e91c9d993bcfc6",
-  "previous_step_tree": "64d81ceed83304dca5a5c2cfccf82641819549f1",
-  "previous_step_test_tree": "a6c60ed13c274da73ad085d0989c6a7a4641e203",
-  "previous_step_core_tests": 3959,
-  "previous_step_parquet_tests": 3962,
+  "previous_step_commit": "9142b344bfc2dc2b33dbc696159f07bbc81b223a",
+  "previous_step_tree": "a485078d3e7cf739e10b087acb604f317ee19854",
+  "previous_step_test_tree": "2fc4e86c4dee9f069f93af59caab138f0ea63224",
   "runtime_paths_authorized": [
-    "src/recursive_integrity_toolkit/reports/assembly.py"
+    "src/recursive_integrity_toolkit/__init__.py"
   ],
   "schema_paths_authorized": [],
   "step1_historical_binding_nodes": {
@@ -490,6 +502,5 @@
       "test_phase4_step8_historical_bindings_preserve_assertions",
       "test_phase4_step8_historical_guard_rejects_weakening"
     ]
-  },
-  "runtime_repair_approval_basis": "批准"
+  }
 }

@@ -1,4 +1,4 @@
-# Data Schema and Phase 3 Call Contracts
+# Data Schema and Calculation Contracts
 
 Canonical field meanings remain governed by `DATA_AND_PROVENANCE_SPEC.md` and `DEFINITIONS_AND_UNITS.md`. This guide describes implemented interfaces and their boundaries. Actual final acceptance is recorded separately.
 
@@ -25,7 +25,7 @@ python -m pip install ".[test,parquet]"
 RIT_TEST_PARQUET=1 python -m pytest -p no:cacheprovider -q
 ```
 
-PowerShell requires setting `$env:RIT_TEST_PARQUET = "1"` separately. Selecting those tests without PyArrow fails instead of skipping. Step 10 CI runs full core and real-extra suites independently and checks that roundtrip, row-limit and invalid-file cases were all collected. Results are never summed as independent populations.
+PowerShell requires setting `$env:RIT_TEST_PARQUET = "1"` separately. Selecting those tests without PyArrow fails instead of skipping. Candidate CI runs full core and real-extra suites independently and checks that roundtrip, row-limit and invalid-file cases were all collected. Results are never summed as independent populations.
 
 ## Safe mapping
 
@@ -87,13 +87,13 @@ Content is read only by explicit LOCAL_REF requests through PR-017 containment a
 
 The bundle returns inventory, records, optional provenance, join evidence, chronology, generation when available, capability classification, mapping evidence, resolved-content identities and diagnostics. It writes no report. Check has_errors independently of maximum level. Content/parent-family failures can coexist with independent valid metadata; fatal structural input errors raise.
 
-Hero input validation qualifies as Level 4 without metric calculation. Model longitudinal remains unavailable. Scenario declarations may establish experimental eligibility without execution. The separately invoked Phase 3 calls below calculate approved fields; general lineage, ancestry and rendering remain deferred. All five serialized schemas remain unchanged.
+Hero input validation qualifies as Level 4 without metric calculation. Model longitudinal remains unavailable. Scenario declarations may establish experimental eligibility without execution. The separately invoked calculation calls below provide approved fields. Phase 4 CLI audit orchestrates these calls and renders reports through the separate report contract. General lineage and ancestry remain deferred. Input/configuration schemas retain their accepted meanings; `report.schema.json` defines the Phase 4 public report.
 
 
-## Phase 3 Step 2: literal field representations
+## Literal field representations
 
-The preceding Phase 2 text documents the preserved input layer. This internal
-interface adds scoped state assignments after canonical normalization:
+This internal interface creates scoped state assignments after canonical
+normalization:
 
 ```python
 from recursive_integrity_toolkit.config import RepresentationConfig
@@ -136,7 +136,7 @@ state-frequency, support, diversity or tail calculations in this interface.
 Payload-bearing result fields are hidden from repr; errors retain coordinates
 without echoing raw contents or unredacted paths. Inputs are never mutated.
 
-## Phase 3 Step 3: exact decoded-content representation
+## Exact decoded-content representation
 
 `assign_content_states` and `detect_exact_duplicates` are explicit in-memory calls.
 The first returns an `ExactContentRepresentation` whose `.representation` uses the
@@ -188,12 +188,12 @@ EMPTY_SCOPE; a nonempty unique scope yields real zero counts.
 
 Exact record form establishes no semantic equivalence, independent origin,
 authorship or provenance. No record/provenance is edited, removed or reweighted.
-Support/diversity, near-duplicates, longitudinal grouping and public reports remain
-outside this step.
+Support/diversity and report assembly use separate explicit APIs. Near-duplicate
+analysis and automatic longitudinal grouping are unsupported.
 
-## Phase 3 mathematical call contracts
+## Mathematical call contracts
 
-These are internal Python result containers, with no new serialized report/config schema. `CalculationScope` supplies selected versions, included/excluded canonical keys, denominator basis and scope ID. Every representation-bound result retains name, source, version and mapping rule. Constructors alone do not certify that a caller's supplied data has the claimed empirical meaning; each kernel validates its own prerequisites.
+These are internal Python result containers. Public report serialization is a separate explicit assembly step under `report.schema.json`. `CalculationScope` supplies selected versions, included/excluded canonical keys, denominator basis and scope ID. Every representation-bound result retains name, source, version and mapping rule. Constructors alone do not certify that a caller's supplied data has the claimed empirical meaning; each kernel validates its own prerequisites.
 
 | Call / result | Input and denominator | Output contract |
 |---|---|---|
@@ -217,3 +217,32 @@ Tail options are `singleton_count`, `count_at_or_below`, `frequency_at_or_below`
 Scenario results retain `simulation` evidence even for analytically evaluated probabilities or expectations. Only sampled input permits the P3-D07 bounded, disclosed within-tolerance correction; larger mass errors fail. Negative probabilities are never clipped. Sampled calls record PCG64, actual NumPy version, canonical state order and replicate-major/step-major schedule. Resource limits are checked before allocation/RNG creation. Analytic methods have no random seed. Numerical underflow is distinct from model extinction.
 
 The pair context revalidates chronology and representation declarations. Both sides must share weighting/denominator families and compatible state semantics. A complete directed many-to-one map may aggregate the source side; mapping collisions and before/after support sizes remain visible. Empty/unavailable sides propagate unavailability without erasing the individually valid side. This interface performs one caller-selected comparison and makes no automatic temporal, causal or model-performance inference.
+
+
+## CLI and report handoff
+
+The installed `audit` command accepts one primary records file and at most one
+`--compare` file. Each audit side must contain exactly one dataset version. The
+comparison side is earlier and the primary side later; explicit chronology and
+`--state-semantics` must establish the declared pair. The broader `AuditBundle`
+input API can validate more comparison sources without automatically analyzing
+them. Neither interface infers chronology from filenames or lexical version order.
+
+CLI field/content-hash representations use the accepted representation config.
+CLI output calculations are unweighted, even if row weights exist. Tail selection
+accepts `singleton_count`, `count_at_or_below` and `frequency_at_or_below`; the
+Python-only `state_list` and directed state-mapping capabilities are not exposed
+through CLI flags. Closed-resampling Python functions require explicit invocation,
+and the CLI leaves simulations empty. No CLI command enables `LOCAL_REF` reading.
+
+`validate` publishes input-only reports. `audit` passes accepted result objects to
+`reports.assembly.assemble_report`, selects `privacy_view`, and publishes the
+validated JSON/Markdown pair. Support/diversity may exclude unrepresented rows
+under the declared missing-value policy; provenance counts and exposure use their
+separately retained full selected scope. Missing, null, declared unknown, false,
+zero and unavailable conclusions remain distinct throughout this handoff.
+
+See [CLI options](cli.md), [public field registry](report_schema.md) and
+[privacy limits](privacy.md). The Phase 4 report schema is available both at
+`schemas/report.schema.json` in the checkout and
+`recursive_integrity_toolkit/data/report.schema.json` in installed resources.

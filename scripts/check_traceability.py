@@ -5699,15 +5699,15 @@ def phase4_step8_main(step: int = 8) -> int:
     return 0
 
 
-def phase4_current_main(step: int = 10) -> int:
+def phase4_current_main(step: int = 11) -> int:
     import runpy
-    if type(step) is not int or step != 10:
-        raise ValueError("Only authorized Phase 4 Step 10 traceability is available")
+    if type(step) is not int or step != 11:
+        raise ValueError("Only authorized Phase 4 Step 11 traceability is available")
     control = runpy.run_path(str(ROOT / "scripts/release_check.py"), run_name="phase4_current_traceability_control")
     control["audit_phase4_current"](step=step)
-    # The current audit freezes 39 modules and the exact approved assembly repair;
-    # replaying the obsolete assembly AST boundary would reject that authorization.
-    print("Phase 4 Step 10: complete report-path measurements; 39 runtime modules and all schemas frozen; exact approved assembly repair: PASS")
+    # The accepted Step 10 product bytes remain frozen, including its assembly repair.
+    # Only the package version literal changes in the forty-module runtime.
+    print("Phase 4 Step 11: final dev3 candidate; 39 runtime modules and all schemas frozen; exact version literals: PASS")
     return 0
 
 
@@ -5739,9 +5739,9 @@ def cli_main(argv: list[str] | None = None) -> int:
         return phase4_step7_main(step=args.step)
     if args.phase == 4 and args.step == 8:
         return phase4_step8_main(step=args.step)
-    if args.phase == 4 and args.step == 10:
+    if args.phase == 4 and args.step == 11:
         return phase4_current_main(step=args.step)
-    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5 or --phase 4 --step 6 or --phase 4 --step 7 or --phase 4 --step 8 or --phase 4 --step 10")
+    parser.error("Choose explicit --phase 3 --step 11 or --phase 4 --step 1 or --phase 4 --step 2 or --phase 4 --step 3 or --phase 4 --step 4 or --phase 4 --step 5 or --phase 4 --step 6 or --phase 4 --step 7 or --phase 4 --step 8 or --phase 4 --step 11")
     return 2
 
 

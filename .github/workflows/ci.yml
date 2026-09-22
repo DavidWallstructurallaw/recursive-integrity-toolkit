@@ -1,8 +1,14 @@
-name: Phase 4 Step 10 CI
+name: Phase 4 Step 11 CI
 
 on:
-  push:
   pull_request:
+    paths-ignore:
+      - README.md
+      - CHANGELOG.md
+      - "docs/**"
+      - PHASE_4_COMPLETION.md
+      - PHASE_4_VALIDATION_REPORT.md
+      - PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md
   workflow_dispatch:
 
 permissions:
@@ -13,54 +19,7 @@ defaults:
     shell: bash
 
 jobs:
-  performance:
-    if: github.event_name == 'push'
-    name: Performance and affected current contracts
-    runs-on: ubuntu-latest
-    timeout-minutes: 75
-    env:
-      PYTHONDONTWRITEBYTECODE: "1"
-      RIT_TEST_PARQUET: "0"
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install approved test tools
-        run: python -m pip install ".[test]"
-      - name: Record environment and exercise complete report paths
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/rit-performance"
-          python -m pip freeze > "$RUNNER_TEMP/rit-performance/dependencies.txt"
-          python -m pip check
-          python -c "import platform; print(platform.platform(), platform.python_version(), platform.processor())"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-performance/performance.xml" tests/performance/test_hero_runtime.py tests/performance/test_metadata_100k.py tests/integration/test_phase4_cli.py tests/golden/test_phase3_math.py tests/golden/test_phase4_reports.py | tee "$RUNNER_TEMP/rit-performance/performance.log"
-          python scripts/release_check.py --phase 4 --step 10 --junit "$RUNNER_TEMP/rit-performance/performance.xml"
-          python scripts/release_check.py --phase 4 --step 10 --golden-junit "$RUNNER_TEMP/rit-performance/performance.xml"
-      - name: Verify affected controls and current authorized scope
-        run: |
-          set -euo pipefail
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-performance/controls.xml" tests/unit/test_phase4_contracts.py tests/integration/test_phase4_gates.py -k phase4_step9 | tee "$RUNNER_TEMP/rit-performance/controls.log"
-          python scripts/check_spec_consistency.py --phase 4 --step 10
-          python scripts/check_traceability.py --phase 4 --step 10
-          python scripts/release_check.py --phase 4 --step 10 --diff
-      - name: Retain measurements and failures
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase4-current-performance
-          path: ${{ runner.temp }}/rit-performance/
-          if-no-files-found: error
-          retention-days: 30
-
   core:
-    if: github.event_name != 'push'
     name: Core (${{ matrix.dependencies }}) on ${{ matrix.os }} with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 75
@@ -79,6 +38,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Set up Python
@@ -98,6 +58,12 @@ jobs:
           python -m pip freeze > "$RUNNER_TEMP/rit-core/dependencies.txt"
           python -m pip check
           python -c "import platform,numpy,pandas; print(platform.platform(),platform.python_version(),numpy.__version__,pandas.__version__)"
+          git rev-parse HEAD > "$RUNNER_TEMP/rit-core/source-commit.txt"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell -NoProfile -Command 'Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory | ConvertTo-Json' | tee "$RUNNER_TEMP/rit-core/host-memory-kib.json"
+          else
+            free --bytes | tee "$RUNNER_TEMP/rit-core/host-memory-bytes.txt"
+          fi
       - name: Verify actual optional dependency absence
         run: python -c "import importlib.util; assert importlib.util.find_spec('pyarrow') is None"
       - name: Run the complete core suite
@@ -105,14 +71,14 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-core"
           python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" | tee "$RUNNER_TEMP/rit-core/phase4_test_results.log"
-          python scripts/release_check.py --phase 4 --step 10 --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 3768
+          python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 3768
       - name: Check current authorized scope and canonical suite
         run: |
           set -euo pipefail
-          python scripts/check_spec_consistency.py --phase 4 --step 10
-          python scripts/check_traceability.py --phase 4 --step 10
-          python scripts/release_check.py --phase 4 --step 10 --diff
-          python scripts/release_check.py --phase 4 --step 10 --baseline-evidence "$RUNNER_TEMP/rit-core"
+          python scripts/check_spec_consistency.py --phase 4 --step 11
+          python scripts/check_traceability.py --phase 4 --step 11
+          python scripts/release_check.py --phase 4 --step 11 --diff
+          python scripts/release_check.py --phase 4 --step 11 --baseline-evidence "$RUNNER_TEMP/rit-core"
       - name: Retain core evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
@@ -123,10 +89,9 @@ jobs:
           retention-days: 30
 
   parquet:
-    if: github.event_name != 'push'
     name: Real optional Parquet on Ubuntu with Python 3.12
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 75
     env:
       PYTHONDONTWRITEBYTECODE: "1"
       RIT_TEST_PARQUET: "1"
@@ -134,6 +99,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Set up Python
@@ -149,9 +115,11 @@ jobs:
           python -m pip freeze > "$RUNNER_TEMP/rit-parquet/dependencies.txt"
           python -m pip check
           python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
+          git rev-parse HEAD > "$RUNNER_TEMP/rit-parquet/source-commit.txt"
+          free --bytes | tee "$RUNNER_TEMP/rit-parquet/host-memory-bytes.txt"
           python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" | tee "$RUNNER_TEMP/rit-parquet/phase4_parquet_results.log"
-          python scripts/release_check.py --phase 4 --step 10 --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 3771
-          python scripts/release_check.py --phase 4 --step 10 --baseline-evidence "$RUNNER_TEMP/rit-parquet"
+          python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 3771
+          python scripts/release_check.py --phase 4 --step 11 --baseline-evidence "$RUNNER_TEMP/rit-parquet"
       - name: Retain Parquet evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
@@ -160,3 +128,8 @@ jobs:
           path: ${{ runner.temp }}/rit-parquet/
           if-no-files-found: error
           retention-days: 30
+
+  delivery:
+    name: Build verified candidate
+    needs: [core, parquet]
+    uses: ./.github/workflows/release.yml

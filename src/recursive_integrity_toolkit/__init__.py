@@ -19,6 +19,6 @@ Current phase status:
     Phase 1 package scaffold with version exposure only.
 """
 
-__version__ = "0.1.0.dev2"
+__version__ = "0.1.0.dev3"
 
 __all__ = ["__version__"]

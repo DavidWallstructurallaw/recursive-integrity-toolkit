@@ -658,7 +658,7 @@ def baseline_evidence(output: Path) -> dict:
     return summary
 
 
-def verify_distributions(directory: Path) -> tuple[Path, Path]:
+def verify_distributions(directory: Path, expected_version: str = "0.1.0.dev2") -> tuple[Path, Path]:
     wheels, sdists = list(directory.glob("*.whl")), list(directory.glob("*.tar.gz"))
     if len(wheels) != 1 or len(sdists) != 1:
         raise ValueError("Require one wheel and one sdist")
@@ -671,7 +671,7 @@ def verify_distributions(directory: Path) -> tuple[Path, Path]:
         if {n for n in names if n.endswith(".py")} != set(expected):
             raise ValueError("Wheel module set differs from the forty source modules")
         metadata = [n for n in names if n.endswith(".dist-info/METADATA")]
-        if len(metadata) != 1 or "Version: 0.1.0.dev2\n" not in wheel.read(metadata[0]).decode():
+        if len(metadata) != 1 or f"Version: {expected_version}\n" not in wheel.read(metadata[0]).decode():
             raise ValueError("Wheel metadata mismatch")
         for notice in ("LICENSE", "NOTICE"):
             if not any(n.endswith("/"+notice) for n in names):
@@ -9695,8 +9695,8 @@ def phase4_step8_resources(root: Path, prior: dict) -> None:
         raise ValueError("Step 8 packaging may add only the exact package-data declaration")
 
 
-def phase4_step8_distributions(directory: Path):
-    wheel, sdist = verify_distributions(directory)
+def phase4_step8_distributions(directory: Path, expected_version: str = "0.1.0.dev2"):
+    wheel, sdist = verify_distributions(directory, expected_version=expected_version)
     with zipfile.ZipFile(wheel) as archive:
         actual = {name for name in archive.namelist() if name.startswith("recursive_integrity_toolkit/data/") and not name.endswith("/")}
         if actual != {path.removeprefix("src/") for path in PHASE4_STEP8_RESOURCES}:
@@ -10838,16 +10838,22 @@ def _phase4_step8_files():
     return MappingProxyType(files)
 
 
-PHASE4_CURRENT_STEP = 10
-PHASE4_CURRENT_APPROVAL = "Phase 4 Step 10 开始"
-PHASE4_CURRENT_BASE = "ad2cb5d0cb34dac9036593bac4e91c9d993bcfc6"
-PHASE4_CURRENT_TREE = "64d81ceed83304dca5a5c2cfccf82641819549f1"
-PHASE4_CURRENT_ASSEMBLY = "src/recursive_integrity_toolkit/reports/assembly.py"
-PHASE4_CURRENT_ASSEMBLY_SHA256 = "28725f6b521713fe578d73ed43c1a0f7616496c497dc53414d475390843732e0"
-PHASE4_CURRENT_ALLOWED = PHASE4_G | {
-    PHASE4_CURRENT_ASSEMBLY,
-    "tests/performance/test_hero_runtime.py", "tests/performance/test_metadata_100k.py",
-    "tests/performance/README.md", "tests/integration/test_phase4_cli.py",
+PHASE4_CURRENT_STEP = 11
+PHASE4_CURRENT_APPROVAL = "继续 Phase 4 Step 11"
+PHASE4_CURRENT_BASE = "9142b344bfc2dc2b33dbc696159f07bbc81b223a"
+PHASE4_CURRENT_TREE = "a485078d3e7cf739e10b087acb604f317ee19854"
+PHASE4_CURRENT_VERSION_PATHS = {
+    "src/recursive_integrity_toolkit/__init__.py", "pyproject.toml",
+}
+PHASE4_CURRENT_NEW = {
+    "PHASE_4_COMPLETION.md", "PHASE_4_VALIDATION_REPORT.md",
+    "PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md",
+}
+PHASE4_CURRENT_ALLOWED = PHASE4_G | PHASE4_CURRENT_VERSION_PATHS | PHASE4_CURRENT_NEW | {
+    "README.md", "CHANGELOG.md", "docs/cli.md", "docs/report_schema.md",
+    "docs/data_schema.md", "docs/privacy.md", "docs/release_process.md",
+    "tests/integration/test_cli_validation.py", "tests/integration/test_phase4_cli.py",
+    "tests/golden/test_phase4_reports.py",
 }
 
 
@@ -10863,18 +10869,19 @@ def phase4_current_expected_control() -> dict:
     """Bind current permission to the user's authorization and accepted Git source."""
     result = json.loads(git("show", PHASE4_CURRENT_BASE + ":PHASE_4_BASELINE.json"))
     result.update({
-        "control_version": "1.9", "active_step": PHASE4_CURRENT_STEP,
+        "control_version": "1.10", "active_step": PHASE4_CURRENT_STEP,
         "approval_date": "2026-09-22", "approval_basis": PHASE4_CURRENT_APPROVAL,
         "previous_step_commit": PHASE4_CURRENT_BASE, "previous_step_tree": PHASE4_CURRENT_TREE,
-        "previous_step_test_tree": "a6c60ed13c274da73ad085d0989c6a7a4641e203",
-        "previous_step_core_tests": 3959, "previous_step_parquet_tests": 3962,
-        "permitted_paths": sorted(PHASE4_CURRENT_ALLOWED), "new_files_permitted": [],
+        "previous_step_test_tree": "2fc4e86c4dee9f069f93af59caab138f0ea63224",
+        "permitted_paths": sorted(PHASE4_CURRENT_ALLOWED), "new_files_permitted": sorted(PHASE4_CURRENT_NEW),
         "report_goldens_authorized": False,
-        "runtime_changes_authorized": True, "runtime_paths_authorized": [PHASE4_CURRENT_ASSEMBLY],
-        "runtime_repair_approval_basis": "批准",
+        "runtime_changes_authorized": True,
+        "runtime_paths_authorized": ["src/recursive_integrity_toolkit/__init__.py"],
     })
     # Git preserves this accepted snapshot; avoid growing parallel hash registries.
-    result.pop("previous_step_files_sha256", None)
+    for key in ("previous_step_files_sha256", "previous_step_core_tests",
+                "previous_step_parquet_tests", "runtime_repair_approval_basis"):
+        result.pop(key, None)
     return result
 
 
@@ -10893,7 +10900,8 @@ def verify_phase4_current_control(control: dict, step: int = PHASE4_CURRENT_STEP
 def verify_phase4_current_changes(changes: list[tuple[str, str]]) -> None:
     seen = set()
     for status, path in changes:
-        if path in seen or path not in PHASE4_CURRENT_ALLOWED or status != "M":
+        if (path in seen or path not in PHASE4_CURRENT_ALLOWED
+                or status != ("A" if path in PHASE4_CURRENT_NEW else "M")):
             raise ValueError(f"Unapproved current Phase 4 path/operation: {status} {path}")
         seen.add(path)
 
@@ -11069,8 +11077,9 @@ def verify_phase4_current_snapshot(root: Path = ROOT) -> dict:
         target = root / path
         if not target.is_file() or target.is_symlink():
             raise ValueError(f"Missing or aliased accepted file: {path}")
-        if path == PHASE4_CURRENT_ASSEMBLY and hashlib.sha256(target.read_bytes()).hexdigest() != PHASE4_CURRENT_ASSEMBLY_SHA256:
-            raise ValueError("Assembly differs from the exact user-approved performance repair")
+        if path in PHASE4_CURRENT_VERSION_PATHS:
+            if raw.count(b"0.1.0.dev2") != 1 or target.read_bytes() != raw.replace(b"0.1.0.dev2", b"0.1.0.dev3", 1):
+                raise ValueError(f"Only the approved dev3 version literal may change: {path}")
         if path not in PHASE4_CURRENT_ALLOWED and target.read_bytes() != raw:
             raise ValueError(f"Protected accepted bytes changed: {path}")
     for prefix in ("src/recursive_integrity_toolkit/", "schemas/", "examples/hero/"):
@@ -11085,9 +11094,13 @@ def verify_phase4_current_snapshot(root: Path = ROOT) -> dict:
     decisions = (root / "PHASE_4_DECISIONS.md").read_text(encoding="utf-8")
     if PHASE4_CURRENT_APPROVAL not in decisions or PHASE4_CURRENT_BASE not in decisions:
         raise ValueError("Actual authorization or accepted source anchor missing")
-    if any((root / name).exists() for name in PHASE4_FORBIDDEN_OUTPUTS):
-        raise ValueError("Current intermediate step cannot create phase completion or audit outputs")
-    return {"package_modules": 40, "frozen_runtime_modules": 39, "approved_runtime_repairs": 1, "frozen_schemas": 5,
+    for name in PHASE4_CURRENT_NEW:
+        path = root / name
+        if not path.is_file() or path.is_symlink() or not path.read_text(encoding="utf-8").strip():
+            raise ValueError(f"Step 11 requires a nonempty regular completion record: {name}")
+    if any((root / name).exists() for name in PHASE4_FORBIDDEN_OUTPUTS - PHASE4_CURRENT_NEW):
+        raise ValueError("Audit outputs cannot be committed as completion records")
+    return {"package_modules": 40, "frozen_runtime_modules": 39, "version_literal_changes": 2, "frozen_schemas": 5,
             "hero_files_unchanged": 6, "packaged_resources": 7, "phase_complete": False,
             **phase4_step9_golden_contract(root)}
 
@@ -11191,7 +11204,7 @@ def phase4_current_candidate(output: Path, step: int = PHASE4_CURRENT_STEP) -> N
         target = expected if parquet else {c for c in expected if c[1] not in PARQUET_CASES}
         if cases != target:
             raise ValueError(f"current Phase 4 JUnit does not execute the entire current suite: {name}")
-    wheel, sdist = phase4_step8_distributions(output / "dist")
+    wheel, sdist = phase4_step8_distributions(output / "dist", expected_version="0.1.0.dev3")
     smoke_installed(wheel)
     smoke_installed_duplicates(wheel)
     phase4_step2_installed_contract_smoke(wheel)
@@ -11211,7 +11224,7 @@ def phase4_current_candidate(output: Path, step: int = PHASE4_CURRENT_STEP) -> N
         if (len(entries) != len(set(entries)) or any(not name.startswith(prefix) for name in entries)):
             raise ValueError("current Phase 4 source archive has duplicate or unprefixed entries")
         names = {name.removeprefix(prefix) for name in entries}
-        if names != tracked or len(tracked) != 243 or len(entries) != 243:
+        if names != tracked or len(tracked) != 246 or len(entries) != 246:
             raise ValueError("current Phase 4 source archive file set mismatch")
         for name in names:
             if zipped.read("recursive-integrity-toolkit/"+name) != (ROOT / name).read_bytes():
@@ -11253,7 +11266,7 @@ def phase4_current_cli_main() -> int:
         phase4_current_suite_evidence(args.baseline_evidence)
     elif args.dist is not None:
         audit_phase4_current(args.step)
-        wheel, sdist = phase4_step8_distributions(args.dist)
+        wheel, sdist = phase4_step8_distributions(args.dist, expected_version="0.1.0.dev3")
         smoke_installed(wheel)
         smoke_installed_duplicates(wheel)
         phase4_step2_installed_contract_smoke(wheel)
@@ -11299,7 +11312,7 @@ def cli_main() -> int:
     explicit_step8 = "--step=8" in argv or any(a == "--step" and b == "8" for a, b in zip(argv, argv[1:]))
     if explicit_phase4 and explicit_step8:
         return phase4_step8_cli_main()
-    explicit_current = "--step=10" in argv or any(a == "--step" and b == "10" for a, b in zip(argv, argv[1:]))
+    explicit_current = "--step=11" in argv or any(a == "--step" and b == "11" for a, b in zip(argv, argv[1:]))
     if explicit_phase4 and explicit_current:
         return phase4_current_cli_main()
     return phase4_cli_main() if explicit_phase4 else main()

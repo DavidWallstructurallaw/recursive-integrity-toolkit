@@ -29,7 +29,7 @@ def test_core_import_without_optional_pyarrow(subprocess_env) -> None:
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "0.1.0.dev2"
+    assert result.stdout.strip() == "0.1.0.dev3"
 
 
 def test_PR002_csv_and_jsonl_work_with_pyarrow_blocked(subprocess_env, tmp_path) -> None:

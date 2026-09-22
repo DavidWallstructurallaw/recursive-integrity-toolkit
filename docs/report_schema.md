@@ -1,14 +1,43 @@
 # Report Schema
 
-Status: Phase 4 Step 2 canonical public contract. Schema version: `1.0`.
+Status: Phase 4 development report contract (`0.1.0.dev3`). Schema version: `1.0`.
 
 The authoritative public shape is `schemas/report.schema.json`, Draft 2020-12. Runtime validation is implemented in `result.py` using the standard library. `report_schema()` returns a detached copy of the same declarative contract. No runtime schema package, filesystem lookup or remote resolver is used. The `$schema` and `$id` identifiers are descriptive; all references are local `$defs` references.
+
+## Current output behavior
+
+The installed CLI publishes `report.json` and `report.md` from the same validated
+privacy view. `audit` computes explicitly requested supported families; `validate`
+keeps analytical sections empty; `example` runs the packaged explicit Hero pair.
+Default `simulations` is `{}`. Existing Python scenario results may be supplied
+explicitly to assembly, but CLI simulation execution is unsupported. General
+lineage, ancestry, broader longitudinal orchestration and HTML remain deferred.
+
+Capability eligibility and execution are separate. An input Level 4 report can
+retain deferred lineage, and a completed explicit pair has partial longitudinal
+execution because additional change families remain deferred. This alone does
+not create an error. Unavailable values retain null plus their required reasons,
+while actual zero and empty measured sets remain values.
+
+Warning `affected_scope` uses the required summary fields `dataset_versions`,
+`record_count`, `excluded_record_count`, `denominator_basis` and `scope_id`.
+Optional complete identity arrays are omitted from each warning; `inputs.scope`
+retains input identities when privacy permits them. Warning codes, counts,
+capability effects and representative locations are preserved. Distinct contexts
+are retained, and only equal diagnostic entries are deduplicated in encounter
+order. This bounded representation prevents repeated full-dataset identity copies
+without changing schema version, analytical values or unknown-state meaning.
+
+`run.duration_seconds` for CLI runs measures input/calculation work before report
+assembly and publication. It must not be treated as the complete report runtime.
+Externally measured Step 10 runtime, report bytes and fresh-process peak RSS are
+described in [performance methodology](../tests/performance/README.md).
 
 ## Scope and API
 
 `CanonicalReport.from_dict(payload)` and direct `CanonicalReport(payload)` both validate and freeze the complete report. `validate_report(payload)` returns `None` or raises `ReportValidationError`, a `ValueError`. Input must consist of built-in JSON dictionaries, lists, strings, finite numbers, booleans and nulls. The `sections` property contains nested immutable mappings and tuples; `to_dict()` returns a detached dictionary in the required top-level order. It performs no calculation adaptation, input loading, rendering or CLI action.
 
-Existing Phase 3 calculation contracts and their three-class enum remain unchanged. `ReportEvidenceClass` owns the five report classes. Report validation establishes structural consistency, not empirical truth or correctness of a caller-supplied analysis. Step 3 must explicitly validate and adapt accepted calculation types.
+Existing Phase 3 calculation contracts and their three-class enum remain unchanged. `ReportEvidenceClass` owns the five report classes. Report validation establishes structural consistency, not empirical truth or correctness of a caller-supplied analysis. The assembly layer explicitly validates and adapts accepted calculation types.
 
 ## Required sections
 
@@ -931,17 +960,17 @@ The following additional fields are part of the registered envelopes, with the o
 
 `status: unavailable` on a proxy requires `level: indeterminate`; a present signal cannot simultaneously be unavailable. Dataset-version field scopes contain exactly their one literal key. SHA-256 values contain exactly 64 lowercase hexadecimal characters. Extinction-event identity is the composite `(replicate_index, step, state_id)`; distinct states within one replicate remain distinct valid events. Sampled generation arrays have `simulation_horizon + 1` entries.
 
-Privacy identity omission can remove optional scope identity arrays while retaining count/metric envelopes. Exact duplicate groups have a bounded identity-omission variant: `record_keys` is null only with same-group `redaction: {omitted_fields: [record_keys], reason: redacted_identity_details}`. The group ID, full `record_count` and normalization profile remain present. Non-null membership lists retain at least two unique canonical keys and cannot claim that membership was omitted. This declaration does not transform identities, change availability, discard group counts or implement the Step 4 privacy operation.
+Privacy identity omission can remove optional scope identity arrays while retaining count/metric envelopes. Exact duplicate groups have a bounded identity-omission variant: `record_keys` is null only with same-group `redaction: {omitted_fields: [record_keys], reason: redacted_identity_details}`. The group ID, full `record_count` and normalization profile remain present. Non-null membership lists retain at least two unique canonical keys and cannot claim that membership was omitted. The schema declaration alone does not transform identities or change availability; the privacy operation described below implements the selected view.
 
 ## Validation ownership and limits
 
 Independent hand-authored PR-012/PR-013 fixtures test schema and canonical construction, five-class placement, unknown keys, null/zero distinctions, nonfinite and boolean values, metadata, immutability, capability mirrors and interval consistency. Schema validation uses only the local file. Runtime additionally enforces cross-field rules such as exact null-reason keys, duplicate table identities, scope membership, mirror equality and interval/trajectory consistency. These constraints supplement JSON Schema without claiming that schema-only validation proves every semantic invariant.
 
-This step creates no report adapters, no Markdown/JSON rendering files, no CLI analysis command and no Phase 4 completion claim.
+Schema validation is separate from evidence assembly, privacy selection, rendering and publication. The following sections describe those implemented layers.
 
-## Phase 4 Step 3: explicit evidence assembly
+## Explicit evidence assembly
 
-The preceding Step 2 material describes the frozen schema and constructor contract. Step 3 adds `recursive_integrity_toolkit.reports.assembly` while retaining report schema version `1.0`, the twelve sections, their order and their registered field ownership. The correction of `weighted_source_type_masses` to `category_mass_map` above describes its existing category-to-mass object; it changes no schema or mathematical result.
+`recursive_integrity_toolkit.reports.assembly` retains report schema version `1.0`, the twelve sections, their order and registered field ownership. `weighted_source_type_masses` is a category-to-mass object (`category_mass_map`).
 
 ### Public Python interface
 
@@ -974,7 +1003,7 @@ class ReportAssemblyError(ReportValidationError):
 
 Both `bundle` and `run` are required. `bundle` is the existing typed `BundleValidationResult` handoff, including its inventory, selected provenance join, chronology, observability assessment and diagnostics. `run` supplies every required run field and exact null reasons documented above. Assembly requires `privacy_mode: standard` and `redacted_mode: false`; it creates no identifiers, timestamps, environment readings, configuration hashes or random seeds. A valid empty typed bundle can retain an empty version list and zero record count without inventing a dataset version.
 
-Callers first obtain results through the accepted validation and calculation APIs, then explicitly pass the results they want represented. Collection arguments are immutable tuples. The adapters require their exact supported result classes and retain the registered fields through explicit field selection. A returned `CanonicalReport` supplies the same immutable sections and detached `to_dict()` export described in Step 2. Unsupported types, duplicate public slots and inconsistent handoffs raise a validation error instead of silently dropping or overwriting evidence.
+Callers first obtain results through the accepted validation and calculation APIs, then explicitly pass the results they want represented. Collection arguments are immutable tuples. The adapters require their exact supported result classes and retain the registered fields through explicit field selection. A returned `CanonicalReport` supplies the same immutable sections and detached `to_dict()` export described above. Unsupported types, duplicate public slots and inconsistent handoffs raise a validation error instead of silently dropping or overwriting evidence.
 
 Assembly validates result types, finite values, metadata ownership, accepted method declarations, scope membership, coverage and denominator consistency. These checks do not authenticate the producer or establish the truth of supplied content, provenance, state meanings or calculations. A coherent supplied result remains a declaration-bound handoff. Assembly does not rerun its owner calculation as an independent numerical oracle.
 
@@ -1022,7 +1051,7 @@ Weighted results keep their explicit weighting mode, `weight` field, record-weig
 
 `comparison` represents one supplied accepted pair. It preserves distinct earlier/later selected versions, explicit order and order source, original and harmonized representations, literal state-meaning declarations, original positive-support differences, harmonized metric basis and mapping effects. Assembly checks this retained context without inferring chronology from version names, argument order or a cached capability flag.
 
-The existing Python calculation API supports both explicit mapping directions, `earlier_to_later` and `later_to_earlier`. A supplied result retains its direction, source/target representations, state meanings, mapping table and collision groups. Assembly exports those accepted declarations; it does not apply a new map or recompute harmonized distributions. This Python handoff does not expand the narrower future CLI comparison contract in P4-D03.
+The existing Python calculation API supports both explicit mapping directions, `earlier_to_later` and `later_to_earlier`. A supplied result retains its direction, source/target representations, state meanings, mapping table and collision groups. Assembly exports those accepted declarations; it does not apply a new map or recompute harmonized distributions. This Python handoff does not expand the narrower implemented CLI comparison contract in P4-D03.
 
 A probability-pair-only handoff preserves `input_basis: explicit_probability_vector`, pair scopes, comparison declarations, supplied deltas and support sets. It does not automatically export complete original probability tables. To include those independent tables, also pass the original `DistributionMetrics` through `distributions`; their own declared version slots must remain unambiguous. Retaining pair basis therefore does not claim that every original distribution has been serialized.
 
@@ -1040,7 +1069,7 @@ No scenario runs during assembly. Omitted scenario arguments leave `simulations`
 
 The seven capability input statuses, original reason codes, requirements and input coverage retain the existing classifier assessment. Assembly adds independent execution fields and copies the same matrix into `observability.capabilities`. The canonical constructor retains one immutable shared capability object.
 
-| Capability | Step 3 execution interpretation |
+| Capability | Execution interpretation |
 | --- | --- |
 | `ingestion` | The retained bundle-validation operation is identified explicitly; retained ingestion errors produce partial/failed execution according to surviving input evidence. |
 | `content_diagnostics` | Names supplied distribution, duplicate and tail operations. With no supplied result or family error it is `not_requested`; supplied operations are `completed` unless retained family errors make execution `partial`. An error with no supplied operation is `failed`. |
@@ -1078,14 +1107,14 @@ Recommendations are deterministic requests for evidence: missing matching proven
 
 Recommendations do not enforce policy, repair records or promise that metadata alone unlocks deferred implementations or universal claims. Source category, human review, confidence and external grounding remain independent declarations. A narrower direct interval does not certify complete pipeline closure, factual truth or an independent source.
 
-### Step 3 boundaries
+### Assembly boundaries
 
-This interface performs in-memory assembly and validation of supplied evidence. It does not ingest files, resolve content references, assign states, classify new inputs, calculate a metric, traverse a graph, run a simulation, redact identities, render JSON/Markdown/HTML, invoke a CLI analysis, perform network calls or publish artifacts. Privacy transformation, rendering and CLI orchestration belong to later approved steps. The historical Step 2 model/schema and the existing mathematical owners remain unchanged.
+This interface performs in-memory assembly and validation of supplied evidence. It does not ingest files, resolve content references, assign states, classify new inputs, calculate a metric, traverse a graph, run a simulation, redact identities, render JSON/Markdown/HTML, invoke a CLI analysis, perform network calls or publish artifacts. Privacy transformation, rendering and CLI orchestration are separate explicit layers. Existing mathematical owners remain unchanged.
 
-## Phase 4 Step 4: privacy and execution metadata APIs
+## Privacy and execution metadata APIs
 
-Step 4 preserves all twelve section keys, the ninety-entry field registry and the
-local report schema bytes. It adds `result.SafeReportView` and an explicit
+Privacy preserves all twelve section keys and the registered public fields.
+It uses `result.SafeReportView` and an explicit
 `reports.assembly.privacy_view(report, mode=..., record_id_mode=..., protection=...)`
 transition after the existing canonical assembly. `SafeReportView.to_dict()`
 returns detached data in the same canonical shape. Its nested sections are
@@ -1138,14 +1167,13 @@ construct content-safe structured diagnostics. Registered codes use static
 toolkit explanations; unrecognized labels receive protected identifiers without
 being reclassified as another registered error. Severity, capability effects and
 safe locations remain. An output stream must be supplied explicitly; import does
-not configure a logger or emit a record. JSON-line diagnostics do not implement
-the deferred JSON report renderer.
+not configure a logger or emit a record. JSON-line diagnostics are separate from the complete JSON report renderer.
 
-Step 4 does not render reports, publish output files, start CLI analysis, expand
-the public metric set or change any mathematical owner. It provides identifier
-and content protection, not statistical anonymity or authentication of evidence.
+Privacy transformation does not render reports, publish files or start analysis.
+It protects identifiers and content while preserving the public metric set and
+mathematical owners. It supplies no statistical anonymity or evidence authentication.
 
-## Phase 4 Step 5: JSON and Markdown renderer APIs
+## JSON and Markdown renderer APIs
 
 The explicit public calls are
 `reports.json_report.render_json(report: SafeReportView) -> str` and
@@ -1234,7 +1262,7 @@ when that is the accepted payload representation. Ratios stay ratios; no
 percentage conversion, fixed decimal truncation or midpoint estimate is
 introduced. This explicit precision policy takes the reporting specification's
 fixed-decimal suggestions as recommendations while preserving the approved
-Step 5 requirement that human display must not erase nonzero values or bounds.
+requirement that human display must not erase nonzero values or bounds.
 Machine-readable JSON remains authoritative.
 
 Intervals retain separate supplied lower bound, upper bound and width with
@@ -1263,6 +1291,6 @@ The renderer validates structure and formats already selected evidence. Its
 safe-view type is an API contract, not isolation from a Python caller capable
 of mutating private objects or replacing runtime functions. It does not certify
 evidence authenticity, provide statistical anonymity, limit total report size
-or establish whole-product performance. Publication safety belongs to Step 6;
-the remaining CLI, packaged-resource and final acceptance work retains its
-later phase-step boundaries.
+or establish whole-product performance. Publication safety is implemented by
+`utils.paths.publish_reports`; [CLI documentation](cli.md) describes installed
+audit, validate and example behavior and the remaining deferred capabilities.

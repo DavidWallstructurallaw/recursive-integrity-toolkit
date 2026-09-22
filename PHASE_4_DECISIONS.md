@@ -1102,3 +1102,58 @@ finite memory justify omitting the additional full-scale tracing pass. Actual
 100k RSS remains mandatory, and no throughput target, Hero target, report
 semantics, warning inventory or failure acceptance rule is relaxed. All raw
 attempts and their instrumentation modes remain recoverable in the evidence.
+
+### Step 10 accepted result and Step 11 authorization
+
+On 2026-09-22 the user instructed `继续 Phase 4 Step 11`. Step 11 starts from
+the accepted Step 10 commit `9142b344bfc2dc2b33dbc696159f07bbc81b223a`, tree
+`a485078d3e7cf739e10b087acb604f317ee19854`. The external Step 10 receipt records
+the completed repair, actual scale measurement and focused remote verification;
+the earlier pending paragraphs above remain the historical investigation record.
+
+The accepted 100,000-record complete report run measured 1,362.470766888 seconds
+outer wall time and 7,640,743,936 bytes peak RSS. It published 442,741,529 bytes
+JSON and 165,120,454 bytes Markdown, with 66,000 warnings and no errors, while
+independent numerical expectations passed. Full-scale traced Python allocation
+peak remains unmeasured. These observations concern that fixture and recorded
+Linux reference environment; no general performance guarantee is inferred.
+Remote run 35718603026 on the accepted commit passed 244 affected product,
+performance and golden cases plus 89 scope-control cases. It was a focused
+Step 10 run and did not establish a new complete environment matrix.
+
+Step 11 authorizes the planned public documentation, three completion reports,
+the exact package version transition to `0.1.0.dev3`, current test expectations
+for that version, and maintenance of existing stage controls and workflow roles.
+All other runtime bytes, scientific oracles, schemas, packaged Hero resources,
+accepted literal golden files and dependency declarations remain frozen.
+Historical version-specific checks use their existing accepted snapshots.
+Current report tests may adapt only the expected version metadata in memory,
+while checking the observed version exactly; the golden normalizer and stored
+golden fixtures retain their accepted bytes.
+
+### Step 11 verification scope and acceptance records
+
+The user's Verification Governance and Complexity Control policy governs this
+closeout. It supersedes the plan's automatic full-workflow rerun after every
+acceptance-record edit. Final candidate verification retains the complete
+Ubuntu/Windows, Python 3.11/3.12, current/minimum core matrix and the real-Parquet
+suite, including their actual performance cases. The packaging role reuses
+same-run core and Parquet evidence instead of executing those full suites again.
+Security and golden roles remain independently required. Failures are retained
+and must be resolved or explicitly block acceptance.
+
+Completion reports are ordinary descriptive records. They cannot authorize a
+runtime mutation or turn a failed gate into a pass. The existing permission
+baseline continues to describe Step 11 candidate authority with
+`phase_complete: false`; actual completion is recorded only after the required
+results exist. An acceptance-only successor may update these reports with
+actual outcomes after direct document and scope checks. Such a successor does
+not automatically repeat the matrix when executable and authoritative bytes
+are unchanged. Final source and package artifacts must identify their actual
+source, and no remote binary equivalence is inferred from job status alone.
+
+No new historical source registry, migration chain, test-body snapshot, execution
+receipt framework or evidence-of-evidence layer is introduced. Existing direct
+mutation rejection checks remain canonical; obsolete implementation forms are
+recoverable from Git and archived phase evidence. Phase 5, merging main, tags
+and package publication require later authorization.

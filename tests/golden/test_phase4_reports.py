@@ -84,16 +84,35 @@ def test_phase4_step9_case_registry_is_explicit_independent_and_exhaustive():
 
 @pytest.mark.parametrize("redacted", [False, True])
 def test_phase4_step9_literal_json_and_markdown_goldens(redacted, phase4_step9_hero_observations):
+    from recursive_integrity_toolkit import __version__
+
     actual = phase4_step9_hero_observations[redacted]
     stem = "phase4_hero_redacted" if redacted else "phase4_hero_report"
     json_path, markdown_path = GOLDEN / (stem + ".json"), GOLDEN / (stem + ".md")
     before = {path: path.read_bytes() for path in (json_path, markdown_path)}
+    # Step 11 synchronizes only the expected package-version metadata. Frozen
+    # fixture bytes and the actual report's closed normalization stay unchanged.
+    expected_json = json.loads(before[json_path])
+    assert expected_json["run"]["toolkit_version"] == "0.1.0.dev2"
+    assert actual["report"]["run"]["toolkit_version"] == __version__
+    assert actual["normalized"]["run"]["toolkit_version"] == __version__
+    expected_json["run"]["toolkit_version"] = __version__
+    expected_markdown = before[markdown_path].decode("utf-8")
+    for old, new in (
+        ('| `["toolkit_version"]` | `"0.1.0.dev2"` |',
+         '| `["toolkit_version"]` | `"' + __version__ + '"` |'),
+        ('Toolkit version: `"0.1.0.dev2"`; report schema version:',
+         'Toolkit version: `"' + __version__ + '"`; report schema version:'),
+    ):
+        assert expected_markdown.count(old) == 1
+        expected_markdown = expected_markdown.replace(old, new, 1)
     NORMALIZER["assert_golden_pair"](actual["normalized"], actual["normalized_markdown"],
-                                      json.loads(before[json_path]), before[markdown_path].decode("utf-8"))
+                                      expected_json, expected_markdown)
     assert {path: path.read_bytes() for path in before} == before
 
 
 @pytest.mark.parametrize("pointer,replacement", [
+    ("/run/toolkit_version", "0.1.0.dev2"),
     ("/derived_metrics/support/by_version/v1/support_size/value", 9001),
     ("/derived_metrics/support/by_version/v1/support_size/evidence_class", "observed_fact"),
     ("/derived_metrics/support/by_version/v1/support_size/scope/record_count", 9001),
@@ -437,6 +456,7 @@ def phase4_step9_execute_oracle(case, directory, fixed_metadata, golden_director
 def phase4_step9_assert_oracle(case, actual, schema):
     import json
     import jsonschema
+    from recursive_integrity_toolkit import __version__
     from recursive_integrity_toolkit.result import SECTION_ORDER, validate_report
 
     if case["kind"] in {"canonical_rejection", "report_rejection", "pair_api_rejection"}:
@@ -469,6 +489,7 @@ def phase4_step9_assert_oracle(case, actual, schema):
         assert payload is None and markdown == ""
         return
     validate_report(payload)
+    assert payload["run"]["toolkit_version"] == __version__
     jsonschema.Draft202012Validator(schema).validate(payload)
     assert tuple(payload) == tuple(SECTION_ORDER)
     headings = ["Run metadata", "Input inventory", "Observability summary", "Capability matrix",
@@ -477,6 +498,9 @@ def phase4_step9_assert_oracle(case, actual, schema):
     assert markdown.startswith("# Recursive Integrity Audit Report\n")
     assert [line for line in markdown.splitlines() if line.startswith("## ")] == ["## " + value for value in headings]
     for pointer, expected in case.get("expected", {}).items():
+        if pointer == "/run/toolkit_version":
+            assert expected == "0.1.0.dev2"
+            expected = __version__
         got = phase4_step9_pointer(payload, pointer)
         assert got == expected, (case["case_id"], pointer, got, expected)
         if isinstance(expected, bool):
@@ -636,7 +660,7 @@ import recursive_integrity_toolkit as package
 installed = Path(package.__file__).resolve().parent
 assert not installed.is_relative_to(repository), installed
 distribution = importlib.metadata.distribution('recursive-integrity-toolkit')
-assert distribution.version == package.__version__ == '0.1.0.dev2'
+assert distribution.version == package.__version__ == '0.1.0.dev3'
 members = {str(p).replace('\\', '/') for p in distribution.files or ()}
 modules = sorted(p for p in installed.rglob('*.py'))
 assert len(modules) == 40
