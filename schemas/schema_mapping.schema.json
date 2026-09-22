@@ -1,13 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://recursive-integrity-toolkit.example/schemas/schema_mapping.schema.json",
-  "title": "Recursive Integrity Toolkit Schema Mapping Skeleton",
-  "description": "Phase 1 structural contract for declarative field mapping. It does not authorize arbitrary code, imports, shell commands, filesystem access, environment access, or network access.",
+  "title": "Recursive Integrity Toolkit Declarative Schema Mapping",
+  "description": "Phase 2 Step 3 PR-003. Closed, versioned syntax for explicit field transforms; all refs are local. Runtime additionally rejects duplicate keys, nonfinite values, unsafe object types and missing required source fields.",
   "type": "object",
   "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "description": "Canonical version key from DATA_AND_PROVENANCE_SPEC.md section 14.2."
+    },
     "mapping_version": {
-      "type": "string",
-      "description": "Version of the mapping document format."
+      "const": "1.0",
+      "description": "Compatibility spelling from the Phase 1 schema. Use exactly one version key."
     },
     "records": {
       "$ref": "#/$defs/mappingSection"
@@ -16,14 +20,78 @@
       "$ref": "#/$defs/mappingSection"
     }
   },
+  "oneOf": [
+    {
+      "required": [
+        "schema_version"
+      ],
+      "not": {
+        "required": [
+          "mapping_version"
+        ]
+      }
+    },
+    {
+      "required": [
+        "mapping_version"
+      ],
+      "not": {
+        "required": [
+          "schema_version"
+        ]
+      }
+    }
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "records"
+      ]
+    },
+    {
+      "required": [
+        "provenance"
+      ]
+    }
+  ],
   "additionalProperties": false,
   "$defs": {
+    "jsonValue": {
+      "anyOf": [
+        {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/jsonValue"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/jsonValue"
+          }
+        }
+      ]
+    },
     "mappingSection": {
       "type": "object",
-      "description": "Declarative mappings for one input role.",
+      "required": [
+        "fields"
+      ],
       "properties": {
         "fields": {
           "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1
+          },
           "additionalProperties": {
             "$ref": "#/$defs/fieldMapping"
           }
@@ -33,10 +101,14 @@
     },
     "fieldMapping": {
       "type": "object",
-      "description": "Source, constant, and allowlisted operation declarations for one canonical field.",
       "properties": {
-        "source": {"type": "string"},
-        "constant": {},
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "constant": {
+          "$ref": "#/$defs/jsonValue"
+        },
         "operations": {
           "type": "array",
           "items": {
@@ -44,30 +116,339 @@
           }
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "source"
+          ],
+          "not": {
+            "required": [
+              "constant"
+            ]
+          }
+        },
+        {
+          "required": [
+            "constant"
+          ],
+          "not": {
+            "required": [
+              "source"
+            ]
+          }
+        },
+        {
+          "required": [
+            "operations"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "source"
+                ]
+              },
+              {
+                "required": [
+                  "constant"
+                ]
+              }
+            ]
+          },
+          "properties": {
+            "operations": {
+              "minItems": 1,
+              "prefixItems": [
+                {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/op_constant"
+                    },
+                    {
+                      "$ref": "#/$defs/op_coalesce"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "description": "One target has one selector. An initial constant or coalesce operation can supply the selector."
     },
     "operation": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/op_cast_boolean"
+        },
+        {
+          "$ref": "#/$defs/op_cast_float"
+        },
+        {
+          "$ref": "#/$defs/op_cast_integer"
+        },
+        {
+          "$ref": "#/$defs/op_cast_string"
+        },
+        {
+          "$ref": "#/$defs/op_coalesce"
+        },
+        {
+          "$ref": "#/$defs/op_constant"
+        },
+        {
+          "$ref": "#/$defs/op_lowercase"
+        },
+        {
+          "$ref": "#/$defs/op_map_values"
+        },
+        {
+          "$ref": "#/$defs/op_normalize_whitespace"
+        },
+        {
+          "$ref": "#/$defs/op_parse_datetime"
+        },
+        {
+          "$ref": "#/$defs/op_parse_json_list"
+        },
+        {
+          "$ref": "#/$defs/op_rename"
+        },
+        {
+          "$ref": "#/$defs/op_trim"
+        },
+        {
+          "$ref": "#/$defs/op_uppercase"
+        }
+      ]
+    },
+    "op_cast_boolean": {
       "type": "object",
-      "description": "One declarative operation. Operation-specific validation is deferred to Phase 2.",
-      "required": ["op"],
+      "required": [
+        "op",
+        "mapping"
+      ],
       "properties": {
         "op": {
-          "type": "string",
-          "description": "Approved operation name such as rename, trim, cast, parse, coalesce, map, or case normalization."
+          "const": "cast_boolean"
         },
         "mapping": {
           "type": "object",
-          "additionalProperties": true
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit cast_boolean operation. No expressions or callbacks are accepted."
+    },
+    "op_cast_float": {
+      "type": "object",
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "cast_float"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit cast_float operation. No expressions or callbacks are accepted."
+    },
+    "op_cast_integer": {
+      "type": "object",
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "cast_integer"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit cast_integer operation. No expressions or callbacks are accepted."
+    },
+    "op_cast_string": {
+      "type": "object",
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "cast_string"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit cast_string operation. No expressions or callbacks are accepted."
+    },
+    "op_coalesce": {
+      "type": "object",
+      "required": [
+        "op",
+        "sources"
+      ],
+      "properties": {
+        "op": {
+          "const": "coalesce"
         },
-        "unmapped": {"type": "string"},
-        "format": {"type": "string"},
         "sources": {
           "type": "array",
-          "items": {"type": "string"}
-        },
-        "value": {}
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Explicit coalesce operation. No expressions or callbacks are accepted."
+    },
+    "op_constant": {
+      "type": "object",
+      "required": [
+        "op",
+        "value"
+      ],
+      "properties": {
+        "op": {
+          "const": "constant"
+        },
+        "value": {
+          "$ref": "#/$defs/jsonValue"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit constant operation. No expressions or callbacks are accepted."
+    },
+    "op_lowercase": {
+      "type": "object",
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "lowercase"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit lowercase operation. No expressions or callbacks are accepted."
+    },
+    "op_map_values": {
+      "type": "object",
+      "required": [
+        "op",
+        "mapping",
+        "unmapped"
+      ],
+      "properties": {
+        "op": {
+          "const": "map_values"
+        },
+        "mapping": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/jsonValue"
+          }
+        },
+        "unmapped": {
+          "enum": [
+            "keep",
+            "null",
+            "error"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit map_values operation. No expressions or callbacks are accepted."
+    },
+    "op_normalize_whitespace": {
+      "type": "object",
+      "required": [
+        "op",
+        "format"
+      ],
+      "properties": {
+        "op": {
+          "const": "normalize_whitespace"
+        },
+        "format": {
+          "const": "collapse"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit collapse of Unicode whitespace runs to a single space; trim is separate."
+    },
+    "op_parse_datetime": {
+      "type": "object",
+      "required": [
+        "op",
+        "format"
+      ],
+      "properties": {
+        "op": {
+          "const": "parse_datetime"
+        },
+        "format": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "description": "Use iso8601 or portable numeric strptime directives. Runtime rejects locale-dependent directives. No timezone inference."
+    },
+    "op_parse_json_list": {
+      "type": "object",
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "parse_json_list"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit parse_json_list operation. No expressions or callbacks are accepted."
+    },
+    "op_rename": {
+      "type": "object",
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "rename"
+        }
+      },
+      "additionalProperties": false,
+      "description": "The enclosing fields key is the target; source selects the literal original field. No dynamic target expression."
+    },
+    "op_trim": {
+      "type": "object",
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "trim"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit trim operation. No expressions or callbacks are accepted."
+    },
+    "op_uppercase": {
+      "type": "object",
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "uppercase"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit uppercase operation. No expressions or callbacks are accepted."
     }
   }
 }

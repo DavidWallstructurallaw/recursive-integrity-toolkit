@@ -38,3 +38,27 @@ def test_import_with_network_blocked(subprocess_env) -> None:
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "all modules imported with network blocked"
+
+
+def test_PR002_table_loads_with_network_blocked(subprocess_env) -> None:
+    script = BLOCKED_IMPORT_SCRIPT + r'''
+import pathlib
+import tempfile
+socket.getaddrinfo = blocked
+socket.socket.connect_ex = blocked
+from recursive_integrity_toolkit.models import InputSource, FileRole
+from recursive_integrity_toolkit.io.loaders import load_table, inventory_source
+with tempfile.TemporaryDirectory() as folder:
+    root = pathlib.Path(folder)
+    for suffix, text in ((".csv", "id,content\na,https://invalid.example/data\n"),
+                         (".jsonl", '{"id":"a","content":"https://invalid.example/data"}\n')):
+        path = root / ("input" + suffix)
+        path.write_text(text, encoding="utf-8")
+        source = InputSource(FileRole.RECORDS_PRIMARY, path)
+        assert inventory_source(source).sha256 == load_table(source).inventory.sha256
+print("Step 2 physical parsing completed with network blocked")
+'''
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True,
+                            env=subprocess_env, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "physical parsing completed with network blocked" in result.stdout

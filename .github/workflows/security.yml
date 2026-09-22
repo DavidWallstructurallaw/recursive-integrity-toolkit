@@ -1,34 +1,89 @@
-name: Phase 1 Security Boundary
+name: Phase 4 Step 11 Security Boundary
 
 on:
-  push:
   pull_request:
+    paths-ignore:
+      - README.md
+      - CHANGELOG.md
+      - "docs/**"
+      - PHASE_4_COMPLETION.md
+      - PHASE_4_VALIDATION_REPORT.md
+      - PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md
   workflow_dispatch:
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   local-first-boundary:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      RIT_TEST_PARQUET: "0"
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install package and Phase 1 test tools
+          python-version: "3.12"
+      - name: Install package and approved test tools
         run: python -m pip install ".[test]"
-      - name: Verify import, optional dependency, and prohibited structure boundaries
-        env:
-          PYTHONDONTWRITEBYTECODE: "1"
-        run: >-
-          python -m pytest -p no:cacheprovider -q
-          tests/integration/test_no_network.py
-          tests/integration/test_optional_dependency.py
-          tests/integration/test_no_algorithms.py
-          tests/integration/test_prohibited_structure.py
-          tests/integration/test_license_notices.py
-
-# This workflow starts no service and runs no audit calculation.
+      - name: Verify import, mapping, content-reference and orchestration boundaries
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rit-security"
+          python -m pytest -p no:cacheprovider -q \
+            tests/integration/test_no_network.py \
+            tests/integration/test_optional_dependency.py \
+            tests/integration/test_no_algorithms.py \
+            tests/integration/test_prohibited_structure.py \
+            tests/integration/test_license_notices.py \
+            tests/unit/test_PR003_schema_mapping.py \
+            tests/unit/test_PR017_content_refs.py \
+            tests/integration/test_hero_end_to_end.py tests/golden/test_phase4_reports.py \
+            tests/integration/test_partial_lineage_report.py \
+            tests/unit/test_T1_representation.py \
+            tests/unit/test_PR006_duplicates.py \
+            tests/unit/test_T1_support.py \
+            tests/unit/test_T1_diversity.py \
+            tests/unit/test_PR004_coverage.py \
+            tests/unit/test_PR005_source_shares.py \
+            tests/unit/test_T3_provenance.py \
+            tests/unit/test_T3_bounds.py \
+            tests/unit/test_T2_tail.py \
+            tests/unit/test_T1_resampling.py \
+            tests/unit/test_T1_compatibility.py \
+            tests/integration/test_phase3_metric_pipeline.py \
+            tests/unit/test_PR012_evidence_classes.py \
+            tests/unit/test_PR013_report_schema.py \
+            tests/unit/test_PR014_unavailable.py \
+            tests/unit/test_PR015_redaction.py \
+            tests/unit/test_PR016_determinism.py \
+            tests/unit/test_PR018_language.py \
+            tests/integration/test_partial_provenance_report.py \
+            tests/unit/test_phase4_output_safety.py \
+            tests/integration/test_phase4_cli.py \
+            tests/unit/test_phase4_contracts.py \
+            tests/integration/test_phase4_gates.py \
+            --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/phase4_current_security_results.log"
+          python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-security/security.xml"
+          python scripts/check_traceability.py --phase 4 --step 11
+          python scripts/release_check.py --phase 4 --step 11
+      - name: Retain actual security test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase4-current-security-boundary
+          path: ${{ runner.temp }}/rit-security/
+          if-no-files-found: error
+          retention-days: 30

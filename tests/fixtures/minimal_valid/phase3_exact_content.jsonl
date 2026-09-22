@@ -1,0 +1,10 @@
+{"dataset_version": "v1", "record_id": "a1", "content": "repeat"}
+{"dataset_version": "v1", "record_id": "a2", "content": "repeat"}
+{"dataset_version": "v1", "record_id": "a3", "content": "repeat"}
+{"dataset_version": "v1", "record_id": "b1", "content": "é"}
+{"dataset_version": "v1", "record_id": "b2", "content": "é"}
+{"dataset_version": "v1", "record_id": "c1", "content": "é"}
+{"dataset_version": "v1", "record_id": "d1", "content": "Repeat"}
+{"dataset_version": "v1", "record_id": "e1", "content": "repeat "}
+{"dataset_version": "v1", "record_id": "f1", "content": "line\nend"}
+{"dataset_version": "v1", "record_id": "g1", "content": "line\r\nend"}

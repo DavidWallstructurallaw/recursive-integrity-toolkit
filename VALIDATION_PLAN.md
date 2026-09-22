@@ -7,7 +7,7 @@
 | Project | Recursive Integrity Toolkit |
 | Target release | v0.1 |
 | Phase | Phase 0 |
-| Status | DRAFT VALIDATION BASELINE |
+| Status | APPROVED PHASE 0 BASELINE |
 | Primary owner | Theory Owner |
 | Technical reviewers | Mathematical Reviewer, Technical Maintainer, Security Reviewer, Domain Validator |
 | Depends on | `SPEC_AUDIT.md`, `THEORY_SOURCE_MAP.md`, `UNRESOLVED_DECISIONS.md`, `PROJECT_INSTRUCTIONS.md`, `V0.1_PRODUCT_SPEC.md`, `DEFINITIONS_AND_UNITS.md`, `DATA_AND_PROVENANCE_SPEC.md`, `OBSERVABILITY_AND_REPORTING.md`, `THEORY_TO_CODE_TRACEABILITY.md` |
@@ -33,7 +33,7 @@ Expected values must come from hand calculation, closed-form derivation, separat
 
 Expected values must not be created by running the implementation and copying its output.
 
-Definitions marked `PENDING DECISION` become release-authoritative only after the corresponding `UD-*` decision is approved.
+Definitions marked `APPROVED DECISION` become release-authoritative only after the corresponding `UD-*` decision is approved.
 
 ---
 

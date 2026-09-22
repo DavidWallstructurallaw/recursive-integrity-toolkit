@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "records": {
+    "fields": {
+      "record_id": {
+        "source": "id",
+        "operations": [
+          {
+            "op": "trim"
+          }
+        ]
+      },
+      "dataset_version": {
+        "constant": "v1"
+      },
+      "content": {
+        "source": "text"
+      },
+      "topic": {
+        "source": "category",
+        "operations": [
+          {
+            "op": "map_values",
+            "mapping": {
+              "Cats": "cat",
+              "Dogs": "dog"
+            },
+            "unmapped": "keep"
+          }
+        ]
+      }
+    }
+  }
+}

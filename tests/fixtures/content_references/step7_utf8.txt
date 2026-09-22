@@ -1,0 +1,1 @@
+Synthetic local UTF-8 fixture. 本地内容。
