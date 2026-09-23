@@ -38,7 +38,7 @@ def test_phase4_step10_hero_complete_report_runtime(phase4_step10_measure_report
         assert metrics["support"]["support_retention_ratio"]["value"] == float(Fraction(5, 8))
         direct = metrics["closure_exposure"]["direct"]
         assert [direct[name]["value"] for name in ("lower_bound", "upper_bound", "interval_width")] == [.5, .5, 0.]
-        assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+        assert report["capabilities"]["lineage"]["execution_status"] == "not_requested"
         assert report["simulations"] == {}
     assert [item["mode"] for item in observations] == ["untraced"] * 3 + ["traced"]
     # A noisy CI observation is not a universal laptop SLA. Every target miss

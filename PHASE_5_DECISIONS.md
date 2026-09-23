@@ -1,6 +1,6 @@
 # Phase 5 Decisions and Current Authorization
 
-Status: **PLAN APPROVED; STEPS 1-6 COMPLETE; PHASE INCOMPLETE**.
+Status: **PLAN APPROVED; STEPS 1-7 COMPLETE; PHASE INCOMPLETE**.
 
 On 2026-09-23 UTC the Theory Owner instructed:
 `批准，Phase 5  step 1开始`.
@@ -218,3 +218,27 @@ architecture is introduced. Package version and executable report schema stay
 Stop after Step 6. Report/schema and CLI integration remain Steps 7-8. Existing
 branch synchronization approval continues; merge, tag and publication remain
 separate actions.
+
+## Step 7 execution instruction
+
+On 2026-09-23 UTC the Theory Owner instructed `Phase 5 Step 7 开始`.
+This authorizes schema 1.1, explicit lineage report assembly and identity-safe
+JSON/Markdown output under P5-D08. Work starts from Step 6 commit
+`e2666515d98cfe41483b5c43345c642bab02ced0` on `phase5-lineage`.
+
+Runtime changes are confined to the existing result/schema, report assembly,
+Markdown renderer, safe diagnostics and ancestry owners. The ancestry change binds supplied
+results to relevant validated declarations so that same-key stale results cannot
+enter a new report; it performs no graph or metric recalculation. Both report
+schema resources advance together. No new product module is introduced.
+
+Current report fixtures are consolidated to schema 1.1 with their independently
+authored scientific values preserved. Schema 1.0 fixtures remain recoverable in
+Git history. Direct semantic, malformed-wire, redaction and report compatibility
+checks cover this public boundary. The single current source control advances
+to Step 6 and opens only the seven changed product paths. No new migration registry
+or meta-verification architecture is added.
+
+Package version stays `0.1.0.dev3`. Step 8 CLI flags, context-role ingestion and
+dispatch remain separate work. Stop after Step 7. Existing branch synchronization
+approval continues; merge, tag and publication remain separate actions.

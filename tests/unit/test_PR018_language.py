@@ -16,7 +16,7 @@ Limits:
 def phase4_step3_run():
     return {
         "run_id": "step3-independent-case", "toolkit_version": "0.1.0.dev2",
-        "report_schema_version": "1.0", "started_at": None, "completed_at": None,
+        "report_schema_version": "1.1", "started_at": None, "completed_at": None,
         "duration_seconds": None, "python_version": None, "platform": None,
         "command": None, "config_hash": None, "random_seed": None,
         "strict_mode": False, "redacted_mode": False, "network_call_count": 0,
@@ -571,7 +571,7 @@ def test_phase4_step5_markdown_run_null_reasons_and_required_footer_are_preserve
     assert reason in strings or reason in markdown
     assert "Unavailable" in markdown
     footer = markdown.split("## Errors\n", 1)[1]
-    for value in ("0.1.0.dev2", "1.0", "observed_fact", "derived_metric", "proxy_signal",
+    for value in ("0.1.0.dev2", "1.1", "observed_fact", "derived_metric", "proxy_signal",
                   "simulation", "unavailable_conclusion", "traceability"):
         assert value.lower() in footer.lower(), value
     assert "unavailable conclusions" in footer.lower()

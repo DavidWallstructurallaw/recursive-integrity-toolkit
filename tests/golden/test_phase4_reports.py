@@ -90,22 +90,13 @@ def test_phase4_step9_literal_json_and_markdown_goldens(redacted, phase4_step9_h
     stem = "phase4_hero_redacted" if redacted else "phase4_hero_report"
     json_path, markdown_path = GOLDEN / (stem + ".json"), GOLDEN / (stem + ".md")
     before = {path: path.read_bytes() for path in (json_path, markdown_path)}
-    # Step 11 synchronizes only the expected package-version metadata. Frozen
-    # fixture bytes and the actual report's closed normalization stay unchanged.
+    # Current schema fixtures retain the independently authored numeric oracle.
+    # Prior schema fixtures remain recoverable from Git history.
     expected_json = json.loads(before[json_path])
-    assert expected_json["run"]["toolkit_version"] == "0.1.0.dev2"
+    assert expected_json["run"]["toolkit_version"] == __version__
     assert actual["report"]["run"]["toolkit_version"] == __version__
     assert actual["normalized"]["run"]["toolkit_version"] == __version__
-    expected_json["run"]["toolkit_version"] = __version__
     expected_markdown = before[markdown_path].decode("utf-8")
-    for old, new in (
-        ('| `["toolkit_version"]` | `"0.1.0.dev2"` |',
-         '| `["toolkit_version"]` | `"' + __version__ + '"` |'),
-        ('Toolkit version: `"0.1.0.dev2"`; report schema version:',
-         'Toolkit version: `"' + __version__ + '"`; report schema version:'),
-    ):
-        assert expected_markdown.count(old) == 1
-        expected_markdown = expected_markdown.replace(old, new, 1)
     NORMALIZER["assert_golden_pair"](actual["normalized"], actual["normalized_markdown"],
                                       expected_json, expected_markdown)
     assert {path: path.read_bytes() for path in before} == before
@@ -498,9 +489,6 @@ def phase4_step9_assert_oracle(case, actual, schema):
     assert markdown.startswith("# Recursive Integrity Audit Report\n")
     assert [line for line in markdown.splitlines() if line.startswith("## ")] == ["## " + value for value in headings]
     for pointer, expected in case.get("expected", {}).items():
-        if pointer == "/run/toolkit_version":
-            assert expected == "0.1.0.dev2"
-            expected = __version__
         got = phase4_step9_pointer(payload, pointer)
         assert got == expected, (case["case_id"], pointer, got, expected)
         if isinstance(expected, bool):

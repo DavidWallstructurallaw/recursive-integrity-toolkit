@@ -25,10 +25,14 @@ def protected_copy(repo_root, tmp_path):
     return tmp_path
 
 
-@pytest.mark.parametrize("mutation", ["formula", "new_module", "deleted_module"])
+@pytest.mark.parametrize("mutation", ["formula", "new_module", "deleted_module",
+                                     "nested_metadata", "similar_metadata"])
 def test_current_scope_rejects_unauthorized_product_changes(current_tools, protected_copy, mutation):
-    """Lineage closure and proxy do not authorize unrelated product changes."""
+    """Lineage report integration does not authorize unrelated product changes."""
     verify = current_tools["verify_source_scope"]
+    generated = protected_copy / "src/recursive_integrity_toolkit.egg-info"
+    generated.mkdir(exist_ok=True)
+    (generated / "PKG-INFO").write_text("Generated wheel metadata\n", encoding="utf-8")
     verify(protected_copy)
     target = protected_copy / "src/recursive_integrity_toolkit/metrics/diversity.py"
     if mutation == "formula":
@@ -37,8 +41,15 @@ def test_current_scope_rejects_unauthorized_product_changes(current_tools, prote
         target.write_text(source.replace("1.0 -", "1.0 +", 1), encoding="utf-8")
     elif mutation == "new_module":
         target.with_name("unauthorized_metric.py").write_text("def score(): return 1\n", encoding="utf-8")
-    else:
+    elif mutation == "deleted_module":
         target.unlink()
+    else:
+        relative = ("src/recursive_integrity_toolkit/recursive_integrity_toolkit.egg-info"
+                    if mutation == "nested_metadata" else
+                    "src/recursive_integrity_toolkit_other.egg-info")
+        extra = protected_copy / relative
+        extra.mkdir()
+        (extra / "unauthorized.py").write_text("def score(): return 1\n", encoding="utf-8")
     with pytest.raises(ValueError):
         verify(protected_copy)
 

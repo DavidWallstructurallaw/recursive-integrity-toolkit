@@ -61,7 +61,7 @@ observations may state 8 declared, 8 resolved and 0 unresolved references and th
 sufficient declared-earlier-version ordering certificate. They cannot claim graph
 traversal or a general cycle verdict.
 
-Maximum input observability stays Level 4. Lineage execution remains deferred;
+Maximum input observability stays Level 4. Lineage execution is not requested;
 dataset-longitudinal execution is partial with the sole explicit-pair support and
 diversity operation identified. The successful run remains complete. Model
 longitudinal is unavailable/deferred, default intervention simulation is
@@ -161,7 +161,7 @@ Earlier minus later is battery,lizard,turtle; intersection contains five states.
 
 The selected v2 scope has eight matching valid provenance rows: four human/yes and four synthetic/no. Each coverage is 8/8; each nonzero source share is 4/8. Direct interval=(closed/N,(closed+unresolved)/N)=[4/8,4/8].
 
-All eight supplied v2 parent references resolve to explicitly earlier v1 records. This supports reference counts and a declared-order certificate only. Graph traversal and all ancestry metrics remain deferred.
+All eight supplied v2 parent references resolve to explicitly earlier v1 records. This supports reference counts and a declared-order certificate only. This CLI invocation does not request graph traversal or ancestry metrics.
 
 ### hero_redacted
 
@@ -281,9 +281,9 @@ Required retained errors: `E_CONFIG_INVALID`.
 
 Driver: `cli`. Expected exit: `0`.
 
-Of two later parent references one resolves and one is absent: 2 declared,1 resolved,1 unresolved. Missing references retain a warning and cannot become external roots. One valid resolved path and one unresolved reference give partial input capability under the frozen lineage classification; execution remains deferred.
+Of two later parent references one resolves and one is absent: 2 declared,1 resolved,1 unresolved. Missing references retain a warning and cannot become external roots. One valid resolved path and one unresolved reference give partial input capability under the frozen lineage classification; execution is not requested.
 
-Independent ordered supports {A,B} and {A,C} both have size2, intersection1, retention1/2; lineage execution remains deferred.
+Independent ordered supports {A,B} and {A,C} both have size2, intersection1, retention1/2; lineage execution is not requested.
 
 Required retained warnings: `W_PARENT_UNRESOLVED`.
 
@@ -398,3 +398,11 @@ Acceptance requires every case, unchanged original math cases, literal JSON and
 Markdown review, normalization mutation rejection, privacy/format/reordering
 metamorphic checks and the governing regression gates. This oracle alone makes no
 claim that current implementation, installed artifacts or remote jobs have passed.
+
+## Phase 5 Step 7 current-schema consolidation
+
+Current canonical fixtures use report schema 1.1 and package 0.1.0.dev3.
+Ordinary CLI calls report lineage execution as `not_requested`; explicit lineage
+report assembly is covered by the current integration suite. Original numeric
+expectations are retained. Prior schema 1.0 fixtures and the original authority
+hashes remain auditable in Git history. No source-binding migration is added.

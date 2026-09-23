@@ -1,6 +1,6 @@
 """Resolve external roots, coverage, concentration and shared-root evidence.
 
-Owner IDs: T4; Phase 5 Step 6.
+Owner IDs: T4; Phase 5 Step 7.
 
 Validated explicit grounding supplies anchors. Iterative dependency scheduling
 unions complete root sets; unknown branches never supply exact roots. Logical
@@ -8,9 +8,8 @@ membership and candidate-visit budgets bound propagation before each work unit.
 The allocation is topological and makes no causal or scientific quality claim.
 
 Current phase status:
-    Phase 5 Step 6 adds an explicitly requested descriptive shared-root proxy.
-    Reports remain a later step. No file or network I/O, generation calculation
-    or implicit invocation.
+    Phase 5 Step 7 binds explicit report handoffs to relevant input evidence.
+    No file or network I/O, generation calculation or implicit invocation.
 """
 from __future__ import annotations
 
@@ -24,6 +23,7 @@ from ..errors import ErrorCode, LineageResourceLimitError
 from ..io.validation import join_provenance
 from ..models import BundleValidationResult, RecordKey, ValidationMessage, ValidationSeverity
 from ..result import ExecutionStatus, ReportStatus
+from ..utils.hashing import canonical_json_bytes, sha256_canonical
 from .cycles import CycleAnalysis, DepthAssessment, analyze_cycles, _local_depth_reasons
 from .graph import (
     LineageGraph, LineageLimits, LineageResourceUsage, LineageScope,
@@ -62,6 +62,63 @@ def _execution(messages: tuple[ValidationMessage, ...], complete: int, unresolve
     if unresolved:
         return ExecutionStatus.PARTIAL, ("UNRESOLVED_ANCESTRY",)
     return ExecutionStatus.COMPLETED, ()
+
+
+def _lineage_input_signature(validation: BundleValidationResult) -> str:
+    """Bind report handoffs to relevant declarations without retaining raw input.
+
+    This internal digest detects stale same-key evidence, not authenticity.
+    Content, URI, path, notes and extras are excluded. No graph or metric runs.
+    """
+    if type(validation) is not BundleValidationResult or validation.parent_validation is None:
+        raise _invalid("lineage input binding requires retained validation evidence")
+    names = ("dataset_version", "record_id", "parent_ids", "external_grounding",
+             "source_type", "provenance_confidence", "transformation", "batch_id", "timestamp")
+
+    def identity(key):
+        return None if key is None else (key.dataset_version, key.record_id)
+
+    def diagnostics(messages):
+        return sorted([(message.code, message.severity.value, identity(message.record_key),
+                       message.field, None if message.file_role is None else message.file_role.value)
+                      for message in messages], key=canonical_json_bytes)
+
+    def rows(items):
+        return tuple((identity(row.record_key),
+                      getattr(row, "kind", None),
+                      None if row.location.file_role is None else row.location.file_role.value,
+                      tuple((name, name in row.values, row.values.get(name)) for name in names),
+                      tuple((name, row.field_states.get(name)) for name in names)
+                      if hasattr(row, "field_states") else ())
+                     for row in sorted(items, key=lambda row: row.record_key))
+
+    def chronology(order):
+        return (order.loaded_versions, order.order, order.order_source, dict(order.source_orders),
+                dict(order.declarations), order.invocation_order, diagnostics(order.messages))
+
+    batch = validation.parent_validation
+    parents = []
+    for item in batch.assessments:
+        parent = item.result
+        refs = None if parent is None else tuple(sorted([(
+            tuple(sorted(ref.source_references)), ref.canonical_reference,
+            identity(ref.parent_key), ref.resolution_status.value, ref.temporal_status)
+            for ref in parent.references], key=canonical_json_bytes))
+        parents.append((identity(item.child_key), item.provenance_available,
+                        item.declared_reference_count, item.resolved_reference_count,
+                        item.invalid_self_reference_count,
+                        None if parent is None else parent.declaration_state, refs,
+                        None if parent is None else parent.graph_validation_deferred,
+                        None if parent is None else diagnostics(parent.messages),
+                        diagnostics(item.messages)))
+    try:
+        return sha256_canonical((
+            rows(validation.records), None if validation.provenance is None else rows(validation.provenance),
+            chronology(validation.version_order), chronology(batch.version_order),
+            tuple(parents), batch.promoted_warning_codes, diagnostics(batch.messages),
+            diagnostics(validation.validation_messages)))
+    except (ValueError, TypeError):
+        raise _invalid("lineage input binding requires canonical declarations") from None
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,8 +241,12 @@ class LineageAnalysisResult:
     effective_external_root_count: float | None
     resource_usage: LineageResourceUsage
     messages: tuple[ValidationMessage, ...]
+    input_signature: str = field(repr=False)
 
     def __post_init__(self) -> None:
+        if (type(self.input_signature) is not str or len(self.input_signature) != 64
+                or any(character not in "0123456789abcdef" for character in self.input_signature)):
+            raise _invalid("lineage result requires its internal declaration binding")
         if type(self.scope) is not LineageScope or type(self.cycles) is not CycleAnalysis:
             raise _invalid("ancestry analysis requires typed scope and cycle observations")
         scope = replace(self.scope)
@@ -538,6 +599,7 @@ def analyze_lineage(
     graph = build_lineage_graph(validation, target_dataset_version=target_dataset_version, limits=limits)
     cycles = analyze_cycles(graph)
     metadata, metadata_messages = _metadata(validation, graph)
+    input_signature = _lineage_input_signature(validation)
     messages = _messages(cycles.messages + metadata_messages)
     target_evidence = tuple(graph.parent_evidence_by_record[key] for key in graph.scope.target_record_keys)
     count_known = all(item.declared_reference_count is not None for item in target_evidence)
@@ -561,7 +623,7 @@ def analyze_lineage(
             None, None, None, None, None, None, (error.reason_code,),
             **reference_fields, root_contributions=None, distinct_external_root_count=None,
             ancestry_concentration_hhi=None, effective_external_root_count=None,
-            resource_usage=error.resource_usage, messages=messages)
+            resource_usage=error.resource_usage, messages=messages, input_signature=input_signature)
     records = tuple(RecordAncestry(
         key, "unresolved" if roots[key] is None else "grounded" if roots[key] else "closed",
         roots[key], reasons[key], cycles.depths_by_record[key].lineage_depth,
@@ -579,4 +641,4 @@ def analyze_lineage(
         () if total else ("EMPTY_TARGET_SCOPE",),
         **reference_fields, root_contributions=contributions, distinct_external_root_count=distinct,
         ancestry_concentration_hhi=hhi, effective_external_root_count=effective,
-        resource_usage=budget.usage(), messages=messages)
+        resource_usage=budget.usage(), messages=messages, input_signature=input_signature)

@@ -2,11 +2,11 @@
 
 A local-first research toolkit for examining recursive closure exposure in synthetic-data and recursive-data pipelines under explicit representations and assumptions.
 
-## Current milestone: Phase 4 reports and CLI
+## Current milestone: Phase 5 lineage report integration
 
 Development version `0.1.0.dev3` provides local input validation, JSON and Markdown audit reports, privacy controls, one explicitly ordered dataset comparison and a packaged Hero example. The mathematical core includes literal topic/label and exact record-form representations, exact duplicates, support/diversity, provenance composition, direct closure-exposure bounds, tail ranking and explicitly invoked closed-resampling scenarios. Actual acceptance and execution evidence are recorded in `PHASE_4_COMPLETION.md`, `PHASE_4_VALIDATION_REPORT.md` and `PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md`.
 
-General lineage/ancestry remains Phase 5 work; longitudinal orchestration remains Phase 6A work; external reopening and experiment orchestration remain Phase 6B work. The CLI does not execute simulations. HTML output is deferred. No stable release, main merge or registry publication is implied by this development milestone.
+Phase 5 Steps 1-7 add explicit Python APIs for validated graphs, cycles, depth, external ancestry, root concentration, lineage closure bounds and descriptive shared-root evidence. Explicitly supplied lineage results integrate with JSON and Markdown under report schema 1.1. CLI lineage dispatch remains Step 8 work. Longitudinal orchestration remains Phase 6A work; external reopening and experiment orchestration remain Phase 6B work. The CLI does not execute simulations. HTML output is deferred. No stable release, main merge or registry publication is implied by this development milestone.
 
 ## Install and run
 
@@ -26,9 +26,9 @@ After installation, the following command works in any local working directory w
 rit example --out ./hero-workspace
 ```
 
-It copies six packaged Hero files into `hero-workspace/inputs/` and writes `hero-workspace/reports/report.json` and `report.md`. It downloads nothing. The packaged `EXPECTED_OUTPUTS.md` also contains future lineage targets; the actual Phase 4 report explicitly defers those calculations.
+It copies six packaged Hero files into `hero-workspace/inputs/` and writes `hero-workspace/reports/report.json` and `report.md`. It downloads nothing. The packaged `EXPECTED_OUTPUTS.md` also contains lineage targets; this CLI invocation does not request lineage calculations.
 
-The report compares v1 with v2: support **8 to 5**, retention **5/8**, diversity **7/8 to 3/4**, and missing topic states `battery`, `lizard`, `turtle`. Later-version human and synthetic shares are each **1/2**, and direct closure exposure is **[1/2, 1/2]**. Input observability is Level 4, lineage execution is deferred and simulations are empty.
+The report compares v1 with v2: support **8 to 5**, retention **5/8**, diversity **7/8 to 3/4**, and missing topic states `battery`, `lizard`, `turtle`. Later-version human and synthetic shares are each **1/2**, and direct closure exposure is **[1/2, 1/2]**. Input observability is Level 4, lineage execution is `not_requested` and simulations are empty.
 
 Use the extracted files for these independent commands, each with a fresh output destination:
 

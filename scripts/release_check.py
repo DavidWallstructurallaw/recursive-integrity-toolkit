@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Step 6 opens the approved lineage closure and descriptive proxy scope. Historical dispatch, source-body
+Step 7 opens the approved lineage schema, assembly and privacy scope. Historical dispatch, source-body
 migrations and phase registries are recoverable from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
 """
@@ -24,11 +24,16 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "d81966561502b94701712a3d4b4b7fd50783cba9"
+ACCEPTED_COMMIT = "e2666515d98cfe41483b5c43345c642bab02ced0"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/")
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
     "src/recursive_integrity_toolkit/lineage/ancestry.py",
-    "src/recursive_integrity_toolkit/metrics/bounds.py",
+    "src/recursive_integrity_toolkit/reports/assembly.py",
+    "src/recursive_integrity_toolkit/reports/markdown_report.py",
+    "src/recursive_integrity_toolkit/utils/logging.py",
+    "src/recursive_integrity_toolkit/result.py",
+    "schemas/report.schema.json",
+    "src/recursive_integrity_toolkit/data/report.schema.json",
 })
 PARQUET_CASES = {"test_PR002_parquet_real_roundtrip", "test_PR002_parquet_real_row_limit", "test_PR002_parquet_real_invalid_file"}
 HERO_NAMES = {"records_v1.csv", "records_v2.csv", "provenance.csv", "config.json", "version_order.json", "EXPECTED_OUTPUTS.md"}
@@ -68,15 +73,19 @@ def verify_source_scope(root: Path = ROOT) -> dict:
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
-            raise ValueError(f"Unauthorized product mutation outside Step 6 scope: {name}")
+            raise ValueError(f"Unauthorized product mutation outside Step 7 scope: {name}")
     for prefix in PROTECTED_PREFIXES:
         paths = list((root / prefix).rglob("*"))
         if (root / prefix).is_symlink() or any(path.is_symlink() for path in paths):
             raise ValueError(f"Aliased protected content: {prefix}")
         actual = {path.relative_to(root).as_posix() for path in paths
-                  if path.is_file() and "__pycache__" not in path.parts}
+                  if path.is_file() and "__pycache__" not in path.parts
+                  # setuptools writes this metadata during normal wheel installs.
+                  # It is outside the package; all product paths stay protected.
+                  and not path.relative_to(root).as_posix().startswith(
+                      "src/recursive_integrity_toolkit.egg-info/")}
         if actual != {name for name in expected if name.startswith(prefix)}:
-            raise ValueError(f"Unauthorized product file-set mutation during Step 6: {prefix}")
+            raise ValueError(f"Unauthorized product file-set mutation during Step 7: {prefix}")
     return {"protected_product_files": len(expected) - len(CURRENT_IMPLEMENTATION_PATHS),
             "authorized_implementation_files": len(CURRENT_IMPLEMENTATION_PATHS),
             "product_file_inventory": "unchanged"}
@@ -396,7 +405,7 @@ sections = ('run', 'inputs', 'observability', 'capabilities', 'observed_facts',
 payload = {
     'run': {
         'run_id': 'installed-empty-case', 'toolkit_version': '0.1.0.dev2',
-        'report_schema_version': '1.0', 'started_at': '2026-09-19T00:00:00+00:00',
+        'report_schema_version': '1.1', 'started_at': '2026-09-19T00:00:00+00:00',
         'completed_at': '2026-09-19T00:00:00+00:00', 'duration_seconds': 0,
         'python_version': '3.12', 'platform': 'isolated-installed-smoke',
         'command': 'rit validate', 'config_hash': '0123456789abcdef' * 4,
@@ -571,7 +580,7 @@ bundle = BundleValidationResult(
 )
 run = {
     'run_id': 'installed-typed-empty-case', 'toolkit_version': '0.1.0.dev2',
-    'report_schema_version': '1.0', 'started_at': None, 'completed_at': None,
+    'report_schema_version': '1.1', 'started_at': None, 'completed_at': None,
     'duration_seconds': None, 'python_version': None, 'platform': None,
     'command': None, 'config_hash': None, 'random_seed': None,
     'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0,
@@ -598,7 +607,7 @@ assert payload['run'] == original_run and run == original_run
 assert payload['inputs']['scope']['record_count'] == 0
 assert payload['inputs']['artifacts'] == [] and payload['inputs']['file_hashes'] == []
 assert payload['simulations'] == {} and payload['errors'] == []
-assert payload['capabilities']['lineage']['execution_status'] == 'deferred'
+assert payload['capabilities']['lineage']['execution_status'] == 'not_requested'
 assert report.sections['observability']['capabilities'] is report.sections['capabilities']
 assert {'model_performance_decline', 'causal_ancestor_effect', 'universal_integrity',
         'universal_collapse_prediction'} <= {item['conclusion'] for item in payload['unavailable_conclusions']}
@@ -757,7 +766,7 @@ bundle = BundleValidationResult(
 )
 run = {
     'run_id': 'installed-typed-empty-case', 'toolkit_version': '0.1.0.dev2',
-    'report_schema_version': '1.0', 'started_at': None, 'completed_at': None,
+    'report_schema_version': '1.1', 'started_at': None, 'completed_at': None,
     'duration_seconds': None, 'python_version': None, 'platform': None,
     'command': None, 'config_hash': None, 'random_seed': None,
     'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0,
@@ -784,7 +793,7 @@ assert payload['run'] == original_run and run == original_run
 assert payload['inputs']['scope']['record_count'] == 0
 assert payload['inputs']['artifacts'] == [] and payload['inputs']['file_hashes'] == []
 assert payload['simulations'] == {} and payload['errors'] == []
-assert payload['capabilities']['lineage']['execution_status'] == 'deferred'
+assert payload['capabilities']['lineage']['execution_status'] == 'not_requested'
 assert report.sections['observability']['capabilities'] is report.sections['capabilities']
 assert {'model_performance_decline', 'causal_ancestor_effect', 'universal_integrity',
         'universal_collapse_prediction'} <= {item['conclusion'] for item in payload['unavailable_conclusions']}
@@ -1003,7 +1012,7 @@ for mode, cli in (('standard', {}), ('redacted', {'redacted': True, 'record_ids'
     views.append((report, view, copy.deepcopy(view.to_dict())))
 assert views[0][2]['run']['run_status'] == 'partial'
 assert views[0][2]['simulations']['closed_resampling']['status'] == 'experimental'
-assert views[0][2]['capabilities']['lineage']['execution_status'] == 'deferred'
+assert views[0][2]['capabilities']['lineage']['execution_status'] == 'not_requested'
 # After this point even an already imported owner cannot execute a function.
 def denied(*args, **kwargs):
     raise AssertionError('installed renderer attempted file, network or process access')
@@ -1083,7 +1092,7 @@ def smoke_installed_publication(wheel: Path) -> None:
         bindir = work / "venv" / ("Scripts" if os.name == "nt" else "bin")
         python = bindir / ("python.exe" if os.name == "nt" else "python")
         subprocess.run([str(python), "-m", "pip", "install", "--no-index", "--no-deps", str(wheel.resolve())], cwd=work, check=True)
-        program = 'import importlib.abc, json, os, socket, sys\nfrom pathlib import Path\nclass BlockOptional(importlib.abc.MetaPathFinder):\n    def find_spec(self, fullname, path=None, target=None):\n        if fullname.split(".")[0] in ("numpy", "pandas", "pyarrow"):\n            raise AssertionError("optional or analytical dependency imported")\nsys.meta_path.insert(0, BlockOptional())\ndef phase4_step6_view(mode="standard", label="publication-case"):\n    from recursive_integrity_toolkit.reports.assembly import privacy_view\n    from recursive_integrity_toolkit.result import CanonicalReport\n    from recursive_integrity_toolkit.utils.hashing import IdentifierProtection\n\n    payload = {\n        "run": {\n            "run_id": label, "toolkit_version": "0.1.0.dev2", "report_schema_version": "1.0",\n            "started_at": "2026-09-20T00:00:00+00:00", "completed_at": "2026-09-20T00:00:00.500000+00:00",\n            "duration_seconds": 0.5, "python_version": "3.12.14", "platform": "independent-test-platform",\n            "command": "rit validate", "config_hash": "0123456789abcdef" * 4,\n            "random_seed": None, "strict_mode": False, "redacted_mode": False,\n            "network_call_count": 0, "deterministic": True, "privacy_mode": "standard",\n            "run_status": "complete", "null_reasons": {"random_seed": "No stochastic scenario was requested."},\n        },\n        "inputs": {}, "observability": {}, "capabilities": {}, "observed_facts": {},\n        "derived_metrics": {}, "proxy_signals": {}, "simulations": {},\n        "unavailable_conclusions": [], "recommended_next_metadata": [], "warnings": [], "errors": [],\n    }\n    return privacy_view(CanonicalReport.from_dict(payload), mode=mode,\n                        protection=IdentifierProtection.create(secret=b"publication-test-only-key-32byte!"))\nfrom recursive_integrity_toolkit.utils.paths import publish_reports, PublicationResult\nfrom recursive_integrity_toolkit.utils.logging import format_publication_diagnostic\nfrom recursive_integrity_toolkit.utils import paths\nfrom recursive_integrity_toolkit.reports.json_report import render_json\nfrom recursive_integrity_toolkit.reports.markdown_report import render_markdown\nimport recursive_integrity_toolkit as package\nassert not Path(package.__file__).resolve().is_relative_to(Path(sys.argv[2]).resolve())\nwork=Path(sys.argv[1]); source=work/\'input.txt\'; source.write_bytes(b\'PRIVATE_INSTALLED_SOURCE\')\nview=phase4_step6_view(\'redacted\')\nexpected={\'report.json\':render_json(view).encode(), \'report.md\':render_markdown(view).encode()}\ndef deny(*args, **kwargs):\n    raise AssertionError(\'network forbidden\')\nsocket.socket=deny; socket.getaddrinfo=deny\nactual_open=os.open\ndef no_input(path,*args,**kwargs):\n    assert Path(path)!=source\n    return actual_open(path,*args,**kwargs)\nos.open=no_input\ndef no_analysis(frame,event,arg):\n    if event==\'call\':\n        name=frame.f_globals.get(\'__name__\',\'\')\n        assert not name.startswith((\'recursive_integrity_toolkit.io.\',\'recursive_integrity_toolkit.metrics.\',\'recursive_integrity_toolkit.representations.\'))\nsys.setprofile(no_analysis)\ntry:\n    result=publish_reports(view,work/\'out\',input_paths=(source,))\n    assert result==PublicationResult(\'complete\',None,0,(\'report.json\',\'report.md\'))\n    assert publish_reports(view,work/\'out\',input_paths=(source,)).code==\'E_OUTPUT_EXISTS\'\n    actual_publish=paths._output_publish_one\n    def fail_second(src,dst):\n        if dst.name==\'report.md\':raise OSError(\'PRIVATE_INSTALLED_FAILURE\')\n        return actual_publish(src,dst)\n    paths._output_publish_one=fail_second\n    failed=publish_reports(view,work/\'failure\',input_paths=(source,))\n    assert failed.status==\'failed\' and failed.code==\'E_OUTPUT_IO\' and failed.temporary_cleanup_complete\n    assert \'PRIVATE_\' not in format_publication_diagnostic(failed)\nfinally:\n    sys.setprofile(None)\nassert {p.name:p.read_bytes() for p in (work/\'out\').iterdir()}==expected\nassert list((work/\'failure\').iterdir())==[]\nassert source.read_bytes()==b\'PRIVATE_INSTALLED_SOURCE\'\nprint(\'installed Step 6: exact safe JSON/Markdown bytes, no-overwrite, partial failure cleanup, safe diagnostics, unchanged input, blocked network/analysis: PASS\')\n'
+        program = 'import importlib.abc, json, os, socket, sys\nfrom pathlib import Path\nclass BlockOptional(importlib.abc.MetaPathFinder):\n    def find_spec(self, fullname, path=None, target=None):\n        if fullname.split(".")[0] in ("numpy", "pandas", "pyarrow"):\n            raise AssertionError("optional or analytical dependency imported")\nsys.meta_path.insert(0, BlockOptional())\ndef phase4_step6_view(mode="standard", label="publication-case"):\n    from recursive_integrity_toolkit.reports.assembly import privacy_view\n    from recursive_integrity_toolkit.result import CanonicalReport\n    from recursive_integrity_toolkit.utils.hashing import IdentifierProtection\n\n    payload = {\n        "run": {\n            "run_id": label, "toolkit_version": "0.1.0.dev2", "report_schema_version": "1.1",\n            "started_at": "2026-09-20T00:00:00+00:00", "completed_at": "2026-09-20T00:00:00.500000+00:00",\n            "duration_seconds": 0.5, "python_version": "3.12.14", "platform": "independent-test-platform",\n            "command": "rit validate", "config_hash": "0123456789abcdef" * 4,\n            "random_seed": None, "strict_mode": False, "redacted_mode": False,\n            "network_call_count": 0, "deterministic": True, "privacy_mode": "standard",\n            "run_status": "complete", "null_reasons": {"random_seed": "No stochastic scenario was requested."},\n        },\n        "inputs": {}, "observability": {}, "capabilities": {}, "observed_facts": {},\n        "derived_metrics": {}, "proxy_signals": {}, "simulations": {},\n        "unavailable_conclusions": [], "recommended_next_metadata": [], "warnings": [], "errors": [],\n    }\n    return privacy_view(CanonicalReport.from_dict(payload), mode=mode,\n                        protection=IdentifierProtection.create(secret=b"publication-test-only-key-32byte!"))\nfrom recursive_integrity_toolkit.utils.paths import publish_reports, PublicationResult\nfrom recursive_integrity_toolkit.utils.logging import format_publication_diagnostic\nfrom recursive_integrity_toolkit.utils import paths\nfrom recursive_integrity_toolkit.reports.json_report import render_json\nfrom recursive_integrity_toolkit.reports.markdown_report import render_markdown\nimport recursive_integrity_toolkit as package\nassert not Path(package.__file__).resolve().is_relative_to(Path(sys.argv[2]).resolve())\nwork=Path(sys.argv[1]); source=work/\'input.txt\'; source.write_bytes(b\'PRIVATE_INSTALLED_SOURCE\')\nview=phase4_step6_view(\'redacted\')\nexpected={\'report.json\':render_json(view).encode(), \'report.md\':render_markdown(view).encode()}\ndef deny(*args, **kwargs):\n    raise AssertionError(\'network forbidden\')\nsocket.socket=deny; socket.getaddrinfo=deny\nactual_open=os.open\ndef no_input(path,*args,**kwargs):\n    assert Path(path)!=source\n    return actual_open(path,*args,**kwargs)\nos.open=no_input\ndef no_analysis(frame,event,arg):\n    if event==\'call\':\n        name=frame.f_globals.get(\'__name__\',\'\')\n        assert not name.startswith((\'recursive_integrity_toolkit.io.\',\'recursive_integrity_toolkit.metrics.\',\'recursive_integrity_toolkit.representations.\'))\nsys.setprofile(no_analysis)\ntry:\n    result=publish_reports(view,work/\'out\',input_paths=(source,))\n    assert result==PublicationResult(\'complete\',None,0,(\'report.json\',\'report.md\'))\n    assert publish_reports(view,work/\'out\',input_paths=(source,)).code==\'E_OUTPUT_EXISTS\'\n    actual_publish=paths._output_publish_one\n    def fail_second(src,dst):\n        if dst.name==\'report.md\':raise OSError(\'PRIVATE_INSTALLED_FAILURE\')\n        return actual_publish(src,dst)\n    paths._output_publish_one=fail_second\n    failed=publish_reports(view,work/\'failure\',input_paths=(source,))\n    assert failed.status==\'failed\' and failed.code==\'E_OUTPUT_IO\' and failed.temporary_cleanup_complete\n    assert \'PRIVATE_\' not in format_publication_diagnostic(failed)\nfinally:\n    sys.setprofile(None)\nassert {p.name:p.read_bytes() for p in (work/\'out\').iterdir()}==expected\nassert list((work/\'failure\').iterdir())==[]\nassert source.read_bytes()==b\'PRIVATE_INSTALLED_SOURCE\'\nprint(\'installed Step 6: exact safe JSON/Markdown bytes, no-overwrite, partial failure cleanup, safe diagnostics, unchanged input, blocked network/analysis: PASS\')\n'
         subprocess.run([str(python), "-I", "-c", program, str(work), str(ROOT)], cwd=work, check=True)
 
 
@@ -1135,7 +1144,7 @@ for name in ('provenance_row_coverage','provenance_required_field_coverage','gro
  assert report['observed_facts']['provenance'][name]['value']==1.0
  assert report['observed_facts']['provenance'][name]['scope']['dataset_versions']==['v2']
 assert [report['derived_metrics']['closure_exposure']['direct'][n]['value'] for n in ('lower_bound','upper_bound','interval_width')]==[0.5,0.5,0]
-assert report['capabilities']['lineage']['execution_status']=='deferred'
+assert report['capabilities']['lineage']['execution_status']=='not_requested'
 assert report['capabilities']['dataset_longitudinal']['execution_status']=='partial'
 assert report['simulations']=={} and report['errors']==[]
 assert {'model_performance_decline','causal_ancestor_effect','universal_integrity','universal_collapse_prediction'} <= {x['conclusion'] for x in report['unavailable_conclusions']}

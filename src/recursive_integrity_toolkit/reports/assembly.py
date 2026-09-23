@@ -2,16 +2,16 @@
 
 Owner IDs: PR-012, PR-014, PR-015, PR-016, PR-018; each public field retains its registered owner.
 Theory Map IDs: inherited through the frozen public field registry.
-Inputs: already validated BundleValidationResult and explicitly supplied Phase 3 results.
+Inputs: validated BundleValidationResult and explicitly supplied metric and lineage results.
 Outputs: immutable CanonicalReport and explicitly selected SafeReportView.
 Assumptions: supplied typed results are evidence handoffs, not authenticity certificates.
 Limits: no ingestion, classification, metric execution, graph traversal, simulation,
         filesystem access, rendering or CLI orchestration.
-Current phase status: Phase 4 Step 4 additive privacy views and explicit run metadata.
+Current phase status: Phase 5 Step 7 canonical lineage evidence and privacy views.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from math import isfinite, isclose
 from types import MappingProxyType
 from pathlib import PosixPath, WindowsPath
@@ -25,7 +25,10 @@ from ..models import (
     FileRole, FileFormat, VersionOrderResult, ProvenanceJoinResult, ProvenanceMatch, ProvenanceAssessment,
     ExplicitPairContext, RowMappingEvidence, RowLocation, GenerationValidationResult, RecordStateAssignment, TailSelectionOptions,
 )
-from ..metrics.bounds import DirectClosureExposureBounds
+from ..metrics.bounds import DirectClosureExposureBounds, LineageClosureExposureBounds
+from ..lineage.ancestry import LineageAnalysisResult, SharedAncestryDependence, RootContribution, RecordAncestry, _lineage_input_signature
+from ..lineage.cycles import CycleAnalysis
+from ..lineage.graph import LineageScope, LineageResourceUsage, LineageLimits
 from ..metrics.diversity import DistributionMetrics, StateDistributionResult, SupportComparison, StateFrequency
 from ..metrics.duplicates import ExactDuplicateResult, ExactDuplicateGroup
 from ..metrics.provenance import ProvenanceCompositionResult, DeclaredComposition, WeightedSourceComposition, DirectGroundingBasis, DirectGroundingAssignment
@@ -1066,7 +1069,7 @@ def _inputs(payload, bundle):
         _diagnostics(payload, bundle.generation.messages)
 
 
-def _capabilities(payload, bundle, operations, failures):
+def _capabilities(payload, bundle, operations, failures, lineage=None):
     matrix = {}
     for key in CapabilityKey:
         original = bundle.observability.capabilities[key]
@@ -1081,12 +1084,14 @@ def _capabilities(payload, bundle, operations, failures):
             reasons.append("R_ANALYSIS_NOT_REQUESTED")
         if key is CapabilityKey.DATASET_LONGITUDINAL and completed:
             execution, reasons = "partial", ["R_LONGITUDINAL_FAMILIES_DEFERRED"]
-        if key in (CapabilityKey.LINEAGE, CapabilityKey.MODEL_LONGITUDINAL):
-            execution, reasons = "deferred", ["R_LINEAGE_EXECUTION_DEFERRED" if key is CapabilityKey.LINEAGE else "R_MODEL_ANALYSIS_DEFERRED"]
+        if key is CapabilityKey.MODEL_LONGITUDINAL:
+            execution, reasons = "deferred", ["R_MODEL_ANALYSIS_DEFERRED"]
+        if key is CapabilityKey.LINEAGE and lineage is not None:
+            execution, reasons = lineage.execution_status.value, list(lineage.execution_reason_codes)
         family_codes = [error["code"] for error in payload["errors"] if key.value in error["effect_on_capabilities"]]
-        if family_codes and key not in (CapabilityKey.LINEAGE, CapabilityKey.MODEL_LONGITUDINAL):
+        if family_codes and key is not CapabilityKey.MODEL_LONGITUDINAL and (key is not CapabilityKey.LINEAGE or key.value in failures):
             execution = "partial" if completed else "failed"
-            reasons = list(dict.fromkeys(reasons + family_codes))
+            reasons = list(dict.fromkeys(([] if key is CapabilityKey.LINEAGE else reasons) + family_codes))
         if key is CapabilityKey.INGESTION and any("ingestion" in error["effect_on_capabilities"] for error in payload["errors"]):
             execution = "partial" if bundle.records else "failed"
             reasons = ["R_INPUT_VALIDATION_ERROR"]
@@ -1114,7 +1119,7 @@ def _capabilities(payload, bundle, operations, failures):
     payload["capabilities"] = matrix
     payload["observability"] = {"maximum_level": bundle.observability.maximum_level,
         "level_label": LEVEL_LABELS[bundle.observability.maximum_level], "basis": list(bundle.observability.basis),
-        "limitations": list(dict.fromkeys(bundle.observability.limitations + ("Input eligibility is distinct from executed analysis; Phase 5 lineage remains deferred.",))),
+        "limitations": list(dict.fromkeys(bundle.observability.limitations + ("Input eligibility is distinct from explicitly supplied executed analysis.",))),
         "partial_evidence": list(dict.fromkeys(reason for capability in matrix.values() for reason in capability["reason_codes"])),
         "capabilities": matrix}
 
@@ -1144,9 +1149,196 @@ def _lineage_observations(payload, bundle):
              "all_resolved_edges_follow_order": True}, scope,
             limitations=("This retained earlier-version ordering certificate is not general graph-cycle traversal.",))
     target["cycle_status"] = _envelope("observed_facts.lineage.cycle_status", None, scope,
-        status="unavailable", reasons=("R_GRAPH_EXECUTION_DEFERRED",), required=("Phase_5_graph_analysis",),
-        limitations=("No general graph-cycle traversal executes in Phase 4.",))
+        status="unavailable", reasons=("R_ANALYSIS_NOT_REQUESTED",), required=("explicit_lineage_result",),
+        limitations=("No executed graph-cycle result was supplied to this report.",))
     payload["observed_facts"]["lineage"] = target
+
+
+def _lineage_scope(value, bundle):
+    """Bind population identities without rerunning the graph or mathematical owners."""
+    _typed(value, LineageScope, "lineage scope")
+    LineageScope(**{field.name: getattr(value, field.name) for field in fields(LineageScope)})
+    loaded = tuple(sorted(row.record_key for row in bundle.records))
+    target = tuple(key for key in loaded if key.dataset_version == value.target_dataset_version)
+    primary = {row.record_key.dataset_version for row in bundle.records
+               if row.location.file_role is FileRole.RECORDS_PRIMARY}
+    _require(not primary or primary == {value.target_dataset_version},
+             "lineage target differs from the validated primary version")
+    _require(primary or not any(row.record_key.dataset_version == value.target_dataset_version and
+             row.location.file_role is FileRole.RECORDS_COMPARE for row in bundle.records),
+             "loaded comparison context cannot become a lineage target")
+    _require(value.target_dataset_version is not None or not bundle.records or
+             any(row.location.file_role is not None for row in bundle.records),
+             "unassigned loaded records require an explicit lineage target version")
+    _require(value.target_record_keys == target and value.loaded_record_count == len(loaded)
+             and value.loaded_dataset_versions == tuple(sorted({key.dataset_version for key in loaded})),
+             "lineage scope differs from the validated target or loaded context")
+    _require(value.target_dataset_version is None or value.target_dataset_version in
+             set(value.loaded_dataset_versions) | set(bundle.version_order.order),
+             "lineage target version was not declared by the validated bundle")
+    return {"dataset_versions": [] if value.target_dataset_version is None else [value.target_dataset_version],
+            "record_count": value.target_record_count, "excluded_record_count": 0,
+            "denominator_basis": "all_valid_records_in_selected_dataset_scope", "scope_id": "lineage_target",
+            "included_record_keys": [_key(key) for key in value.target_record_keys], "excluded_record_keys": []}
+
+
+def _lineage_detail(items, total=None):
+    """Limit presentation only; values and rank were computed by the owner."""
+    total = len(items) if total is None else total
+    shown = list(items[:100])
+    omitted = total - len(shown)
+    return {"items": shown, "total_count": total, "returned_count": len(shown),
+            "omitted_count": omitted, "limit": 100,
+            "detail_status": "truncated" if omitted else "complete",
+            "omission_reasons": ["diagnostic_limit"] if omitted else []}
+
+
+def _lineage_usage(value):
+    _typed(value, LineageResourceUsage, "lineage resource usage")
+    LineageResourceUsage(**{field.name: getattr(value, field.name) for field in fields(LineageResourceUsage)})
+    result = {field.name: getattr(value, field.name) for field in fields(LineageResourceUsage)}
+    result["limits"] = {field.name: getattr(value.limits, field.name) for field in fields(LineageLimits)}
+    return result
+
+
+def _lineage_result(payload, value, bundle, bounds, proxy):
+    """Serialize supplied owner results; no graph traversal or formula evaluation."""
+    _typed(value, LineageAnalysisResult, "lineage analysis")
+    _require(value.input_signature == _lineage_input_signature(bundle),
+             "lineage result was computed from different retained input evidence")
+    scope = _lineage_scope(value.scope, bundle)
+    _typed(value.cycles, CycleAnalysis, "lineage cycle result")
+    _require(value.cycles.scope == value.scope and
+             set(value.cycles.depths_by_record) == {row.record_key for row in bundle.records},
+             "lineage cycle observations differ from the validated loaded identities")
+    _require(value.records is None or type(value.records) is tuple and
+             all(type(record) is RecordAncestry for record in value.records) and
+             tuple(record.record_key for record in value.records) == value.scope.target_record_keys,
+             "lineage records differ from the selected target population")
+    _require(value.root_contributions is None or type(value.root_contributions) is tuple and
+             all(type(item) is RootContribution for item in value.root_contributions),
+             "root contributions require immutable typed rows")
+    total = value.scope.target_record_count
+    coverage = value.resolved_lineage_coverage
+    aborted = value.records is None
+    root_reasons = ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",) if aborted else ("UNRESOLVED_ANCESTRY",) if value.unresolved_record_count else ()
+    assumptions = ("theory_guided_operationalization", "Only explicit supplied parent and grounding evidence defines ancestry.")
+    limitations = ("Root allocation describes supplied topology and does not establish causal contribution or source independence.",)
+    graph_scope = _bundle_scope(bundle)
+    observed = {}
+    graph_value = {field.name: getattr(value.scope, field.name) for field in fields(LineageScope)
+                   if field.name != "target_record_keys"}
+    graph_value["loaded_dataset_versions"] = list(graph_value["loaded_dataset_versions"])
+    observed["graph_scope"] = _envelope("observed_facts.lineage.graph_scope", graph_value,
+        graph_scope, denominator=value.scope.loaded_record_count,
+        limitations=("Context supplies ancestry evidence without entering target denominators.",))
+    cycles = value.cycles
+    components = [{"component_index": item.component_index, "member_count": item.member_count,
+                   "target_member_count": item.target_member_count,
+                   "witness_record_keys": None if item.witness_record_keys is None else [_key(key) for key in item.witness_record_keys],
+                   "witness_edge_count": item.witness_edge_count, "witness_reason": item.witness_reason}
+                  for item in cycles.component_details]
+    cycle_value = {name: getattr(cycles, name) for name in (
+        "detected", "cycle_count", "counting_method", "cycle_member_count", "target_cycle_member_count",
+        "affected_record_count", "target_affected_record_count")}
+    cycle_value.update({"components": _lineage_detail(components, cycles.cycle_count),
+        "cycle_member_record_keys": _lineage_detail([_key(key) for key in cycles.cycle_member_record_keys[:100]], cycles.cycle_member_count),
+        "affected_record_keys": _lineage_detail([_key(key) for key in cycles.affected_record_keys[:100]], cycles.affected_record_count)})
+    cycle_limits = ("Engineering graph-validity observation over accepted edges and explicit self references.",
+                    "An acyclic accepted subgraph does not certify rejected parent declarations.")
+    cycle_reasons = tuple(sorted({message.code for message in cycles.messages
+                                 if message.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)}))
+    for name, result in (("cycle_analysis", cycle_value), ("cycle_status", cycles.cycle_status)):
+        observed[name] = _envelope("observed_facts.lineage." + name, result, graph_scope,
+            status="partial" if cycle_reasons else "available", reasons=cycle_reasons,
+            assumptions=(cycles.cycle_status_scope,), limitations=cycle_limits)
+    observed["depth_summary"] = _envelope("observed_facts.lineage.depth_summary", {
+        "depth_resolved_record_count": value.depth_resolved_record_count,
+        "maximum_resolved_target_depth": value.maximum_resolved_target_depth,
+        "target_record_count": total}, scope, denominator=total,
+        limitations=("Resolved structural depth does not establish resolved external ancestry.",))
+    unresolved = []
+    for record in value.records or ():
+        if record.classification == "unresolved":
+            unresolved.append({"record_key": _key(record.record_key), "reason_codes": list(record.reason_codes)})
+            if len(unresolved) == 100:
+                break
+    observed["unresolved_record_details"] = _envelope("observed_facts.lineage.unresolved_record_details",
+        None if aborted else _lineage_detail(unresolved, value.unresolved_record_count), scope, denominator=total, coverage=coverage,
+        status="unavailable" if aborted else "available", reasons=root_reasons if aborted else (),
+        required=("completed_target_partition",) if aborted else ())
+    observed["resource_usage"] = _envelope("observed_facts.lineage.resource_usage", _lineage_usage(value.resource_usage),
+        graph_scope, limitations=("Defined admission and root-work units do not measure peak memory or scientific thresholds.",))
+    for name, count in (("declared_parent_edge_count", value.declared_parent_reference_count),
+                        ("resolved_parent_edge_count", value.resolved_parent_reference_count),
+                        ("unresolved_parent_edge_count", value.unresolved_parent_reference_count)):
+        observed[name] = _envelope("observed_facts.lineage." + name, count, scope,
+            denominator=value.declared_parent_reference_count, coverage=value.resolved_parent_edge_coverage,
+            status="unavailable" if count is None else "available", reasons=value.reference_coverage_reason_codes,
+            required=("countable_original_parent_references",) if count is None else (),
+            limitations=("Counts preserve original target reference multiplicity; graph adjacency deduplicates canonical edges.",))
+    payload["observed_facts"]["lineage"] = observed
+    metrics = {}
+    for name in ("grounded_record_count", "closed_record_count", "unresolved_record_count", "records_with_resolved_external_ancestry"):
+        metrics[name] = _envelope("derived_metrics.lineage." + name, getattr(value, name), scope,
+            denominator=total, coverage=coverage, status="unavailable" if aborted else "available",
+            reasons=root_reasons if aborted else (), required=("completed_target_partition",) if aborted else (),
+            assumptions=assumptions, limitations=limitations)
+    for name in ("resolved_lineage_coverage", "external_ancestry_coverage"):
+        number = getattr(value, name)
+        metrics[name] = _envelope("derived_metrics.lineage." + name, number, scope,
+            denominator=total, coverage=coverage, status="unavailable" if number is None else "available",
+            reasons=value.ancestry_coverage_reason_codes, required=("nonempty_completed_target_partition",) if number is None else (),
+            assumptions=assumptions, limitations=limitations)
+    metrics["resolved_parent_edge_coverage"] = _envelope("derived_metrics.lineage.resolved_parent_edge_coverage",
+        value.resolved_parent_edge_coverage, scope, denominator=value.declared_parent_reference_count,
+        coverage=value.resolved_parent_edge_coverage, status="unavailable" if value.resolved_parent_edge_coverage is None else "available",
+        reasons=value.reference_coverage_reason_codes,
+        required=("countable_original_parent_references",) if value.resolved_parent_edge_coverage is None else (),
+        limitations=("Identity resolution coverage remains distinct from accepted graph edges and complete ancestry.",))
+    metrics["resolved_parent_edge_coverage"]["no_declared_parents"] = value.no_declared_parents
+    roots = None if aborted else [{field.name: _key(item.record_key) if field.name == "record_key" else getattr(item, field.name)
+                                  for field in fields(RootContribution)} for item in value.root_contributions[:100]]
+    for name, result in (("distinct_external_root_count", value.distinct_external_root_count),
+                         ("top_shared_ancestors", None if aborted else _lineage_detail(roots, len(value.root_contributions)))):
+        metrics[name] = _envelope("derived_metrics.lineage." + name, result, scope, denominator=total,
+            coverage=value.external_ancestry_coverage, status=value.root_metrics_status.value,
+            reasons=root_reasons, required=("completed_root_resolution",) if aborted else (),
+            assumptions=assumptions, limitations=limitations)
+    for name in ("ancestry_concentration_hhi", "effective_external_root_count"):
+        metrics[name] = _envelope("derived_metrics.lineage." + name, getattr(value, name), scope,
+            denominator=value.grounded_record_count, coverage=value.external_ancestry_coverage,
+            status=value.concentration_status.value, reasons=value.concentration_reason_codes or root_reasons,
+            required=("nonempty_resolved_external_root_population",) if getattr(value, name) is None else (),
+            assumptions=assumptions, limitations=limitations + ("Concentration uses the complete grounded subset and is computed before detail limits.",))
+    metrics["lineage_depth"] = _envelope("derived_metrics.lineage.lineage_depth", value.lineage_depth, scope,
+        denominator=total, status="unavailable" if value.lineage_depth is None else "available",
+        reasons=cycles.depth_reason_codes, required=("complete_target_structural_depth",) if value.lineage_depth is None else (),
+        limitations=("Whole-target depth is unavailable when any required structural path is unresolved.",))
+    payload["derived_metrics"]["lineage"] = metrics
+    if bounds is not None:
+        _typed(bounds, LineageClosureExposureBounds, "lineage bounds")
+        _require(bounds.source == value, "lineage bounds source differs from the supplied lineage analysis")
+        target = {}
+        for name in ("lower_bound", "upper_bound", "interval_width"):
+            target[name] = _envelope("derived_metrics.closure_exposure.lineage." + name, getattr(bounds, name), scope,
+                denominator=bounds.denominator, coverage=coverage, status=bounds.status.value,
+                reasons=bounds.reason_codes, required=("nonempty_completed_target_partition",) if bounds.reason_codes else (),
+                assumptions=(bounds.operationalization_label,), limitations=bounds.limitations)
+        payload["derived_metrics"].setdefault("closure_exposure", {})["lineage"] = target
+    if proxy is not None:
+        _typed(proxy, SharedAncestryDependence, "shared ancestry proxy")
+        _require(proxy.source == value, "shared ancestry source differs from the supplied lineage analysis")
+        signal = _base("proxy_signals.shared_ancestry_dependence", scope, denominator=total, coverage=coverage,
+            status=proxy.status.value, reasons=proxy.reason_codes,
+            required=("complete_ancestry_or_shared_root_witness",) if proxy.status.value == "unavailable" else (),
+            assumptions=(proxy.operationalization_label,), limitations=proxy.limitations)
+        signal.update({"signal": "shared_ancestry_dependence", "level": proxy.level,
+            "basis_fields": ["derived_metrics.lineage.top_shared_ancestors", "derived_metrics.lineage.resolved_lineage_coverage",
+                             "derived_metrics.lineage.external_ancestry_coverage"],
+            "trigger_rule": "Present when a complete external root supports at least two targets; absence requires complete target ancestry."})
+        payload["proxy_signals"]["shared_ancestry_dependence"] = signal
+    _diagnostics(payload, value.messages, "lineage")
 
 
 def _bundle_check(bundle):
@@ -1223,6 +1415,9 @@ def assemble_report(bundle: BundleValidationResult, *, run: dict,
                     tail: TailSelectionResult | None = None,
                     comparison: SupportComparison | None = None,
                     closure: DirectClosureExposureBounds | None = None,
+                    lineage: LineageAnalysisResult | None = None,
+                    lineage_bounds: LineageClosureExposureBounds | None = None,
+                    shared_ancestry: SharedAncestryDependence | None = None,
                     expected_diversity: ExpectedDiversityResult | None = None,
                     resampling: ResamplingSimulation | None = None,
                     extinction: tuple[ExtinctionProbabilityResult, ...] = (),
@@ -1243,6 +1438,8 @@ def assemble_report(bundle: BundleValidationResult, *, run: dict,
     _require(set(bundle.observability.capabilities) == set(CapabilityKey), "bundle capability matrix is incomplete")
     _require(type(distributions) is tuple and type(extinction) is tuple and type(family_errors) is tuple, "explicit result collections require immutable tuples")
     _require(expected_diversity is None or resampling is None, "one closed-resampling report slot cannot hold two different method results")
+    _require(lineage is not None or lineage_bounds is None and shared_ancestry is None,
+             "lineage derivatives require their explicit source lineage result")
     payload = {key: {} if index < 8 else [] for index, key in enumerate(SECTION_ORDER)}
     payload["run"] = dict(run)
     _inputs(payload, bundle)
@@ -1254,6 +1451,8 @@ def assemble_report(bundle: BundleValidationResult, *, run: dict,
         FamilyFailure(failure.capability, failure.messages)
         failures.setdefault(failure.capability.value, []).extend(failure.messages)
         _diagnostics(payload, failure.messages, failure.capability.value)
+    _require(lineage is None or "lineage" not in failures,
+             "a supplied lineage result cannot also have a separate lineage family failure")
     empirical_representations = []
     for supplied in distributions:
         if type(supplied) is StateDistributionResult:
@@ -1305,8 +1504,20 @@ def assemble_report(bundle: BundleValidationResult, *, run: dict,
         payload["inputs"]["representation"] = _representation(empirical_representations[0])
     elif empirical_representations:
         payload["inputs"]["limitations"].append("Supplied calculation families use multiple explicit representations; inspect each result envelope.")
-    _lineage_observations(payload, bundle)
-    _capabilities(payload, bundle, operations, failures)
+    if lineage is None:
+        _lineage_observations(payload, bundle)
+        if "lineage" in failures:
+            payload["observed_facts"]["lineage"]["cycle_status"]["reason_codes"] = ["R_LINEAGE_EXECUTION_FAILED"]
+    else:
+        _lineage_result(payload, lineage, bundle, lineage_bounds, shared_ancestry)
+        operations["lineage"].append("supplied_lineage_graph_and_depth")
+        if lineage.records is not None:
+            operations["lineage"].append("supplied_lineage_roots_and_concentration")
+        if lineage_bounds is not None:
+            operations["lineage"].append("supplied_lineage_closure_interval")
+        if shared_ancestry is not None:
+            operations["lineage"].append("supplied_shared_ancestry_proxy")
+    _capabilities(payload, bundle, operations, failures, lineage)
     if payload["errors"]:
         payload["run"]["run_status"] = "failed" if any(error["severity"] == "fatal" for error in payload["errors"]) else "partial" if bundle.records or distributions or payload["simulations"] else "failed"
         for error in payload["errors"]:
@@ -1428,7 +1639,6 @@ def _disclosures(payload):
              "This signal reports unresolved supplied provenance evidence and does not estimate factual truth or source independence.",
              "A not_present signal is limited to the cited fields and does not certify universal integrity."],
         )
-    # No shared_ancestry_dependence proxy: P4-D01 prohibits Phase 4 ancestry inference.
     _disclosure_unavailable(
         payload, "model_performance_decline", "PR-014", "model_longitudinal",
         "The supplied audit evidence cannot establish model-performance decline.",
@@ -1439,8 +1649,8 @@ def _disclosures(payload):
     _disclosure_unavailable(
         payload, "causal_ancestor_effect", "T4", "lineage",
         "A causal effect of an ancestor is unavailable.",
-        ["R_CAUSAL_EVIDENCE_MISSING", "R_LINEAGE_EXECUTION_DEFERRED"],
-        ["Phase 4 does not compute ancestry; topology alone would not identify a causal contribution."],
+        ["R_CAUSAL_EVIDENCE_MISSING"],
+        ["Supplied parent topology and fractional root allocation do not identify a causal contribution."],
         ["An identified ancestor, measured outcomes and a controlled or otherwise justified causal design."],
         "Parent declarations and graph topology do not establish causal effects.",
     )
@@ -1476,20 +1686,31 @@ def _disclosures(payload):
         )
     lineage = payload["capabilities"].get("lineage")
     if lineage is not None:
-        reasons = ["R_LINEAGE_EXECUTION_DEFERRED"]
-        if lineage["status"] != "available":
-            reasons.extend(reason for reason in lineage["reason_codes"] if reason not in reasons)
-        for name, owner, statement in (
-            ("lineage_analysis", "PR-014", "General lineage graph analysis is deferred to Phase 5."),
-            ("lineage_closure_exposure", "T3", "Lineage closure exposure is deferred to Phase 5."),
-            ("external_ancestry", "T4", "External ancestry results are deferred to Phase 5."),
-        ):
-            _disclosure_unavailable(
-                payload, name, owner, "lineage", statement, list(reasons),
-                ["Only existing reference validation observations can be reported; no graph traversal, root tracing or ancestry metric executes."],
-                ["Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."],
-                "Implementation is deferred even when the existing input classifier marks lineage available.",
-            )
+        if lineage["execution_status"] in ("not_requested", "failed"):
+            _disclosure_unavailable(payload, "lineage_analysis", "PR-014", "lineage",
+                "A completed whole-target lineage analysis is unavailable in this report.",
+                list(lineage["execution_reason_codes"]),
+                ["No complete successful lineage execution was supplied; independently completed observations remain visible."],
+                ["Supply an explicit lineage result for the validated target and its loaded context."],
+                "Input eligibility alone does not establish executed ancestry analysis.")
+        lineage_metrics = derived.get("lineage", {})
+        coverage = lineage_metrics.get("resolved_lineage_coverage", {})
+        if coverage.get("value") is None or coverage["value"] < 1:
+            _disclosure_unavailable(payload, "external_ancestry", "T4", "lineage",
+                "Complete external ancestry for every target is unavailable.",
+                list(coverage.get("reason_codes") or lineage["execution_reason_codes"] or ["UNRESOLVED_ANCESTRY"]),
+                ["Missing, invalid or unknown ancestry remains unresolved; any complete subset retains its reported coverage."],
+                ["Complete the required parent references, chronology and external-grounding evidence."],
+                "Partial ancestry cannot be promoted to whole-target completeness.")
+        lineage_interval = derived.get("closure_exposure", {}).get("lineage", {})
+        lower = lineage_interval.get("lower_bound")
+        if lower is None or lower["status"] == "unavailable":
+            _disclosure_unavailable(payload, "lineage_closure_exposure", "T3", "lineage",
+                "A lineage closure interval is unavailable in this report.",
+                list(lower["reason_codes"] if lower is not None else ["R_ANALYSIS_NOT_REQUESTED"]),
+                ["No available explicitly supplied lineage interval covers a nonempty completed target partition."],
+                ["Supply lineage closure bounds from the same explicit lineage result."],
+                "Unavailable intervals are never replaced by a guessed numeric value.")
     if payload["simulations"]:
         _disclosure_unavailable(
             payload, "empirical_intervention_effect", "T5", "intervention_simulation",
@@ -1530,7 +1751,7 @@ def _disclosures(payload):
                               "The supplied capability assessment identifies missing chronology.")
     if lineage is not None and any(reason in lineage["reason_codes"] for reason in ("R_PARENT_UNRESOLVED", "R_PARENT_AMBIGUOUS", "R_PARENT_DECLARATION_MISSING", "R_PARENT_INVALID")):
         _disclosure_recommend(payload, 3, "composite_parent_references", "records with unresolved or invalid parent declarations",
-                              ["more complete immediate-parent validation; future Phase 5 analysis remains deferred"],
+                              ["more complete parent validation and explicitly requested ancestry coverage"],
                               "The existing classifier identifies incomplete or invalid parent evidence.")
     _disclosure_recommend(payload, 4, "versioned_model_outcomes", "models and comparable evaluation conditions",
                           ["evidence needed by a future model-longitudinal implementation"],
@@ -1541,6 +1762,76 @@ def _disclosures(payload):
 # capability owners. Unknown caller prose never becomes trusted by a prefix,
 # regular expression, or similarity to one of these reviewed literal strings.
 _PRIVACY_SAFE_TEXT = frozenset((
+    'R_LINEAGE_EXECUTION_FAILED',
+    'Input eligibility is distinct from explicitly supplied executed analysis.',
+    'No executed graph-cycle result was supplied to this report.',
+    'explicit_lineage_result',
+    'A completed whole-target lineage analysis is unavailable in this report.',
+    'No complete successful lineage execution was supplied; independently completed observations remain visible.',
+    'Supply an explicit lineage result for the validated target and its loaded context.',
+    'Input eligibility alone does not establish executed ancestry analysis.',
+    'Complete external ancestry for every target is unavailable.',
+    'Missing, invalid or unknown ancestry remains unresolved; any complete subset retains its reported coverage.',
+    'Complete the required parent references, chronology and external-grounding evidence.',
+    'Partial ancestry cannot be promoted to whole-target completeness.',
+    'A lineage closure interval is unavailable in this report.',
+    'No available explicitly supplied lineage interval covers a nonempty completed target partition.',
+    'Supply lineage closure bounds from the same explicit lineage result.',
+    'Unavailable intervals are never replaced by a guessed numeric value.',
+    'more complete parent validation and explicitly requested ancestry coverage',
+    'Supplied parent topology and fractional root allocation do not identify a causal contribution.',
+    'supplied_lineage_graph_and_depth',
+    'supplied_lineage_roots_and_concentration',
+    'supplied_lineage_closure_interval',
+    'supplied_shared_ancestry_proxy',
+    'Only explicit supplied parent and grounding evidence defines ancestry.',
+    'Root allocation describes supplied topology and does not establish causal contribution or source independence.',
+    'Context supplies ancestry evidence without entering target denominators.',
+    'Engineering graph-validity observation over accepted edges and explicit self references.',
+    'An acyclic accepted subgraph does not certify rejected parent declarations.',
+    'Resolved structural depth does not establish resolved external ancestry.',
+    'Defined admission and root-work units do not measure peak memory or scientific thresholds.',
+    'Counts preserve original target reference multiplicity; graph adjacency deduplicates canonical edges.',
+    'Identity resolution coverage remains distinct from accepted graph edges and complete ancestry.',
+    'Concentration uses the complete grounded subset and is computed before detail limits.',
+    'Whole-target depth is unavailable when any required structural path is unresolved.',
+    'Present when a complete external root supports at least two targets; absence requires complete target ancestry.',
+    'completed_target_partition',
+    'countable_original_parent_references',
+    'nonempty_completed_target_partition',
+    'completed_root_resolution',
+    'nonempty_resolved_external_root_population',
+    'complete_target_structural_depth',
+    'complete_ancestry_or_shared_root_witness',
+    'accepted_edges_and_explicit_self_references',
+    'theory_guided_operationalization',
+    'INCOMPLETE_TARGET_DEPTH',
+    'MISSING_PROVENANCE',
+    'MISSING_REQUIRED_PROVENANCE',
+    'UNKNOWN_GROUNDING',
+    'PARENT_DECLARATION_UNAVAILABLE',
+    'INVALID_PARENT_REFERENCE',
+    'UNRESOLVED_PARENT_REFERENCE',
+    'VERSION_ORDER_UNAVAILABLE',
+    'CYCLE_AFFECTED',
+    'INCOMPLETE_PARENT_ANCESTRY',
+    'INCOMPLETE_PARENT_DEPTH',
+    'GROUNDED_PARENT_RULE_UNSUPPORTED',
+    'INVALID_LINEAGE_INPUT',
+    'UNRESOLVED_ANCESTRY',
+    'LINEAGE_RESOURCE_LIMIT_EXCEEDED',
+    'E_LINEAGE_RESOURCE_LIMIT_EXCEEDED',
+    'EMPTY_TARGET_SCOPE',
+    'PARENT_REFERENCE_COUNT_UNAVAILABLE',
+    'NO_RESOLVED_EXTERNAL_ROOTS',
+    'root_contributions.incidence_count',
+    'resolved_lineage_coverage',
+    'external_ancestry_coverage',
+    'Descriptive shared-root topology under supplied metadata; no calibrated risk level.',
+    'Does not establish causal contribution, semantic error, independent information, biological relatedness, universal integrity or collapse.',
+    'Lineage exposure is relative to the audited loop and supplied metadata.',
+    'Unresolved ancestry remains in the conservative interval; availability does not certify input validity.',
+    'No midpoint, calibrated risk threshold or causal claim.',
     'earlier_positive_mass_support_in_harmonized_representation',
     'explicit_version_order',
     'identifier_secret_file_path',
@@ -2657,6 +2948,20 @@ def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection,
     if "const" in contract or "enum" in contract or value is None or type(value) in (int, float, bool):
         return value
     if type(value) is dict:
+        # Lineage detail collections contain identities in several required row
+        # shapes. Omit the collection as a whole, retaining presentation counts,
+        # rather than making individual rows invalid by deleting identity keys.
+        if record_id_mode == "omit" and set(value) == {
+                "items", "total_count", "returned_count", "omitted_count",
+                "limit", "detail_status", "omission_reasons"}:
+            reasons = list(value["omission_reasons"])
+            if "redacted_identity_details" not in reasons:
+                reasons.append("redacted_identity_details")
+            omissions.append(("field", ".".join(path), ""))
+            return {"items": None, "total_count": value["total_count"],
+                    "returned_count": 0, "omitted_count": value["total_count"],
+                    "limit": value["limit"], "detail_status": "omitted",
+                    "omission_reasons": reasons}
         if set(value) == {"dataset_version", "record_id"}:
             return {"dataset_version": _privacy_alias(protection, "dataset_version", value["dataset_version"]) if mode == "redacted" else value["dataset_version"],
                     "record_id": _privacy_alias(protection, "record_id", [value["dataset_version"], value["record_id"]]) if record_id_mode == "hash" else value["record_id"]}
@@ -2700,7 +3005,8 @@ def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection,
     if type(value) is list:
         return [_privacy_value(item, contract.get("items", {}), schema, mode=mode,
             record_id_mode=record_id_mode, protection=protection, path=path, omissions=omissions) for item in value]
-    version_fields = ("dataset_version", "dataset_versions", "version_order", "earlier_version", "later_version")
+    version_fields = ("dataset_version", "dataset_versions", "version_order", "earlier_version", "later_version",
+                      "target_dataset_version", "loaded_dataset_versions")
     state_fields = ("state_id", "state_ids", "missing_state_id", "state_order", "source_state", "source_states", "target_state",
                     "original_earlier_support", "original_later_support", "harmonized_earlier_support", "harmonized_later_support", "support")
     identity_fields = ("run_id", "scope_id", "group_id", "representation_name", "representation_source", "representation_version",
@@ -2839,7 +3145,7 @@ def build_run_metadata(*, options, run_id: str, operation="python_api", started_
     if type(run_id) is not str or not run_id or "\x00" in run_id:
         raise ValueError("run identifier must be nonempty literal text")
     command = None if operation == "python_api" else "rit " + operation + (" --strict" if options.strict_mode else "") + (" --redacted" if options.privacy_mode == "redacted" else "")
-    result = {"run_id": run_id, "toolkit_version": __version__, "report_schema_version": "1.0",
+    result = {"run_id": run_id, "toolkit_version": __version__, "report_schema_version": "1.1",
               "started_at": started_at, "completed_at": completed_at, "duration_seconds": duration_seconds,
               "python_version": python_version, "platform": platform, "command": command,
               "config_hash": phase4_config_hash(options), "random_seed": random_seed,

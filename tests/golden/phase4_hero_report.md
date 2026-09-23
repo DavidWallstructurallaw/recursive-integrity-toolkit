@@ -4,7 +4,7 @@
 
 - Run ID: `"phase4-step9-golden"`.
 - Maximum observability level: 4; `"longitudinal_dataset_observability"`.
-- Capability statuses: Ingestion: `"available"` (execution `"completed"`); Content diagnostics: `"available"` (execution `"completed"`); Provenance: `"available"` (execution `"completed"`); Lineage: `"available"` (execution `"deferred"`); Dataset longitudinal: `"available"` (execution `"partial"`); Model longitudinal: `"unavailable"` (execution `"deferred"`); Intervention simulation: `"unavailable"` (execution `"not_requested"`).
+- Capability statuses: Ingestion: `"available"` (execution `"completed"`); Content diagnostics: `"available"` (execution `"completed"`); Provenance: `"available"` (execution `"completed"`); Lineage: `"available"` (execution `"not_requested"`); Dataset longitudinal: `"available"` (execution `"partial"`); Model longitudinal: `"unavailable"` (execution `"deferred"`); Intervention simulation: `"unavailable"` (execution `"not_requested"`).
 - Record scope: `"validated_bundle"`; dataset versions `["v1", "v2"]`; records 16; excluded records 0.
 - Representation: `"topic"`; source `"topic_field"`; version `"hero-topic-v1"`. Complete mapping metadata appears in Input inventory.
 - Warning entries: 0; error entries: 0.
@@ -37,7 +37,7 @@ Quoted code literals represent supplied data, including identifiers and labels. 
 | `["python_version"]` | Unavailable (null): `"private_or_nonstandard_metadata_omitted"` |
 | `["random_seed"]` | Unavailable (null): `"not_recorded"` |
 | `["redacted_mode"]` | false |
-| `["report_schema_version"]` | `"1.0"` |
+| `["report_schema_version"]` | `"1.1"` |
 | `["resolved_options"]["comparison_requested"]` | true |
 | `["resolved_options"]["privacy_mode"]` | `"standard"` |
 | `["resolved_options"]["record_id_mode"]` | `"preserve"` |
@@ -49,7 +49,7 @@ Quoted code literals represent supplied data, including identifiers and labels. 
 | `["run_status"]` | `"complete"` |
 | `["started_at"]` | `"2000-01-01T00:00:00+00:00"` |
 | `["strict_mode"]` | false |
-| `["toolkit_version"]` | `"0.1.0.dev2"` |
+| `["toolkit_version"]` | `"0.1.0.dev3"` |
 
 **`["identifier_protection"]["limitations"]`**
 
@@ -194,7 +194,7 @@ Quoted code literals represent supplied data, including identifiers and labels. 
 
 - `"R_MODEL_EVIDENCE_MISSING"`
 - `"R_SCENARIO_NOT_CONFIGURED"`
-- `"Input eligibility is distinct from executed analysis; Phase 5 lineage remains deferred."`
+- `"Input eligibility is distinct from explicitly supplied executed analysis."`
 
 The equal observability.capabilities compatibility mirror is represented once in the Capability matrix section.
 
@@ -205,7 +205,7 @@ The equal observability.capabilities compatibility mirror is represented once in
 | Ingestion | `"available"` | 1.0 | `[]` | `"completed"` | `[]` |
 | Content diagnostics | `"available"` | 1.0 | `[]` | `"completed"` | `[]` |
 | Provenance | `"available"` | 1.0 | `[]` | `"completed"` | `[]` |
-| Lineage | `"available"` | 1.0 | `[]` | `"deferred"` | `["R_LINEAGE_EXECUTION_DEFERRED"]` |
+| Lineage | `"available"` | 1.0 | `[]` | `"not_requested"` | `["R_ANALYSIS_NOT_REQUESTED"]` |
 | Dataset longitudinal | `"available"` | 1.0 | `[]` | `"partial"` | `["R_LONGITUDINAL_FAMILIES_DEFERRED"]` |
 | Model longitudinal | `"unavailable"` | Unavailable (null): `"coverage_not_supplied_or_empty_denominator"` | `["R_MODEL_EVIDENCE_MISSING"]` | `"deferred"` | `["R_MODEL_ANALYSIS_DEFERRED"]` |
 | Intervention simulation | `"unavailable"` | Unavailable (null): `"coverage_not_supplied_or_empty_denominator"` | `["R_SCENARIO_NOT_CONFIGURED"]` | `"not_requested"` | `["R_ANALYSIS_NOT_REQUESTED"]` |
@@ -324,7 +324,7 @@ Coverage details and unresolved counts, when supplied, follow below. Related dia
 
 Status: `"unavailable"`; evidence class: `"observed_fact"`; unit: `"status"`; method: `"T6.graph_cycle_check"`.
 
-Value: Unavailable (null): reason codes `["R_GRAPH_EXECUTION_DEFERRED"]`.
+Value: Unavailable (null): reason codes `["R_ANALYSIS_NOT_REQUESTED"]`.
 
 Denominator: Unavailable (null): `"denominator_not_applicable_or_unavailable"`; coverage (ratio): Unavailable (null): `"coverage_not_supplied_for_this_result"`.
 
@@ -338,9 +338,9 @@ Denominator: Unavailable (null): `"denominator_not_applicable_or_unavailable"`; 
 | `["evidence_class"]` | `"observed_fact"` |
 | `["method_id"]` | `"T6.graph_cycle_check"` |
 | `["owner_ids"]` | `["T6"]` |
-| `["reason_codes"]` | `["R_GRAPH_EXECUTION_DEFERRED"]` |
+| `["reason_codes"]` | `["R_ANALYSIS_NOT_REQUESTED"]` |
 | `["representation"]` | Unavailable (null): No applicable representation supplied; consult status and required evidence. |
-| `["required_evidence"]` | `["Phase_5_graph_analysis"]` |
+| `["required_evidence"]` | `["explicit_lineage_result"]` |
 | `["scope"]["dataset_versions"]` | `["v1", "v2"]` |
 | `["scope"]["denominator_basis"]` | `"all_validated_bundle_records"` |
 | `["scope"]["excluded_record_count"]` | 0 |
@@ -351,11 +351,11 @@ Denominator: Unavailable (null): `"denominator_not_applicable_or_unavailable"`; 
 | `["theory_map_ids"]` | `[]` |
 | `["trace_ids"]` | `["T6"]` |
 | `["unit"]` | `"status"` |
-| `["value"]` | Unavailable (null): reason codes `["R_GRAPH_EXECUTION_DEFERRED"]` |
+| `["value"]` | Unavailable (null): reason codes `["R_ANALYSIS_NOT_REQUESTED"]` |
 
 **`["limitations"]`**
 
-- `"No general graph-cycle traversal executes in Phase 4."`
+- `"No executed graph-cycle result was supplied to this report."`
 
 **`["scope"]["included_record_keys"]`**
 
@@ -3764,7 +3764,7 @@ Denominator: Unavailable (null): `"This conclusion has no scalar denominator."`;
 | Field | Value |
 |---|---|
 | `["assumptions"]` | `[]` |
-| `["blocking_evidence"]` | `["Phase 4 does not compute ancestry; topology alone would not identify a causal contribution."]` |
+| `["blocking_evidence"]` | `["Supplied parent topology and fractional root allocation do not identify a causal contribution."]` |
 | `["conclusion"]` | `"causal_ancestor_effect"` |
 | `["coverage"]` | Unavailable (null): `"This conclusion has no measured evidence coverage."` |
 | `["coverage_reason"]` | `"This conclusion has no measured evidence coverage."` |
@@ -3773,7 +3773,7 @@ Denominator: Unavailable (null): `"This conclusion has no scalar denominator."`;
 | `["evidence_class"]` | `"unavailable_conclusion"` |
 | `["method_id"]` | `"T4.unavailable_conclusion"` |
 | `["owner_ids"]` | `["T4"]` |
-| `["reason_codes"]` | `["R_CAUSAL_EVIDENCE_MISSING", "R_LINEAGE_EXECUTION_DEFERRED"]` |
+| `["reason_codes"]` | `["R_CAUSAL_EVIDENCE_MISSING"]` |
 | `["related_capability"]` | `"lineage"` |
 | `["representation"]` | Unavailable (null): No applicable representation supplied; consult status and required evidence. |
 | `["required_evidence"]` | `["An identified ancestor, measured outcomes and a controlled or otherwise justified causal design."]` |
@@ -4079,7 +4079,7 @@ Denominator: Unavailable (null): `"This conclusion has no scalar denominator."`;
 | Field | Value |
 |---|---|
 | `["assumptions"]` | `[]` |
-| `["blocking_evidence"]` | `["Only existing reference validation observations can be reported; no graph traversal, root tracing or ancestry metric executes."]` |
+| `["blocking_evidence"]` | `["No complete successful lineage execution was supplied; independently completed observations remain visible."]` |
 | `["conclusion"]` | `"lineage_analysis"` |
 | `["coverage"]` | Unavailable (null): `"This conclusion has no measured evidence coverage."` |
 | `["coverage_reason"]` | `"This conclusion has no measured evidence coverage."` |
@@ -4088,21 +4088,21 @@ Denominator: Unavailable (null): `"This conclusion has no scalar denominator."`;
 | `["evidence_class"]` | `"unavailable_conclusion"` |
 | `["method_id"]` | `"PR-014.unavailable_conclusion"` |
 | `["owner_ids"]` | `["PR-014"]` |
-| `["reason_codes"]` | `["R_LINEAGE_EXECUTION_DEFERRED"]` |
+| `["reason_codes"]` | `["R_ANALYSIS_NOT_REQUESTED"]` |
 | `["related_capability"]` | `"lineage"` |
 | `["representation"]` | Unavailable (null): No applicable representation supplied; consult status and required evidence. |
-| `["required_evidence"]` | `["Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."]` |
-| `["required_next_metadata"]` | `["Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."]` |
+| `["required_evidence"]` | `["Supply an explicit lineage result for the validated target and its loaded context."]` |
+| `["required_next_metadata"]` | `["Supply an explicit lineage result for the validated target and its loaded context."]` |
 | `["scope"]["dataset_versions"]` | `["v1", "v2"]` |
 | `["scope"]["denominator_basis"]` | `"all_validated_bundle_records"` |
 | `["scope"]["excluded_record_count"]` | 0 |
 | `["scope"]["excluded_record_keys"]` | `[]` |
 | `["scope"]["record_count"]` | 16 |
 | `["scope"]["scope_id"]` | `"validated_bundle"` |
-| `["statement"]` | `"General lineage graph analysis is deferred to Phase 5."` |
+| `["statement"]` | `"A completed whole-target lineage analysis is unavailable in this report."` |
 | `["status"]` | `"unavailable"` |
 | `["theory_map_ids"]` | `[]` |
-| `["theory_or_product_limit"]` | `"Implementation is deferred even when the existing input classifier marks lineage available."` |
+| `["theory_or_product_limit"]` | `"Input eligibility alone does not establish executed ancestry analysis."` |
 | `["trace_ids"]` | `[]` |
 | `["unit"]` | `"conclusion"` |
 
@@ -4135,38 +4135,38 @@ Denominator: Unavailable (null): `"This conclusion has no scalar denominator."`;
 
 `["unavailable_conclusions"][7]`
 
-Status: `"unavailable"`; evidence class: `"unavailable_conclusion"`; unit: `"conclusion"`; method: `"T3.unavailable_conclusion"`.
+Status: `"unavailable"`; evidence class: `"unavailable_conclusion"`; unit: `"conclusion"`; method: `"T4.unavailable_conclusion"`.
 
 Denominator: Unavailable (null): `"This conclusion has no scalar denominator."`; coverage (ratio): Unavailable (null): `"This conclusion has no measured evidence coverage."`.
 
 | Field | Value |
 |---|---|
 | `["assumptions"]` | `[]` |
-| `["blocking_evidence"]` | `["Only existing reference validation observations can be reported; no graph traversal, root tracing or ancestry metric executes."]` |
-| `["conclusion"]` | `"lineage_closure_exposure"` |
+| `["blocking_evidence"]` | `["Missing, invalid or unknown ancestry remains unresolved; any complete subset retains its reported coverage."]` |
+| `["conclusion"]` | `"external_ancestry"` |
 | `["coverage"]` | Unavailable (null): `"This conclusion has no measured evidence coverage."` |
 | `["coverage_reason"]` | `"This conclusion has no measured evidence coverage."` |
 | `["denominator"]` | Unavailable (null): `"This conclusion has no scalar denominator."` |
 | `["denominator_reason"]` | `"This conclusion has no scalar denominator."` |
 | `["evidence_class"]` | `"unavailable_conclusion"` |
-| `["method_id"]` | `"T3.unavailable_conclusion"` |
-| `["owner_ids"]` | `["T3"]` |
-| `["reason_codes"]` | `["R_LINEAGE_EXECUTION_DEFERRED"]` |
+| `["method_id"]` | `"T4.unavailable_conclusion"` |
+| `["owner_ids"]` | `["T4"]` |
+| `["reason_codes"]` | `["R_ANALYSIS_NOT_REQUESTED"]` |
 | `["related_capability"]` | `"lineage"` |
 | `["representation"]` | Unavailable (null): No applicable representation supplied; consult status and required evidence. |
-| `["required_evidence"]` | `["Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."]` |
-| `["required_next_metadata"]` | `["Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."]` |
+| `["required_evidence"]` | `["Complete the required parent references, chronology and external-grounding evidence."]` |
+| `["required_next_metadata"]` | `["Complete the required parent references, chronology and external-grounding evidence."]` |
 | `["scope"]["dataset_versions"]` | `["v1", "v2"]` |
 | `["scope"]["denominator_basis"]` | `"all_validated_bundle_records"` |
 | `["scope"]["excluded_record_count"]` | 0 |
 | `["scope"]["excluded_record_keys"]` | `[]` |
 | `["scope"]["record_count"]` | 16 |
 | `["scope"]["scope_id"]` | `"validated_bundle"` |
-| `["statement"]` | `"Lineage closure exposure is deferred to Phase 5."` |
+| `["statement"]` | `"Complete external ancestry for every target is unavailable."` |
 | `["status"]` | `"unavailable"` |
 | `["theory_map_ids"]` | `[]` |
-| `["theory_or_product_limit"]` | `"Implementation is deferred even when the existing input classifier marks lineage available."` |
-| `["trace_ids"]` | `["T3"]` |
+| `["theory_or_product_limit"]` | `"Partial ancestry cannot be promoted to whole-target completeness."` |
+| `["trace_ids"]` | `["T4"]` |
 | `["unit"]` | `"conclusion"` |
 
 **`["limitations"]`**
@@ -4198,38 +4198,38 @@ Denominator: Unavailable (null): `"This conclusion has no scalar denominator."`;
 
 `["unavailable_conclusions"][8]`
 
-Status: `"unavailable"`; evidence class: `"unavailable_conclusion"`; unit: `"conclusion"`; method: `"T4.unavailable_conclusion"`.
+Status: `"unavailable"`; evidence class: `"unavailable_conclusion"`; unit: `"conclusion"`; method: `"T3.unavailable_conclusion"`.
 
 Denominator: Unavailable (null): `"This conclusion has no scalar denominator."`; coverage (ratio): Unavailable (null): `"This conclusion has no measured evidence coverage."`.
 
 | Field | Value |
 |---|---|
 | `["assumptions"]` | `[]` |
-| `["blocking_evidence"]` | `["Only existing reference validation observations can be reported; no graph traversal, root tracing or ancestry metric executes."]` |
-| `["conclusion"]` | `"external_ancestry"` |
+| `["blocking_evidence"]` | `["No available explicitly supplied lineage interval covers a nonempty completed target partition."]` |
+| `["conclusion"]` | `"lineage_closure_exposure"` |
 | `["coverage"]` | Unavailable (null): `"This conclusion has no measured evidence coverage."` |
 | `["coverage_reason"]` | `"This conclusion has no measured evidence coverage."` |
 | `["denominator"]` | Unavailable (null): `"This conclusion has no scalar denominator."` |
 | `["denominator_reason"]` | `"This conclusion has no scalar denominator."` |
 | `["evidence_class"]` | `"unavailable_conclusion"` |
-| `["method_id"]` | `"T4.unavailable_conclusion"` |
-| `["owner_ids"]` | `["T4"]` |
-| `["reason_codes"]` | `["R_LINEAGE_EXECUTION_DEFERRED"]` |
+| `["method_id"]` | `"T3.unavailable_conclusion"` |
+| `["owner_ids"]` | `["T3"]` |
+| `["reason_codes"]` | `["R_ANALYSIS_NOT_REQUESTED"]` |
 | `["related_capability"]` | `"lineage"` |
 | `["representation"]` | Unavailable (null): No applicable representation supplied; consult status and required evidence. |
-| `["required_evidence"]` | `["Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."]` |
-| `["required_next_metadata"]` | `["Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."]` |
+| `["required_evidence"]` | `["Supply lineage closure bounds from the same explicit lineage result."]` |
+| `["required_next_metadata"]` | `["Supply lineage closure bounds from the same explicit lineage result."]` |
 | `["scope"]["dataset_versions"]` | `["v1", "v2"]` |
 | `["scope"]["denominator_basis"]` | `"all_validated_bundle_records"` |
 | `["scope"]["excluded_record_count"]` | 0 |
 | `["scope"]["excluded_record_keys"]` | `[]` |
 | `["scope"]["record_count"]` | 16 |
 | `["scope"]["scope_id"]` | `"validated_bundle"` |
-| `["statement"]` | `"External ancestry results are deferred to Phase 5."` |
+| `["statement"]` | `"A lineage closure interval is unavailable in this report."` |
 | `["status"]` | `"unavailable"` |
 | `["theory_map_ids"]` | `[]` |
-| `["theory_or_product_limit"]` | `"Implementation is deferred even when the existing input classifier marks lineage available."` |
-| `["trace_ids"]` | `["T4"]` |
+| `["theory_or_product_limit"]` | `"Unavailable intervals are never replaced by a guessed numeric value."` |
+| `["trace_ids"]` | `["T3"]` |
 | `["unit"]` | `"conclusion"` |
 
 **`["limitations"]`**
@@ -4282,7 +4282,7 @@ No entries supplied. Empty list: `[]`.
 
 **Report footer**
 
-Toolkit version: `"0.1.0.dev2"`; report schema version: `"1.0"`.
+Toolkit version: `"0.1.0.dev3"`; report schema version: `"1.1"`.
 
 Evidence-class legend:
 

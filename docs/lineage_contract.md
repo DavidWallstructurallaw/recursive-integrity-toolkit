@@ -13,10 +13,11 @@ node/edge limits. Step 3 adds `analyze_cycles` for iterative cycle detection,
 unaffected topology and structural depth. Step 4 adds `analyze_lineage` for
 external-root resolution, G/C/U counts and coverage. Step 5 adds root incidence,
 fractional mass and ancestry concentration. Step 6 adds explicit lineage closure
-and shared-root proxy calls. Report and CLI lineage interfaces remain later
-implementation targets.
+and shared-root proxy calls. Step 7 integrates explicitly supplied lineage
+results into schema 1.1, canonical assembly and privacy-safe JSON/Markdown.
+CLI lineage invocation and context input options remain Step 8 targets.
 The package remains at
-`0.1.0.dev3` and the executable report schema at `1.0`.
+`0.1.0.dev3`; the executable report schema is `1.1`.
 
 ## 1. Scope and reference semantics
 
@@ -345,16 +346,33 @@ status/level table above. A positive witness is the first already ranked
 incidence and coverage field references, target scope and source diagnostics.
 It adds no calibrated severity, risk threshold or causal conclusion. Both calls
 consume already computed ancestry and perform no graph traversal, ingestion,
-report rendering or network/file access. Serialized schema integration remains
-Step 7.
+report rendering or network/file access. Step 7 serializes these explicitly
+supplied results without invoking either calculation automatically.
 
 ## 5. Schema 1.1 placement, detail bounds and privacy
 
-Step 7 changes every Phase 5 output to report schema 1.1, including requests
+Step 7 changes every current output to report schema 1.1, including requests
 without lineage. Strict 1.0 readers must adopt the new schema. Preserve the twelve
 top-level sections, existing envelopes and all non-lineage numerical meanings.
 Root and packaged report schemas must agree. No migration-loader framework is
 introduced.
+
+The implemented `assemble_report` keywords are `lineage`, `lineage_bounds` and
+`shared_ancestry`. Bounds and proxy handoffs require their matching explicit
+lineage source. Assembly checks exact target/context scope and a private
+computation-owner input signature against retained declarations, policy and
+diagnostics, rejecting stale same-identity results. This consistency check does
+not authenticate a hostile Python caller. It does not rerun graph traversal or
+the root/concentration kernel, and the private signature is never reported.
+
+Without a lineage result, execution is `not_requested` and immediate-validation
+observations retain their limited meanings. An explicit existing
+`FamilyFailure(CapabilityKey.LINEAGE, ...)` can report a failure before graph
+admission; it supplies no completed graph or root observations. Root-resource
+failures with a typed result retain completed graph/depth/reference observations
+and consumed-work counters. A separate family failure cannot contradict a
+supplied lineage result. Step 8 owns CLI dispatch and graph-admission exception
+orchestration.
 
 New observed fields are `observed_facts.lineage.graph_scope` (the public scope
 counts/version inventory), `cycle_analysis`, `depth_summary`,
@@ -405,15 +423,17 @@ around components provides the privacy omission shape for the entire row list.
 `maximum_resolved_target_depth` and the explicit target count. No arbitrary
 message, URI, path or content payload is admitted into these shapes.
 
-In standard/hash views, identities use the existing protection transformation
-appropriate to the selected privacy and record-ID modes. In redacted/hash,
+Standard mode preserves declared structural identities and record IDs.
+Redacted mode supports record-ID `hash` (default), `omit` and explicit `preserve`;
+record-ID overrides require redacted mode. In redacted/hash,
 dataset IDs, root keys, witness keys and dynamic identities use the existing
 scoped HMAC mechanism consistently; sort/rank before privacy transformation.
 In record-ID omit mode, each identity-bearing collection uses its whole-list
 omission variant. Never remove a required `record_key` while retaining an invalid
 row. Aggregate values, counts, severity and execution status remain visible.
-Existing options for preserving only the declared record-ID field retain their
-scope. Both renderers consume the same schema-valid safe result.
+Redacted/preserve retains only declared record-ID fields while dataset versions
+and other protected identities still use their existing transformation. Both
+renderers consume the same schema-valid safe result.
 
 ## 6. Resource and invocation interfaces
 

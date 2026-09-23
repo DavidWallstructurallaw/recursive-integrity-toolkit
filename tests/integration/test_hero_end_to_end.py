@@ -284,7 +284,7 @@ def phase4_step8_hero_values(report):
     direct = report["derived_metrics"]["closure_exposure"]["direct"]
     assert [direct[n]["value"] for n in ("lower_bound", "upper_bound", "interval_width")] == [0.5, 0.5, 0]
     assert report["observability"]["maximum_level"] == 4 and report["capabilities"] == report["observability"]["capabilities"]
-    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert report["capabilities"]["lineage"]["execution_status"] == "not_requested"
     assert report["capabilities"]["dataset_longitudinal"]["execution_status"] == "partial"
     assert report["capabilities"]["model_longitudinal"]["status"] == "unavailable"
     assert report["capabilities"]["intervention_simulation"]["status"] == "unavailable"

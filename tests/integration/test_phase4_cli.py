@@ -51,7 +51,7 @@ def test_phase4_step7_explicit_single_version_metrics_match_hand_counts(tmp_path
     assert report["run"]["resolved_options"]["weighted"] is False
     assert "weighted_support_size" not in report["derived_metrics"]["support"]["by_version"]["v1"]
     assert report["simulations"] == {} and "tail" not in report["derived_metrics"]
-    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert report["capabilities"]["lineage"]["execution_status"] == "not_requested"
     assert report["capabilities"] == report["observability"]["capabilities"]
     assert all(path.read_bytes() == data for path, data in before.items())
     assert {artifact["role"] for artifact in report["inputs"]["artifacts"]} == {"config", "records_primary", "provenance_manifest"}
@@ -391,7 +391,7 @@ def test_phase4_step7_existing_lineage_error_retains_metrics_and_precedence(tmp_
     assert "E_PARENT_FORMAT" in {item["code"] for item in report["errors"]}
     assert report["observed_facts"]["record_counts"]["v1"]["value"] == 4
     assert "closure_exposure" in report["derived_metrics"]
-    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert report["capabilities"]["lineage"]["execution_status"] == "not_requested"
     if not unsupported:
         assert report["derived_metrics"]["support"]["by_version"]["v1"]["support_size"]["value"] == 3
 
