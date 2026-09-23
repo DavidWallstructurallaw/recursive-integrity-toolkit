@@ -2,9 +2,10 @@
 
 ## Current Phase 5 boundary
 
-Phase 5 Step 1 is approved. Runtime remains at `0.1.0.dev3`, with executable
-report schema 1.0 and general lineage deferred. The Phase 5 contracts describe
-future implementation. Stable v0.1 publication, a tag and main merge require
+Phase 5 Step 2 is approved. Runtime remains at `0.1.0.dev3`, with executable
+report schema 1.0. Parent-graph construction is the current implementation scope;
+cycle, depth, ancestry and report integration remain subsequent steps.
+Stable v0.1 publication, a tag and main merge require
 separate authorization.
 
 Use one current verification path:
@@ -18,8 +19,10 @@ python scripts/release_check.py
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
 The accepted Phase 4 commit supplies the existing historical authority; no new
-Phase 5 hash registry is needed. During Step 1 the source check rejects changes
-to runtime, schemas, package metadata and canonical Hero files. Sixteen frozen
+Phase 5 hash registry is needed. During Step 2 the existing source check permits
+the approved models, errors, input-validation and lineage-graph modules, retaining
+the exact product file inventory and rejecting unrelated runtime, schema,
+package-metadata and canonical Hero changes. Sixteen frozen
 specifications and seven packaged resource copies remain protected.
 
 ## Risk-sensitive gates
@@ -43,7 +46,7 @@ Dispatch `ci.yml` with `gate=candidate` for a stable candidate. The workflow run
 Compatibility cells run complete canonical regression with
 `--ignore=tests/performance`. The designated performance job runs
 `tests/performance` once, avoiding nine repetitions of the costly 100k report
-workload. The Phase 5 sparse-lineage test is still a placeholder in Step 1;
+workload. The Phase 5 sparse-lineage test is still a placeholder in Step 2;
 it becomes an executable graph benchmark in Step 9. No placeholder is counted as
 a successful lineage measurement.
 

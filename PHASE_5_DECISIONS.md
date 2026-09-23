@@ -1,6 +1,6 @@
-# Phase 5 Decisions and Step 1 Authorization
+# Phase 5 Decisions and Current Authorization
 
-Status: **PLAN APPROVED; STEP 1 AUTHORIZED; PHASE INCOMPLETE**.
+Status: **PLAN APPROVED; STEPS 1-2 COMPLETE; PHASE INCOMPLETE**.
 
 On 2026-09-23 UTC the Theory Owner instructed:
 `批准，Phase 5  step 1开始`.
@@ -116,4 +116,23 @@ release matrix or demonstrate graph correctness. Actual changes, check results,
 failures and unresolved limitations belong in the Step 1 completion report.
 This approval record makes no claim that those checks have already passed.
 
-Stop after Step 1. Phase 5 Step 2 requires its own execution instruction.
+Step 1 completed before the following separate execution instruction.
+
+## Step 2 execution instruction
+
+On 2026-09-23 UTC the Theory Owner instructed `Phase 5 Step 2开始`.
+This authorizes the bounded reference-retention refactor and immutable validated
+parent graph in the approved plan. Work starts from Step 1 commit
+`5e946d1a42f87f89d4f97e9da4fd76cb05517caa` on `phase5-lineage`.
+
+The current source boundary opens four existing modules: `models.py`, `errors.py`,
+`io/validation.py` and `lineage/graph.py`. Direct reference/graph tests, affected
+generation/input neighbors, documentation and the current focused gate are in
+scope. This updates the single current control without adding a registry or
+historical migration. Package version and executable report schema remain
+`0.1.0.dev3` and `1.0`. No cycle/depth/root algorithm, lineage metric, new CLI role,
+full environment matrix or performance measurement is authorized by this step.
+
+Stop after Step 2; subsequent execution needs its own instruction. Existing
+authorization to synchronize this branch is retained. Merge, tag and publication
+remain separate actions.

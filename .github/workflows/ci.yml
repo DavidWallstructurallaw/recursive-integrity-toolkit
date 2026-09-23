@@ -50,13 +50,13 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install ".[test]"
-      - name: Check Step 1 contracts and affected boundaries
+      - name: Check Step 2 parent graph and affected boundaries
         run: |
           set -euo pipefail
           python scripts/check_spec_consistency.py
           python scripts/check_traceability.py
           python scripts/release_check.py
-          python -m pytest -p no:cacheprovider -q tests/integration/test_current_verification.py tests/integration/test_ci_workflows.py tests/unit/test_lineage_fixture_inputs.py tests/unit/test_phase3_contracts.py tests/integration/test_phase3_metric_pipeline.py tests/unit/test_PR016_determinism.py tests/integration/test_no_algorithms.py tests/integration/test_repository_structure.py
+          python -m pytest -p no:cacheprovider -q tests/unit/test_parent_batch.py tests/unit/test_lineage_graph.py tests/unit/test_PR007_version_order.py tests/unit/test_PR008_parent_resolution.py tests/unit/test_PR009_generation.py tests/unit/test_lineage_fixture_inputs.py tests/unit/test_phase3_contracts.py tests/integration/test_phase3_metric_pipeline.py tests/unit/test_PR016_determinism.py tests/integration/test_current_verification.py tests/integration/test_ci_workflows.py tests/integration/test_no_algorithms.py tests/integration/test_repository_structure.py
 
   core:
     if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'

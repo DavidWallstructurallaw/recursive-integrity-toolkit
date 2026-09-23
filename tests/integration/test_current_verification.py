@@ -26,8 +26,8 @@ def protected_copy(repo_root, tmp_path):
 
 
 @pytest.mark.parametrize("mutation", ["formula", "new_module", "deleted_module"])
-def test_step1_rejects_unauthorized_product_changes(current_tools, protected_copy, mutation):
-    """Step 1 grants contracts and fixture work without granting runtime changes."""
+def test_current_scope_rejects_unauthorized_product_changes(current_tools, protected_copy, mutation):
+    """Parent-graph implementation does not authorize unrelated product changes."""
     verify = current_tools["verify_source_scope"]
     verify(protected_copy)
     target = protected_copy / "src/recursive_integrity_toolkit/metrics/diversity.py"

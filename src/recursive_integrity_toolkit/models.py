@@ -474,6 +474,86 @@ class ParentValidationResult:
 
 
 @dataclass(frozen=True, slots=True)
+class ParentRecordValidation:
+    """Retained immediate evidence for one loaded record, including failures.
+
+    Missing and null declarations have zero declared references, while an
+    unparseable container has unknown cardinality. Identity resolution counts
+    remain distinct from chronological eligibility for ancestry edges.
+    """
+
+    child_key: RecordKey
+    provenance_available: bool
+    result: ParentValidationResult | None = field(repr=False)
+    declared_reference_count: int | None
+    resolved_reference_count: int
+    invalid_self_reference_count: int
+    messages: tuple[ValidationMessage, ...] = ()
+
+    def __post_init__(self) -> None:
+        if type(self.child_key) is not RecordKey or type(self.provenance_available) is not bool:
+            raise TypeError("parent evidence requires a canonical key and explicit provenance flag")
+        if self.result is not None and (type(self.result) is not ParentValidationResult
+                                       or self.result.child_key != self.child_key):
+            raise ValueError("parent result must belong to its loaded record")
+        if self.result is not None:
+            if (self.result.declaration_state not in ("absent", "null", "empty", "declared")
+                    or type(self.result.graph_validation_deferred) is not bool):
+                raise ValueError("parent evidence requires an explicit declaration state")
+            if type(self.result.references) is not tuple:
+                raise TypeError("parent references require an immutable tuple")
+            for reference in self.result.references:
+                if (type(reference) is not ParentReference
+                        or type(reference.source_references) is not tuple
+                        or any(type(text) is not str for text in reference.source_references)):
+                    raise TypeError("parent source references require immutable literal spellings")
+            if type(self.result.messages) is not tuple or any(type(item) is not ValidationMessage
+                                                            for item in self.result.messages):
+                raise TypeError("parent result messages require an immutable tuple")
+        counts = (self.resolved_reference_count, self.invalid_self_reference_count)
+        if self.declared_reference_count is not None:
+            counts += (self.declared_reference_count,)
+        for value in counts:
+            if type(value) is not int or value < 0:
+                raise ValueError("parent reference counts require nonnegative integers")
+        if self.declared_reference_count is not None and (
+                self.resolved_reference_count + self.invalid_self_reference_count
+                > self.declared_reference_count):
+            raise ValueError("parent evidence counts exceed the declaration count")
+        if type(self.messages) is not tuple or any(type(item) is not ValidationMessage for item in self.messages):
+            raise TypeError("parent messages require an immutable tuple")
+
+
+@dataclass(frozen=True, slots=True)
+class ParentBatchValidationResult:
+    """Input-only immediate evidence retained for every loaded canonical key."""
+
+    record_keys: tuple[RecordKey, ...]
+    assessments: tuple[ParentRecordValidation, ...] = field(repr=False)
+    version_order: VersionOrderResult
+    messages: tuple[ValidationMessage, ...]
+    promoted_warning_codes: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if type(self.record_keys) is not tuple or any(type(key) is not RecordKey for key in self.record_keys):
+            raise TypeError("parent batch keys require an immutable canonical tuple")
+        if tuple(sorted(set(self.record_keys))) != self.record_keys:
+            raise ValueError("parent batch keys must be unique and sorted")
+        if type(self.assessments) is not tuple or any(type(item) is not ParentRecordValidation
+                                                   for item in self.assessments):
+            raise TypeError("parent batch assessments require an immutable tuple")
+        if tuple(item.child_key for item in self.assessments) != self.record_keys:
+            raise ValueError("parent batch assessments must cover every loaded key exactly once")
+        if type(self.version_order) is not VersionOrderResult:
+            raise TypeError("parent batch chronology requires typed evidence")
+        if type(self.messages) is not tuple or any(type(item) is not ValidationMessage for item in self.messages):
+            raise TypeError("parent batch messages require an immutable tuple")
+        if type(self.promoted_warning_codes) is not tuple or any(type(code) is not str
+                                                               for code in self.promoted_warning_codes):
+            raise TypeError("parent warning policy requires an immutable tuple")
+
+
+@dataclass(frozen=True, slots=True)
 class GenerationAssessment:
     """PR-009 declaration versus safely established non-grounding step count."""
 
@@ -555,6 +635,7 @@ class BundleValidationResult:
     mapping_traces: tuple[RowMappingEvidence, ...] = field(repr=False)
     content_read_keys: tuple[RecordKey, ...]
     validation_messages: tuple[ValidationMessage, ...]
+    parent_validation: ParentBatchValidationResult | None = field(default=None, repr=False)
 
     @property
     def has_errors(self) -> bool:

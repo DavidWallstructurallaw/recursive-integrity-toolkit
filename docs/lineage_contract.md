@@ -7,10 +7,11 @@ Authority: [Phase 5 decisions](../PHASE_5_DECISIONS.md), approved Phase 5 plan,
 frozen owners are T4, T6, PR-008, PR-009 and T3 lineage bounds. The original
 definitions/specifications remain unchanged.
 
-This document defines interfaces to implement in Steps 2-8. Step 1 leaves the
-package at `0.1.0.dev3`, the executable report schema at `1.0`, and general
-lineage execution deferred. Code-like declarations below are contracts, not
-claims about currently importable classes or functions.
+This document defines interfaces for Steps 2-8. Step 2 implements retained batch
+parent evidence and `build_lineage_graph` with immutable scope, adjacency and
+node/edge limits. Cycle, depth, root, metric, report and CLI lineage interfaces
+remain later implementation targets. The package remains at `0.1.0.dev3` and the
+executable report schema at `1.0`.
 
 ## 1. Scope and reference semantics
 
@@ -46,8 +47,12 @@ index for the batch. It never treats an ambiguous/future/invalid reference as an
 accepted ancestry edge.
 
 For each syntactically valid reference list, declared count is the original
-list length, including repeated aliases. Resolved count sums the lengths of
-`source_references` for accepted resolved references. Unresolved count is
+list length, including repeated aliases. Absent/null declarations and missing
+provenance have zero original reference entries; this does not establish an
+explicitly parentless record. Resolved count sums the lengths of
+`source_references` whose existing resolution status is `resolved`, including
+known identities with unavailable chronology. Graph edge admission separately
+requires known chronology. Unresolved reference count is
 declared minus resolved and includes invalid references whose entries can be
 counted. A malformed declaration with unknown reference cardinality makes the
 whole-target reference totals/coverage unavailable; retain known-subset counts
@@ -81,6 +86,24 @@ after the Step 2 retention refactor. It must cover context as well as target
 records. Selection is explicit, revalidated and independent of ordinary metric
 eligibility. `validate_bundle` remains input-only and never calls this function.
 CLI orchestration calls it only after an explicit lineage request.
+
+Step 2 supplies the lower-level input-only handoff in `models.py`:
+`ParentRecordValidation` retains provenance presence, an optional
+`ParentValidationResult`, declared/resolved/self-reference counts and diagnostics;
+`ParentBatchValidationResult` covers every loaded key in canonical order.
+`io.validation.resolve_parent_batch` shares reference interpretation with the
+existing fail-fast resolver and creates one identity lookup per batch.
+`BundleValidationResult.parent_validation` is an appended optional field for
+source compatibility. Graph construction requires this retained evidence and
+revalidates it against the canonical inputs, rejecting stale or forged handoffs.
+
+`lineage.graph.build_lineage_graph(validation, *, target_dataset_version, limits)`
+constructs the immediate graph only. When explicit primary record roles exist,
+the selected version must be that primary version. Context-only typed inputs can
+represent an empty target with no declared version; an explicit empty version
+must be present in the declared version order. Input loading and its limits stay
+independent of graph limits. Root-membership and union-work limits are reserved
+for the later ancestry implementation.
 
 Ownership stays in existing modules:
 
