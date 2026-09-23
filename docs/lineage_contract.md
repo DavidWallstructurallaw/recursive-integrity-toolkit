@@ -11,8 +11,9 @@ This document defines interfaces for Steps 2-8. Step 2 implements retained batch
 parent evidence and `build_lineage_graph` with immutable scope, adjacency and
 node/edge limits. Step 3 adds `analyze_cycles` for iterative cycle detection,
 unaffected topology and structural depth. Step 4 adds `analyze_lineage` for
-external-root resolution, G/C/U counts and coverage. Incidence, concentration,
-bounds, report and CLI lineage interfaces remain later implementation targets.
+external-root resolution, G/C/U counts and coverage. Step 5 adds root incidence,
+fractional mass and ancestry concentration. Bounds, report and CLI lineage
+interfaces remain later implementation targets.
 The package remains at
 `0.1.0.dev3` and the executable report schema at `1.0`.
 
@@ -90,11 +91,11 @@ records. Selection is explicit, revalidated and independent of ordinary metric
 eligibility. `validate_bundle` remains input-only and never calls this function.
 CLI orchestration calls it only after an explicit lineage request.
 
-Step 4 implements this direct API for root resolution and coverage. Its
+Steps 4-5 implement this direct API for root resolution, coverage and concentration. Its
 `LineageAnalysisResult.records` contains target records in canonical order;
 context roots are intermediate computation data and do not enter target
-denominators. The existing `ExecutionStatus` vocabulary applies. Incidence,
-fractional mass, concentration, bounds and proxy fields remain later steps.
+denominators. The existing `ExecutionStatus` vocabulary applies. Bounds and proxy
+fields remain later steps.
 
 Graph admission failures retain the existing `LineageResourceLimitError` before
 a valid analytical result can be created. A root-membership or union-work
@@ -152,6 +153,23 @@ as a full transitive-closure table.
 `normalized_weight: float`, and `weight_denominator: int`. Runtime values must be
 finite. Independent fixture expectations use exact fractions where possible;
 deterministic numeric reduction uses canonical target/root order.
+
+Step 5 returns all `root_contributions` in decreasing incidence order, with
+canonical root-key ties. Its aggregate fields are
+`distinct_external_root_count`, `ancestry_concentration_hhi` and
+`effective_external_root_count`. These computations precede the Step 7 detail
+limit; the direct result does not truncate the root distribution.
+
+Read-only `root_metrics_status` and `concentration_status` properties use the
+existing `ReportStatus` vocabulary. A completed partition has available root
+observations when U=0 and partial observations when U>0. A G-only concentration
+uses that status when G>0; existing G/N coverage and contribution denominators
+disclose its conditional population. With G=0, the contribution tuple is empty
+and the distinct-root count is zero, while concentration is unavailable with
+`concentration_reason_codes=("NO_RESOLVED_EXTERNAL_ROOTS",)`. A root-resource
+abort instead makes contributions and all three aggregates null, with unavailable
+statuses and `LINEAGE_RESOURCE_LIMIT_EXCEEDED`. These field states remain
+separate from the overall execution status and its input diagnostics.
 
 `LineageAnalysisResult` contains `scope: LineageScope`,
 `execution_status: ExecutionStatus`, `execution_reason_codes: tuple[str, ...]`,

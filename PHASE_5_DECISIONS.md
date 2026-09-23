@@ -1,6 +1,6 @@
 # Phase 5 Decisions and Current Authorization
 
-Status: **PLAN APPROVED; STEPS 1-4 COMPLETE; PHASE INCOMPLETE**.
+Status: **PLAN APPROVED; STEPS 1-5 COMPLETE; PHASE INCOMPLETE**.
 
 On 2026-09-23 UTC the Theory Owner instructed:
 `批准，Phase 5  step 1开始`.
@@ -176,3 +176,22 @@ and provenance namespaces alone does not establish such a conflict. Original
 metadata is preserved; no new grounding inference is made from labels or URIs.
 
 Stop after Step 4; merge, tag and publication remain outside this instruction.
+
+## Step 5 execution instruction
+
+On 2026-09-23 UTC the Theory Owner instructed `Phase 5 Step 5 继续`.
+This authorizes typed root contributions, incidence with the full target
+denominator, fractional root mass with the grounded target denominator,
+ancestry HHI and effective external-root count. Work starts from Step 4 commit
+`2450100d08355d8cb1e0be931345f44572861e4a` on `phase5-lineage`.
+
+Runtime changes remain confined to `lineage/ancestry.py`. Direct rational
+oracles, deterministic invariance checks and affected ancestry/resource
+neighbors verify the new calculations. The current source check advances its
+single comparison commit to Step 4 and continues to open only the ancestry
+module. No additional governance framework or historical migration is added.
+Package version and executable report schema remain `0.1.0.dev3` and `1.0`.
+
+Stop after Step 5. Bounds, shared-root proxy, report/schema integration and CLI
+lineage dispatch remain later steps. Existing branch synchronization approval
+continues; merge, tag and publication remain separate actions.

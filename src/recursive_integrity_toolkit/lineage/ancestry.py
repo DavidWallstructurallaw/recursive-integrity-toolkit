@@ -1,6 +1,6 @@
-"""Resolve exact external roots and target ancestry coverage.
+"""Resolve exact external roots, target coverage and root concentration.
 
-Owner IDs: T4; Phase 5 Step 4.
+Owner IDs: T4; Phase 5 Step 5.
 
 Validated explicit grounding supplies anchors. Iterative dependency scheduling
 unions complete root sets; unknown branches never supply exact roots. Logical
@@ -8,21 +8,22 @@ membership and candidate-visit budgets bound propagation before each work unit.
 The allocation is topological and makes no causal or scientific quality claim.
 
 Current phase status:
-    Phase 5 Step 4 root resolution, G/C/U classification and target coverage.
-    Incidence, fractional mass, concentration, bounds and reports remain later
-    steps. No file or network I/O, generation calculation or implicit invocation.
+    Phase 5 Step 5 adds target incidence, fractional mass and concentration.
+    Bounds and reports remain later steps. No file or network I/O, generation
+    calculation or implicit invocation.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from heapq import heapify, heappop, heappush
+from math import fsum, isfinite
 from types import MappingProxyType
 from typing import Literal
 
 from ..errors import ErrorCode, LineageResourceLimitError
 from ..io.validation import join_provenance
 from ..models import BundleValidationResult, RecordKey, ValidationMessage, ValidationSeverity
-from ..result import ExecutionStatus
+from ..result import ExecutionStatus, ReportStatus
 from .cycles import CycleAnalysis, DepthAssessment, analyze_cycles, _local_depth_reasons
 from .graph import (
     LineageGraph, LineageLimits, LineageResourceUsage, LineageScope,
@@ -95,8 +96,65 @@ class RecordAncestry:
 
 
 @dataclass(frozen=True, slots=True)
+class RootContribution:
+    """One root's target incidence and equal-per-record fractional allocation."""
+    record_key: RecordKey
+    incidence_count: int
+    incidence_share: float
+    incidence_denominator: int
+    fractional_mass: float
+    normalized_weight: float
+    weight_denominator: int
+
+    def __post_init__(self) -> None:
+        _key(self.record_key)
+        for value in (self.incidence_count, self.incidence_denominator, self.weight_denominator):
+            _integer(value)
+        if not 1 <= self.incidence_count <= self.weight_denominator <= self.incidence_denominator:
+            raise _invalid("root incidence requires positive target and grounded denominators")
+        for value in (self.incidence_share, self.fractional_mass, self.normalized_weight):
+            if type(value) is not float or not isfinite(value) or value <= 0:
+                raise _invalid("root contributions require finite positive floating-point values")
+        try:
+            incidence_share = self.incidence_count / self.incidence_denominator
+            normalized_weight = self.fractional_mass / self.weight_denominator
+        except OverflowError:
+            raise _invalid("root contribution denominators exceed the supported numeric range") from None
+        if (self.fractional_mass > self.incidence_count
+                or self.incidence_share != incidence_share
+                or self.normalized_weight != normalized_weight):
+            raise _invalid("root contribution values disagree with their declared denominators")
+
+
+def _root_metrics(records: tuple[RecordAncestry, ...], total: int, grounded: int):
+    """Aggregate complete target sets before any future display truncation.
+
+    Input targets and each root visit use canonical identity order. fsum retains
+    small fractional contributions without order-sensitive running totals. The
+    temporary terms are bounded by the already admitted target memberships.
+    """
+    terms: dict[RecordKey, list[float]] = {}
+    for record in records:
+        roots = record.external_root_keys
+        if roots:
+            mass = 1.0 / len(roots)
+            for root in sorted(roots):
+                terms.setdefault(root, []).append(mass)
+    contributions = []
+    for root in sorted(terms):
+        incidence = len(terms[root])
+        mass = fsum(terms[root])
+        contributions.append(RootContribution(
+            root, incidence, incidence / total, total, mass, mass / grounded, grounded))
+    hhi = fsum(row.normalized_weight ** 2 for row in contributions) if contributions else None
+    effective = 1.0 / hhi if hhi is not None else None
+    contributions.sort(key=lambda row: (-row.incidence_count, row.record_key))
+    return tuple(contributions), len(contributions), hhi, effective
+
+
+@dataclass(frozen=True, slots=True)
 class LineageAnalysisResult:
-    """Step 4 targets and completed structural observations.
+    """Targets, complete root metrics and completed structural observations.
 
     Resource-aborted root propagation supplies no partition or record rows.
     Earlier graph/depth/reference observations survive. Node/edge admission
@@ -120,6 +178,10 @@ class LineageAnalysisResult:
     resolved_parent_edge_coverage: float | None
     no_declared_parents: bool
     reference_coverage_reason_codes: tuple[str, ...]
+    root_contributions: tuple[RootContribution, ...] | None
+    distinct_external_root_count: int | None
+    ancestry_concentration_hhi: float | None
+    effective_external_root_count: float | None
     resource_usage: LineageResourceUsage
     messages: tuple[ValidationMessage, ...]
 
@@ -143,6 +205,8 @@ class LineageAnalysisResult:
         _reasons(self.execution_reason_codes, _EXECUTION_REASONS)
         counts = (self.grounded_record_count, self.closed_record_count,
                   self.unresolved_record_count, self.records_with_resolved_external_ancestry)
+        root_metrics = (self.root_contributions, self.distinct_external_root_count,
+                        self.ancestry_concentration_hhi, self.effective_external_root_count)
         if self.records is None:
             if (self.execution_status is not ExecutionStatus.FAILED
                     or self.execution_reason_codes != ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",)
@@ -151,6 +215,7 @@ class LineageAnalysisResult:
                     or self.resolved_lineage_coverage is not None
                     or self.external_ancestry_coverage is not None
                     or self.ancestry_coverage_reason_codes != ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",)
+                    or any(value is not None for value in root_metrics)
                     or not any(message.code == ErrorCode.LINEAGE_RESOURCE_LIMIT_EXCEEDED.value
                                and message.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)
                                for message in messages)):
@@ -184,6 +249,20 @@ class LineageAnalysisResult:
                 raise _invalid("ancestry coverage must use the full explicit target denominator")
             if (self.execution_status, self.execution_reason_codes) != _execution(messages, ground + closed, unresolved):
                 raise _invalid("ancestry execution status disagrees with its target partition and diagnostics")
+            if type(self.root_contributions) is not tuple:
+                raise _invalid("completed root metrics require immutable contribution rows")
+            for contribution in self.root_contributions:
+                if type(contribution) is not RootContribution:
+                    raise _invalid("root contributions require typed values")
+                replace(contribution)
+            _integer(self.distinct_external_root_count)
+            expected_roots, expected_count, expected_hhi, expected_effective = _root_metrics(
+                self.records, total, ground)
+            if (self.root_contributions != expected_roots
+                    or self.distinct_external_root_count != expected_count
+                    or not _coverage(self.ancestry_concentration_hhi, expected_hhi)
+                    or not _coverage(self.effective_external_root_count, expected_effective)):
+                raise _invalid("root metrics disagree with complete target root sets")
         references = (self.declared_parent_reference_count, self.resolved_parent_reference_count,
                       self.unresolved_parent_reference_count)
         if type(self.no_declared_parents) is not bool:
@@ -205,6 +284,22 @@ class LineageAnalysisResult:
         object.__setattr__(self, "cycles", cycles)
         object.__setattr__(self, "resource_usage", usage)
         object.__setattr__(self, "messages", messages)
+
+    @property
+    def root_metrics_status(self) -> ReportStatus:
+        if self.records is None:
+            return ReportStatus.UNAVAILABLE
+        return ReportStatus.PARTIAL if self.unresolved_record_count else ReportStatus.AVAILABLE
+
+    @property
+    def concentration_status(self) -> ReportStatus:
+        return self.root_metrics_status if self.grounded_record_count else ReportStatus.UNAVAILABLE
+
+    @property
+    def concentration_reason_codes(self) -> tuple[str, ...]:
+        if self.records is None:
+            return ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",)
+        return () if self.grounded_record_count else ("NO_RESOLVED_EXTERNAL_ROOTS",)
 
     @property
     def lineage_depth(self) -> int | None:
@@ -323,10 +418,10 @@ def analyze_lineage(
     validation: BundleValidationResult, *, target_dataset_version: str | None,
     limits: LineageLimits = LineageLimits(),
 ) -> LineageAnalysisResult:
-    """Compute explicit Step 4 ancestry, stopping dependent work on exhaustion.
+    """Compute explicit ancestry and root metrics, stopping on exhaustion.
 
     All loaded context nodes participate in resolution and resource accounting.
-    Only selected targets enter returned record rows, G/C/U and coverage.
+    Only selected targets enter returned rows, G/C/U, coverage and root metrics.
     Canonical dependency-ready nodes precede canonical parent and root visits.
     """
     graph = build_lineage_graph(validation, target_dataset_version=target_dataset_version, limits=limits)
@@ -353,7 +448,9 @@ def analyze_lineage(
         return LineageAnalysisResult(
             graph.scope, ExecutionStatus.FAILED, (error.reason_code,), None, cycles,
             None, None, None, None, None, None, (error.reason_code,),
-            **reference_fields, resource_usage=error.resource_usage, messages=messages)
+            **reference_fields, root_contributions=None, distinct_external_root_count=None,
+            ancestry_concentration_hhi=None, effective_external_root_count=None,
+            resource_usage=error.resource_usage, messages=messages)
     records = tuple(RecordAncestry(
         key, "unresolved" if roots[key] is None else "grounded" if roots[key] else "closed",
         roots[key], reasons[key], cycles.depths_by_record[key].lineage_depth,
@@ -363,9 +460,12 @@ def analyze_lineage(
     unresolved = len(records) - ground - closed
     status, execution_reasons = _execution(messages, ground + closed, unresolved)
     total = graph.scope.target_record_count
+    contributions, distinct, hhi, effective = _root_metrics(records, total, ground)
     return LineageAnalysisResult(
         graph.scope, status, execution_reasons, records, cycles,
         ground, closed, unresolved, ground + closed,
         (ground + closed) / total if total else None, ground / total if total else None,
         () if total else ("EMPTY_TARGET_SCOPE",),
-        **reference_fields, resource_usage=budget.usage(), messages=messages)
+        **reference_fields, root_contributions=contributions, distinct_external_root_count=distinct,
+        ancestry_concentration_hhi=hhi, effective_external_root_count=effective,
+        resource_usage=budget.usage(), messages=messages)

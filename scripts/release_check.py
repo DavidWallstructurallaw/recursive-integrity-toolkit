@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Step 4 opens the approved root resolution and coverage implementation scope. Historical dispatch, source-body
+Step 5 opens the approved root incidence and concentration implementation scope. Historical dispatch, source-body
 migrations and phase registries are recoverable from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
 """
@@ -24,7 +24,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "11192a3c353292f11d85eb3725c8edc73a71967b"
+ACCEPTED_COMMIT = "2450100d08355d8cb1e0be931345f44572861e4a"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/")
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
     "src/recursive_integrity_toolkit/lineage/ancestry.py",
@@ -67,7 +67,7 @@ def verify_source_scope(root: Path = ROOT) -> dict:
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
-            raise ValueError(f"Unauthorized product mutation outside Step 4 scope: {name}")
+            raise ValueError(f"Unauthorized product mutation outside Step 5 scope: {name}")
     for prefix in PROTECTED_PREFIXES:
         paths = list((root / prefix).rglob("*"))
         if (root / prefix).is_symlink() or any(path.is_symlink() for path in paths):
@@ -75,7 +75,7 @@ def verify_source_scope(root: Path = ROOT) -> dict:
         actual = {path.relative_to(root).as_posix() for path in paths
                   if path.is_file() and "__pycache__" not in path.parts}
         if actual != {name for name in expected if name.startswith(prefix)}:
-            raise ValueError(f"Unauthorized product file-set mutation during Step 4: {prefix}")
+            raise ValueError(f"Unauthorized product file-set mutation during Step 5: {prefix}")
     return {"protected_product_files": len(expected) - len(CURRENT_IMPLEMENTATION_PATHS),
             "authorized_implementation_files": len(CURRENT_IMPLEMENTATION_PATHS),
             "product_file_inventory": "unchanged"}
