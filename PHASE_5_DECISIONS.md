@@ -1,6 +1,6 @@
 # Phase 5 Decisions and Current Authorization
 
-Status: **PLAN APPROVED; STEPS 1-2 COMPLETE; PHASE INCOMPLETE**.
+Status: **PLAN APPROVED; STEPS 1-3 COMPLETE; PHASE INCOMPLETE**.
 
 On 2026-09-23 UTC the Theory Owner instructed:
 `批准，Phase 5  step 1开始`.
@@ -136,3 +136,20 @@ full environment matrix or performance measurement is authorized by this step.
 Stop after Step 2; subsequent execution needs its own instruction. Existing
 authorization to synchronize this branch is retained. Merge, tag and publication
 remain separate actions.
+
+## Step 3 execution instruction
+
+On 2026-09-23 UTC the Theory Owner instructed `Phase 5 Step 3 继续`.
+This authorizes iterative strongly connected component detection, affected
+descendants, bounded cycle witnesses, topological ordering and structural depth.
+Work starts from Step 2 commit
+`e40543ff5ed3d2793a41bf58d7e4831bd2a9bfe9` on `phase5-lineage`.
+
+Runtime implementation is confined to the existing `lineage/cycles.py` owner.
+The existing T6 test module becomes a direct behavior suite; input/graph and
+generation neighbors remain the affected gate. The single current source check
+advances to the completed Step 2 tree and opens only this implementation module.
+No additional historical dispatcher or source-binding registry is introduced.
+Root propagation, ancestry metrics, schema/report integration and CLI lineage
+dispatch remain subsequent steps. Stop after Step 3; merge, tag and publication
+remain outside this instruction.

@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Step 2 opens the approved parent-graph implementation scope. Historical dispatch, source-body
+Step 3 opens the approved cycle, topology and depth implementation scope. Historical dispatch, source-body
 migrations and phase registries are recoverable from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
 """
@@ -24,13 +24,10 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "1db3b1a460c233242ff37fbe45b8fac74d6101ef"
+ACCEPTED_COMMIT = "e40543ff5ed3d2793a41bf58d7e4831bd2a9bfe9"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/")
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
-    "src/recursive_integrity_toolkit/models.py",
-    "src/recursive_integrity_toolkit/errors.py",
-    "src/recursive_integrity_toolkit/io/validation.py",
-    "src/recursive_integrity_toolkit/lineage/graph.py",
+    "src/recursive_integrity_toolkit/lineage/cycles.py",
 })
 PARQUET_CASES = {"test_PR002_parquet_real_roundtrip", "test_PR002_parquet_real_row_limit", "test_PR002_parquet_real_invalid_file"}
 HERO_NAMES = {"records_v1.csv", "records_v2.csv", "provenance.csv", "config.json", "version_order.json", "EXPECTED_OUTPUTS.md"}
@@ -60,7 +57,7 @@ def _regular_file(root: Path, relative: str) -> Path:
 
 
 def verify_source_scope(root: Path = ROOT) -> dict:
-    """Reject product changes outside the currently authorized parent-graph scope.
+    """Reject product changes outside the currently authorized cycle/depth scope.
 
     Later authorized implementation updates this single current boundary. It does
     not append another historical dispatcher or grant authority through metadata.
@@ -70,7 +67,7 @@ def verify_source_scope(root: Path = ROOT) -> dict:
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
-            raise ValueError(f"Unauthorized product mutation outside Step 2 scope: {name}")
+            raise ValueError(f"Unauthorized product mutation outside Step 3 scope: {name}")
     for prefix in PROTECTED_PREFIXES:
         paths = list((root / prefix).rglob("*"))
         if (root / prefix).is_symlink() or any(path.is_symlink() for path in paths):
@@ -78,7 +75,7 @@ def verify_source_scope(root: Path = ROOT) -> dict:
         actual = {path.relative_to(root).as_posix() for path in paths
                   if path.is_file() and "__pycache__" not in path.parts}
         if actual != {name for name in expected if name.startswith(prefix)}:
-            raise ValueError(f"Unauthorized product file-set mutation during Step 2: {prefix}")
+            raise ValueError(f"Unauthorized product file-set mutation during Step 3: {prefix}")
     return {"protected_product_files": len(expected) - len(CURRENT_IMPLEMENTATION_PATHS),
             "authorized_implementation_files": len(CURRENT_IMPLEMENTATION_PATHS),
             "product_file_inventory": "unchanged"}

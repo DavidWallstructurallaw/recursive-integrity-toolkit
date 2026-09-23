@@ -2,9 +2,9 @@
 
 ## Current Phase 5 boundary
 
-Phase 5 Step 2 is approved. Runtime remains at `0.1.0.dev3`, with executable
-report schema 1.0. Parent-graph construction is the current implementation scope;
-cycle, depth, ancestry and report integration remain subsequent steps.
+Phase 5 Step 3 is approved. Runtime remains at `0.1.0.dev3`, with executable
+report schema 1.0. Cycle detection, topology and structural depth are the current
+implementation scope; ancestry and report integration remain subsequent steps.
 Stable v0.1 publication, a tag and main merge require
 separate authorization.
 
@@ -18,11 +18,11 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The accepted Phase 4 commit supplies the existing historical authority; no new
-Phase 5 hash registry is needed. During Step 2 the existing source check permits
-the approved models, errors, input-validation and lineage-graph modules, retaining
-the exact product file inventory and rejecting unrelated runtime, schema,
-package-metadata and canonical Hero changes. Sixteen frozen
+The existing source check advances its single reference to the completed Step 2
+commit; no new Phase 5 hash registry is needed. During Step 3 it permits changes
+only to the existing cycle module, retaining the exact product file inventory and
+rejecting unrelated runtime, schema, package-metadata and canonical Hero changes.
+The frozen Phase 0 specification hashes are unchanged. Sixteen frozen
 specifications and seven packaged resource copies remain protected.
 
 ## Risk-sensitive gates
@@ -46,7 +46,7 @@ Dispatch `ci.yml` with `gate=candidate` for a stable candidate. The workflow run
 Compatibility cells run complete canonical regression with
 `--ignore=tests/performance`. The designated performance job runs
 `tests/performance` once, avoiding nine repetitions of the costly 100k report
-workload. The Phase 5 sparse-lineage test is still a placeholder in Step 2;
+workload. The Phase 5 sparse-lineage test is still a placeholder in Step 3;
 it becomes an executable graph benchmark in Step 9. No placeholder is counted as
 a successful lineage measurement.
 

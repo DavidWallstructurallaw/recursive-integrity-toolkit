@@ -202,10 +202,13 @@ def test_phase4_step7_validate_blocks_every_calculation_and_content_reader(tmp_p
     def denied(*args, **kwargs):
         touched.append(True)
         raise AssertionError("calculation or content-reference reader executed")
-    for name in ("metrics.diversity", "metrics.provenance", "metrics.bounds", "metrics.duplicates", "metrics.tail",
-                 "metrics.resampling", "representations.base", "representations.field", "representations.content_hash",
-                 "representations.compatibility"):
-        module = importlib.import_module("recursive_integrity_toolkit." + name)
+    names = ("metrics.diversity", "metrics.provenance", "metrics.bounds", "metrics.duplicates", "metrics.tail",
+             "metrics.resampling", "representations.base", "representations.field", "representations.content_hash",
+             "representations.compatibility", "lineage.graph", "lineage.cycles", "lineage.ancestry")
+    # Import dependencies before patching so late imports cannot retain a stub
+    # after monkeypatch restores the original owner module.
+    modules = [importlib.import_module("recursive_integrity_toolkit." + name) for name in names]
+    for module in modules:
         for key, value in vars(module).copy().items():
             if inspect.isfunction(value) and value.__module__ == module.__name__:
                 monkeypatch.setattr(module, key, denied)
@@ -602,8 +605,9 @@ def test_phase4_step8_pair_does_not_activate_other_calculation_families(tmp_path
     def denied(*args, **kwargs):
         calls.append(True)
         raise AssertionError("unopened operation")
-    for name in ("metrics.resampling", "lineage.graph", "lineage.ancestry", "lineage.cycles"):
-        module = importlib.import_module("recursive_integrity_toolkit." + name)
+    names = ("metrics.resampling", "lineage.graph", "lineage.ancestry", "lineage.cycles")
+    modules = [importlib.import_module("recursive_integrity_toolkit." + name) for name in names]
+    for module in modules:
         for key, value in vars(module).copy().items():
             if inspect.isfunction(value): monkeypatch.setattr(module, key, denied)
     for owner, name in ((socket, "socket"), (socket, "getaddrinfo"), (urllib.request, "urlopen"), (loaders, "load_content_reference")):

@@ -9,9 +9,10 @@ definitions/specifications remain unchanged.
 
 This document defines interfaces for Steps 2-8. Step 2 implements retained batch
 parent evidence and `build_lineage_graph` with immutable scope, adjacency and
-node/edge limits. Cycle, depth, root, metric, report and CLI lineage interfaces
-remain later implementation targets. The package remains at `0.1.0.dev3` and the
-executable report schema at `1.0`.
+node/edge limits. Step 3 adds `analyze_cycles` for iterative cycle detection,
+unaffected topology and structural depth. Root, metric, report and CLI lineage
+interfaces remain later implementation targets. The package remains at
+`0.1.0.dev3` and the executable report schema at `1.0`.
 
 ## 1. Scope and reference semantics
 
@@ -148,6 +149,20 @@ closed classification. A failed intermediate field uses null and its reason,
 while the result identifies which computation stages actually completed.
 
 ## 3. Cycles and structural depth
+
+The direct Step 3 entry is `lineage.cycles.analyze_cycles(graph: LineageGraph)`.
+It revalidates the typed graph and returns immutable `CycleAnalysis` data without
+calling loaders, generation, root propagation, metrics or rendering. Full SCC
+membership, affected keys, unaffected topology and per-record depth assessments
+are internal computation inputs for subsequent ancestry work. They retain all
+loaded nodes. `component_details` holds at most 100 canonical component rows;
+omitted component counts remain explicit. The general report detail envelope
+and identity protection in section 5 belong to Step 7.
+
+Cycle status explicitly covers accepted edges and retained self-reference
+evidence. Structural input reasons and validation errors remain separate, so an
+acyclic accepted subgraph does not certify rejected declarations. A detected
+cycle adds `E_LINEAGE_CYCLE` even when its component is disconnected from targets.
 
 Cycle analysis uses accepted resolved edges plus separately retained explicit
 self-parent evidence. The self-edge remains invalid ancestry evidence while
