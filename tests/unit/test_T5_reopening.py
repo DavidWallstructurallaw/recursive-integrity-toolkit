@@ -3,8 +3,7 @@ import ast
 import inspect
 
 
-def test_T5_reopening_owner_and_placeholder(owner_checker, repo_root):
-    owner_checker("metrics/resampling.py", "T5")
+def test_T5_reopening_public_boundary(repo_root):
     from recursive_integrity_toolkit.metrics import resampling
     source=(repo_root/"src/recursive_integrity_toolkit/metrics/resampling.py").read_text()
     public={node.name for node in ast.parse(source).body if isinstance(node,ast.FunctionDef) and not node.name.startswith("_")}

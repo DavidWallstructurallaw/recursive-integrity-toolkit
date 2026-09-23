@@ -12,13 +12,6 @@ Limits:
 """
 
 
-def test_PR018_language_owner_and_placeholder(owner_checker, placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):
-    owner_checker = phase3_final_owner_checker
-    placeholder_checker = phase3_final_placeholder_checker
-    owner_checker("reports/markdown_report.py", "PR-018")
-    placeholder_checker("reports/markdown_report.py")
-
-
 # Phase 4 Step 3: independently authored report assembly expectations.
 def phase4_step3_run():
     return {

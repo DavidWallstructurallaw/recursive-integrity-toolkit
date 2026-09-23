@@ -1,15 +1,29 @@
-name: Phase 4 Step 11 CI
+name: Current verification
 
 on:
   pull_request:
     paths-ignore:
       - README.md
       - CHANGELOG.md
-      - "docs/**"
+      - docs/architecture.md
+      - docs/cli.md
+      - docs/data_schema.md
+      - docs/privacy.md
+      - docs/release_process.md
+      - docs/report_schema.md
+      - docs/theory_traceability.md
       - PHASE_4_COMPLETION.md
       - PHASE_4_VALIDATION_REPORT.md
       - PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md
+      - PHASE_5_STEP_1.md
   workflow_dispatch:
+    inputs:
+      gate:
+        description: Focused development checks or complete candidate verification
+        required: true
+        default: focused
+        type: choice
+        options: [focused, candidate]
 
 permissions:
   contents: read
@@ -19,10 +33,36 @@ defaults:
     shell: bash
 
 jobs:
+  focused:
+    if: github.event_name != 'workflow_dispatch' || inputs.gate != 'candidate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      RIT_TEST_PARQUET: "0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install ".[test]"
+      - name: Check Step 1 contracts and affected boundaries
+        run: |
+          set -euo pipefail
+          python scripts/check_spec_consistency.py
+          python scripts/check_traceability.py
+          python scripts/release_check.py
+          python -m pytest -p no:cacheprovider -q tests/integration/test_current_verification.py tests/integration/test_ci_workflows.py tests/unit/test_lineage_fixture_inputs.py tests/unit/test_phase3_contracts.py tests/integration/test_phase3_metric_pipeline.py tests/unit/test_PR016_determinism.py tests/integration/test_no_algorithms.py tests/integration/test_repository_structure.py
+
   core:
+    if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'
     name: Core (${{ matrix.dependencies }}) on ${{ matrix.os }} with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 105
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -66,32 +106,32 @@ jobs:
           fi
       - name: Verify actual optional dependency absence
         run: python -c "import importlib.util; assert importlib.util.find_spec('pyarrow') is None"
-      - name: Run the complete core suite
+      - name: Run complete canonical regression
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-core"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" --maxfail=1 | tee "$RUNNER_TEMP/rit-core/phase4_test_results.log"
-          python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 3768
-      - name: Check current authorized scope and canonical suite
+          python -m pytest -p no:cacheprovider -q --ignore=tests/performance --junitxml="$RUNNER_TEMP/rit-core/core.xml" --maxfail=1 | tee "$RUNNER_TEMP/rit-core/tests.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-core/core.xml"
+      - name: Check current source, specifications and traceability
         run: |
           set -euo pipefail
-          python scripts/check_spec_consistency.py --phase 4 --step 11
-          python scripts/check_traceability.py --phase 4 --step 11
-          python scripts/release_check.py --phase 4 --step 11 --diff
-          python scripts/release_check.py --phase 4 --step 11 --baseline-evidence "$RUNNER_TEMP/rit-core"
+          python scripts/check_spec_consistency.py
+          python scripts/check_traceability.py
+          python scripts/release_check.py
       - name: Retain core evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase4-current-core-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.dependencies }}
+          name: current-core-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.dependencies }}
           path: ${{ runner.temp }}/rit-core/
           if-no-files-found: error
           retention-days: 30
 
   parquet:
+    if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'
     name: Real optional Parquet on Ubuntu with Python 3.12
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 30
     env:
       PYTHONDONTWRITEBYTECODE: "1"
       RIT_TEST_PARQUET: "1"
@@ -108,7 +148,7 @@ jobs:
           python-version: "3.12"
       - name: Install approved real Parquet extra
         run: python -m pip install ".[test,parquet]"
-      - name: Run the complete extra-enabled suite
+      - name: Run complete canonical regression with Parquet
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/rit-parquet"
@@ -117,19 +157,60 @@ jobs:
           python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
           git rev-parse HEAD > "$RUNNER_TEMP/rit-parquet/source-commit.txt"
           free --bytes | tee "$RUNNER_TEMP/rit-parquet/host-memory-bytes.txt"
-          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" --maxfail=1 | tee "$RUNNER_TEMP/rit-parquet/phase4_parquet_results.log"
-          python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 3771
-          python scripts/release_check.py --phase 4 --step 11 --baseline-evidence "$RUNNER_TEMP/rit-parquet"
+          python -m pytest -p no:cacheprovider -q --ignore=tests/performance --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" --maxfail=1 | tee "$RUNNER_TEMP/rit-parquet/tests.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet
       - name: Retain Parquet evidence without masking failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase4-current-real-parquet
+          name: current-real-parquet
           path: ${{ runner.temp }}/rit-parquet/
           if-no-files-found: error
           retention-days: 30
 
+  performance:
+    if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      RIT_TEST_PARQUET: "0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install ".[test]"
+      - name: Measure reference profile including required 100k workload
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rit-performance"
+          python -m pip freeze > "$RUNNER_TEMP/rit-performance/dependencies.txt"
+          python -c "import platform; print(platform.platform(), platform.python_version())"
+          free --bytes
+          python -m pytest -p no:cacheprovider -q tests/performance --junitxml="$RUNNER_TEMP/rit-performance/performance.xml" | tee "$RUNNER_TEMP/rit-performance/tests.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-performance/performance.xml"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: current-reference-performance
+          path: ${{ runner.temp }}/rit-performance/
+          if-no-files-found: error
+          retention-days: 30
+
+  hero:
+    if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'
+    uses: ./.github/workflows/golden.yml
+
+  security:
+    if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'
+    uses: ./.github/workflows/security.yml
+
   delivery:
     name: Build verified candidate
-    needs: [core, parquet]
+    needs: [core, parquet, performance, hero, security]
     uses: ./.github/workflows/release.yml

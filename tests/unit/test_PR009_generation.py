@@ -1,6 +1,5 @@
 """PR-009 Step 4 declared generation types only; parent-based derivation is deferred."""
 
-import ast
 import pytest
 
 from recursive_integrity_toolkit.errors import CanonicalValidationError, ErrorCode
@@ -12,15 +11,6 @@ from recursive_integrity_toolkit.models import InputSource, FileRole
 def _row(generation):
     return {"dataset_version": "v1", "record_id": "a", "source_type": "human",
             "provenance_confidence": "unknown", "external_grounding": "yes", "generation": generation}
-
-
-def test_PR009_generation_owner_and_no_derivation(owner_checker, package_root, placeholder_checker):
-    owner_checker("io/validation.py", "PR-009")
-    tree = ast.parse((package_root / "io/validation.py").read_text())
-    names = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
-    assert not names & {"expected_generation", "derive_generation", "lineage_depth", "detect_cycles"}
-    for path in ["lineage/graph.py", "lineage/cycles.py", "lineage/ancestry.py"]:
-        placeholder_checker(path)
 
 
 @pytest.mark.parametrize("value", [0, 1, 2, 1000, None])

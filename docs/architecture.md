@@ -1,5 +1,19 @@
 # Architecture
 
+## Current Phase 5 Step 1 boundary
+
+The approved [lineage contract](lineage_contract.md) fixes the interfaces for
+future graph/ancestry implementation. Step 1 changes no runtime modules, executable
+schemas, dependencies, canonical Hero inputs or package version. The following
+Phase 3/4 sections describe historical implementation stages.
+
+Current verification uses one path in the existing consistency, traceability and
+release scripts. Exact historical method bodies, snapshot fixtures and migration
+chains are recoverable from Git, while direct current product/security tests
+remain active. [Release process](release_process.md) defines focused and candidate
+gates. The current source-scope check rejects product changes during this
+administrative step without creating another approval registry.
+
 Status: Phase 3 Step 11 development milestone. Actual acceptance is recorded in `PHASE_3_COMPLETION.md`.
 
 The input-layer sections below describe the preserved Phase 2 implementation. Subsequent step sections retain the boundary at their historical stage. The current boundary is summarized here and in the final Step 11 section.

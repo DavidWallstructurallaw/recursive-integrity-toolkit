@@ -54,11 +54,6 @@ def _csv_row(tmp_path, text):
     return load_table(InputSource(FileRole.RECORDS_PRIMARY, path)).rows[0]
 
 
-def test_PR001_step4_owner_metadata(owner_checker):
-    for path, owner in [("io/normalization.py", "PR-001"), ("io/validation.py", "PR-001")]:
-        owner_checker(path, owner)
-
-
 @pytest.mark.parametrize("field", ["dataset_version", "record_id", "content"])
 @pytest.mark.parametrize("missing", [True, False])
 def test_PR001_required_field_missing_or_null(field, missing):

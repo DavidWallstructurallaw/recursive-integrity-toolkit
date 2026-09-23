@@ -12,13 +12,6 @@ Limits:
 """
 
 
-def test_PR014_unavailable_owner_and_placeholder(owner_checker, placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):
-    owner_checker = phase3_final_owner_checker
-    placeholder_checker = phase3_final_placeholder_checker
-    owner_checker("reports/assembly.py", "PR-014")
-    placeholder_checker("reports/assembly.py")
-
-
 # Phase 4 Step 3: independently authored report assembly expectations.
 def phase4_step3_run():
     return {

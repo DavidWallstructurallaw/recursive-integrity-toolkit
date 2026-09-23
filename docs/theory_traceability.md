@@ -1,6 +1,18 @@
 # Theory Traceability
 
-Status: Phase 3 mathematical development milestone. Final acceptance is recorded in the three Phase 3 milestone reports.
+## Current Phase 5 Step 1 status
+
+The Phase 5 plan and decisions are approved. T4, T6, full PR-008, PR-009 depth and
+T3 lineage bounds now have fixed [implementation contracts](lineage_contract.md)
+and independent fixtures. Their general lineage algorithms remain unimplemented.
+The existing Phase 3 mathematics and Phase 4 reports/CLI remain the current runtime.
+
+The sections below retain historical implementation explanations. Current checks
+protect owner/layer boundaries and current behavior; they no longer require
+historical test-body or source-binding migrations to execute. Frozen specifications
+and mathematical/Hero expectations remain unchanged.
+
+Historical Phase 3 status: mathematical development milestone. Final acceptance is recorded in the three Phase 3 milestone reports.
 
 The controlling maps are:
 

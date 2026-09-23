@@ -1,5 +1,11 @@
 # Performance measurements
 
+Current scheduling: Phase 5 candidate verification runs this directory once on
+the designated Ubuntu/Python 3.12 reference profile. Compatibility cells run the
+canonical suite without this performance directory. The existing complete 100k
+report benchmark remains required. The sparse-lineage placeholder gains actual
+execution in Phase 5 Step 9 and currently makes no graph performance claim.
+
 Phase 4 Step 10 extends the retained Phase 3 calculation observations with public
 CLI audit measurements ending only after both `report.json` and `report.md` have
 been published. The original Phase 3 test functions and measurement fixture remain

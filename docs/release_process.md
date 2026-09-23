@@ -1,75 +1,110 @@
 # Development and Release Verification
 
-`0.1.0.dev3` is the Phase 4 report/CLI development milestone. Completion requires recorded candidate evidence and does not authorize stable v0.1 publication, a tag, main merge or Phase 5 implementation. The three `PHASE_4_*` milestone reports distinguish actual acceptance, remaining limits and unexecuted work. Prior phase records remain historical evidence.
+## Current Phase 5 boundary
 
-## Choose the gate by impact
+Phase 5 Step 1 is approved. Runtime remains at `0.1.0.dev3`, with executable
+report schema 1.0 and general lineage deferred. The Phase 5 contracts describe
+future implementation. Stable v0.1 publication, a tag and main merge require
+separate authorization.
 
-| Change or milestone | Required scope |
-|---|---|
-| Documentation or nonauthoritative metadata | Formatting/static checks and affected document consistency |
-| Isolated implementation | Affected unit tests, dependency neighbors and applicable mathematical/security checks |
-| Schema, public API, mathematics, provenance, privacy or package boundary | Relevant integration, compatibility and broader regression appropriate to impact |
-| PR candidate | Complete canonical regression and required supported-environment matrix |
-| Release candidate or phase delivery candidate | Complete regression, supported matrix, build/install, canonical examples, reproducibility, artifact integrity and applicable security checks |
-
-Documentation that participates in executable authority receives the applicable authority checks. Administrative successors after an accepted code candidate do not automatically repeat the full matrix when executable and authoritative bytes are unchanged. Preserve the accepted source identity and state exactly what changed. If an executable or authoritative change invalidates prior evidence, rerun the affected gate before acceptance.
-
-Keep three concerns distinct: the canonical suite protects current supported behavior; release verification covers environment/package/reproducibility boundaries; Git and archived records preserve superseded evidence. Preserve historical behavioral guarantees without automatically adding test-body migrations, registries or evidence-of-evidence layers. A new verification mechanism needs a concrete failure that existing controls cannot adequately detect. New governance mechanisms additionally require the reason Git/archive evidence is insufficient, maintenance cost and an exit or consolidation path.
-
-## Supported candidate profiles
-
-| Profile | Environment and evidence |
-|---|---|
-| Core, current dependencies | Ubuntu and Windows, Python 3.11 and 3.12; resolved versions retained; PyArrow genuinely absent |
-| Core, minimum jointly compatible dependencies | Same OS/Python matrix, NumPy 2.0.0 and pandas 2.2.2; PyArrow absent |
-| Real Parquet | Ubuntu/Python 3.12 with actual PyArrow; real roundtrip, row-limit and invalid-file regressions |
-| Security | No-network/import, declarative mapping, safe input/output paths, privacy/redaction and protected-owner boundaries |
-| Hero and mathematics | Frozen mathematical cases, literal standard/redacted report goldens and installed Hero behavior |
-| Package and delivery | Wheel/sdist integrity, strict metadata checks, clean installed execution outside the checkout, resource equality and tracked-source archive |
-
-The package still declares `numpy>=2.0` and `pandas>=2.2`. NumPy 2.0.0 with pandas 2.2.0 cannot resolve because that pandas version requires NumPy below 2. The retained minimum profile uses pandas 2.2.2. This covers that jointly compatible pair, without claiming every intervening version or all optional-dependency minimums. Current profiles record the versions actually resolved at execution time.
-
-Retain Python/platform/dependency details, `pip freeze`, `pip check`, commands, exit codes, JUnit identities and workflow logs. Core absence and real-PyArrow presence must be checked explicitly. A skipped, failed, duplicate or uncollected required test cannot stand in for an executed passing test. Do not add repeated jobs/subsets into a fictitious distinct-test total.
-
-## Local checks and builds
-
-From a prepared full Git checkout:
+Use one current verification path:
 
 ```bash
-python -m pip install ".[test,release]"
-python scripts/check_spec_consistency.py --phase 4 --step 11
-python scripts/check_traceability.py --phase 4 --step 11
-python scripts/release_check.py --phase 4 --step 11 --diff
+python scripts/check_spec_consistency.py
+python scripts/check_traceability.py
+python scripts/release_check.py
 ```
 
-The Phase 4 Step 11 candidate runs `python -m pytest -p no:cacheprovider -q` in all eight core matrix cells and the real-Parquet cell, retaining the complete suite including the 100,000-record report case. The release job reuses the exact same-commit Ubuntu/Python 3.12 current-core and real-Parquet results rather than running both suites again. The Hero/mathematics and security roles run separately. Full Git history is needed for the bounded retained historical checks. Scope guards protect the fixed authority files, supported runtime behavior, schemas, Hero resources and mathematical/report oracles. The active manifest cannot expand its own permissions.
+Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
+migrations and receipts remain recoverable from Git and archived phase records.
+The accepted Phase 4 commit supplies the existing historical authority; no new
+Phase 5 hash registry is needed. During Step 1 the source check rejects changes
+to runtime, schemas, package metadata and canonical Hero files. Sixteen frozen
+specifications and seven packaged resource copies remain protected.
 
-Build into a fresh evidence directory:
+## Risk-sensitive gates
+
+Ordinary PR checks use the focused job for the active step. Documentation-only
+changes require formatting and affected consistency checks. As implementation
+scope changes, update the focused selection to affected owners and dependency
+neighbors. It does not establish candidate acceptance.
+
+Dispatch `ci.yml` with `gate=candidate` for a stable candidate. The workflow runs:
+
+| Role | Required execution |
+|---|---|
+| Core | Ubuntu/Windows, Python 3.11/3.12, current/minimum compatible dependencies; PyArrow absent |
+| Optional Parquet | Ubuntu/Python 3.12, real PyArrow with roundtrip, row-limit and invalid-file regressions |
+| Canonical Hero and mathematics | Frozen mathematical cases, report goldens and packaged Hero behavior |
+| Security | No-network, input/path, privacy/redaction and output-publication boundaries |
+| Reference performance | One Ubuntu/Python 3.12 profile, including required actual 100k workloads |
+| Package/delivery | Wheel/sdist integrity, clean installed execution, reproducibility and tracked-source archive |
+
+Compatibility cells run complete canonical regression with
+`--ignore=tests/performance`. The designated performance job runs
+`tests/performance` once, avoiding nine repetitions of the costly 100k report
+workload. The Phase 5 sparse-lineage test is still a placeholder in Step 1;
+it becomes an executable graph benchmark in Step 9. No placeholder is counted as
+a successful lineage measurement.
+
+The existing minimum compatible pair remains NumPy 2.0.0/pandas 2.2.2. Record
+actual resolved dependencies, `pip check`, Python/platform, commands, results
+and material limitations. A skipped, failed, duplicate or uncollected required
+test cannot stand in for a passing result. No raw test-count growth target is used.
+
+Hero and security are reusable candidate roles and may also be dispatched
+explicitly for a relevant change. Delivery requires core, Parquet, performance,
+Hero and security success. A failing command cannot be masked by evidence upload.
+
+## Package and candidate checks
 
 ```bash
 python -m build --outdir /absolute/evidence/dist
 python -m twine check --strict /absolute/evidence/dist/*
-python scripts/release_check.py --phase 4 --step 11 --dist /absolute/evidence/dist
+python scripts/release_check.py --junit /absolute/evidence/core.xml
+python scripts/release_check.py --junit /absolute/evidence/parquet.xml --require-parquet
+python scripts/release_check.py --dist /absolute/evidence/dist
+python scripts/release_check.py --candidate /absolute/evidence
 ```
 
-The candidate build role performs two default builds from sdist with the same recorded build environment and `SOURCE_DATE_EPOCH`, comparing wheel bytes and sdist payloads. The package checks compare wheel/sdist module and resource bytes with the tested tree. Installed checks must import the installed artifact, with checkout source excluded. Keep import/input-only checks with NumPy/pandas/PyArrow blocked separate from numerical/audit checks with required dependencies available. Both operate under the declared no-network checks. Exercise installed `example`, `audit`, `validate`, help/version and the documented Python examples. Wheel and sdist must include the six exact Hero files and report schema, without adding Python modules.
+Delivery reuses same-commit core/Parquet XML instead of rerunning those suites.
+Candidate validation checks complete current canonical test identities against
+collection, exact committed source, wheel/sdist module and resource bytes, safe
+archive handling and clean installed behavior outside the checkout. Synthetic
+archive/XML negatives test corruption detection; they never count as a real
+build or installed execution.
 
-A source archive contains one project root and the complete tracked tree. Compare archived member bytes with the accepted checkout. Exclude Git internals, environments, caches, generated bytecode, private inputs and full theory PDFs. Wheel, sdist and source archive have different documented scopes. Retain artifact hashes with actual source commit/tree identity in the external receipt; committed documents need not encode their own eventual hash.
+Build twice from the same committed source and recorded environment with
+`SOURCE_DATE_EPOCH`; compare wheel bytes and every sdist file payload. Sdist archive
+timestamps may differ. Keep installed import/input-only checks with numerical
+and optional imports blocked separate from actual mathematical/audit execution.
+Installed checks cover the existing public APIs, CLI, privacy, safe output and
+Hero. Schema and Hero resources must match their canonical source bytes.
 
-## Performance evidence and limits
+The source archive contains one project root and the complete tracked tree.
+Exclude Git internals, environments, caches, generated bytecode, private inputs
+and full theory PDFs. Wheel, sdist and source archives retain their distinct scopes.
 
-Keep complete-report timing separate from the CLI's pre-publication `run.duration_seconds`. Use untraced wall time for the Hero under-five-second target and record hardware/environment. Allocation tracing is a separate observation with measured overhead. RSS describes fresh-process peak resident size and includes interpreter/native allocation; it is not a delta or a Python-only allocation measure.
+## Performance and evidence reuse
 
-The accepted Step 10 reference-container 100,000-record metadata run took 1,362.4708 seconds, peaked at 7.12 GiB RSS and produced approximately 443 MB JSON and 165 MB Markdown. That run checked independent aggregate expectations through actual published outputs. It measures the declared synthetic workload without certifying other data shapes, common-laptop throughput, general linear scaling or deferred lineage behavior. Its full-scale Python allocation peak was not measured; a separately labeled bounded run characterized tracing overhead.
+Measure complete output publication separately from report
+`run.duration_seconds`. Untraced Hero wall time supports the under-five-second
+target on the stated reference environment. Traced allocation and process peak
+RSS are separate observations. Do not substitute a small workload or extrapolation
+for required actual 100k execution. See [performance details](../tests/performance/README.md).
 
-The Step 10 observation supplies the comparison baseline; the Step 11 full candidate matrix also records fresh complete-suite performance observations. For later changes, reuse accepted observations when product/report bytes and relevant conditions are unchanged. Repeat expensive performance measurements only for a concrete impact or required gate, with comparable dataset, tracing mode, environment and resources. Preserve all attempts and explain target misses. A timeout is a resource guard and a failed attempt, never a successful throughput result. The [performance README](../tests/performance/README.md) defines the generator, expectations and measurement scope.
+Phase 4's metadata-only 100k run took about 1,362.47 seconds and 7.12 GiB peak RSS.
+It did not execute general ancestry. Phase 5 must measure its own enabled graph
+workloads; comparable regression review uses the approved >20% time or >50%
+memory thresholds. Operational timeouts are resource guards, not product SLAs.
 
-## Acceptance and handoff
+Reuse unchanged successful candidate evidence for nonauthoritative administrative
+successors and disclose that reuse. Repeat affected gates when executable or
+authoritative content changes. Preserve failed attempts and material limitations
+in the existing completion/validation record; do not generate another permanent
+receipt framework. A hosted artifact that cannot be retrieved is distinct from
+locally reproduced bytes and must be described accurately.
 
-The active CI workflow calls the reusable build/delivery workflow after core and Parquet success. Together with the separately dispatched Hero and security workflows, this supplies four verification roles from three dispatchable workflows. There is no additional push-triggered full matrix or standalone performance job. Record the actual immutable candidate commit and required workflow roles. Completion can be claimed only after their required checks pass and deliverable identities are known. If the final record changes only nonauthoritative documentation, verify those changes and reuse the identified code-candidate evidence under the policy above. Changes to executable/authoritative content require the corresponding checks. Do not claim a matrix was rerun when it was reused.
-
-The external receipt identifies candidate/final source, actual workflow attempts, commands, artifacts, hashes, failed attempts, fixes and limitations. Hosted artifacts have finite retention. If a hosted binary cannot be retrieved and verified, disclose that gap and distinguish locally reproduced bytes from the hosted artifact. Archive previous evidence without expanding permanent current execution merely to preserve old source forms.
-
-GitHub evaluates PR path filters against the complete three-dot diff. A documentation-only successor on an existing code PR can therefore trigger the matrix despite `paths-ignore`. After every required candidate gate passes, an acceptance-record successor may use `[skip ci]` when an exact diff confirms that only nonauthoritative documentation changed and executable, workflow, test and authority bytes are unchanged. Retain the accepted candidate identity and results, run focused document/source checks, and record evidence reuse. This cannot excuse a failed or outstanding product gate. Required checks may remain pending on the skipped head, so this handoff keeps the PR draft and unmerged; a later merge must satisfy its applicable checks. See GitHub's [path-filter semantics](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#git-diff-comparisons) and [skip instructions](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs).
-
-Stop at the approved development milestone. Stable release, merge, tag, publication and the next phase remain separate actions.
+The historical Phase 4 procedure and full evidence are recoverable at
+`1db3b1a460c233242ff37fbe45b8fac74d6101ef` and its phase completion records.
+Stop at the authorized step. Verification never merges, tags or publishes by itself.

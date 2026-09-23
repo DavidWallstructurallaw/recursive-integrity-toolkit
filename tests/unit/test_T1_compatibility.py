@@ -74,11 +74,6 @@ def _mapping_pair(direction='earlier_to_later'):
     return a, b, kw
 
 
-def test_step9_owner_and_new_module_scope(owner_checker):
-    for owner in ('T1', 'PR-007', 'PR-011'):
-        owner_checker('representations/compatibility.py', owner)
-
-
 def test_equal_size_support_can_lose_and_add_states():
     x = _compare()
     assert x.support_delta.value == 0 and x.support_loss_count.value == x.support_added_count.value == 1

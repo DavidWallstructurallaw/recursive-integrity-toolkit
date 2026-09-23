@@ -12,13 +12,6 @@ Limits:
 """
 
 
-def test_PR012_evidence_classes_owner_and_placeholder(owner_checker, placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):
-    owner_checker = phase3_final_owner_checker
-    placeholder_checker = phase3_final_placeholder_checker
-    owner_checker("reports/assembly.py", "PR-012")
-    placeholder_checker("reports/assembly.py")
-
-
 def phase4_step2_evidence_report_fixture():
     """Independent literal control data, never generated from production code."""
     return {
