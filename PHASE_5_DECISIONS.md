@@ -1,6 +1,6 @@
 # Phase 5 Decisions and Current Authorization
 
-Status: **PLAN APPROVED; STEPS 1-5 COMPLETE; PHASE INCOMPLETE**.
+Status: **PLAN APPROVED; STEPS 1-6 COMPLETE; PHASE INCOMPLETE**.
 
 On 2026-09-23 UTC the Theory Owner instructed:
 `批准，Phase 5  step 1开始`.
@@ -195,3 +195,26 @@ Package version and executable report schema remain `0.1.0.dev3` and `1.0`.
 Stop after Step 5. Bounds, shared-root proxy, report/schema integration and CLI
 lineage dispatch remain later steps. Existing branch synchronization approval
 continues; merge, tag and publication remain separate actions.
+
+## Step 6 execution instruction
+
+On 2026-09-23 UTC the Theory Owner instructed `ok 继续Phase 5 Step 6`.
+This authorizes lineage closure bounds and the descriptive shared-ancestry
+dependence proxy under P5-D07. Work starts from Step 5 commit
+`d81966561502b94701712a3d4b4b7fd50783cba9` on `phase5-lineage`.
+
+Runtime changes are confined to `metrics/bounds.py` and `lineage/ancestry.py`.
+Lineage bounds use the complete target G/C/U partition and preserve direct
+bounds. The proxy uses exact root incidence with explicit coverage and no
+calibrated risk interpretation. Its absence requires complete nonempty target
+evidence; incomplete evidence without a witness remains unavailable.
+
+The current source check advances its single comparison commit to Step 5 and
+opens these two existing owners. Direct oracle, uncertainty, input-boundary and
+direct-bound regression checks cover the change; no additional governance
+architecture is introduced. Package version and executable report schema stay
+`0.1.0.dev3` and `1.0`.
+
+Stop after Step 6. Report/schema and CLI integration remain Steps 7-8. Existing
+branch synchronization approval continues; merge, tag and publication remain
+separate actions.

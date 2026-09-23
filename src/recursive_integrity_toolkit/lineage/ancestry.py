@@ -1,6 +1,6 @@
-"""Resolve exact external roots, target coverage and root concentration.
+"""Resolve external roots, coverage, concentration and shared-root evidence.
 
-Owner IDs: T4; Phase 5 Step 5.
+Owner IDs: T4; Phase 5 Step 6.
 
 Validated explicit grounding supplies anchors. Iterative dependency scheduling
 unions complete root sets; unknown branches never supply exact roots. Logical
@@ -8,13 +8,13 @@ membership and candidate-visit budgets bound propagation before each work unit.
 The allocation is topological and makes no causal or scientific quality claim.
 
 Current phase status:
-    Phase 5 Step 5 adds target incidence, fractional mass and concentration.
-    Bounds and reports remain later steps. No file or network I/O, generation
-    calculation or implicit invocation.
+    Phase 5 Step 6 adds an explicitly requested descriptive shared-root proxy.
+    Reports remain a later step. No file or network I/O, generation calculation
+    or implicit invocation.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from heapq import heapify, heappop, heappush
 from math import fsum, isfinite
 from types import MappingProxyType
@@ -312,6 +312,117 @@ class LineageAnalysisResult:
     @property
     def depth_resolved_record_count(self) -> int:
         return self.cycles.depth_resolved_record_count
+
+
+@dataclass(frozen=True, slots=True)
+class SharedAncestryDependence:
+    """Descriptive exact-root witness with its original coverage and errors.
+
+    A single ranked contribution is sufficient to witness shared support. The
+    immutable source retains all evidence without copying the contribution list.
+    Unresolved targets can preserve a witnessed presence but cannot prove absence.
+    """
+    source: LineageAnalysisResult = field(repr=False)
+
+    def __post_init__(self) -> None:
+        if type(self.source) is not LineageAnalysisResult:
+            raise _invalid("shared ancestry requires a typed lineage analysis")
+        object.__setattr__(self, "source", replace(self.source))
+
+    @property
+    def witness(self) -> RootContribution | None:
+        roots = self.source.root_contributions
+        return roots[0] if roots and roots[0].incidence_count >= 2 else None
+
+    @property
+    def status(self) -> ReportStatus:
+        if self.witness is not None:
+            return ReportStatus.PARTIAL if self.unresolved_record_count else ReportStatus.AVAILABLE
+        if self.source.records is not None and self.scope.target_record_count and not self.unresolved_record_count:
+            return ReportStatus.AVAILABLE
+        return ReportStatus.UNAVAILABLE
+
+    @property
+    def level(self) -> Literal["present", "not_present", "indeterminate"]:
+        if self.witness is not None:
+            return "present"
+        return "not_present" if self.status is ReportStatus.AVAILABLE else "indeterminate"
+
+    @property
+    def reason_codes(self) -> tuple[str, ...]:
+        if self.source.records is None:
+            return ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",)
+        if not self.scope.target_record_count:
+            return ("EMPTY_TARGET_SCOPE",)
+        return ("UNRESOLVED_ANCESTRY",) if self.unresolved_record_count else ()
+
+    @property
+    def scope(self) -> LineageScope:
+        return self.source.scope
+
+    @property
+    def grounded_record_count(self) -> int | None:
+        return self.source.grounded_record_count
+
+    @property
+    def closed_record_count(self) -> int | None:
+        return self.source.closed_record_count
+
+    @property
+    def unresolved_record_count(self) -> int | None:
+        return self.source.unresolved_record_count
+
+    @property
+    def resolved_lineage_coverage(self) -> float | None:
+        return self.source.resolved_lineage_coverage
+
+    @property
+    def external_ancestry_coverage(self) -> float | None:
+        return self.source.external_ancestry_coverage
+
+    @property
+    def ancestry_coverage_reason_codes(self) -> tuple[str, ...]:
+        return self.source.ancestry_coverage_reason_codes
+
+    @property
+    def unresolved_reason_codes(self) -> tuple[str, ...]:
+        return tuple(sorted({reason for record in self.source.records or () for reason in record.reason_codes}))
+
+    @property
+    def input_execution_status(self) -> ExecutionStatus:
+        return self.source.execution_status
+
+    @property
+    def input_execution_reason_codes(self) -> tuple[str, ...]:
+        return self.source.execution_reason_codes
+
+    @property
+    def input_has_errors(self) -> bool:
+        return any(message.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)
+                   for message in self.source.messages)
+
+    @property
+    def validation_messages(self) -> tuple[ValidationMessage, ...]:
+        return self.source.messages
+
+    @property
+    def evidence_fields(self) -> tuple[str, ...]:
+        return ("root_contributions.incidence_count", "resolved_lineage_coverage", "external_ancestry_coverage")
+
+    @property
+    def operationalization_label(self) -> str:
+        return "theory_guided_operationalization"
+
+    @property
+    def limitations(self) -> tuple[str, ...]:
+        return ("Descriptive shared-root topology under supplied metadata; no calibrated risk level.",
+                "Does not establish causal contribution, semantic error, independent information, "
+                "biological relatedness, universal integrity or collapse.")
+
+
+def shared_ancestry_dependence(result: LineageAnalysisResult) -> SharedAncestryDependence:
+    """Explicit pure proxy request; never reload data or rerun graph analysis."""
+    return SharedAncestryDependence(result)
 
 
 class _RootBudget:

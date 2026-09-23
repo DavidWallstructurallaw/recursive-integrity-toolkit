@@ -12,8 +12,9 @@ parent evidence and `build_lineage_graph` with immutable scope, adjacency and
 node/edge limits. Step 3 adds `analyze_cycles` for iterative cycle detection,
 unaffected topology and structural depth. Step 4 adds `analyze_lineage` for
 external-root resolution, G/C/U counts and coverage. Step 5 adds root incidence,
-fractional mass and ancestry concentration. Bounds, report and CLI lineage
-interfaces remain later implementation targets.
+fractional mass and ancestry concentration. Step 6 adds explicit lineage closure
+and shared-root proxy calls. Report and CLI lineage interfaces remain later
+implementation targets.
 The package remains at
 `0.1.0.dev3` and the executable report schema at `1.0`.
 
@@ -94,8 +95,9 @@ CLI orchestration calls it only after an explicit lineage request.
 Steps 4-5 implement this direct API for root resolution, coverage and concentration. Its
 `LineageAnalysisResult.records` contains target records in canonical order;
 context roots are intermediate computation data and do not enter target
-denominators. The existing `ExecutionStatus` vocabulary applies. Bounds and proxy
-fields remain later steps.
+denominators. The existing `ExecutionStatus` vocabulary applies. Step 6 derives
+bounds and the descriptive proxy through separate explicit calls over that
+typed result; `analyze_lineage` does not invoke either automatically.
 
 Graph admission failures retain the existing `LineageResourceLimitError` before
 a valid analytical result can be created. A root-membership or union-work
@@ -128,8 +130,8 @@ Ownership stays in existing modules:
 |---|---|
 | `lineage/graph.py` | `LineageGraph`: scope, sorted node keys, deduplicated immutable `parents_by_child` and `children_by_parent`, retained per-record reference/declaration evidence, invalid-self-reference evidence and validation messages. |
 | `lineage/cycles.py` | `CycleAnalysis`: cyclic components, member keys, affected descendant keys, topology for unaffected nodes and structural depth assessments. Iterative algorithms only. |
-| `lineage/ancestry.py` | `RecordAncestry`, `RootContribution`, `LineageAnalysisResult`; complete root resolution, G/C/U partition, root incidence/mass and concentration. |
-| `metrics/bounds.py` | Lineage closure envelope from the typed G/C/U counts, preserving the direct-bound branch. |
+| `lineage/ancestry.py` | `RecordAncestry`, `RootContribution`, `LineageAnalysisResult`; complete root resolution, G/C/U partition, root incidence/mass and concentration. `SharedAncestryDependence` describes shared-root evidence. |
+| `metrics/bounds.py` | `LineageClosureExposureBounds` from the typed G/C/U counts, preserving the direct-bound branch. |
 | `result.py`, `reports/assembly.py` | Validate/assemble supplied typed results, scope/status metadata and canonical schema 1.1 values. No graph traversal or metric recomputation. |
 | `reports/json_report.py`, `reports/markdown_report.py` | Render the same privacy-safe canonical result. No computation ownership. |
 
@@ -318,6 +320,33 @@ does not certify causal contribution, semantic error, independent information,
 biological relatedness, universal diversity, integrity or collapse. T4 retains
 its theory-guided operationalization label; T6 is an engineering graph-validity
 rule. Existing unavailable scientific conclusions remain explicit.
+
+### Step 6 direct calculation interfaces
+
+`metrics.bounds.lineage_closure_exposure(result)` returns immutable
+`LineageClosureExposureBounds`. Its only stored field, `source`, is a revalidated
+`LineageAnalysisResult`, excluded from the wrapper representation. Scope, target
+G/C/U counts, denominator, coverage, unresolved reasons and input diagnostics
+remain accessible without copying another record or root table. `lower_bound`,
+`upper_bound` and `interval_width` expose the three ratios as floats or null.
+
+The interval's `status` is `available` for a completed nonempty target partition,
+including U>0 and the all-unresolved interval `[0,1]`. This status describes the
+conservative interval. Input execution status, errors and unresolved reasons
+retain their separate meaning. Empty scope yields unavailable values with
+`EMPTY_TARGET_SCOPE`; an aborted root traversal yields unavailable values with
+`LINEAGE_RESOURCE_LIMIT_EXCEEDED`. The original direct-bound functions preserve
+their formulas, classifications and input-only dependency behavior.
+
+`lineage.ancestry.shared_ancestry_dependence(result)` returns immutable
+`SharedAncestryDependence`, retaining one revalidated `source` and deriving the
+status/level table above. A positive witness is the first already ranked
+`RootContribution` with incidence at least two. The proxy exposes actual
+incidence and coverage field references, target scope and source diagnostics.
+It adds no calibrated severity, risk threshold or causal conclusion. Both calls
+consume already computed ancestry and perform no graph traversal, ingestion,
+report rendering or network/file access. Serialized schema integration remains
+Step 7.
 
 ## 5. Schema 1.1 placement, detail bounds and privacy
 
