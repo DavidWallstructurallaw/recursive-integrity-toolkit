@@ -1,6 +1,6 @@
 # Phase 5 Decisions and Current Authorization
 
-Status: **PLAN APPROVED; STEPS 1-3 COMPLETE; PHASE INCOMPLETE**.
+Status: **PLAN APPROVED; STEPS 1-4 COMPLETE; PHASE INCOMPLETE**.
 
 On 2026-09-23 UTC the Theory Owner instructed:
 `批准，Phase 5  step 1开始`.
@@ -153,3 +153,26 @@ No additional historical dispatcher or source-binding registry is introduced.
 Root propagation, ancestry metrics, schema/report integration and CLI lineage
 dispatch remain subsequent steps. Stop after Step 3; merge, tag and publication
 remain outside this instruction.
+
+## Step 4 execution instruction
+
+On 2026-09-23 UTC the Theory Owner instructed `Phase 5 Step 4 继续`.
+This authorizes external-root anchors, carryover inheritance, complete root
+unions, G/C/U classification and coverage, including the approved root resource
+guards. Work starts from Step 3 commit
+`11192a3c353292f11d85eb3725c8edc73a71967b` on `phase5-lineage`.
+
+Runtime changes are confined to `lineage/ancestry.py`. Direct T4 and root-resource
+tests exercise the new behavior; graph/cycle, provenance and input-only neighbors
+retain their relevant checks. The existing source boundary advances its single
+comparison commit to Step 3 and opens only the ancestry module. No new registry
+or historical migration is added. Incidence, concentration, bounds, shared-root
+proxy, report/schema integration and CLI lineage dispatch remain later steps.
+
+The conflict rule follows frozen `DEFINITIONS_AND_UNITS.md` section 5.8 and
+`DATA_AND_PROVENANCE_SPEC.md` section 9.12: unresolved grounding/ancestry conflicts
+block root classification. A `batch_id` or `timestamp` difference between record
+and provenance namespaces alone does not establish such a conflict. Original
+metadata is preserved; no new grounding inference is made from labels or URIs.
+
+Stop after Step 4; merge, tag and publication remain outside this instruction.

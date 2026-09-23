@@ -10,8 +10,10 @@ definitions/specifications remain unchanged.
 This document defines interfaces for Steps 2-8. Step 2 implements retained batch
 parent evidence and `build_lineage_graph` with immutable scope, adjacency and
 node/edge limits. Step 3 adds `analyze_cycles` for iterative cycle detection,
-unaffected topology and structural depth. Root, metric, report and CLI lineage
-interfaces remain later implementation targets. The package remains at
+unaffected topology and structural depth. Step 4 adds `analyze_lineage` for
+external-root resolution, G/C/U counts and coverage. Incidence, concentration,
+bounds, report and CLI lineage interfaces remain later implementation targets.
+The package remains at
 `0.1.0.dev3` and the executable report schema at `1.0`.
 
 ## 1. Scope and reference semantics
@@ -87,6 +89,19 @@ after the Step 2 retention refactor. It must cover context as well as target
 records. Selection is explicit, revalidated and independent of ordinary metric
 eligibility. `validate_bundle` remains input-only and never calls this function.
 CLI orchestration calls it only after an explicit lineage request.
+
+Step 4 implements this direct API for root resolution and coverage. Its
+`LineageAnalysisResult.records` contains target records in canonical order;
+context roots are intermediate computation data and do not enter target
+denominators. The existing `ExecutionStatus` vocabulary applies. Incidence,
+fractional mass, concentration, bounds and proxy fields remain later steps.
+
+Graph admission failures retain the existing `LineageResourceLimitError` before
+a valid analytical result can be created. A root-membership or union-work
+failure after graph/cycle analysis returns a failed result with root records,
+G/C/U counts and root coverage unavailable. Completed cycle/depth observations,
+original-reference coverage and exact consumed-work counters survive. No partial
+root traversal is converted into an exact target partition.
 
 Step 2 supplies the lower-level input-only handoff in `models.py`:
 `ParentRecordValidation` retains provenance presence, an optional
@@ -205,6 +220,13 @@ An explicit parentless grounded-yes record supports itself with root set `{key}`
 Strict ancestry still excludes self. Explicit parentless grounding-no produces a
 known-empty set. Grounding-unknown, missing required provenance, conflicting
 declarations or an undeclared boundary produces an unresolved set.
+
+Conflicts here concern grounding or required ancestry, as defined in frozen
+`DEFINITIONS_AND_UNITS.md` section 5.8. Record/provenance `batch_id` or `timestamp`
+differences remain separate metadata observations under
+`DATA_AND_PROVENANCE_SPEC.md` section 9.12; they do not alone invalidate roots.
+Provenance-specific declarations retain their manifest authority. Labels, URI
+spelling and metadata disagreements do not introduce inferred grounding values.
 
 A grounding-yes carryover with exactly one deduplicated resolved canonical parent
 inherits the parent's set. Any unresolved additional declaration blocks it.

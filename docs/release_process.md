@@ -2,9 +2,10 @@
 
 ## Current Phase 5 boundary
 
-Phase 5 Step 3 is approved. Runtime remains at `0.1.0.dev3`, with executable
-report schema 1.0. Cycle detection, topology and structural depth are the current
-implementation scope; ancestry and report integration remain subsequent steps.
+Phase 5 Step 4 is approved. Runtime remains at `0.1.0.dev3`, with executable
+report schema 1.0. External-root resolution, G/C/U classification and coverage are
+the current implementation scope; concentration, bounds and report integration
+remain subsequent steps.
 Stable v0.1 publication, a tag and main merge require
 separate authorization.
 
@@ -18,9 +19,9 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The existing source check advances its single reference to the completed Step 2
-commit; no new Phase 5 hash registry is needed. During Step 3 it permits changes
-only to the existing cycle module, retaining the exact product file inventory and
+The existing source check advances its single reference to the completed Step 3
+commit; no new Phase 5 hash registry is needed. During Step 4 it permits changes
+only to the existing ancestry module, retaining the exact product file inventory and
 rejecting unrelated runtime, schema, package-metadata and canonical Hero changes.
 The frozen Phase 0 specification hashes are unchanged. Sixteen frozen
 specifications and seven packaged resource copies remain protected.
@@ -46,7 +47,7 @@ Dispatch `ci.yml` with `gate=candidate` for a stable candidate. The workflow run
 Compatibility cells run complete canonical regression with
 `--ignore=tests/performance`. The designated performance job runs
 `tests/performance` once, avoiding nine repetitions of the costly 100k report
-workload. The Phase 5 sparse-lineage test is still a placeholder in Step 3;
+workload. The Phase 5 sparse-lineage test is still a placeholder in Step 4;
 it becomes an executable graph benchmark in Step 9. No placeholder is counted as
 a successful lineage measurement.
 
