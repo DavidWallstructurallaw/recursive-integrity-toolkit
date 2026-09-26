@@ -1,22 +1,7 @@
-"""Check the Phase 1 help and version startup commands."""
+"""Check help and version startup against the current package."""
 
 import subprocess
 import sys
-
-
-def test_cli_help_runs(subprocess_env,phase3_final_subprocess_env) -> None:
-    subprocess_env = phase3_final_subprocess_env
-    result = subprocess.run(
-        [sys.executable, "-m", "recursive_integrity_toolkit", "--help"],
-        capture_output=True,
-        text=True,
-        env=subprocess_env,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    normalized = " ".join(result.stdout.split())
-    assert "Phase 1 scaffold" in normalized
-    assert "Analytical audit functionality is not implemented" in normalized
 
 
 def test_cli_version_runs(subprocess_env) -> None:
@@ -28,11 +13,11 @@ def test_cli_version_runs(subprocess_env) -> None:
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "recursive-integrity-toolkit 0.1.0.dev3"
+    assert result.stdout.strip() == "recursive-integrity-toolkit 0.1.0.dev4"
 
 
 def test_phase4_cli_help_uses_current_source(subprocess_env) -> None:
-    """Current startup remains exercised after preserving the historical help text."""
+    """The current CLI starts with a useful help response and no diagnostics."""
     result = subprocess.run(
         [sys.executable, "-m", "recursive_integrity_toolkit", "--help"],
         capture_output=True,

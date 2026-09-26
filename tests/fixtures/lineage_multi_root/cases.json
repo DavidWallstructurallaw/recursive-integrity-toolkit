@@ -1,0 +1,583 @@
+{
+  "purpose": "Independent Phase 5 acceptance inputs and future lineage oracles; no lineage execution is claimed by Step 1.",
+  "fraction_encoding": "Exact rational strings; null means unavailable and requires the adjacent reason.",
+  "cases": [
+    {
+      "case_id": "mixed_missing_and_unknown",
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "a",
+          "content": "Synthetic fixture a"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "b",
+          "content": "Synthetic fixture b"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "u",
+          "content": "Synthetic fixture u"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t1",
+          "content": "Synthetic fixture t1"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t2",
+          "content": "Synthetic fixture t2"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t3",
+          "content": "Synthetic fixture t3"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t4",
+          "content": "Synthetic fixture t4"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "a",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "b",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "u",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "unknown",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a",
+            "v1::b"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a",
+            "v1::u",
+            "v1::missing"
+          ]
+        }
+      ],
+      "version_order": [
+        "v1",
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::t1",
+        "v2::t2",
+        "v2::t3",
+        "v2::t4"
+      ],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [
+          "W_GROUNDING_UNKNOWN",
+          "W_PARENT_UNRESOLVED"
+        ],
+        "target_declared_references": 6,
+        "target_resolved_references": 5
+      },
+      "expected_lineage": {
+        "complete_root_sets": {
+          "v2::t1": [
+            "v1::a"
+          ],
+          "v2::t2": [
+            "v1::a",
+            "v1::b"
+          ],
+          "v2::t3": []
+        },
+        "unresolved_reasons": {
+          "v2::t4": [
+            "unknown_grounding",
+            "missing_parent"
+          ]
+        },
+        "counts": {
+          "target": 4,
+          "grounded": 2,
+          "closed": 1,
+          "unresolved": 1
+        },
+        "loaded_records": 7,
+        "records_with_resolved_external_ancestry": 3,
+        "distinct_external_roots": 2,
+        "root_order": [
+          "v1::a",
+          "v1::b"
+        ],
+        "incidence": [
+          2,
+          1
+        ],
+        "incidence_shares": [
+          "1/2",
+          "1/4"
+        ],
+        "incidence_denominator": 4,
+        "fractional_masses": [
+          "3/2",
+          "1/2"
+        ],
+        "normalized_weights": [
+          "3/4",
+          "1/4"
+        ],
+        "mass_denominator": 2,
+        "ancestry_hhi": "5/8",
+        "effective_external_root_count": "8/5",
+        "resolved_lineage_coverage": "3/4",
+        "external_ancestry_coverage": "1/2",
+        "edge_coverage": "5/6",
+        "lineage_bounds": [
+          "1/4",
+          "1/2",
+          "1/4"
+        ],
+        "shared_ancestry_proxy": "present",
+        "cycle_detected": false
+      }
+    },
+    {
+      "case_id": "unknown_without_missing",
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "a",
+          "content": "Synthetic fixture a"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "b",
+          "content": "Synthetic fixture b"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "u",
+          "content": "Synthetic fixture u"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t1",
+          "content": "Synthetic fixture t1"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t2",
+          "content": "Synthetic fixture t2"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t3",
+          "content": "Synthetic fixture t3"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t4",
+          "content": "Synthetic fixture t4"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "a",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "b",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "u",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "unknown",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a",
+            "v1::b"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a",
+            "v1::u"
+          ]
+        }
+      ],
+      "version_order": [
+        "v1",
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::t1",
+        "v2::t2",
+        "v2::t3",
+        "v2::t4"
+      ],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [
+          "W_GROUNDING_UNKNOWN"
+        ],
+        "target_declared_references": 5,
+        "target_resolved_references": 5
+      },
+      "expected_lineage": {
+        "complete_root_sets": {
+          "v2::t1": [
+            "v1::a"
+          ],
+          "v2::t2": [
+            "v1::a",
+            "v1::b"
+          ],
+          "v2::t3": []
+        },
+        "unresolved_reasons": {
+          "v2::t4": [
+            "unknown_grounding"
+          ]
+        },
+        "counts": {
+          "target": 4,
+          "grounded": 2,
+          "closed": 1,
+          "unresolved": 1
+        },
+        "loaded_records": 7,
+        "records_with_resolved_external_ancestry": 3,
+        "distinct_external_roots": 2,
+        "root_order": [
+          "v1::a",
+          "v1::b"
+        ],
+        "incidence": [
+          2,
+          1
+        ],
+        "incidence_shares": [
+          "1/2",
+          "1/4"
+        ],
+        "incidence_denominator": 4,
+        "fractional_masses": [
+          "3/2",
+          "1/2"
+        ],
+        "normalized_weights": [
+          "3/4",
+          "1/4"
+        ],
+        "mass_denominator": 2,
+        "ancestry_hhi": "5/8",
+        "effective_external_root_count": "8/5",
+        "resolved_lineage_coverage": "3/4",
+        "external_ancestry_coverage": "1/2",
+        "edge_coverage": "1",
+        "lineage_bounds": [
+          "1/4",
+          "1/2",
+          "1/4"
+        ],
+        "shared_ancestry_proxy": "present",
+        "cycle_detected": false
+      }
+    },
+    {
+      "case_id": "missing_without_unknown",
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "a",
+          "content": "Synthetic fixture a"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "b",
+          "content": "Synthetic fixture b"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "u",
+          "content": "Synthetic fixture u"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t1",
+          "content": "Synthetic fixture t1"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t2",
+          "content": "Synthetic fixture t2"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t3",
+          "content": "Synthetic fixture t3"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t4",
+          "content": "Synthetic fixture t4"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "a",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "b",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "u",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a",
+            "v1::b"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "t4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a",
+            "v1::u",
+            "v1::missing"
+          ]
+        }
+      ],
+      "version_order": [
+        "v1",
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::t1",
+        "v2::t2",
+        "v2::t3",
+        "v2::t4"
+      ],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [
+          "W_PARENT_UNRESOLVED"
+        ],
+        "target_declared_references": 6,
+        "target_resolved_references": 5
+      },
+      "expected_lineage": {
+        "complete_root_sets": {
+          "v2::t1": [
+            "v1::a"
+          ],
+          "v2::t2": [
+            "v1::a",
+            "v1::b"
+          ],
+          "v2::t3": []
+        },
+        "unresolved_reasons": {
+          "v2::t4": [
+            "missing_parent"
+          ]
+        },
+        "counts": {
+          "target": 4,
+          "grounded": 2,
+          "closed": 1,
+          "unresolved": 1
+        },
+        "loaded_records": 7,
+        "records_with_resolved_external_ancestry": 3,
+        "distinct_external_roots": 2,
+        "root_order": [
+          "v1::a",
+          "v1::b"
+        ],
+        "incidence": [
+          2,
+          1
+        ],
+        "incidence_shares": [
+          "1/2",
+          "1/4"
+        ],
+        "incidence_denominator": 4,
+        "fractional_masses": [
+          "3/2",
+          "1/2"
+        ],
+        "normalized_weights": [
+          "3/4",
+          "1/4"
+        ],
+        "mass_denominator": 2,
+        "ancestry_hhi": "5/8",
+        "effective_external_root_count": "8/5",
+        "resolved_lineage_coverage": "3/4",
+        "external_ancestry_coverage": "1/2",
+        "edge_coverage": "5/6",
+        "lineage_bounds": [
+          "1/4",
+          "1/2",
+          "1/4"
+        ],
+        "shared_ancestry_proxy": "present",
+        "cycle_detected": false
+      }
+    }
+  ]
+}

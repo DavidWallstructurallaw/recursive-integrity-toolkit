@@ -7,7 +7,6 @@ from dataclasses import FrozenInstanceError, replace
 from itertools import permutations
 from pathlib import Path
 from types import MappingProxyType
-import ast
 import hashlib
 import json
 import pytest
@@ -35,16 +34,6 @@ def options(**changes):
 
 def detect(rows, **changes):
     return detect_exact_duplicates(tuple(rows), **options(**changes))
-
-
-def test_PR006_duplicates_owner_and_placeholder(owner_checker, package_root):
-    # Historical identity retained; only its obsolete placeholder requirement migrates.
-    owner_checker("metrics/duplicates.py", "PR-006")
-    owner_checker("representations/content_hash.py", "PR-006")
-    tree = ast.parse((package_root / "metrics/duplicates.py").read_text(encoding="utf-8"))
-    names = {n.name for n in tree.body if isinstance(n, ast.FunctionDef)}
-    assert names == {"detect_exact_duplicates"}
-    assert callable(detect_exact_duplicates)
 
 
 def test_PR006_identical_normalized_content_groups():

@@ -1,0 +1,566 @@
+{
+  "purpose": "Independent Phase 5 acceptance inputs and future lineage oracles; no lineage execution is claimed by Step 1.",
+  "fraction_encoding": "Exact rational strings; null means unavailable and requires the adjacent reason.",
+  "cases": [
+    {
+      "case_id": "external_root_supports_itself",
+      "records": [
+        {
+          "dataset_version": "v2",
+          "record_id": "a",
+          "content": "Synthetic fixture a"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v2",
+          "record_id": "a",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        }
+      ],
+      "version_order": [
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::a"
+      ],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [],
+        "target_declared_references": 0,
+        "target_resolved_references": 0
+      },
+      "expected_lineage": {
+        "complete_root_sets": {
+          "v2::a": [
+            "v2::a"
+          ]
+        },
+        "strict_ancestors": {
+          "v2::a": []
+        },
+        "counts": {
+          "target": 1,
+          "grounded": 1,
+          "closed": 0,
+          "unresolved": 0
+        },
+        "depth_by_record": {
+          "v2::a": 0
+        },
+        "lineage_depth": 0,
+        "no_declared_parents": true,
+        "edge_coverage": "1",
+        "ancestry_hhi": "1",
+        "effective_external_root_count": "1",
+        "shared_ancestry_proxy": "not_present",
+        "lineage_bounds": [
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "case_id": "all_closed",
+      "records": [
+        {
+          "dataset_version": "v2",
+          "record_id": "a",
+          "content": "Synthetic fixture a"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "b",
+          "content": "Synthetic fixture b"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v2",
+          "record_id": "a",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "b",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::a"
+          ]
+        }
+      ],
+      "version_order": [
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::a",
+        "v2::b"
+      ],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [],
+        "target_declared_references": 1,
+        "target_resolved_references": 1
+      },
+      "expected_lineage": {
+        "complete_root_sets": {
+          "v2::a": [],
+          "v2::b": []
+        },
+        "counts": {
+          "target": 2,
+          "grounded": 0,
+          "closed": 2,
+          "unresolved": 0
+        },
+        "depth_by_record": {
+          "v2::a": 0,
+          "v2::b": 1
+        },
+        "lineage_depth": 1,
+        "resolved_lineage_coverage": "1",
+        "external_ancestry_coverage": "0",
+        "distinct_external_roots": 0,
+        "ancestry_hhi": null,
+        "effective_external_root_count": null,
+        "concentration_unavailable_reason": "no_completely_resolved_nonempty_root_sets",
+        "shared_ancestry_proxy": "not_present",
+        "lineage_bounds": [
+          "1",
+          "1",
+          "0"
+        ]
+      }
+    },
+    {
+      "case_id": "unknown_absent_and_null_boundaries",
+      "records": [
+        {
+          "dataset_version": "v2",
+          "record_id": "unknown",
+          "content": "Synthetic fixture unknown"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "absent",
+          "content": "Synthetic fixture absent"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "null",
+          "content": "Synthetic fixture null"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "grounded_absent",
+          "content": "Synthetic fixture grounded_absent"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v2",
+          "record_id": "unknown",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "unknown",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "absent",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "null",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": null
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "grounded_absent",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate"
+        }
+      ],
+      "version_order": [
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::absent",
+        "v2::grounded_absent",
+        "v2::null",
+        "v2::unknown"
+      ],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [
+          "W_GROUNDING_UNKNOWN"
+        ],
+        "target_declared_references": 0,
+        "target_resolved_references": 0,
+        "parent_field_states": {
+          "v2::unknown": "value",
+          "v2::absent": "absent",
+          "v2::null": "null",
+          "v2::grounded_absent": "absent"
+        }
+      },
+      "expected_lineage": {
+        "complete_root_sets": {},
+        "unresolved_reasons": {
+          "v2::unknown": [
+            "unknown_grounding"
+          ],
+          "v2::absent": [
+            "undeclared_parent_boundary"
+          ],
+          "v2::null": [
+            "undeclared_parent_boundary"
+          ],
+          "v2::grounded_absent": [
+            "undeclared_parent_boundary"
+          ]
+        },
+        "counts": {
+          "target": 4,
+          "grounded": 0,
+          "closed": 0,
+          "unresolved": 4
+        },
+        "depth_by_record": {
+          "v2::unknown": 0,
+          "v2::absent": null,
+          "v2::null": null,
+          "v2::grounded_absent": null
+        },
+        "lineage_depth": null,
+        "depth_unavailable_reason": "incomplete_target_parent_paths",
+        "no_declared_parents": true,
+        "edge_coverage": "1",
+        "resolved_lineage_coverage": "0",
+        "external_ancestry_coverage": "0",
+        "ancestry_hhi": null,
+        "effective_external_root_count": null,
+        "concentration_unavailable_reason": "no_completely_resolved_nonempty_root_sets",
+        "shared_ancestry_proxy": "indeterminate",
+        "lineage_bounds": [
+          "0",
+          "1",
+          "1"
+        ]
+      }
+    },
+    {
+      "case_id": "carryover_diamond_and_grounded_parent_limits",
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "a",
+          "content": "Synthetic fixture a"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "b",
+          "content": "Synthetic fixture b"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "carry",
+          "content": "Synthetic fixture carry"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "left",
+          "content": "Synthetic fixture left"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "right",
+          "content": "Synthetic fixture right"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "diamond",
+          "content": "Synthetic fixture diamond"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "grounded_transform",
+          "content": "Synthetic fixture grounded_transform"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "multi_carry",
+          "content": "Synthetic fixture multi_carry"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "incomplete_carry",
+          "content": "Synthetic fixture incomplete_carry"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "a",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "b",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "carry",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "carryover",
+          "parent_ids": [
+            "v1::a",
+            "a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "left",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "right",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "diamond",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::left",
+            "v2::right"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "grounded_transform",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "multi_carry",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "carryover",
+          "parent_ids": [
+            "v1::a",
+            "v1::b"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "incomplete_carry",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "carryover",
+          "parent_ids": [
+            "v1::a",
+            "v1::missing"
+          ]
+        }
+      ],
+      "version_order": [
+        "v1",
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::carry",
+        "v2::diamond",
+        "v2::grounded_transform",
+        "v2::incomplete_carry",
+        "v2::left",
+        "v2::multi_carry",
+        "v2::right"
+      ],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [
+          "W_PARENT_BARE_COMPATIBILITY",
+          "W_PARENT_DUPLICATE_REFERENCE",
+          "W_PARENT_UNRESOLVED"
+        ],
+        "target_declared_references": 11,
+        "target_resolved_references": 10
+      },
+      "expected_lineage": {
+        "complete_root_sets": {
+          "v2::carry": [
+            "v1::a"
+          ],
+          "v2::diamond": [
+            "v1::a"
+          ],
+          "v2::left": [
+            "v1::a"
+          ],
+          "v2::right": [
+            "v1::a"
+          ]
+        },
+        "unresolved_reasons": {
+          "v2::grounded_transform": [
+            "unsupported_grounded_parent_rule"
+          ],
+          "v2::multi_carry": [
+            "unsupported_grounded_parent_rule"
+          ],
+          "v2::incomplete_carry": [
+            "missing_parent"
+          ]
+        },
+        "counts": {
+          "target": 7,
+          "grounded": 4,
+          "closed": 0,
+          "unresolved": 3
+        },
+        "carryover_generation": 0,
+        "carryover_depth": 1,
+        "diamond_depth": 2,
+        "distinct_external_roots": 1,
+        "root_order": [
+          "v1::a"
+        ],
+        "incidence": [
+          4
+        ],
+        "incidence_shares": [
+          "4/7"
+        ],
+        "fractional_masses": [
+          "4"
+        ],
+        "normalized_weights": [
+          "1"
+        ],
+        "ancestry_hhi": "1",
+        "effective_external_root_count": "1",
+        "resolved_lineage_coverage": "4/7",
+        "external_ancestry_coverage": "4/7",
+        "edge_coverage": "10/11",
+        "lineage_bounds": [
+          "0",
+          "3/7",
+          "3/7"
+        ],
+        "shared_ancestry_proxy": "present"
+      },
+      "note": "Carryover has two original declarations for one canonical parent. Diamond paths both reach a. Loaded root b has no complete grounded target and contributes no exact root mass."
+    },
+    {
+      "case_id": "empty_selected_scope",
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "context",
+          "content": "Synthetic fixture context"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "context",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        }
+      ],
+      "version_order": [
+        "v1"
+      ],
+      "target_record_keys": [],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [],
+        "target_declared_references": 0,
+        "target_resolved_references": 0
+      },
+      "expected_lineage": {
+        "target_dataset_version": null,
+        "counts": {
+          "target": 0,
+          "grounded": 0,
+          "closed": 0,
+          "unresolved": 0
+        },
+        "complete_root_sets": {},
+        "distinct_external_roots": 0,
+        "no_declared_parents": true,
+        "edge_coverage": "1",
+        "resolved_lineage_coverage": null,
+        "external_ancestry_coverage": null,
+        "ancestry_hhi": null,
+        "effective_external_root_count": null,
+        "lineage_bounds": null,
+        "ratios_unavailable_reason": "empty_target",
+        "shared_ancestry_proxy": "indeterminate"
+      },
+      "note": "Future analysis API empty selection over a loaded context. This case makes no claim that the current CLI accepts an empty primary input file."
+    }
+  ]
+}

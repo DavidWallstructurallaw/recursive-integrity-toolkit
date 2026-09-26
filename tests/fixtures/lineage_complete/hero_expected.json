@@ -1,0 +1,60 @@
+{
+  "purpose": "Future lineage oracle copied from the approved Hero arithmetic; canonical Hero files are unchanged.",
+  "canonical_source": "examples/hero/EXPECTED_OUTPUTS.md",
+  "target_dataset_version": "v2",
+  "target_records": 8,
+  "loaded_records": 16,
+  "declared_target_references": 8,
+  "resolved_target_references": 8,
+  "root_order": [
+    "v1::v1_01",
+    "v1::v1_02",
+    "v1::v1_03",
+    "v1::v1_04",
+    "v1::v1_07"
+  ],
+  "incidence": [
+    3,
+    2,
+    1,
+    1,
+    1
+  ],
+  "incidence_shares": [
+    "3/8",
+    "1/4",
+    "1/8",
+    "1/8",
+    "1/8"
+  ],
+  "fractional_masses": [
+    "3",
+    "2",
+    "1",
+    "1",
+    "1"
+  ],
+  "normalized_weights": [
+    "3/8",
+    "1/4",
+    "1/8",
+    "1/8",
+    "1/8"
+  ],
+  "ancestry_hhi": "1/4",
+  "effective_external_root_count": "4",
+  "lineage_bounds": [
+    "0",
+    "0",
+    "0"
+  ],
+  "direct_bounds": [
+    "1/2",
+    "1/2",
+    "0"
+  ],
+  "distinct_external_roots": 5,
+  "cycle_detected": false,
+  "shared_ancestry_proxy": "present",
+  "lineage_execution": "future_completed_when_requested"
+}

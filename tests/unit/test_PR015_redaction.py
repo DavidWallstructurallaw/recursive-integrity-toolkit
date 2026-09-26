@@ -12,13 +12,6 @@ Limits:
 """
 
 
-def test_PR015_redaction_owner_and_placeholder(owner_checker, placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):
-    owner_checker = phase3_final_owner_checker
-    placeholder_checker = phase3_final_placeholder_checker
-    owner_checker("utils/logging.py", "PR-015")
-    placeholder_checker("utils/logging.py")
-
-
 # Phase 4 Step 4: independently authored privacy cases.
 def phase4_step4_private_report(tmp_path, *, scenario=False, duplicates=False, pair=False):
     import json
@@ -46,7 +39,7 @@ def phase4_step4_private_report(tmp_path, *, scenario=False, duplicates=False, p
     distribution = calculate_state_distribution(selected)
     distributions = (distribution,)
     nullable = ('started_at', 'completed_at', 'duration_seconds', 'python_version', 'platform', 'command', 'config_hash', 'random_seed')
-    run = {'run_id': 'RUN_SENTINEL', 'toolkit_version': '0.1.0.dev2', 'report_schema_version': '1.0', **dict.fromkeys(nullable), 'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0, 'deterministic': True, 'privacy_mode': 'standard', 'run_status': 'complete', 'null_reasons': {key: 'Test supplies no execution metadata.' for key in nullable}}
+    run = {'run_id': 'RUN_SENTINEL', 'toolkit_version': '0.1.0.dev2', 'report_schema_version': '1.1', **dict.fromkeys(nullable), 'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0, 'deterministic': True, 'privacy_mode': 'standard', 'run_status': 'complete', 'null_reasons': {key: 'Test supplies no execution metadata.' for key in nullable}}
     kwargs = {}
     if pair:
         from recursive_integrity_toolkit.metrics.diversity import compare_support

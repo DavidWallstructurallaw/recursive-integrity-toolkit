@@ -143,7 +143,7 @@ def _phase4_step10_assert_metadata_report(path, size=100000):
     assert [facts[name]["value"] for name in ("known_open_count", "known_closed_count", "unresolved_grounding_count")] == [size * 36 // 100, size * 18 // 100, size * 46 // 100]
     direct = metrics["closure_exposure"]["direct"]
     assert [direct[name]["value"] for name in ("lower_bound", "upper_bound", "interval_width")] == [.18, .64, .46]
-    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert report["capabilities"]["lineage"]["execution_status"] == "not_requested"
     assert report["capabilities"]["content_diagnostics"]["execution_status"] == "completed"
     assert report["capabilities"]["content_diagnostics"]["execution_scope"] == ["supplied_distribution:audit-representation"]
     assert set(metrics) == {"closure_exposure", "diversity", "provenance", "support"}

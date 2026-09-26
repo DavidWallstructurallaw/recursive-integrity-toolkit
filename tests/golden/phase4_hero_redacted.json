@@ -33,7 +33,7 @@
     "python_version": null,
     "random_seed": null,
     "redacted_mode": true,
-    "report_schema_version": "1.0",
+    "report_schema_version": "1.1",
     "resolved_options": {
       "comparison_requested": true,
       "privacy_mode": "redacted",
@@ -47,7 +47,7 @@
     "run_status": "complete",
     "started_at": "2000-01-01T00:00:00+00:00",
     "strict_mode": false,
-    "toolkit_version": "0.1.0.dev2"
+    "toolkit_version": "0.1.0.dev4"
   },
   "inputs": {
     "artifacts": [
@@ -401,10 +401,10 @@
         },
         "coverage_reason": null,
         "execution_reason_codes": [
-          "R_LINEAGE_EXECUTION_DEFERRED"
+          "R_ANALYSIS_NOT_REQUESTED"
         ],
         "execution_scope": [],
-        "execution_status": "deferred",
+        "execution_status": "not_requested",
         "notes": [
           "Input eligibility only; downstream analytical implementations remain deferred.",
           "Reference-entry resolution coverage is not ancestry or external-root coverage.",
@@ -486,7 +486,7 @@
     "limitations": [
       "R_MODEL_EVIDENCE_MISSING",
       "R_SCENARIO_NOT_CONFIGURED",
-      "Input eligibility is distinct from executed analysis; Phase 5 lineage remains deferred."
+      "Input eligibility is distinct from explicitly supplied executed analysis."
     ],
     "maximum_level": 4,
     "partial_evidence": [
@@ -607,10 +607,10 @@
       },
       "coverage_reason": null,
       "execution_reason_codes": [
-        "R_LINEAGE_EXECUTION_DEFERRED"
+        "R_ANALYSIS_NOT_REQUESTED"
       ],
       "execution_scope": [],
-      "execution_status": "deferred",
+      "execution_status": "not_requested",
       "notes": [
         "Input eligibility only; downstream analytical implementations remain deferred.",
         "Reference-entry resolution coverage is not ancestry or external-root coverage.",
@@ -698,18 +698,18 @@
         "denominator_reason": "denominator_not_applicable_or_unavailable",
         "evidence_class": "observed_fact",
         "limitations": [
-          "No general graph-cycle traversal executes in Phase 4."
+          "No executed graph-cycle result was supplied to this report."
         ],
         "method_id": "T6.graph_cycle_check",
         "owner_ids": [
           "T6"
         ],
         "reason_codes": [
-          "R_GRAPH_EXECUTION_DEFERRED"
+          "R_ANALYSIS_NOT_REQUESTED"
         ],
         "representation": null,
         "required_evidence": [
-          "Phase_5_graph_analysis"
+          "explicit_lineage_result"
         ],
         "scope": {
           "dataset_versions": [
@@ -5650,7 +5650,7 @@
     {
       "assumptions": [],
       "blocking_evidence": [
-        "Phase 4 does not compute ancestry; topology alone would not identify a causal contribution."
+        "Supplied parent topology and fractional root allocation do not identify a causal contribution."
       ],
       "conclusion": "causal_ancestor_effect",
       "coverage": null,
@@ -5666,8 +5666,7 @@
         "T4"
       ],
       "reason_codes": [
-        "R_CAUSAL_EVIDENCE_MISSING",
-        "R_LINEAGE_EXECUTION_DEFERRED"
+        "R_CAUSAL_EVIDENCE_MISSING"
       ],
       "related_capability": "lineage",
       "representation": null,
@@ -6222,7 +6221,7 @@
     {
       "assumptions": [],
       "blocking_evidence": [
-        "Only existing reference validation observations can be reported; no graph traversal, root tracing or ancestry metric executes."
+        "No complete successful lineage execution was supplied; independently completed observations remain visible."
       ],
       "conclusion": "lineage_analysis",
       "coverage": null,
@@ -6238,15 +6237,15 @@
         "PR-014"
       ],
       "reason_codes": [
-        "R_LINEAGE_EXECUTION_DEFERRED"
+        "R_ANALYSIS_NOT_REQUESTED"
       ],
       "related_capability": "lineage",
       "representation": null,
       "required_evidence": [
-        "Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."
+        "Supply an explicit lineage result for the validated target and its loaded context."
       ],
       "required_next_metadata": [
-        "Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."
+        "Supply an explicit lineage result for the validated target and its loaded context."
       ],
       "scope": {
         "dataset_versions": [
@@ -6325,132 +6324,17 @@
         "record_count": 16,
         "scope_id": "hmac-sha256:fe3080b69d042a9eca2d392f8429412803f06dd3eb9e71fd16178d05e5971ac3"
       },
-      "statement": "General lineage graph analysis is deferred to Phase 5.",
+      "statement": "A completed whole-target lineage analysis is unavailable in this report.",
       "status": "unavailable",
       "theory_map_ids": [],
-      "theory_or_product_limit": "Implementation is deferred even when the existing input classifier marks lineage available.",
+      "theory_or_product_limit": "Input eligibility alone does not establish executed ancestry analysis.",
       "trace_ids": [],
       "unit": "conclusion"
     },
     {
       "assumptions": [],
       "blocking_evidence": [
-        "Only existing reference validation observations can be reported; no graph traversal, root tracing or ancestry metric executes."
-      ],
-      "conclusion": "lineage_closure_exposure",
-      "coverage": null,
-      "coverage_reason": "This conclusion has no measured evidence coverage.",
-      "denominator": null,
-      "denominator_reason": "This conclusion has no scalar denominator.",
-      "evidence_class": "unavailable_conclusion",
-      "limitations": [
-        "Unavailable means the supplied evidence does not support this conclusion; it does not establish that the conclusion is false."
-      ],
-      "method_id": "T3.unavailable_conclusion",
-      "owner_ids": [
-        "T3"
-      ],
-      "reason_codes": [
-        "R_LINEAGE_EXECUTION_DEFERRED"
-      ],
-      "related_capability": "lineage",
-      "representation": null,
-      "required_evidence": [
-        "Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."
-      ],
-      "required_next_metadata": [
-        "Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."
-      ],
-      "scope": {
-        "dataset_versions": [
-          "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
-          "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d"
-        ],
-        "denominator_basis": "all_validated_bundle_records",
-        "excluded_record_count": 0,
-        "excluded_record_keys": [],
-        "included_record_keys": [
-          {
-            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
-            "record_id": "hmac-sha256:a130e0b7f4696e3bc1ed555d0170b426ca57c7efed97c9c27766355dd842ec1c"
-          },
-          {
-            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
-            "record_id": "hmac-sha256:6da9164abc2800aec9b384c96483bc3bc128008df04704ad7050851f8b3f9a2c"
-          },
-          {
-            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
-            "record_id": "hmac-sha256:52d7e4984062cff58f5ee2ab4592f4174277c11213b23be0f66b0da6c2801b15"
-          },
-          {
-            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
-            "record_id": "hmac-sha256:b09664f79e8df7595b88db8e5d4fd40a678384e2b4816e04044a63b901c6dc3d"
-          },
-          {
-            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
-            "record_id": "hmac-sha256:18eea61d82b38372f77e43b8596c93ef577d554d1cb4dba3545cd509026b1c2c"
-          },
-          {
-            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
-            "record_id": "hmac-sha256:d829ae28c8f6422156149b7d293896efb88703427b4b31d13996703e67d35aae"
-          },
-          {
-            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
-            "record_id": "hmac-sha256:41770f394bc6316c571ecb74ac4e07554113bb8f92d0c56603009a81daeeff12"
-          },
-          {
-            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
-            "record_id": "hmac-sha256:3913f4a00a32e7b06211da44f3d156e37509bf8aefde1ba61f221717eaae8c8d"
-          },
-          {
-            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
-            "record_id": "hmac-sha256:aae75164d165f5a4c0e499d094250b126cb2c634f1f3c5a55226be1fd115c101"
-          },
-          {
-            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
-            "record_id": "hmac-sha256:0a8b103130fe77d9b2a8d6f9ab9e4d69cc7146f7f342b859fdf9ce0c703fed5d"
-          },
-          {
-            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
-            "record_id": "hmac-sha256:7c40d9ce71dce69af2ccfd0c4396f6fcea650358a04107008cfa34ec73e82fc4"
-          },
-          {
-            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
-            "record_id": "hmac-sha256:8167cf7b096bcf02b20dbc95d47de65bf2b7eb2902495b089aae8ad6cc2ffae7"
-          },
-          {
-            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
-            "record_id": "hmac-sha256:7c808566f31ad17b61c8700c5ecf0e95be4fd01ca4b2edf3bb12f80f4de49255"
-          },
-          {
-            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
-            "record_id": "hmac-sha256:c45259baf1db3285bd3b9cb81d1637bfcd7ac34589868894e6ad63ee93577a0a"
-          },
-          {
-            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
-            "record_id": "hmac-sha256:c60be35d2fffdab2e6c81834408613d778914041c0ecd3f4a0f5be53541dc7bd"
-          },
-          {
-            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
-            "record_id": "hmac-sha256:27864c18901ea515a772984044b552f7cb3a0d2a058bd1a67a9b53dc49c4ab5d"
-          }
-        ],
-        "record_count": 16,
-        "scope_id": "hmac-sha256:fe3080b69d042a9eca2d392f8429412803f06dd3eb9e71fd16178d05e5971ac3"
-      },
-      "statement": "Lineage closure exposure is deferred to Phase 5.",
-      "status": "unavailable",
-      "theory_map_ids": [],
-      "theory_or_product_limit": "Implementation is deferred even when the existing input classifier marks lineage available.",
-      "trace_ids": [
-        "T3"
-      ],
-      "unit": "conclusion"
-    },
-    {
-      "assumptions": [],
-      "blocking_evidence": [
-        "Only existing reference validation observations can be reported; no graph traversal, root tracing or ancestry metric executes."
+        "Missing, invalid or unknown ancestry remains unresolved; any complete subset retains its reported coverage."
       ],
       "conclusion": "external_ancestry",
       "coverage": null,
@@ -6466,15 +6350,15 @@
         "T4"
       ],
       "reason_codes": [
-        "R_LINEAGE_EXECUTION_DEFERRED"
+        "R_ANALYSIS_NOT_REQUESTED"
       ],
       "related_capability": "lineage",
       "representation": null,
       "required_evidence": [
-        "Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."
+        "Complete the required parent references, chronology and external-grounding evidence."
       ],
       "required_next_metadata": [
-        "Preserve explicit composite parent references, chronology and external-grounding metadata for the future Phase 5 analysis."
+        "Complete the required parent references, chronology and external-grounding evidence."
       ],
       "scope": {
         "dataset_versions": [
@@ -6553,12 +6437,127 @@
         "record_count": 16,
         "scope_id": "hmac-sha256:fe3080b69d042a9eca2d392f8429412803f06dd3eb9e71fd16178d05e5971ac3"
       },
-      "statement": "External ancestry results are deferred to Phase 5.",
+      "statement": "Complete external ancestry for every target is unavailable.",
       "status": "unavailable",
       "theory_map_ids": [],
-      "theory_or_product_limit": "Implementation is deferred even when the existing input classifier marks lineage available.",
+      "theory_or_product_limit": "Partial ancestry cannot be promoted to whole-target completeness.",
       "trace_ids": [
         "T4"
+      ],
+      "unit": "conclusion"
+    },
+    {
+      "assumptions": [],
+      "blocking_evidence": [
+        "No available explicitly supplied lineage interval covers a nonempty completed target partition."
+      ],
+      "conclusion": "lineage_closure_exposure",
+      "coverage": null,
+      "coverage_reason": "This conclusion has no measured evidence coverage.",
+      "denominator": null,
+      "denominator_reason": "This conclusion has no scalar denominator.",
+      "evidence_class": "unavailable_conclusion",
+      "limitations": [
+        "Unavailable means the supplied evidence does not support this conclusion; it does not establish that the conclusion is false."
+      ],
+      "method_id": "T3.unavailable_conclusion",
+      "owner_ids": [
+        "T3"
+      ],
+      "reason_codes": [
+        "R_ANALYSIS_NOT_REQUESTED"
+      ],
+      "related_capability": "lineage",
+      "representation": null,
+      "required_evidence": [
+        "Supply lineage closure bounds from the same explicit lineage result."
+      ],
+      "required_next_metadata": [
+        "Supply lineage closure bounds from the same explicit lineage result."
+      ],
+      "scope": {
+        "dataset_versions": [
+          "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
+          "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d"
+        ],
+        "denominator_basis": "all_validated_bundle_records",
+        "excluded_record_count": 0,
+        "excluded_record_keys": [],
+        "included_record_keys": [
+          {
+            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
+            "record_id": "hmac-sha256:a130e0b7f4696e3bc1ed555d0170b426ca57c7efed97c9c27766355dd842ec1c"
+          },
+          {
+            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
+            "record_id": "hmac-sha256:6da9164abc2800aec9b384c96483bc3bc128008df04704ad7050851f8b3f9a2c"
+          },
+          {
+            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
+            "record_id": "hmac-sha256:52d7e4984062cff58f5ee2ab4592f4174277c11213b23be0f66b0da6c2801b15"
+          },
+          {
+            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
+            "record_id": "hmac-sha256:b09664f79e8df7595b88db8e5d4fd40a678384e2b4816e04044a63b901c6dc3d"
+          },
+          {
+            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
+            "record_id": "hmac-sha256:18eea61d82b38372f77e43b8596c93ef577d554d1cb4dba3545cd509026b1c2c"
+          },
+          {
+            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
+            "record_id": "hmac-sha256:d829ae28c8f6422156149b7d293896efb88703427b4b31d13996703e67d35aae"
+          },
+          {
+            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
+            "record_id": "hmac-sha256:41770f394bc6316c571ecb74ac4e07554113bb8f92d0c56603009a81daeeff12"
+          },
+          {
+            "dataset_version": "hmac-sha256:4e02dbb7e57fd003c1b4a2d16e058bca5c848e94f5b8730261ad64c1175dfef4",
+            "record_id": "hmac-sha256:3913f4a00a32e7b06211da44f3d156e37509bf8aefde1ba61f221717eaae8c8d"
+          },
+          {
+            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
+            "record_id": "hmac-sha256:aae75164d165f5a4c0e499d094250b126cb2c634f1f3c5a55226be1fd115c101"
+          },
+          {
+            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
+            "record_id": "hmac-sha256:0a8b103130fe77d9b2a8d6f9ab9e4d69cc7146f7f342b859fdf9ce0c703fed5d"
+          },
+          {
+            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
+            "record_id": "hmac-sha256:7c40d9ce71dce69af2ccfd0c4396f6fcea650358a04107008cfa34ec73e82fc4"
+          },
+          {
+            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
+            "record_id": "hmac-sha256:8167cf7b096bcf02b20dbc95d47de65bf2b7eb2902495b089aae8ad6cc2ffae7"
+          },
+          {
+            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
+            "record_id": "hmac-sha256:7c808566f31ad17b61c8700c5ecf0e95be4fd01ca4b2edf3bb12f80f4de49255"
+          },
+          {
+            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
+            "record_id": "hmac-sha256:c45259baf1db3285bd3b9cb81d1637bfcd7ac34589868894e6ad63ee93577a0a"
+          },
+          {
+            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
+            "record_id": "hmac-sha256:c60be35d2fffdab2e6c81834408613d778914041c0ecd3f4a0f5be53541dc7bd"
+          },
+          {
+            "dataset_version": "hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d",
+            "record_id": "hmac-sha256:27864c18901ea515a772984044b552f7cb3a0d2a058bd1a67a9b53dc49c4ab5d"
+          }
+        ],
+        "record_count": 16,
+        "scope_id": "hmac-sha256:fe3080b69d042a9eca2d392f8429412803f06dd3eb9e71fd16178d05e5971ac3"
+      },
+      "statement": "A lineage closure interval is unavailable in this report.",
+      "status": "unavailable",
+      "theory_map_ids": [],
+      "theory_or_product_limit": "Unavailable intervals are never replaced by a guessed numeric value.",
+      "trace_ids": [
+        "T3"
       ],
       "unit": "conclusion"
     }

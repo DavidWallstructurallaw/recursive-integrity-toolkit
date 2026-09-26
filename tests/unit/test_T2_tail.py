@@ -51,13 +51,6 @@ def value(result):
     return result.one_step_extinction_probability.value
 
 
-def test_T2_tail_owner_and_placeholder(owner_checker,repo_root):
-    owner_checker('metrics/tail.py','T2')
-    text=(repo_root/'src/recursive_integrity_toolkit/metrics/tail.py').read_text()
-    assert 'Phase 3 Step 7' in text
-    assert all('def '+name+'(' not in text for name in ('simulate','reopen','risk_score','tail_fragility_signal'))
-
-
 @pytest.mark.parametrize('rule,args,expected',[
     ('singleton_count',{},('bird','fish','refund')),
     ('count_at_or_below',{'count_threshold':0},()),

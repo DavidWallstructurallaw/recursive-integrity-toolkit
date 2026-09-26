@@ -5,14 +5,6 @@ active. No closure interval, confidence score or report is produced.
 """
 
 
-def test_PR005_source_shares_owner_and_placeholder(owner_checker, repo_root):
-    owner_checker("metrics/provenance.py", "PR-005")
-    text = (repo_root / "src/recursive_integrity_toolkit/metrics/provenance.py").read_text(encoding="utf-8")
-    assert "Phase 3 Step 5" in text
-    for name in ("closure_bounds", "ancestry_hhi", "confidence_score", "effective_source_diversity"):
-        assert "def " + name + "(" not in text
-
-
 # Step 5 tests only declared-field separation. No source counts or shares.
 def test_PR005_join_keeps_crossed_declarations_without_inference(repo_root):
     from recursive_integrity_toolkit.io.loaders import load_table

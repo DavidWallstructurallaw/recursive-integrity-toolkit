@@ -1,16 +1,19 @@
 # CLI
 
-Development version `0.1.0.dev3` supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
+Development version `0.1.0.dev4` supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
 
 ## Packaged local example
 
 ```bash
 rit example --out ./hero-workspace
+rit example --lineage --out ./hero-lineage-workspace
 ```
 
 Run after installation from a trusted local directory. The workspace must be new and its parent must already exist. Even an existing empty workspace is rejected. Six exact packaged Hero files are copied under `inputs/`; `report.json` and `report.md` appear under `reports/`. No data download occurs. Add `--redacted` to protect identifiers and paths in reports and console diagnostics. Extracted inputs remain the public canonical Hero files.
 
-The copied `inputs/EXPECTED_OUTPUTS.md` includes full-product lineage targets. Phase 4 reports explicitly defer lineage calculation. Their current targets are support 8 and 5, delta -3, retention 5/8, diversity 7/8 and 3/4, delta -1/8, and missing states `battery`, `lizard`, `turtle`. Later human/synthetic shares are each 1/2 and direct exposure is [1/2, 1/2]. Input observability is Level 4 and default simulations are empty.
+Both commands retain support 8 and 5, delta -3, retention 5/8, diversity 7/8 and 3/4, delta -1/8, and missing states `battery`, `lizard`, `turtle`. Later human/synthetic shares are each 1/2 and direct exposure is [1/2, 1/2]. Input observability is Level 4 and default simulations are empty.
+
+With `--lineage`, v2 is the eight-record target and v1 supplies eight ancestor records. All eight targets have resolved external ancestry, supported by five distinct roots. Ancestry HHI is 1/4, effective root count is 4, lineage exposure is [0, 0], and the shared-ancestry proxy is `present`. The report retains the distinction between declared topology and causal evidence. Plain `example` leaves lineage `not_requested`. Both modes use schema 1.1 and the unchanged packaged `inputs/EXPECTED_OUTPUTS.md` oracle.
 
 Successful stdout names both report files. In redacted mode the fixed names are relative to the example's `reports/` directory. An audit failure may leave extracted inputs and an error report. Extraction failures clean only files owned by that attempt; incomplete cleanup is disclosed on stderr. Inspect a failed destination and choose a fresh one for retry.
 
@@ -57,10 +60,50 @@ Without a representation, audit retains input/provenance evidence and explains u
 | `--tail-rule frequency_at_or_below --tail-threshold P` | Audit only; finite number in [0,1] |
 | `--compare FILE` | One earlier-version records file; current records are the later side |
 | `--state-semantics TEXT` | Audit pair only; explicit shared literal meaning across both sides |
+| `--lineage` | Audit/example only; explicitly execute the validated parent graph and ancestry families |
+| `--lineage-records PATH` | Repeatable audit/validate context input; audit requires lineage opt-in |
 
-Repeated flags and competing CLI/config singleton declarations fail even if values match. Config output allows only `directory`, `record_id_mode` and `id_salt_file`. The CLI performs unweighted calculations even when weights are present and applies no implicit representation, tail threshold or simulation. Debug output, simulation requests, state-list tail selection and arbitrary state maps are unsupported.
+Repeated singleton flags and competing CLI/config singleton declarations fail even if values match. `--lineage-records` is repeatable. Config output allows only `directory`, `record_id_mode` and `id_salt_file`. The CLI performs unweighted calculations even when weights are present and applies no implicit representation, tail threshold or simulation. Debug output, simulation requests, state-list tail selection and arbitrary state maps are unsupported.
 
-An ordinary audit requires one dataset version. Multiple versions in a side cause an input error without pooling or choosing one. Validate can inspect multiple versions and two files through `--records`/`--compare`; it rejects state-semantics and tail requests. Its `derived_metrics`, `proxy_signals` and `simulations` stay empty. Empty/malformed input can produce an error-only report. Missing provenance never becomes supplied unknown or fabricated source evidence.
+An ordinary audit requires one primary dataset version. Multiple versions in a calculated side cause an input error without pooling or choosing one. Validate can inspect multiple versions through `--records`, `--compare` and repeated `--lineage-records`; it rejects lineage execution, state-semantics and tail requests. Its `derived_metrics`, `proxy_signals` and `simulations` stay empty. Empty/malformed input can produce an error-only report. Missing provenance never becomes supplied unknown or fabricated source evidence.
+
+## Explicit lineage and context
+
+The extracted Hero inputs can run ancestry without requesting a comparison:
+
+```bash
+rit audit --records ./hero-workspace/inputs/records_v2.csv --lineage --lineage-records ./hero-workspace/inputs/records_v1.csv --provenance ./hero-workspace/inputs/provenance.csv --version-order ./hero-workspace/inputs/version_order.json --config ./hero-workspace/inputs/config.json --out ./lineage-report
+rit validate --records ./hero-workspace/inputs/records_v2.csv --lineage-records ./hero-workspace/inputs/records_v1.csv --provenance ./hero-workspace/inputs/provenance.csv --version-order ./hero-workspace/inputs/version_order.json --out ./lineage-input-check
+```
+
+Repeat `--lineage-records` for additional local context files. CSV, JSONL and optional Parquet use the existing local table loaders. A context file may contain multiple context versions. Context versions must be disjoint from the primary and comparison versions; duplicate composite keys across context inputs fail. Keep same-version ancestors in the primary records file. Splitting one version between primary/comparison and context roles is unsupported. The provenance manifest may describe all loaded versions.
+
+Ancestry targets exactly the primary `--records` version. Context contributes ancestors and appears in input inventory, graph scope and diagnostics. It does not enlarge the primary support, diversity, provenance, direct-bound, duplicate or tail denominator. Adding `--lineage` to an explicit pair lets the existing comparison input also supply ancestors. Context alone never requests comparison or state compatibility, and parent chronology still requires explicit declarations where needed.
+
+JSON/TOML config can declare `lineage: true`, repeated `inputs.lineage_context`, and the four finite graph limits. For example, a JSON config relative to its own directory may include:
+
+```json
+{
+  "lineage": true,
+  "inputs": {
+    "lineage_context": ["ancestors_v1.jsonl", "ancestors_v0.csv"]
+  },
+  "resource_limits": {
+    "max_lineage_nodes": 200000,
+    "max_lineage_edges": 1000000,
+    "max_lineage_root_memberships": 1000000,
+    "max_lineage_root_union_visits": 10000000
+  }
+}
+```
+
+These are the defaults. Each override must be a positive integer; null, booleans and fractional values fail. They bound admitted nodes, unique edges, logical record/root memberships and candidate root-union visits. Existing input byte/row/parent-list limits remain separate. The limits do not guarantee a peak memory budget. Exhaustion produces a lineage error and unavailable dependent values; independently completed ordinary metrics survive. A cycle anywhere in the loaded graph remains an error, even if primary ancestry is unaffected.
+
+CLI context declarations extend the configured context list. Declare the lineage opt-in once, through either config or the CLI; an explicit config `lineage` value together with `--lineage` is a conflicting singleton declaration.
+
+`validate` accepts context declarations with lineage disabled, performs existing input and immediate-reference validation, and never runs graph metrics. Both `--lineage` and config `lineage: true` are rejected for `validate`. Config parsing and the Python `validate_bundle` function also remain input-only. `--strict` promotes only configured warning codes, including a configured missing-parent warning; ordinary unresolved ancestry remains explicit in coverage and bounds.
+
+Use `--redacted` for protected context paths, dataset labels, roots and cycle witnesses. `--record-ids omit` removes identity-bearing lineage detail collections while retaining counts, values and omission reasons. Resource failures and validation errors retain severity in both report formats and stderr.
 
 ## Explicit earlier/later pair
 
@@ -85,9 +128,9 @@ Warnings carry an `affected_scope` summary of versions, record/exclusion counts,
 | Exit | Meaning |
 |---|---|
 | 0 | Supported work completed without error-severity diagnostics |
-| 1 | Input/validation or output I/O failure |
+| 1 | Input/validation, lineage resource-limit or output I/O failure |
 | 2 | Invalid invocation/configuration or unsupported request |
-| 3 | Existing immediate-parent/lineage-family validation error |
+| 3 | Immediate-parent format/resolution or lineage-cycle error |
 | 4 | Internal or invariant failure |
 
 Precedence is 4, then 2, then 3, then 1. Warnings alone return 0 unless configured strict promotion applies. Deferred/optional unavailable analyses alone do not cause a partial run. A report may contain useful results despite a nonzero exit, so file presence is insufficient to establish success.
@@ -102,4 +145,4 @@ The output directory's existing ancestors must be stable and trusted. Ordinary a
 
 The Python helper `utils.paths.publish_reports(safe_view, output_directory, input_paths=...)` consumes a validated `SafeReportView`; supply every input path, including declared missing inputs. A `complete` result means both exact reports were verified and private staging removed. `E_OUTPUT_PATH_INVALID` maps to exit 2; collision, existing/unsafe target, I/O or cleanup failure maps to 1; rendering/invariant failure maps to 4.
 
-Handled partial failures clean only files still identified as belonging to the attempt. An `incomplete` result discloses remaining or uncertain cleanup. Pair publication is not a filesystem transaction: another reader or process crash may observe one report before the other. See [privacy and filesystem limits](privacy.md) for platform permissions and race/crash boundaries. HTML, general ancestry and simulation orchestration remain deferred.
+Handled partial failures clean only files still identified as belonging to the attempt. An `incomplete` result discloses remaining or uncertain cleanup. Pair publication is not a filesystem transaction: another reader or process crash may observe one report before the other. See [privacy and filesystem limits](privacy.md) for platform permissions and race/crash boundaries. HTML, automatic longitudinal analysis and simulation orchestration remain deferred.

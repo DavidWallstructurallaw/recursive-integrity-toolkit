@@ -1,11 +1,8 @@
-"""Phase 3 Step 1 contract/baseline tests. No metric or state assignment runs."""
-import ast
-from copy import deepcopy
+"""Direct calculation contract validation and independent mathematical oracles."""
 from dataclasses import FrozenInstanceError, replace
 import hashlib
 import json
 from pathlib import Path
-import runpy
 
 import pytest
 from recursive_integrity_toolkit.models import (
@@ -29,10 +26,6 @@ def scope():
 def metadata():
     return CalculationMetadata("gini_simpson_diversity", "T1", "F-003", CalculationEvidenceClass.DERIVED_METRIC,
                                "dimensionless", "supplied-not-computed", scope(), descriptor())
-
-
-def tools():
-    return runpy.run_path(str(ROOT / "scripts/release_check.py"), run_name="contract_test_tools")
 
 
 def scenario(**changes):
@@ -218,38 +211,6 @@ def test_phase3_contracts_do_not_execute_user_callbacks_or_io(monkeypatch,capsys
     assert not calls and capsys.readouterr() == ("", "")
 
 
-def test_phase3_approved_plan_and_baseline_control():
-    control=json.loads((ROOT/"PHASE_3_BASELINE.json").read_text(encoding="utf-8"))
-    assert hashlib.sha256((ROOT/"PHASE_3_PLAN.md").read_bytes()).hexdigest()==control["approved_plan_sha256"]
-    tools()["verify_phase3_control"](control)
-
-
-@pytest.mark.parametrize("key", ["baseline_commit","baseline_tree","baseline_test_tree","approved_plan_sha256",
-                                 "active_phase","active_step","permitted_paths","approved_decisions","phase_complete"])
-def test_phase3_forged_manifest_does_not_authorize_a_change(key):
-    control=deepcopy(json.loads((ROOT/"PHASE_3_BASELINE.json").read_text(encoding="utf-8")))
-    if key in ("active_phase","active_step"): control[key]+=1
-    elif key=="phase_complete": control[key]=not control[key]
-    elif key=="permitted_paths": control[key].append("src/recursive_integrity_toolkit/metrics/diversity.py")
-    elif key=="approved_decisions": control[key].pop()
-    else: control[key]="0"*40
-    with pytest.raises(ValueError): tools()["verify_phase3_control"](control)
-
-
-@pytest.mark.parametrize("status,path", [
-    ("M","VALIDATION_PLAN.md"), ("M","src/recursive_integrity_toolkit/io/validation.py"),
-    ("M","src/recursive_integrity_toolkit/metrics/diversity.py"), ("M","src/recursive_integrity_toolkit/cli.py"),
-    ("A","tests/unit/test_arbitrary.py"), ("D","tests/conftest.py"), ("M","pyproject.toml"),
-])
-def test_phase3_unauthorized_path_change_fails(status,path):
-    with pytest.raises(ValueError): tools()["verify_prior_step_changes"]([(status,path)], step=1)
-
-
-def test_phase3_exact_new_file_set():
-    t=tools(); t["verify_phase3_changes"]([("A",p) for p in t["STEP1_NEW"]])
-    assert len(t["STEP1_NEW"])==6 and "VALIDATION_PLAN.md" not in t["STEP1_ALLOWED"]
-
-
 def test_phase3_oracle_is_independent_source_transcription():
     path=ROOT/"tests/golden/phase3_math_cases.json"
     assert hashlib.sha256(path.read_bytes()).hexdigest()=="b494d50a1a9bd1009c060c998e4cb3c7433d0e8949f73a8d627e538fa38884b2"
@@ -265,21 +226,3 @@ def test_phase3_oracle_is_independent_source_transcription():
     assert by_id["HERO-PAIR"]["expected"]["lost_states"]==["battery","lizard","turtle"]
     assert by_id["HERO-EXTINCTION-CAT"]["expected"]["one_step_extinction_probability"]=="390625/16777216"
     # Authored literal comparisons only; no implementation calculates the oracle.
-
-
-@pytest.mark.parametrize("body", ["return value ** 2", "return value / 2", "return sum(value)",
-    "return open('private')", "return eval(value)", "return __import__('numpy')", "return math.sqrt(value)",
-    "return (lambda: value)()"])
-def test_phase3_contract_gate_rejects_hidden_calculation_or_execution(body):
-    checker=runpy.run_path(str(ROOT/"scripts/check_traceability.py"),run_name="contract_boundary_test")
-    with pytest.raises(SystemExit): checker["_phase3_contract_boundary"](ast.parse("def _calculation_number(value):\n    "+body+"\n"))
-
-
-def test_phase3_current_model_passes_restricted_contract_gate():
-    checker=runpy.run_path(str(ROOT/"scripts/check_traceability.py"),run_name="contract_boundary_test")
-    checker["_phase3_contract_boundary"](ast.parse((ROOT/"src/recursive_integrity_toolkit/models.py").read_text(encoding="utf-8")))
-
-
-def test_phase3_final_completion_records_not_created(phase3_step10_snapshot):
-    for name in ("PHASE_3_COMPLETION.md","PHASE_3_VALIDATION_REPORT.md","PHASE_3_ARCHITECTURE_COMPLIANCE_REPORT.md"):
-        assert not (phase3_step10_snapshot/name).exists()

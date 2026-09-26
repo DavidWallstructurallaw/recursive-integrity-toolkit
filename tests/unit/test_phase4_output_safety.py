@@ -25,7 +25,7 @@ def phase4_step6_view(mode="standard", label="publication-case"):
 
     payload = {
         "run": {
-            "run_id": label, "toolkit_version": "0.1.0.dev2", "report_schema_version": "1.0",
+            "run_id": label, "toolkit_version": "0.1.0.dev2", "report_schema_version": "1.1",
             "started_at": "2026-09-20T00:00:00+00:00", "completed_at": "2026-09-20T00:00:00.500000+00:00",
             "duration_seconds": 0.5, "python_version": "3.12.14", "platform": "independent-test-platform",
             "command": "rit validate", "config_hash": "0123456789abcdef" * 4,

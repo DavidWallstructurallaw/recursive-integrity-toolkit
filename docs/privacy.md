@@ -1,6 +1,6 @@
 # Privacy and Local Input Boundaries
 
-Status: Phase 4 development milestone (`0.1.0.dev3`). `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
+Status: Phase 5 dev4 candidate (`0.1.0.dev4`, report schema `1.1`). `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
 
 Package import does not contact a network, open user audit files, require optional PyArrow or start a service. Runtime operates on explicitly supplied local files and declarations. No telemetry, background worker, plugin, cloud client, database, model download or LLM service exists. CI/package installation acquire dependencies separately; CI uses synthetic fixtures only.
 
@@ -64,7 +64,7 @@ Scopes, state IDs, source declarations, weights, content digests and original di
 
 ## Explicit safe report views
 
-These APIs implement approved P4-D05 and P4-D08, with PR-015 privacy and
+These APIs implement approved P4-D05, P4-D08 and P5-D08, with PR-015 privacy and
 PR-016 reproducibility ownership. `assemble_report` continues to assemble standard internal
 evidence. Its `CanonicalReport` validates structure and evidence semantics;
 validation alone is not a privacy transformation. After calculation and assembly,
@@ -91,12 +91,41 @@ denominators, evidence classes, availability and error severity remain unchanged
 Pseudonyms do not reorder parallel simulation arrays.
 
 Record-ID modes are `hash` (the redacted default), `preserve` and `omit`.
+Standard mode preserves record IDs; explicit record-ID overrides require
+redacted mode.
 An explicit `preserve` applies only to declared record-ID fields, never to a
 matching string embedded in a diagnostic, path or other narrative. `omit` removes
 record-level linkage while retaining aggregate counts and disclosure of exclusion
 reasons. An omitted duplicate-group identity list uses the existing
 `redacted_identity_details` contract. These omissions describe a privacy choice,
 not missing input evidence, and do not turn an available metric into unavailable.
+
+Lineage adds root identities, target and loaded version labels, cycle witnesses,
+cycle-member and affected-record lists, and unresolved-record details to the
+same protection boundary. Redacted/hash uses existing dataset/record identity
+domains consistently across roots, witnesses, scopes and diagnostics. Ranking
+and the 100-row presentation cap are applied before identity transformation.
+The complete root distribution determines concentration before this cap.
+
+In redacted/omit, each identity-bearing lineage collection is omitted as a whole:
+`items: null`, `returned_count: 0`, `omitted_count: total_count` and
+`detail_status: "omitted"`. Its reasons include `redacted_identity_details` and
+retain `diagnostic_limit` if the original collection was already capped. No row
+survives with a required identity removed. Counts, resource usage, numerical
+values, evidence classes and execution/error status remain visible. Explicit
+redacted/preserve retains only declared record-ID fields; dataset versions and
+other protected labels remain pseudonymized.
+
+The private lineage input signature binds retained declarations to the supplied
+calculation result so stale same-key evidence cannot silently enter a report.
+It is an internal consistency check, excluded from report serialization, and
+provides no authenticity or anonymity guarantee. Assembly and rendering do not
+rerun ancestry calculations. Explicit `audit --lineage` and `example --lineage`
+invoke the accepted lineage kernels before assembly. Repeatable local context
+inputs use the same loader, source-inventory and output-protection boundaries as
+primary inputs. Context paths are included in publication collision checks.
+The dedicated `lineage_context` role does not enable content-reference reads or
+network access. `validate` can ingest this role while remaining input-only.
 
 Identifier protection uses domain-separated HMAC-SHA-256 over unambiguous
 canonical encodings. A fresh secret gives run-scoped consistency and separates
@@ -189,3 +218,11 @@ privacy mode appropriate to the destination before sharing a report. Redacted
 output still contains aggregate counts and linkable input/configuration digests.
 Large reports consume memory during in-memory construction and rendering;
 per-file input limits do not bound total report memory or size.
+
+Lineage additionally enforces positive finite configuration limits for cumulative
+nodes, unique edges, record/root memberships and union visits. These guards bound
+defined graph work after table loading; they do not cap total process RSS or
+decompression memory. A limit failure preserves available earlier observations
+and independent metrics, with a nonzero exit and unavailable dependent values.
+Context identities, roots, unresolved-record lists and cycle witnesses are
+protected in reports and stderr under the same selected privacy mode.

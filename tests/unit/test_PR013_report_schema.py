@@ -12,13 +12,6 @@ Limits:
 """
 
 
-def test_PR013_report_schema_owner_and_placeholder(owner_checker, placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):
-    owner_checker = phase3_final_owner_checker
-    placeholder_checker = phase3_final_placeholder_checker
-    owner_checker("reports/json_report.py", "PR-013")
-    placeholder_checker("reports/json_report.py")
-
-
 def phase4_step2_report_fixture():
     """Hand-authored empty report from reporting sections 8, 10 and 31.
 
@@ -28,7 +21,7 @@ def phase4_step2_report_fixture():
         "run": {
             "run_id": "independent-empty-case",
             "toolkit_version": "0.1.0.dev2",
-            "report_schema_version": "1.0",
+            "report_schema_version": "1.1",
             "started_at": "2026-09-19T00:00:00+00:00",
             "completed_at": "2026-09-19T00:00:00.500000+00:00",
             "duration_seconds": 0.5,
@@ -295,18 +288,18 @@ def phase4_step2_capability_report_fixture():
             "requirements_missing": ["Required evidence was not supplied."] if unavailable else [],
             "notes": ["Input eligibility does not assert that analysis was executed."],
             "execution_status": "completed" if key == "ingestion" else (
-                "deferred" if key == "lineage" else "not_requested"
+                "deferred" if key == "model_longitudinal" else "not_requested"
             ),
             "execution_scope": ["input_validation"] if key == "ingestion" else [],
             "execution_reason_codes": [] if key == "ingestion" else [
-                "IMPLEMENTATION_DEFERRED" if key == "lineage" else "NOT_REQUESTED"
+                "IMPLEMENTATION_DEFERRED" if key == "model_longitudinal" else "NOT_REQUESTED"
             ],
         }
     payload["capabilities"] = capabilities
     payload["observability"] = {
         "maximum_level": 4, "level_label": "longitudinal_dataset_observability",
         "basis": ["Explicit dataset chronology and representation eligibility were supplied."],
-        "limitations": ["This is input eligibility; lineage analysis is deferred."],
+        "limitations": ["This is input eligibility; lineage analysis was not requested."],
         "partial_evidence": [], "capabilities": copy.deepcopy(capabilities),
     }
     return payload
@@ -322,7 +315,7 @@ def test_phase4_step2_capability_mirror_preserves_input_and_execution_status(sch
     assert exported["capabilities"] == exported["observability"]["capabilities"]
     assert exported["observability"]["maximum_level"] == 4
     assert exported["capabilities"]["lineage"]["status"] == "available"
-    assert exported["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert exported["capabilities"]["lineage"]["execution_status"] == "not_requested"
     assert report.sections["capabilities"] is report.sections["observability"]["capabilities"]
 
 
@@ -610,7 +603,7 @@ def test_phase4_step5_json_does_not_round_intervals_or_precise_scalar_values():
     assert "midpoint" not in interval
     assert actual["observed_facts"]["content"]["duplicate_record_count"]["value"] == 0
     assert actual["simulations"]["closed_resampling"]["status"] == "experimental"
-    assert actual["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert actual["capabilities"]["lineage"]["execution_status"] == "not_requested"
 
 
 def test_phase4_step5_renderers_require_explicit_safe_view_without_adapting_inputs():

@@ -1,0 +1,530 @@
+{
+  "purpose": "Independent Phase 5 acceptance inputs and future lineage oracles; no lineage execution is claimed by Step 1.",
+  "fraction_encoding": "Exact rational strings; null means unavailable and requires the adjacent reason.",
+  "cases": [
+    {
+      "case_id": "two_node_cycle_and_descendants",
+      "records": [
+        {
+          "dataset_version": "v2",
+          "record_id": "a",
+          "content": "Synthetic fixture a"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "b",
+          "content": "Synthetic fixture b"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "descendant",
+          "content": "Synthetic fixture descendant"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "independent",
+          "content": "Synthetic fixture independent"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v2",
+          "record_id": "a",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::b"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "b",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "descendant",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "independent",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        }
+      ],
+      "version_order": [
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::a",
+        "v2::b",
+        "v2::descendant",
+        "v2::independent"
+      ],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [],
+        "target_declared_references": 3,
+        "target_resolved_references": 3
+      },
+      "expected_lineage": {
+        "cycle_detected": true,
+        "cycle_count": 1,
+        "cycle_count_method": "cyclic_strongly_connected_components",
+        "cyclic_components": [
+          [
+            "v2::a",
+            "v2::b"
+          ]
+        ],
+        "cycle_member_keys": [
+          "v2::a",
+          "v2::b"
+        ],
+        "affected_record_keys": [
+          "v2::a",
+          "v2::b",
+          "v2::descendant"
+        ],
+        "complete_root_sets": {
+          "v2::independent": [
+            "v2::independent"
+          ]
+        },
+        "counts": {
+          "target": 4,
+          "grounded": 1,
+          "closed": 0,
+          "unresolved": 3
+        },
+        "lineage_depth": null,
+        "depth_unavailable_reason": "cycle_affected_target_paths",
+        "lineage_error": true,
+        "cli_audit_success": false,
+        "edge_coverage": "1",
+        "lineage_bounds": [
+          "0",
+          "3/4",
+          "3/4"
+        ]
+      },
+      "note": "Current immediate-reference validation accepts these references. General cycle detection remains Phase 5 Step 3."
+    },
+    {
+      "case_id": "disconnected_context_cycle",
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "a",
+          "content": "Synthetic fixture a"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "b",
+          "content": "Synthetic fixture b"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "root",
+          "content": "Synthetic fixture root"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "a",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::b"
+          ]
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "b",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v1::a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "root",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        }
+      ],
+      "version_order": [
+        "v1",
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::root"
+      ],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [],
+        "target_declared_references": 0,
+        "target_resolved_references": 0
+      },
+      "expected_lineage": {
+        "cycle_detected": true,
+        "cycle_count": 1,
+        "cycle_count_method": "cyclic_strongly_connected_components",
+        "cyclic_components": [
+          [
+            "v1::a",
+            "v1::b"
+          ]
+        ],
+        "cycle_member_keys": [
+          "v1::a",
+          "v1::b"
+        ],
+        "affected_record_keys": [
+          "v1::a",
+          "v1::b"
+        ],
+        "affected_target_record_keys": [],
+        "complete_root_sets": {
+          "v2::root": [
+            "v2::root"
+          ]
+        },
+        "counts": {
+          "target": 1,
+          "grounded": 1,
+          "closed": 0,
+          "unresolved": 0
+        },
+        "lineage_depth": 0,
+        "lineage_error": true,
+        "cli_audit_success": false,
+        "no_declared_parents": true,
+        "edge_coverage": "1",
+        "lineage_bounds": [
+          "0",
+          "0",
+          "0"
+        ]
+      },
+      "note": "A loaded disconnected cycle remains a lineage error even though target ancestry is fully resolved."
+    },
+    {
+      "case_id": "self_cycle_and_descendant",
+      "records": [
+        {
+          "dataset_version": "v2",
+          "record_id": "self",
+          "content": "Synthetic fixture self"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "descendant",
+          "content": "Synthetic fixture descendant"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "closed",
+          "content": "Synthetic fixture closed"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v2",
+          "record_id": "self",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::self"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "descendant",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::self"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "closed",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": []
+        }
+      ],
+      "version_order": [
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::closed",
+        "v2::descendant",
+        "v2::self"
+      ],
+      "expected_input": {
+        "error_codes": [
+          "E_LINEAGE_CYCLE"
+        ],
+        "required_warning_codes": []
+      },
+      "expected_lineage": {
+        "cycle_detected": true,
+        "cycle_count": 1,
+        "cycle_count_method": "cyclic_strongly_connected_components",
+        "cyclic_components": [
+          [
+            "v2::self"
+          ]
+        ],
+        "cycle_member_keys": [
+          "v2::self"
+        ],
+        "affected_record_keys": [
+          "v2::descendant",
+          "v2::self"
+        ],
+        "complete_root_sets": {
+          "v2::closed": []
+        },
+        "counts": {
+          "target": 3,
+          "grounded": 0,
+          "closed": 1,
+          "unresolved": 2
+        },
+        "lineage_error": true,
+        "cli_audit_success": false,
+        "lineage_bounds": [
+          "1/3",
+          "1",
+          "2/3"
+        ]
+      },
+      "note": "Current validator rejects the direct self-parent. Future graph construction must retain explicit self-reference evidence without accepting it as a valid ancestry edge."
+    },
+    {
+      "case_id": "two_components_with_multiple_simple_cycles",
+      "records": [
+        {
+          "dataset_version": "v2",
+          "record_id": "a",
+          "content": "Synthetic fixture a"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "b",
+          "content": "Synthetic fixture b"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "c",
+          "content": "Synthetic fixture c"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "d",
+          "content": "Synthetic fixture d"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "e",
+          "content": "Synthetic fixture e"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "f",
+          "content": "Synthetic fixture f"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "root",
+          "content": "Synthetic fixture root"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v2",
+          "record_id": "a",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::b",
+            "v2::c"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "b",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::a",
+            "v2::c"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "c",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::a",
+            "v2::b"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "d",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::e"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "e",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::d"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "f",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "transformation": "generate",
+          "parent_ids": [
+            "v2::a"
+          ]
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "root",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "transformation": "generate",
+          "parent_ids": []
+        }
+      ],
+      "version_order": [
+        "v2"
+      ],
+      "target_record_keys": [
+        "v2::a",
+        "v2::b",
+        "v2::c",
+        "v2::d",
+        "v2::e",
+        "v2::f",
+        "v2::root"
+      ],
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [],
+        "target_declared_references": 9,
+        "target_resolved_references": 9
+      },
+      "expected_lineage": {
+        "cycle_detected": true,
+        "cycle_count": 2,
+        "cycle_count_method": "cyclic_strongly_connected_components",
+        "cyclic_components": [
+          [
+            "v2::a",
+            "v2::b",
+            "v2::c"
+          ],
+          [
+            "v2::d",
+            "v2::e"
+          ]
+        ],
+        "cycle_member_keys": [
+          "v2::a",
+          "v2::b",
+          "v2::c",
+          "v2::d",
+          "v2::e"
+        ],
+        "affected_record_keys": [
+          "v2::a",
+          "v2::b",
+          "v2::c",
+          "v2::d",
+          "v2::e",
+          "v2::f"
+        ],
+        "complete_root_sets": {
+          "v2::root": [
+            "v2::root"
+          ]
+        },
+        "counts": {
+          "target": 7,
+          "grounded": 1,
+          "closed": 0,
+          "unresolved": 6
+        },
+        "lineage_error": true,
+        "cli_audit_success": false,
+        "edge_coverage": "1",
+        "lineage_bounds": [
+          "0",
+          "6/7",
+          "6/7"
+        ]
+      },
+      "note": "The three-node component contains several simple cycles but counts once; the second component counts once."
+    }
+  ]
+}

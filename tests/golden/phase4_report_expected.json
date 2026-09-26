@@ -156,8 +156,8 @@
       },
       "expected_exit": 0,
       "expected": {
-        "/run/report_schema_version": "1.0",
-        "/run/toolkit_version": "0.1.0.dev2",
+        "/run/report_schema_version": "1.1",
+        "/run/toolkit_version": "0.1.0.dev4",
         "/run/run_status": "complete",
         "/run/network_call_count": 0,
         "/run/network_count_scope": "toolkit_managed_outbound_operations",
@@ -244,7 +244,7 @@
         "/capabilities/ingestion/execution_status": "completed",
         "/capabilities/content_diagnostics/execution_status": "completed",
         "/capabilities/provenance/execution_status": "completed",
-        "/capabilities/lineage/execution_status": "deferred",
+        "/capabilities/lineage/execution_status": "not_requested",
         "/capabilities/dataset_longitudinal/execution_status": "partial",
         "/capabilities/dataset_longitudinal/execution_scope": [
           "supplied_explicit_pair_support_and_diversity"
@@ -468,7 +468,7 @@
         "v2 topic counts cat=3,dog=2,bird=fish=refund=1 give support 5; sum squared frequencies=16/64=1/4 and D=3/4.",
         "Earlier minus later is battery,lizard,turtle; intersection contains five states. Delta=5-8=-3, retention=5/8, diversity delta=3/4-7/8=-1/8.",
         "The selected v2 scope has eight matching valid provenance rows: four human/yes and four synthetic/no. Each coverage is 8/8; each nonzero source share is 4/8. Direct interval=(closed/N,(closed+unresolved)/N)=[4/8,4/8].",
-        "All eight supplied v2 parent references resolve to explicitly earlier v1 records. This supports reference counts and a declared-order certificate only. Graph traversal and all ancestry metrics remain deferred."
+        "All eight supplied v2 parent references resolve to explicitly earlier v1 records. This supports reference counts and a declared-order certificate only. This CLI invocation does not request graph traversal or ancestry metrics."
       ]
     },
     {
@@ -485,8 +485,8 @@
       },
       "expected_exit": 0,
       "expected": {
-        "/run/report_schema_version": "1.0",
-        "/run/toolkit_version": "0.1.0.dev2",
+        "/run/report_schema_version": "1.1",
+        "/run/toolkit_version": "0.1.0.dev4",
         "/run/run_status": "complete",
         "/run/network_call_count": 0,
         "/run/network_count_scope": "toolkit_managed_outbound_operations",
@@ -545,7 +545,7 @@
         "/capabilities/ingestion/execution_status": "completed",
         "/capabilities/content_diagnostics/execution_status": "completed",
         "/capabilities/provenance/execution_status": "completed",
-        "/capabilities/lineage/execution_status": "deferred",
+        "/capabilities/lineage/execution_status": "not_requested",
         "/capabilities/dataset_longitudinal/execution_status": "partial",
         "/capabilities/dataset_longitudinal/execution_scope": [
           "supplied_explicit_pair_support_and_diversity"
@@ -650,8 +650,8 @@
       },
       "expected_exit": 0,
       "expected": {
-        "/run/report_schema_version": "1.0",
-        "/run/toolkit_version": "0.1.0.dev2",
+        "/run/report_schema_version": "1.1",
+        "/run/toolkit_version": "0.1.0.dev4",
         "/run/run_status": "complete",
         "/run/network_call_count": 0,
         "/run/network_count_scope": "toolkit_managed_outbound_operations",
@@ -738,7 +738,7 @@
         "/capabilities/ingestion/execution_status": "completed",
         "/capabilities/content_diagnostics/execution_status": "completed",
         "/capabilities/provenance/execution_status": "completed",
-        "/capabilities/lineage/execution_status": "deferred",
+        "/capabilities/lineage/execution_status": "not_requested",
         "/capabilities/dataset_longitudinal/execution_status": "partial",
         "/capabilities/dataset_longitudinal/execution_scope": [
           "supplied_explicit_pair_support_and_diversity"
@@ -2412,7 +2412,7 @@
         "/run/run_status": "complete",
         "/observability/maximum_level": 4,
         "/capabilities/lineage/status": "partial",
-        "/capabilities/lineage/execution_status": "deferred",
+        "/capabilities/lineage/execution_status": "not_requested",
         "/observed_facts/lineage/declared_parent_edge_count/value": 2,
         "/observed_facts/lineage/resolved_parent_edge_count/value": 1,
         "/observed_facts/lineage/unresolved_parent_edge_count/value": 1,
@@ -2442,8 +2442,8 @@
         "json_value_evidence_status_parity"
       ],
       "numeric_rationale": [
-        "Of two later parent references one resolves and one is absent: 2 declared,1 resolved,1 unresolved. Missing references retain a warning and cannot become external roots. One valid resolved path and one unresolved reference give partial input capability under the frozen lineage classification; execution remains deferred.",
-        "Independent ordered supports {A,B} and {A,C} both have size2, intersection1, retention1/2; lineage execution remains deferred."
+        "Of two later parent references one resolves and one is absent: 2 declared,1 resolved,1 unresolved. Missing references retain a warning and cannot become external roots. One valid resolved path and one unresolved reference give partial input capability under the frozen lineage classification; execution is not requested.",
+        "Independent ordered supports {A,B} and {A,C} both have size2, intersection1, retention1/2; lineage execution is not requested."
       ]
     },
     {
@@ -2574,7 +2574,7 @@
         "/derived_metrics/support/by_version/later/support_size/scope/record_count": 2,
         "/run/run_status": "partial",
         "/observability/maximum_level": 4,
-        "/capabilities/lineage/execution_status": "deferred"
+        "/capabilities/lineage/execution_status": "not_requested"
       },
       "required_error_codes": [
         "E_LINEAGE_CYCLE"
@@ -3550,7 +3550,7 @@
         "/capabilities/ingestion/execution_status": "completed",
         "/capabilities/content_diagnostics/execution_status": "completed",
         "/capabilities/provenance/execution_status": "completed",
-        "/capabilities/lineage/execution_status": "deferred",
+        "/capabilities/lineage/execution_status": "not_requested",
         "/capabilities/dataset_longitudinal/execution_status": "partial",
         "/capabilities/dataset_longitudinal/execution_scope": [
           "supplied_explicit_pair_support_and_diversity"
