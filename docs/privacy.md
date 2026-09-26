@@ -1,6 +1,6 @@
 # Privacy and Local Input Boundaries
 
-Status: Phase 5 Step 7 report/privacy milestone (`0.1.0.dev3`, report schema `1.1`). `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
+Status: Phase 5 Step 8 CLI/context milestone (`0.1.0.dev3`, report schema `1.1`). `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
 
 Package import does not contact a network, open user audit files, require optional PyArrow or start a service. Runtime operates on explicitly supplied local files and declarations. No telemetry, background worker, plugin, cloud client, database, model download or LLM service exists. CI/package installation acquire dependencies separately; CI uses synthetic fixtures only.
 
@@ -120,8 +120,12 @@ The private lineage input signature binds retained declarations to the supplied
 calculation result so stale same-key evidence cannot silently enter a report.
 It is an internal consistency check, excluded from report serialization, and
 provides no authenticity or anonymity guarantee. Assembly and rendering do not
-rerun ancestry calculations. CLI lineage flags and context-input orchestration
-remain Step 8 work; current ordinary reports already use schema 1.1.
+rerun ancestry calculations. Explicit `audit --lineage` and `example --lineage`
+invoke the accepted lineage kernels before assembly. Repeatable local context
+inputs use the same loader, source-inventory and output-protection boundaries as
+primary inputs. Context paths are included in publication collision checks.
+The dedicated `lineage_context` role does not enable content-reference reads or
+network access. `validate` can ingest this role while remaining input-only.
 
 Identifier protection uses domain-separated HMAC-SHA-256 over unambiguous
 canonical encodings. A fresh secret gives run-scoped consistency and separates
@@ -214,3 +218,11 @@ privacy mode appropriate to the destination before sharing a report. Redacted
 output still contains aggregate counts and linkable input/configuration digests.
 Large reports consume memory during in-memory construction and rendering;
 per-file input limits do not bound total report memory or size.
+
+Lineage additionally enforces positive finite configuration limits for cumulative
+nodes, unique edges, record/root memberships and union visits. These guards bound
+defined graph work after table loading; they do not cap total process RSS or
+decompression memory. A limit failure preserves available earlier observations
+and independent metrics, with a nonzero exit and unavailable dependent values.
+Context identities, roots, unresolved-record lists and cycle witnesses are
+protected in reports and stderr under the same selected privacy mode.

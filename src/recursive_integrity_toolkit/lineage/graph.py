@@ -321,7 +321,7 @@ def build_lineage_graph(
             raise _invalid("lineage record identity disagrees with its retained values")
         if type(row.location) is not RowLocation or (row.location.file_role is not None and
                 (type(row.location.file_role) is not FileRole or row.location.file_role not in
-                 (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE))):
+                 (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE, FileRole.LINEAGE_CONTEXT))):
             raise _invalid("lineage records have an unsupported input role")
         role = row.location.file_role
         roles_by_version.setdefault(key.dataset_version, set()).add(role)
@@ -331,8 +331,11 @@ def build_lineage_graph(
     nodes = tuple(sorted(keys))
     if len(set(nodes)) != len(nodes):
         raise _invalid("duplicate canonical record identity in lineage input", ErrorCode.RECORD_DUPLICATE_ID)
-    if len(primary_versions) > 1 or any(FileRole.RECORDS_PRIMARY in roles and FileRole.RECORDS_COMPARE in roles
-                                        for roles in roles_by_version.values()):
+    if len(primary_versions) > 1 or any(
+            FileRole.RECORDS_PRIMARY in roles and FileRole.RECORDS_COMPARE in roles
+            or FileRole.LINEAGE_CONTEXT in roles and bool(
+                roles & {FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE})
+            for roles in roles_by_version.values()):
         raise _invalid("lineage primary and context version roles must be disjoint", ErrorCode.CONFIG_INVALID)
     if target_dataset_version is None:
         if primary_versions or (nodes and all(roles == {None} for roles in roles_by_version.values())):
@@ -341,7 +344,8 @@ def build_lineage_graph(
         _version(target_dataset_version)
         if primary_versions and target_dataset_version not in primary_versions:
             raise _invalid("lineage target must select the primary version", ErrorCode.CONFIG_INVALID)
-        if not primary_versions and target_dataset_version in roles_by_version and FileRole.RECORDS_COMPARE in roles_by_version[target_dataset_version]:
+        if not primary_versions and roles_by_version.get(target_dataset_version, set()) & {
+                FileRole.RECORDS_COMPARE, FileRole.LINEAGE_CONTEXT}:
             raise _invalid("lineage context records cannot define the primary target", ErrorCode.CONFIG_INVALID)
     retained = validation.parent_validation
     if type(retained) is not ParentBatchValidationResult:

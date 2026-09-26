@@ -40,6 +40,7 @@ class FileRole(StrEnum):
 
     RECORDS_PRIMARY = "records_primary"
     RECORDS_COMPARE = "records_compare"
+    LINEAGE_CONTEXT = "lineage_context"
     PROVENANCE_MANIFEST = "provenance_manifest"
     SCHEMA_MAPPING = "schema_mapping"
     CONFIG = "config"

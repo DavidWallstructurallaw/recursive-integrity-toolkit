@@ -294,6 +294,7 @@
                 "enum": [
                   "records_primary",
                   "records_compare",
+                  "lineage_context",
                   "provenance_manifest",
                   "schema_mapping",
                   "config",
@@ -34564,6 +34565,9 @@
           "type": "boolean"
         },
         "scenario_requested": {
+          "type": "boolean"
+        },
+        "lineage_requested": {
           "type": "boolean"
         }
       },

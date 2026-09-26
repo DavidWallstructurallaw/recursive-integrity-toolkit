@@ -285,7 +285,7 @@ def _build_contract() -> dict:
     }, ("run_id", "toolkit_version", "report_schema_version", *RUN_NULLABLE_FIELDS,
         "strict_mode", "redacted_mode", "network_call_count", "deterministic", "privacy_mode", "run_status", "null_reasons"))
     artifact = _object({
-        "role": _enum("records_primary", "records_compare", "provenance_manifest", "schema_mapping", "config",
+        "role": _enum("records_primary", "records_compare", "lineage_context", "provenance_manifest", "schema_mapping", "config",
                       "version_order", "embedding_data", "external_reference"),
         "path": _nullable(_text()), "path_redacted": {"type": "boolean"},
         "format": _enum("csv", "jsonl", "parquet", "json", "toml", "npy"),
@@ -606,7 +606,8 @@ def _build_contract() -> dict:
             "record_id_mode": _enum("preserve", "hash", "omit"), "representation": _nullable(_ref("representation")),
             "tail_selection": _nullable(_ref("tail_selection")), "version_order": _strings(),
             "state_meaning": _nullable(_text()), "weighted": {"type": "boolean"},
-            "comparison_requested": {"type": "boolean"}, "scenario_requested": {"type": "boolean"}}, ()),
+            "comparison_requested": {"type": "boolean"}, "scenario_requested": {"type": "boolean"},
+            "lineage_requested": {"type": "boolean"}}, ()),
         "state_probability": _object({"state_id": _text(empty=True), "probability": _number(minimum=0, maximum=1)}),
         "simulation_parameters": _object({
             "resample_size": _integer(minimum=1), "simulation_horizon": _integer(),
@@ -882,6 +883,26 @@ def _lineage_detail_checks(detail: dict) -> None:
             _fail(path, "detail identities must be unique")
 
 
+def _lineage_usage_checks(usage: dict, execution: str) -> None:
+    """Validate exact supplied work accounting for admitted and aborted graphs."""
+    counter_names = {
+        "max_nodes": "admitted_node_count", "max_edges": "admitted_edge_count",
+        "max_root_memberships": "stored_root_membership_count", "max_root_union_visits": "root_union_visit_count",
+    }
+    for limit, counter in counter_names.items():
+        if (type(usage[counter]) is not int or type(usage["limits"][limit]) is not int
+                or not 0 <= usage[counter] <= usage["limits"][limit] or usage["limits"][limit] <= 0):
+            _fail("$.lineage.resource_usage", "consumed work must remain within its positive integer limit")
+    exhausted = usage["exhausted_limit"]
+    if exhausted is None:
+        if usage["attempted_value"] is not None:
+            _fail("$.lineage.resource_usage", "unexhausted work cannot contain a rejected attempt")
+    elif (execution != "failed" or type(usage["attempted_value"]) is not int
+          or usage["attempted_value"] != usage["limits"][exhausted] + 1
+          or usage[counter_names[exhausted]] != usage["limits"][exhausted]):
+        _fail("$.lineage.resource_usage", "resource exhaustion requires failed execution and its next rejected unit")
+
+
 def _lineage_semantic_checks(payload: dict) -> None:
     """Check supplied lineage evidence consistency without traversing a graph."""
     observed = payload["observed_facts"].get("lineage", {})
@@ -908,6 +929,29 @@ def _lineage_semantic_checks(payload: dict) -> None:
     if scope is None:
         if execution == "failed" and not active:
             return
+        usage = value(observed, "resource_usage")
+        if execution == "failed" and usage is not None:
+            _lineage_usage_checks(usage, execution)
+            if (any(value(observed, name) is not None for name in new_observed if name != "resource_usage")
+                    or any(value(metrics, name) is not None for name in new_metrics)
+                    or any(entry["value"] is not None for entry in bounds.values())
+                    or (proxy is not None and proxy["status"] != "unavailable")):
+                _fail("$.lineage", "failed graph admission cannot contain subsequent analytical results")
+            loaded_scope = payload["inputs"].get("scope")
+            if loaded_scope is None or observed["resource_usage"]["scope"] != loaded_scope:
+                _fail("$.lineage.resource_usage", "admission accounting must retain the complete loaded input scope")
+            loaded = loaded_scope["record_count"]
+            exhausted = usage["exhausted_limit"]
+            if (exhausted not in ("max_nodes", "max_edges")
+                    or usage["stored_root_membership_count"] or usage["root_union_visit_count"]
+                    or type(loaded) is not int
+                    or exhausted == "max_nodes" and (usage["admitted_node_count"] >= loaded or usage["admitted_edge_count"])
+                    or exhausted == "max_edges" and usage["admitted_node_count"] != loaded):
+                _fail("$.lineage.resource_usage", "admission exhaustion is inconsistent with the loaded records or later-stage work")
+            if not any(error["code"] == "E_LINEAGE_RESOURCE_LIMIT_EXCEEDED"
+                       and "lineage" in error["effect_on_capabilities"] for error in payload["errors"]):
+                _fail("$.lineage.resource_usage", "admission exhaustion requires its matching lineage error")
+            return
         _fail("$.observed_facts.lineage.graph_scope", "executed lineage requires its explicit target and loaded scope")
     target, loaded, context = (scope[name] for name in ("target_record_count", "loaded_record_count", "context_record_count"))
     if any(type(number) is not int for number in (target, loaded, context)) or loaded != target + context:
@@ -931,20 +975,8 @@ def _lineage_semantic_checks(payload: dict) -> None:
     usage = value(observed, "resource_usage")
     if usage is None:
         _fail("$.observed_facts.lineage.resource_usage", "executed lineage requires work accounting")
-    counter_names = {
-        "max_nodes": "admitted_node_count", "max_edges": "admitted_edge_count",
-        "max_root_memberships": "stored_root_membership_count", "max_root_union_visits": "root_union_visit_count",
-    }
-    for limit, counter in counter_names.items():
-        if type(usage[counter]) is not int or type(usage["limits"][limit]) is not int or usage[counter] > usage["limits"][limit]:
-            _fail("$.lineage.resource_usage", "consumed work must remain within its exact integer limit")
+    _lineage_usage_checks(usage, execution)
     exhausted = usage["exhausted_limit"]
-    if exhausted is None:
-        if usage["attempted_value"] is not None:
-            _fail("$.lineage.resource_usage", "unexhausted work cannot contain a rejected attempt")
-    elif (execution != "failed" or type(usage["attempted_value"]) is not int
-          or usage["attempted_value"] <= usage["limits"][exhausted]):
-        _fail("$.lineage.resource_usage", "resource exhaustion requires failed execution and an over-limit attempt")
     cycles, depth = value(observed, "cycle_analysis"), value(observed, "depth_summary")
     if execution in ("completed", "partial") and (cycles is None or depth is None):
         _fail("$.capabilities.lineage", "completed traversal requires cycle and depth observations")

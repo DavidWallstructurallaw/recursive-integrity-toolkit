@@ -50,14 +50,14 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install ".[test]"
-      - name: Check Step 7 lineage reports, schema and privacy with affected boundaries
+      - name: Check Step 8 explicit lineage CLI, context inputs and affected boundaries
         run: |
           set -euo pipefail
           python scripts/check_spec_consistency.py
           python scripts/check_traceability.py
           python scripts/release_check.py
+          python -m pytest -p no:cacheprovider -q tests/integration/test_phase5_lineage_cli.py tests/unit/test_phase5_lineage_config.py tests/unit/test_lineage_context_inputs.py tests/integration/test_phase4_cli.py tests/integration/test_hero_end_to_end.py
           python -m pytest -p no:cacheprovider -q tests/integration/test_phase5_lineage_reports.py tests/integration/test_phase5_lineage_privacy.py tests/unit/test_PR013_report_schema.py tests/unit/test_PR012_evidence_classes.py tests/unit/test_PR015_redaction.py tests/integration/test_partial_lineage_report.py tests/golden/test_phase4_reports.py tests/unit/test_lineage_bounds_proxy.py tests/unit/test_T3_bounds.py tests/unit/test_lineage_concentration.py tests/unit/test_T4_ancestry.py tests/unit/test_lineage_root_resources.py tests/unit/test_T6_cycles.py tests/unit/test_parent_batch.py tests/unit/test_lineage_graph.py tests/unit/test_PR007_version_order.py tests/unit/test_PR008_parent_resolution.py tests/unit/test_PR009_generation.py tests/unit/test_lineage_fixture_inputs.py tests/unit/test_phase3_contracts.py tests/integration/test_phase3_metric_pipeline.py tests/unit/test_PR016_determinism.py tests/integration/test_current_verification.py tests/integration/test_ci_workflows.py tests/integration/test_no_algorithms.py tests/integration/test_repository_structure.py
-          python -m pytest -p no:cacheprovider -q tests/integration/test_phase4_cli.py::test_phase4_step7_validate_blocks_every_calculation_and_content_reader tests/integration/test_phase4_cli.py::test_phase4_step8_pair_does_not_activate_other_calculation_families
 
   core:
     if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'

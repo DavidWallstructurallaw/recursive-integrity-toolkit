@@ -1,4 +1,4 @@
-"""Preserve Phase 2 configuration and add explicit inert Phase 4 report options.
+"""Resolve explicit inert input, report and opt-in lineage declarations.
 
 Owner IDs:
     PR-007, PR-010, PR-011, PR-015, PR-016 supporting infrastructure, PR-017
@@ -8,18 +8,18 @@ Inputs:
 
 Outputs:
     Immutable ``ResolvedConfig`` objects that preserve user declarations without
-    inference; restricted Phase 4 options, safe summaries and normalized hashes.
+    inference; report and lineage options, safe summaries and normalized hashes.
 
 Assumptions:
     Version order, representation choice, privacy mode, strict-mode promotion, and scenario
     declarations are explicit. Configuration never activates analysis at import time.
 
 Limits:
-    Phase 4 resolution performs no file ingestion, secret read, version-order
+    Declaration resolution performs no file ingestion, secret read, version-order
     inference, metric, lineage, simulation, report assembly or remote access.
 
 Current phase status:
-    Phase 4 Step 7 invocation adapter. Inherited parsers remain unchanged.
+    Phase 5 Step 8 explicit lineage and repeatable context invocation adapter.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import math
 import tomllib
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -50,12 +51,21 @@ _ALLOWED_TOP_LEVEL = {
     "resource_limits",
     "output",
     "simulation",
+    "lineage",
 }
 
 _MULTI_ROLES = {
     FileRole.RECORDS_COMPARE,
     FileRole.EMBEDDING_DATA,
     FileRole.EXTERNAL_REFERENCE,
+    FileRole.LINEAGE_CONTEXT,
+}
+
+_LINEAGE_LIMIT_DEFAULTS = {
+    "max_lineage_nodes": 200000,
+    "max_lineage_edges": 1000000,
+    "max_lineage_root_memberships": 1000000,
+    "max_lineage_root_union_visits": 10000000,
 }
 
 
@@ -76,6 +86,10 @@ class ResourceLimits:
     max_content_bytes: int | None = None
     max_parent_list_length: int | None = None
     max_json_depth: int | None = None
+    max_lineage_nodes: int = _LINEAGE_LIMIT_DEFAULTS["max_lineage_nodes"]
+    max_lineage_edges: int = _LINEAGE_LIMIT_DEFAULTS["max_lineage_edges"]
+    max_lineage_root_memberships: int = _LINEAGE_LIMIT_DEFAULTS["max_lineage_root_memberships"]
+    max_lineage_root_union_visits: int = _LINEAGE_LIMIT_DEFAULTS["max_lineage_root_union_visits"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +112,7 @@ class ResolvedConfig:
     resource_limits: ResourceLimits = ResourceLimits()
     output: tuple[tuple[str, Any], ...] = ()
     simulation: ScenarioConfig = ScenarioConfig()
+    lineage: bool = False
 
 
 def load_config(path: str | Path) -> ResolvedConfig:
@@ -130,7 +145,7 @@ def load_config(path: str | Path) -> ResolvedConfig:
 
 
 def resolve_config(data: Mapping[str, Any]) -> ResolvedConfig:
-    """Resolve approved Phase 2 configuration fields without inferring missing evidence."""
+    """Resolve approved configuration fields without inferring missing evidence."""
     unknown = sorted(set(data) - _ALLOWED_TOP_LEVEL)
     if unknown:
         raise ConfigurationError(
@@ -157,6 +172,7 @@ def resolve_config(data: Mapping[str, Any]) -> ResolvedConfig:
     resource_limits = _parse_resource_limits(data.get("resource_limits"))
     output = _frozen_mapping(data.get("output"), "output")
     simulation = _parse_simulation(data.get("simulation"))
+    lineage = _bool_value(data.get("lineage", False), "lineage")
 
     return ResolvedConfig(
         config_version=config_version,
@@ -171,6 +187,7 @@ def resolve_config(data: Mapping[str, Any]) -> ResolvedConfig:
         resource_limits=resource_limits,
         output=output,
         simulation=simulation,
+        lineage=lineage,
     )
 
 
@@ -261,13 +278,18 @@ def _parse_resource_limits(value: Any) -> ResourceLimits:
         "max_parent_list_length",
         "max_json_depth",
     }
-    unknown = sorted(set(value) - allowed)
+    unknown = sorted(set(value) - allowed - _LINEAGE_LIMIT_DEFAULTS.keys())
     if unknown:
         _invalid(f"resource_limits has unknown fields: {', '.join(unknown)}")
     kwargs = {
         key: _optional_positive_int(value.get(key), f"resource_limits.{key}")
         for key in allowed
     }
+    for key, default in _LINEAGE_LIMIT_DEFAULTS.items():
+        item = value.get(key, default)
+        if type(item) is not int or item <= 0:
+            _invalid(f"resource_limits.{key} must be a positive integer")
+        kwargs[key] = item
     return ResourceLimits(**kwargs)
 
 
@@ -361,7 +383,7 @@ class Phase4Options:
     """Explicit inert report options; raw declarations are hidden from repr.
 
     Resolution does not read inputs, load a secret, perform calculations or
-    activate a command. ``configuration`` retains the accepted Phase 2 contract.
+    activate a command. ``configuration`` retains explicit input declarations.
     """
 
     configuration: ResolvedConfig = field(repr=False)
@@ -376,12 +398,14 @@ class Phase4Options:
     missing_state_id: str | None = field(repr=False)
     tail_rule: str | None
     tail_threshold: int | float | None
+    lineage: bool = False
 
     def __post_init__(self) -> None:
         if (type(self.configuration) is not ResolvedConfig or type(self.inputs) is not tuple
                 or any(type(source) is not InputSource or type(source.role) is not FileRole
                        or not isinstance(source.path, Path) for source in self.inputs)
-                or type(self.strict_mode) is not bool or type(self.privacy_mode) is not str
+                or type(self.strict_mode) is not bool or type(self.lineage) is not bool
+                or type(self.privacy_mode) is not str
                 or self.privacy_mode not in {"standard", "redacted"}
                 or type(self.record_id_mode) is not str or self.record_id_mode not in {"preserve", "hash", "omit"}
                 or not isinstance(self.directory, Path)
@@ -447,12 +471,14 @@ def _phase4_config_data(config: ResolvedConfig) -> dict[str, Any]:
         "state_mapping": dict(config.state_mapping), "version_order": list(config.version_order),
         "privacy_mode": config.privacy_mode.value, "strict_mode": config.strict_mode,
         "strict_warning_codes": list(config.strict_warning_codes),
+        "lineage": config.lineage,
         "resource_limits": {
             "max_file_bytes": config.resource_limits.max_file_bytes,
             "max_rows": config.resource_limits.max_rows,
             "max_content_bytes": config.resource_limits.max_content_bytes,
             "max_parent_list_length": config.resource_limits.max_parent_list_length,
             "max_json_depth": config.resource_limits.max_json_depth,
+            **{key: getattr(config.resource_limits, key) for key in _LINEAGE_LIMIT_DEFAULTS},
         },
         "output": dict(config.output),
         "simulation": {"enabled": config.simulation.enabled, "seed": config.simulation.seed},
@@ -488,11 +514,11 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
     CLI keys use underscore spellings of the approved option names. Omitted
     options are absent or ``None``. Raw config mappings retain explicit-field
     provenance. With a ``ResolvedConfig``, its privacy and strictness values are
-    authoritative because Phase 2 does not retain omission provenance.
+    authoritative because resolved declarations do not retain omission provenance.
     """
     allowed_cli = {"records", "provenance", "compare", "schema_mapping", "version_order",
                    "state_semantics", "missing_state_id", "out", "redacted", "record_ids",
-                   "id_salt_file", "strict", "tail_rule", "tail_threshold"}
+                   "id_salt_file", "strict", "tail_rule", "tail_threshold", "lineage", "lineage_records"}
     if cli is None:
         cli = {}
     if not isinstance(cli, Mapping) or any(type(key) is not str or key not in allowed_cli for key in cli):
@@ -540,6 +566,13 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
         if "strict_mode" in declared:
             _invalid("Phase 4 strict declarations compete")
         strict_mode = options["strict"]
+    lineage = resolved.lineage
+    if "lineage" in options:
+        if type(options["lineage"]) is not bool:
+            _invalid("lineage selection must be boolean")
+        if "lineage" in declared:
+            _invalid("lineage declarations compete")
+        lineage = options["lineage"]
     record_id_mode = options.get("record_ids", output.get("record_id_mode", "hash" if privacy_mode == "redacted" else "preserve"))
     if type(record_id_mode) is not str or record_id_mode not in {"preserve", "hash", "omit"}:
         _invalid("Phase 4 record ID mode must be preserve, hash or omit")
@@ -560,6 +593,11 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
             _invalid("Phase 4 singleton input declarations compete")
         if key in options:
             sources.append(InputSource(role, _phase4_option_path(options[key])))
+    if "lineage_records" in options:
+        paths = options["lineage_records"]
+        if type(paths) not in (list, tuple):
+            _invalid("lineage_records must be a sequence of local paths")
+        sources.extend(InputSource(FileRole.LINEAGE_CONTEXT, _phase4_option_path(path)) for path in paths)
     version_order = resolved.version_order
     if "version_order" in options:
         if version_order or any(source.role is FileRole.VERSION_ORDER for source in sources):
@@ -595,7 +633,7 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
         _invalid("frequency_at_or_below requires a finite threshold within zero and one")
     return Phase4Options(resolved, tuple(sorted(sources, key=lambda source: (source.role.value, str(source.path)))),
                          directory, privacy_mode, record_id_mode, salt_file, strict_mode, version_order,
-                         state_semantics, missing_state_id, tail_rule, threshold)
+                         state_semantics, missing_state_id, tail_rule, threshold, lineage)
 
 
 def phase4_config_summary(options: Phase4Options) -> dict[str, Any]:
@@ -617,7 +655,7 @@ def phase4_config_summary(options: Phase4Options) -> dict[str, Any]:
     return {"strict_mode": options.strict_mode, "privacy_mode": options.privacy_mode,
             "record_id_mode": options.record_id_mode, "tail_selection": tail, "weighted": False,
             "comparison_requested": any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs),
-            "scenario_requested": False}
+            "scenario_requested": False, **({"lineage_requested": True} if options.lineage else {})}
 
 
 def phase4_config_hash(options: Phase4Options) -> str:
@@ -645,6 +683,15 @@ def phase4_config_hash(options: Phase4Options) -> str:
     normalized["missing_state_id"] = options.missing_state_id
     normalized["tail_rule"] = options.tail_rule
     normalized["tail_threshold"] = options.tail_threshold
+    # Disabled lineage with unchanged graph defaults retains the ordinary hash.
+    # Explicit graph overrides still identify distinct input settings.
+    if options.lineage:
+        normalized["lineage"] = True
+    else:
+        normalized.pop("lineage")
+    for key, default in _LINEAGE_LIMIT_DEFAULTS.items():
+        if normalized["resource_limits"][key] == default:
+            del normalized["resource_limits"][key]
     return sha256_canonical({"encoding": "rit.phase4.config.v1", "options": normalized})
 
 
@@ -689,17 +736,22 @@ def load_phase4_invocation(*, cli: Mapping[str, Any], config_path: str | Path | 
         _phase4_literal(str(path))
     if options.id_salt_file is not None:
         _phase4_literal(str(options.id_salt_file))
-    configured_roles = {source.role for source in options.configuration.inputs}
-    sources = tuple(InputSource(source.role, source.path if source.path.is_absolute() else
-                    (config_base if source.role in configured_roles else base) / source.path,
-                    source.declared_format) for source in options.inputs)
+    configured_sources = Counter(options.configuration.inputs)
+    sources = []
+    for item in options.inputs:
+        from_config = configured_sources[item] > 0
+        if from_config:
+            configured_sources[item] -= 1
+        source_base = config_base if from_config else base
+        sources.append(InputSource(item.role, item.path if item.path.is_absolute() else source_base / item.path,
+                                   item.declared_format))
     output = dict(options.configuration.output)
     directory_base = config_base if "directory" in output else base
     directory = options.directory if options.directory.is_absolute() else directory_base / options.directory
     salt = options.id_salt_file
     if salt is not None and not salt.is_absolute():
         salt = (config_base if "id_salt_file" in output else base) / salt
-    return replace(options, inputs=sources, directory=directory, id_salt_file=salt), inventory
+    return replace(options, inputs=tuple(sources), directory=directory, id_salt_file=salt), inventory
 
 
 def phase4_validation_configuration(options: Phase4Options) -> dict[str, Any]:
@@ -711,6 +763,7 @@ def phase4_validation_configuration(options: Phase4Options) -> dict[str, Any]:
     data["strict_mode"] = options.strict_mode
     data["privacy_mode"] = options.privacy_mode
     data["version_order"] = list(options.version_order)
+    data["lineage"] = options.lineage
     return data
 
 
@@ -724,7 +777,7 @@ def phase4_pair_requested(options: Phase4Options, *, operation: str) -> bool:
         _invalid("invalid Phase 4 operation")
     requested = any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs)
     if operation == "validate":
-        if options.state_semantics is not None or options.tail_rule is not None:
+        if options.state_semantics is not None or options.tail_rule is not None or options.lineage:
             _invalid("input-only validation cannot request calculations")
         return False
     if requested != (options.state_semantics is not None):

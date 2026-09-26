@@ -15,7 +15,7 @@ external-root resolution, G/C/U counts and coverage. Step 5 adds root incidence,
 fractional mass and ancestry concentration. Step 6 adds explicit lineage closure
 and shared-root proxy calls. Step 7 integrates explicitly supplied lineage
 results into schema 1.1, canonical assembly and privacy-safe JSON/Markdown.
-CLI lineage invocation and context input options remain Step 8 targets.
+Step 8 integrates explicit CLI lineage invocation and local context input options.
 The package remains at
 `0.1.0.dev3`; the executable report schema is `1.1`.
 
@@ -438,8 +438,7 @@ renderers consume the same schema-valid safe result.
 ## 6. Resource and invocation interfaces
 
 `LineageLimits` has four required positive integer fields with these defaults;
-the existing `ResourceLimits` gains corresponding configuration fields when
-the configuration integration is implemented:
+the existing `ResourceLimits` exposes the corresponding configuration fields:
 
 | `LineageLimits` field | `ResourceLimits` / JSON `resource_limits` field | Default |
 |---|---|---|
@@ -479,7 +478,7 @@ or scientific thresholds. Step 9 measures actual time/RSS and may propose an
 explicitly documented limit adjustment. It must not silently raise limits to
 turn a failing check into a pass.
 
-The future inert configuration field is `ResolvedConfig.lineage: bool = False`,
+The inert configuration field is `ResolvedConfig.lineage: bool = False`,
 serialized as top-level `lineage: false` when explicit. The dedicated input role
 is `FileRole.LINEAGE_CONTEXT` with value `lineage_context`; it permits repeated
 existing local input declarations. Preserve all existing multi-role Python/config
@@ -492,6 +491,21 @@ validation, but rejects any true lineage execution request. Ordinary metric call
 select the primary version explicitly. Context does not request comparison,
 trajectories, simulations or network access. Existing CLI comparison stays one
 explicit earlier input; broader Python/config multiplicity stays unchanged.
+
+Context files may contain multiple context versions. Context versions must be
+disjoint from primary and comparison versions, and duplicate composite keys
+across repeated context inputs are rejected. A same-version ancestor must be
+loaded alongside its target in the primary input. Config context paths resolve
+relative to the config document; CLI context paths resolve relative to the
+working directory. The existing CSV/JSONL/optional Parquet and privacy rules
+apply unchanged. See [CLI commands](cli.md#explicit-lineage-and-context).
+
+The installed Hero selects v2 as its eight-record target and loads v1 as the
+existing comparison/ancestor input. Plain `example` retains `not_requested`
+lineage. Explicit `example --lineage` produces G=8, C=0, U=0, five supporting
+roots, HHI=1/4, effective roots=4, lineage bounds [0, 0] and the witnessed shared
+ancestry proxy. Direct bounds remain [1/2, 1/2]. Step 9 supplies the separate
+scale measurements; Step 10 supplies candidate verification.
 
 ## 7. Execution and error states
 

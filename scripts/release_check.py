@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Step 7 opens the approved lineage schema, assembly and privacy scope. Historical dispatch, source-body
+Step 8 opens the approved explicit lineage CLI and context-input scope. Historical dispatch, source-body
 migrations and phase registries are recoverable from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
 """
@@ -24,14 +24,19 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "e2666515d98cfe41483b5c43345c642bab02ced0"
+ACCEPTED_COMMIT = "267504e8fee4784f6d041e445a9e690c982e61a3"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/")
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
-    "src/recursive_integrity_toolkit/lineage/ancestry.py",
+    "src/recursive_integrity_toolkit/cli.py",
+    "src/recursive_integrity_toolkit/config.py",
+    "src/recursive_integrity_toolkit/models.py",
+    "src/recursive_integrity_toolkit/io/loaders.py",
+    "src/recursive_integrity_toolkit/io/normalization.py",
+    "src/recursive_integrity_toolkit/io/validation.py",
+    "src/recursive_integrity_toolkit/lineage/graph.py",
     "src/recursive_integrity_toolkit/reports/assembly.py",
-    "src/recursive_integrity_toolkit/reports/markdown_report.py",
-    "src/recursive_integrity_toolkit/utils/logging.py",
     "src/recursive_integrity_toolkit/result.py",
+    "schemas/config.schema.json",
     "schemas/report.schema.json",
     "src/recursive_integrity_toolkit/data/report.schema.json",
 })
@@ -73,7 +78,7 @@ def verify_source_scope(root: Path = ROOT) -> dict:
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
-            raise ValueError(f"Unauthorized product mutation outside Step 7 scope: {name}")
+            raise ValueError(f"Unauthorized product mutation outside Step 8 scope: {name}")
     for prefix in PROTECTED_PREFIXES:
         paths = list((root / prefix).rglob("*"))
         if (root / prefix).is_symlink() or any(path.is_symlink() for path in paths):
@@ -85,7 +90,7 @@ def verify_source_scope(root: Path = ROOT) -> dict:
                   and not path.relative_to(root).as_posix().startswith(
                       "src/recursive_integrity_toolkit.egg-info/")}
         if actual != {name for name in expected if name.startswith(prefix)}:
-            raise ValueError(f"Unauthorized product file-set mutation during Step 7: {prefix}")
+            raise ValueError(f"Unauthorized product file-set mutation during Step 8: {prefix}")
     return {"protected_product_files": len(expected) - len(CURRENT_IMPLEMENTATION_PATHS),
             "authorized_implementation_files": len(CURRENT_IMPLEMENTATION_PATHS),
             "product_file_inventory": "unchanged"}
@@ -1159,11 +1164,50 @@ redacted=json.loads((work/'redacted/reports/report.json').read_bytes())
 assert redacted['derived_metrics']['support']['support_delta']['value']==-3
 assert redacted['run']['redacted_mode'] is True and redacted['simulations']=={}
 assert str(work) not in (work/'redacted/reports/report.json').read_text(encoding='utf-8')
+for name,privacy in (('lineage',[]),('lineage-redacted',['--redacted'])):
+ destination=work/name
+ assert main(['example','--lineage','--out',str(destination),*privacy])==0
+ current=json.loads((destination/'reports/report.json').read_bytes())
+ jsonschema.Draft202012Validator(json.loads(resources.joinpath('data','report.schema.json').read_bytes())).validate(current)
+ assert current['run']['report_schema_version']=='1.1' and current['run']['run_status']=='complete'
+ assert current['capabilities']['lineage']['execution_status']=='completed'
+ assert current['capabilities']==current['observability']['capabilities']
+ assert current['simulations']=={} and current['errors']==[]
+ facts=current['observed_facts']['lineage'];metrics=current['derived_metrics']['lineage']
+ graph=facts['graph_scope']['value']
+ assert (graph['target_record_count'],graph['loaded_record_count'],graph['context_record_count'])==(8,16,8)
+ assert [metrics[k]['value'] for k in ('grounded_record_count','closed_record_count','unresolved_record_count')]==[8,0,0]
+ assert metrics['distinct_external_root_count']['value']==5
+ assert metrics['ancestry_concentration_hhi']['value']==0.25
+ assert metrics['effective_external_root_count']['value']==4.0
+ assert [metrics[k]['value'] for k in ('resolved_lineage_coverage','external_ancestry_coverage','resolved_parent_edge_coverage')]==[1.0,1.0,1.0]
+ assert facts['declared_parent_edge_count']['value']==facts['resolved_parent_edge_count']['value']==8
+ assert facts['cycle_status']['value']=='acyclic'
+ roots=metrics['top_shared_ancestors']['value']['items']
+ assert [root['incidence_count'] for root in roots]==[3,2,1,1,1]
+ assert [root['normalized_weight'] for root in roots]==[3/8,2/8,1/8,1/8,1/8]
+ assert [current['derived_metrics']['closure_exposure']['lineage'][k]['value'] for k in ('lower_bound','upper_bound','interval_width')]==[0.0,0.0,0.0]
+ assert [current['derived_metrics']['closure_exposure']['direct'][k]['value'] for k in ('lower_bound','upper_bound','interval_width')]==[0.5,0.5,0.0]
+ assert current['derived_metrics']['support']['support_delta']['value']==-3
+ assert current['derived_metrics']['diversity']['gini_simpson_diversity_delta']['value']==-0.125
+ assert current['proxy_signals']['shared_ancestry_dependence']['level']=='present'
+ assert {'model_performance_decline','causal_ancestor_effect','universal_integrity','universal_collapse_prediction'} <= {x['conclusion'] for x in current['unavailable_conclusions']}
+ markdown=(destination/'reports/report.md').read_text(encoding='utf-8')
+ assert '`["derived_metrics"]["lineage"]["ancestry_concentration_hhi"]`' in markdown
+ if privacy:
+  assert str(work) not in (destination/'reports/report.json').read_text(encoding='utf-8')
+  assert str(work) not in markdown
+  assert all(root['record_key']['record_id'] not in {f'v1_{i:02d}' for i in range(1,9)} for root in roots)
+ else:
+  assert graph['target_dataset_version']=='v2'
+  assert roots[0]['record_key']=={'dataset_version':'v1','record_id':'v1_01'}
+ for p in (destination/'inputs').iterdir():
+  assert p.read_bytes()==resources.joinpath('data','hero',p.name).read_bytes()
 for relative,digest in expected.items():
  assert hashlib.sha256(resources.joinpath(*relative.split('/')).read_bytes()).hexdigest()==digest
 for p in (target/'inputs').iterdir():
  assert p.read_bytes()==resources.joinpath('data','hero',p.name).read_bytes()
-print('installed Step 8: hand-counted Hero, local schema, exact resources, core-only, standard/redacted, no overwrite, blocked network: PASS')
+print('installed Hero: ordinary and explicit lineage, frozen numerical oracles, local schema, exact resources, core-only, standard/redacted, no overwrite, blocked network: PASS')
 '''
 
 

@@ -329,7 +329,7 @@ def normalize_table(table: LoadedTable, *, options: NormalizationOptions | None 
     if type(table) is not LoadedTable:
         raise CanonicalValidationError(ErrorCode.SCHEMA_TYPE, "normalize_table requires a LoadedTable")
     role = table.inventory.role
-    if role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE):
+    if role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE, FileRole.LINEAGE_CONTEXT):
         kind = "records"
     elif role is FileRole.PROVENANCE_MANIFEST:
         kind = "provenance"

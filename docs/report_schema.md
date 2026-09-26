@@ -1,6 +1,6 @@
 # Report Schema
 
-Status: Phase 5 Step 7 development report contract (`0.1.0.dev3`). Schema version: `1.1`.
+Status: Phase 5 Step 8 development report contract (`0.1.0.dev3`). Schema version: `1.1`.
 
 The authoritative public shape is `schemas/report.schema.json`, Draft 2020-12. Runtime validation is implemented in `result.py` using the standard library. `report_schema()` returns a detached copy of the same declarative contract. No runtime schema package, filesystem lookup or remote resolver is used. The `$schema` and `$id` identifiers are descriptive; all references are local `$defs` references.
 
@@ -12,8 +12,12 @@ keeps analytical sections empty; `example` runs the packaged explicit Hero pair.
 Default `simulations` is `{}`. Existing Python scenario results may be supplied
 explicitly to assembly, but CLI simulation execution is unsupported. Python
 callers can supply completed lineage, lineage bounds and shared-root proxy
-results explicitly. CLI lineage flags and context inputs remain Step 8 work;
-broader longitudinal orchestration and HTML remain deferred.
+results explicitly. `audit --lineage` and `example --lineage` compute these
+families explicitly. Input inventories and diagnostic locations accept the
+dedicated `lineage_context` role. Graph scope counts loaded context separately
+from the primary target; ordinary metric denominators remain scoped to their
+selected primary/comparison versions. Broader longitudinal orchestration and
+HTML remain deferred.
 
 Capability eligibility and execution are separate. An input Level 4 report can
 retain `not_requested` lineage, and a completed explicit pair has partial longitudinal
@@ -242,7 +246,7 @@ The following tables enumerate non-envelope public fields and containers. A `$de
 | `inputs` | object | required | PR-002 | Not nullable |
 | `inputs.artifacts` | object[] | optional | PR-002 | Not nullable |
 | `inputs.artifacts[]` | object | required | PR-002 | Not nullable |
-| `inputs.artifacts[].role` | enum: records_primary, records_compare, provenance_manifest, schema_mapping, config, version_order, embedding_data, external_reference | required | PR-002 | Not nullable |
+| `inputs.artifacts[].role` | enum: records_primary, records_compare, lineage_context, provenance_manifest, schema_mapping, config, version_order, embedding_data, external_reference | required | PR-002 | Not nullable |
 | `inputs.artifacts[].path` | string or null | required | PR-002 | Explicitly not applicable/unavailable as described above |
 | `inputs.artifacts[].path_redacted` | boolean | required | PR-002 | Not nullable |
 | `inputs.artifacts[].format` | enum: csv, jsonl, parquet, json, toml, npy | required | PR-002 | Not nullable |

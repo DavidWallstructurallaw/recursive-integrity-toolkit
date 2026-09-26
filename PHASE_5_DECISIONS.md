@@ -1,6 +1,6 @@
 # Phase 5 Decisions and Current Authorization
 
-Status: **PLAN APPROVED; STEPS 1-7 COMPLETE; PHASE INCOMPLETE**.
+Status: **PLAN APPROVED; STEPS 1-8 COMPLETE; PHASE INCOMPLETE**.
 
 On 2026-09-23 UTC the Theory Owner instructed:
 `批准，Phase 5  step 1开始`.
@@ -242,3 +242,30 @@ or meta-verification architecture is added.
 Package version stays `0.1.0.dev3`. Step 8 CLI flags, context-role ingestion and
 dispatch remain separate work. Stop after Step 7. Existing branch synchronization
 approval continues; merge, tag and publication remain separate actions.
+
+## Step 8 execution instruction
+
+On 2026-09-26 UTC the Theory Owner instructed `Phase 5  Step 8  开始`.
+This authorizes the explicit CLI and installed Hero integration under P5-D09,
+including the finite configured resource limits already specified under P5-D10.
+Work starts from Step 7 commit
+`267504e8fee4784f6d041e445a9e690c982e61a3` on `phase5-lineage`.
+
+`audit` and `example` gain explicit lineage opt-in. Repeatable local context
+inputs supply ancestors without entering the primary population's denominators
+or automatically requesting comparison. Context versions must remain disjoint
+from primary and comparison versions. Configuration resolution remains inert;
+`validate` may load context for input/reference validation and never executes
+lineage or analytical families. Existing empty-file rejection remains unchanged.
+
+The current source check advances its single comparison commit to Step 7 and
+opens the existing configuration, input-role, CLI and report-schema owners needed
+for this integration. Direct CLI/config/input tests, affected metric/report
+neighbors and installed Hero checks protect the public boundary. CSV/JSONL and
+real Parquet context inputs receive relevant loader checks. No new historical
+migration mechanism or meta-verification registry is authorized or required.
+
+Package version stays `0.1.0.dev3`; report schema stays `1.1`. Step 9 scale work
+and Step 10 candidate verification remain subsequent steps. Stop after Step 8.
+Existing branch synchronization approval continues; merge, tag and publication
+remain separate actions.

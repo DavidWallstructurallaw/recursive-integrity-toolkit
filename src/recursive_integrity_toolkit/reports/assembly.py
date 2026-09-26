@@ -48,6 +48,7 @@ class FamilyFailure:
 
     capability: CapabilityKey
     messages: tuple[ValidationMessage, ...]
+    lineage_resource_usage: LineageResourceUsage | None = None
 
     def __post_init__(self):
         if type(self.capability) is not CapabilityKey or type(self.messages) is not tuple:
@@ -55,6 +56,15 @@ class FamilyFailure:
         if not self.messages or any(type(item) is not ValidationMessage or item.severity not in
                                    (ValidationSeverity.ERROR, ValidationSeverity.FATAL) for item in self.messages):
             raise ReportAssemblyError("family failure must retain error or fatal diagnostics")
+        if self.lineage_resource_usage is not None:
+            _require(self.capability is CapabilityKey.LINEAGE,
+                     "lineage resource usage belongs only to the lineage family")
+            usage = _lineage_usage(self.lineage_resource_usage)
+            _require(usage["exhausted_limit"] in ("max_nodes", "max_edges")
+                     and usage["stored_root_membership_count"] == usage["root_union_visit_count"] == 0,
+                     "family failure resource usage must describe graph admission exhaustion")
+            _require(any(message.code == "E_LINEAGE_RESOURCE_LIMIT_EXCEEDED" for message in self.messages),
+                     "resource admission failure requires its matching error diagnostic")
 
 
 def _require(condition, message):
@@ -1111,6 +1121,14 @@ def _capabilities(payload, bundle, operations, failures, lineage=None):
                 entry["coverage_details"][name] = _coverage(value)
         if key is CapabilityKey.LINEAGE and original.coverage is not None:
             entry["coverage_details"]["resolved_parent_edge_coverage"] = _coverage(original.coverage)
+        if key is CapabilityKey.LINEAGE and (lineage is not None or key.value in failures):
+            replacements = {
+                "Input eligibility only; downstream analytical implementations remain deferred.":
+                    "Input eligibility describes supplied metadata; execution status records the explicit lineage request.",
+                "General graph validation is deferred; no roots or ancestors are traced.":
+                    "Graph and ancestry execution is reported separately from immediate-reference eligibility.",
+            }
+            entry["notes"] = [replacements.get(note, note) for note in entry["notes"]]
         if key is CapabilityKey.DATASET_LONGITUDINAL and completed:
             entry["notes"].append("Executed only the supplied explicit-pair support/diversity comparison; no adjacent-pair discovery, lineage/provenance trajectory or relative-change calculation.")
         if key is CapabilityKey.INTERVENTION_SIMULATION and completed:
@@ -1162,11 +1180,18 @@ def _lineage_scope(value, bundle):
     target = tuple(key for key in loaded if key.dataset_version == value.target_dataset_version)
     primary = {row.record_key.dataset_version for row in bundle.records
                if row.location.file_role is FileRole.RECORDS_PRIMARY}
+    context = {row.record_key.dataset_version for row in bundle.records
+               if row.location.file_role is FileRole.LINEAGE_CONTEXT}
+    selected = {row.record_key.dataset_version for row in bundle.records
+                if row.location.file_role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE)}
+    _require(not context & selected,
+             "lineage context versions overlap primary or comparison versions")
     _require(not primary or primary == {value.target_dataset_version},
              "lineage target differs from the validated primary version")
     _require(primary or not any(row.record_key.dataset_version == value.target_dataset_version and
-             row.location.file_role is FileRole.RECORDS_COMPARE for row in bundle.records),
-             "loaded comparison context cannot become a lineage target")
+             row.location.file_role in (FileRole.RECORDS_COMPARE, FileRole.LINEAGE_CONTEXT)
+             for row in bundle.records),
+             "loaded context cannot become a lineage target")
     _require(value.target_dataset_version is not None or not bundle.records or
              any(row.location.file_role is not None for row in bundle.records),
              "unassigned loaded records require an explicit lineage target version")
@@ -1446,9 +1471,13 @@ def assemble_report(bundle: BundleValidationResult, *, run: dict,
     operations = {key.value: [] for key in CapabilityKey}
     operations["ingestion"] = ["existing_bundle_validation"] if bundle.inventory or bundle.records else []
     failures = {}
+    admission_usage = None
     for failure in family_errors:
         _typed(failure, FamilyFailure, "family failure")
-        FamilyFailure(failure.capability, failure.messages)
+        FamilyFailure(failure.capability, failure.messages, failure.lineage_resource_usage)
+        if failure.lineage_resource_usage is not None:
+            _require(admission_usage is None, "one lineage execution cannot have competing admission failures")
+            admission_usage = failure.lineage_resource_usage
         failures.setdefault(failure.capability.value, []).extend(failure.messages)
         _diagnostics(payload, failure.messages, failure.capability.value)
     _require(lineage is None or "lineage" not in failures,
@@ -1508,6 +1537,10 @@ def assemble_report(bundle: BundleValidationResult, *, run: dict,
         _lineage_observations(payload, bundle)
         if "lineage" in failures:
             payload["observed_facts"]["lineage"]["cycle_status"]["reason_codes"] = ["R_LINEAGE_EXECUTION_FAILED"]
+        if admission_usage is not None:
+            payload["observed_facts"]["lineage"]["resource_usage"] = _envelope(
+                "observed_facts.lineage.resource_usage", _lineage_usage(admission_usage), _bundle_scope(bundle),
+                limitations=("Defined admission and root-work units do not measure peak memory or scientific thresholds.",))
     else:
         _lineage_result(payload, lineage, bundle, lineage_bounds, shared_ancestry)
         operations["lineage"].append("supplied_lineage_graph_and_depth")
@@ -1963,12 +1996,14 @@ _PRIVACY_SAFE_TEXT = frozenset((
     'Fixed finite declared state space and constant positive integer resample size.',
     'Floating-point and pseudorandom sampling are numerical realizations of the declared model.',
     'General graph validation is deferred; no roots or ancestors are traced.',
+    'Graph and ancestry execution is reported separately from immediate-reference eligibility.',
     'General lineage graph analysis is deferred to Phase 5.',
     'Immediate-reference validation coverage does not establish resolved ancestry or external roots.',
     'Implementation is deferred even when the existing input classifier marks lineage available.',
     'Incomplete required provenance remains unresolved with original errors retained.',
     'Input eligibility is distinct from executed analysis; Phase 5 lineage remains deferred.',
     'Input eligibility only; downstream analytical implementations remain deferred.',
+    'Input eligibility describes supplied metadata; execution status records the explicit lineage request.',
     'Input hashes identify supplied bytes and do not certify authenticity.',
     'Lineage closure exposure is deferred to Phase 5.',
     'Literal declared field labels do not certify semantic validity.',

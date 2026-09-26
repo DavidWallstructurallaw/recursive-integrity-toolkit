@@ -312,7 +312,7 @@ def test_phase4_step8_packaged_one_command_hero(repo_root, tmp_path, capsys, mon
     report = json.loads((output / "reports/report.json").read_bytes())
     phase4_step8_hero_values(report)
     assert report["run"]["command"] == "rit example" + (" --redacted" if redacted else "")
-    assert "full-product reference" in streams.err and "lineage execution is deferred" in streams.err
+    assert "Lineage was not requested" in streams.err and "rit example --lineage" in streams.err
     assert len(list((output / "inputs").iterdir())) == 6
     for path in (output / "inputs").iterdir():
         assert path.read_bytes() == (repo_root / "examples/hero" / path.name).read_bytes()

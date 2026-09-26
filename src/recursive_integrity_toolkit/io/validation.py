@@ -1180,7 +1180,8 @@ def validate_bundle(bundle: AuditBundle, *, configuration: dict[str, object] | N
     source_by_key = {}
     provenance_supplied = any(source.role is FileRole.PROVENANCE_MANIFEST for source in sources)
     for source in sources:
-        if source.role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE, FileRole.PROVENANCE_MANIFEST):
+        if source.role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE,
+                           FileRole.LINEAGE_CONTEXT, FileRole.PROVENANCE_MANIFEST):
             entry, rows, row_traces, notices = _bundle_table(source, effective, options, mapping)
             inventory.append(entry)
             traces.extend(row_traces)
@@ -1195,6 +1196,14 @@ def validate_bundle(bundle: AuditBundle, *, configuration: dict[str, object] | N
             inventory.append(inventory_source(source, limits=effective))
     canonical_records = tuple(sorted(records, key=_bundle_row_key))
     validate_unique_keys(canonical_records, kind="records")
+    context_versions = {row.record_key.dataset_version for row in canonical_records
+                        if row.location.file_role is FileRole.LINEAGE_CONTEXT}
+    selected_versions = {row.record_key.dataset_version for row in canonical_records
+                         if row.location.file_role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE)}
+    if context_versions & selected_versions:
+        raise _fail(ErrorCode.CONFIG_INVALID,
+                    "lineage context versions must be disjoint from primary and comparison versions",
+                    "dataset_version", RowLocation(FileRole.LINEAGE_CONTEXT))
     canonical_provenance = tuple(sorted(provenance, key=_bundle_row_key)) if provenance_supplied else None
     joined = join_provenance(canonical_records, canonical_provenance,
                              strict_mode=config.strict_mode, strict_warning_codes=config.strict_warning_codes)

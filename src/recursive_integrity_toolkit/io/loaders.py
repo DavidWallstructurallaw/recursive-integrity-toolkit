@@ -43,7 +43,8 @@ from ..utils.hashing import sha256_bytes
 from ..utils.paths import local_input_path
 
 
-_TABLE_ROLES = {FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE, FileRole.PROVENANCE_MANIFEST}
+_TABLE_ROLES = {FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE,
+                FileRole.LINEAGE_CONTEXT, FileRole.PROVENANCE_MANIFEST}
 _TABLE_FORMATS = {FileFormat.CSV, FileFormat.JSONL, FileFormat.PARQUET}
 _EXTENSIONS = {".csv": FileFormat.CSV, ".jsonl": FileFormat.JSONL, ".parquet": FileFormat.PARQUET,
                ".json": FileFormat.JSON, ".toml": FileFormat.TOML, ".npy": FileFormat.NPY}
@@ -78,6 +79,7 @@ def _select_format(source: InputSource) -> FileFormat:
     allowed = {
         FileRole.RECORDS_PRIMARY: _TABLE_FORMATS,
         FileRole.RECORDS_COMPARE: _TABLE_FORMATS,
+        FileRole.LINEAGE_CONTEXT: _TABLE_FORMATS,
         FileRole.PROVENANCE_MANIFEST: _TABLE_FORMATS,
         FileRole.SCHEMA_MAPPING: {FileFormat.JSON},
         FileRole.CONFIG: {FileFormat.JSON, FileFormat.TOML},
@@ -319,7 +321,7 @@ def _parse_parquet(source: InputSource, raw: bytes, limits: ResourceLimits) -> t
 
 
 def load_table(source: InputSource, *, limits: ResourceLimits | None = None) -> LoadedTable:
-    """Parse a records/compare/provenance table; canonical validation is later.
+    """Parse a records, lineage-context or provenance table before validation.
 
     A declared format selects exactly one parser. No fallback sniffing occurs.
     CSV values stay strings. JSONL and Parquet retain their native values.
@@ -336,7 +338,8 @@ def load_table(source: InputSource, *, limits: ResourceLimits | None = None) -> 
         fields, rows = _parse_jsonl(source, _text(source, raw), checked)
     else:
         fields, rows = _parse_parquet(source, raw, checked)
-    if not rows and source.role in {FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE}:
+    if not rows and source.role in {FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE,
+                                   FileRole.LINEAGE_CONTEXT}:
         raise _failure(source, ErrorCode.EMPTY_DATASET, "records table contains no data rows")
     inventory = FileInventoryEntry(source.role, path, chosen, len(raw), sha256_bytes(raw), len(rows), fields)
     return LoadedTable(inventory, rows)
