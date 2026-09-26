@@ -2,11 +2,11 @@
 
 ## Current Phase 5 boundary
 
-Phase 5 Step 8 is approved. Runtime remains at `0.1.0.dev3`, with executable
-report schema 1.1 for every report. Explicit CLI lineage execution, repeated
-context inputs, configuration limits and the installed lineage Hero are the
-current implementation scope. Step 9 scale/mutation work and Step 10 candidate
-verification remain pending.
+Phase 5 Step 9 is approved. Runtime remains at `0.1.0.dev3`, with executable
+report schema 1.1 for every report. Bounded adversarial/mutation checks and actual
+lineage scale measurements follow the accepted explicit CLI and context inputs.
+The measured generation bottleneck receives only the plan-authorized dependency
+propagation optimization. Step 10 candidate verification remains pending.
 Stable v0.1 publication, a tag and main merge require
 separate authorization.
 
@@ -20,10 +20,10 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The existing source check advances its single reference to the completed Step 7
-commit; no new Phase 5 hash registry is needed. During Step 8 it permits changes
-only to explicit CLI/configuration, the context input role and necessary input,
-graph and report adapters, with config/report schema enum updates. It retains the exact product file inventory and
+The existing source check advances its single reference to the completed Step 8
+commit; no new Phase 5 hash registry is needed. During Step 9 it permits changes
+only to `io/validation.py` for the measured generation optimization.
+It retains the exact product file inventory and
 rejects unrelated runtime, package-metadata and canonical Hero changes.
 The frozen Phase 0 specification hashes are unchanged. Sixteen frozen
 specifications and seven packaged resource copies remain protected. The source
@@ -52,9 +52,10 @@ Dispatch `ci.yml` with `gate=candidate` for a stable candidate. The workflow run
 Compatibility cells run complete canonical regression with
 `--ignore=tests/performance`. The designated performance job runs
 `tests/performance` once, avoiding nine repetitions of the costly 100k report
-workload. The Phase 5 sparse-lineage test is still a placeholder in Step 8;
-it becomes an executable graph benchmark in Step 9. No placeholder is counted as
-a successful lineage measurement.
+workload. The current sparse-lineage benchmark executes a real 100k reverse chain
+through file loading, complete input/generation validation and ancestry analysis.
+Separate bounded deep-chain and high-fan-in cases measure the full lineage CLI
+through JSON/Markdown. The canonical Hero is measured afresh with lineage enabled.
 
 The existing minimum compatible pair remains NumPy 2.0.0/pandas 2.2.2. Record
 actual resolved dependencies, `pip check`, Python/platform, commands, results
@@ -106,8 +107,12 @@ RSS are separate observations. Do not substitute a small workload or extrapolati
 for required actual 100k execution. See [performance details](../tests/performance/README.md).
 
 Phase 4's metadata-only 100k run took about 1,362.47 seconds and 7.12 GiB peak RSS.
-It did not execute general ancestry. Phase 5 must measure its own enabled graph
-workloads; comparable regression review uses the approved >20% time or >50%
+It did not execute general ancestry. Step 9's actual 100k ancestry API run took
+123.36 seconds and 1.71 GiB peak RSS, excluding full audit serialization and
+ordinary metrics. Its 1,000-record full CLI run took 11.15 seconds. Those scopes
+are distinct from the Phase 4 workload and do not imply a comparable speedup.
+See [Step 9 results](../PHASE_5_STEP_9.md) for environment and all attempts.
+Comparable regression review uses the approved >20% time or >50%
 memory thresholds. Operational timeouts are resource guards, not product SLAs.
 
 Reuse unchanged successful candidate evidence for nonauthoritative administrative

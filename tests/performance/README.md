@@ -3,13 +3,14 @@
 Current scheduling: Phase 5 candidate verification runs this directory once on
 the designated Ubuntu/Python 3.12 reference profile. Compatibility cells run the
 canonical suite without this performance directory. The existing complete 100k
-report benchmark remains required. The sparse-lineage placeholder gains actual
-execution in Phase 5 Step 9 and currently makes no graph performance claim.
+report benchmark remains required. Phase 5 Step 9 replaces the sparse-lineage
+placeholder with an actual 100k deep-chain API measurement and bounded complete
+CLI lineage measurements. These workloads have distinct scopes.
 
 Phase 4 Step 10 extends the retained Phase 3 calculation observations with public
 CLI audit measurements ending only after both `report.json` and `report.md` have
 been published. The original Phase 3 test functions and measurement fixture remain
-unchanged. Sparse lineage remains deferred and is not measured here.
+available alongside the current lineage observations.
 
 ## Complete Hero audit
 
@@ -27,6 +28,49 @@ small measurement-wrapper bookkeeping. The separately recorded CLI interval star
 before its import and stops after publication. Container observations identify the
 recorded reference hardware; they do not certify every common laptop. A repeatable
 target miss requires explicit review under P4-D08 before acceptance.
+
+`test_hero_lineage_complete_report_runtime` measures the same canonical inputs
+with `--lineage` in three fresh, untraced processes. It additionally asserts
+G=8, C=U=0, five roots, HHI=1/4, four effective roots and lineage bounds `[0,0]`.
+All three outer wall times are reviewed against the same under-five-second
+reference target. No fastest-run selection or universal laptop guarantee applies.
+
+## Current sparse lineage and fan-in
+
+`test_sparse_lineage_100k_api` runs once on the Linux/Python 3.12 reference
+profile in a fresh interpreter. It loads actual JSONL files and executes complete
+input validation, including expected generation, then graph construction,
+cycles/depth, roots and concentration. The 100,000 primary records use version
+`m`, IDs `n000000` through `n099999`, fixed synthetic content and topic
+`s{index % 20:02d}`. Only the final record is a parentless externally grounded
+anchor; every preceding record declares the next ID as its parent and
+generation `99999 - index`. Confidence is confirmed; non-anchor source is
+synthetic, grounding is no and transformation is generate. No context is loaded.
+
+Independent expectations are 99,999 unique edges, depth 99,999, 100,000 logical
+root memberships, 99,999 union visits, G=100,000, C=U=0, one distinct root and
+HHI/effective roots both 1. Every target root set and every expected generation
+is checked. This API run does **not** serialize full audit JSON/Markdown or run
+ordinary metric families. Its reported output size is the small API summary,
+not an audit report. This distinction prevents comparison with Phase 4's full
+metadata report workload.
+
+`test_sparse_lineage_bounded_complete_reports` uses the same generator at 1,000
+records through the full CLI, ending after JSON and Markdown publication.
+`test_high_fan_in_lineage_complete_reports` loads 64 parentless context anchors
+in `v1` and 64 targets in `v2`, each depending on all 64 anchors. It asserts
+4,096 edges/visits, 4,160 memberships, depth 1, HHI=1/64 and 64 effective roots.
+The context remains outside the target denominator. Separate bounded canonical
+tests exercise repeated paths through multiple union layers and failure exactly
+at the next rejected budget unit. Compatibility jobs run these structural tests
+without repeating the expensive reference benchmark.
+
+The API measurement records command, input sizes/hashes, environment, return
+code, all stdout/stderr, elapsed time, actual process peak RSS, graph/root counts
+and summary size in its ordinary JUnit observation and temporary output.
+It uses no allocation tracing. The two CLI workloads reuse the existing report
+measurement fixture. There is no new benchmark service, registry or receipt chain.
+See [Step 9 results](../../PHASE_5_STEP_9.md) for the actual reference baseline.
 
 ## Deterministic metadata audit
 
@@ -99,8 +143,11 @@ record null Python-allocation fields with an explicit omission reason, rather th
 reporting a bounded-run value or extrapolation as a measured 100,000-record peak.
 
 A 60-second per-attempt Hero timeout and 1,800-second metadata timeout bound test
-execution. They are resource guards, not performance targets. A killed or failed
-attempt remains in the recorded evidence and fails the measurement test; it is
+execution. Lineage uses 600 seconds for the 100k API and 180 seconds for either
+bounded CLI case. The measured 123.36-second API run leaves approximately 4.9x
+operational headroom in that 600-second guard. The existing 75-minute reference
+CI job limit is unchanged. These are resource guards, not performance targets.
+A killed or failed attempt remains in the recorded evidence and fails the measurement test; it is
 not silently replaced by a successful retry.
 
 Example commands, from a prepared test environment:
@@ -108,6 +155,8 @@ Example commands, from a prepared test environment:
 ```sh
 python -m pytest tests/performance/test_hero_runtime.py -k phase4_step10 --junitxml=hero-performance.xml
 python -m pytest tests/performance/test_metadata_100k.py -k phase4_step10 --junitxml=metadata-performance.xml
+python -m pytest tests/performance/test_sparse_lineage_100k.py --junitxml=lineage-performance.xml
+python -m pytest tests/performance/test_hero_runtime.py -k hero_lineage --junitxml=lineage-hero.xml
 ```
 
 Only measurements with the same dataset, product path, tracing mode, environment
@@ -116,4 +165,4 @@ The inherited Phase 3 calculation-only timings do not measure the Phase 4 comple
 report path. Comparable runtime growth above 20% or memory growth above 50%
 requires review. Every attempt, including failed preliminary fixture construction
 or target misses, belongs in execution evidence. These observations cover the
-implemented Phase 4 audit and do not certify deferred final-product Hero behavior.
+implemented audit and explicit Phase 5 lineage scope; Phase 6 behavior remains deferred.

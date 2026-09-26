@@ -1,4 +1,4 @@
-"""PR-009 Step 4 declared generation types only; parent-based derivation is deferred."""
+"""PR-009 declared generation types, expected counts and bounded dependency work."""
 
 import pytest
 
@@ -97,6 +97,60 @@ def test_PR009_second_ungrounded_descendant_generation_two():
     result = _s6_generations([_s6_gen_row("z", "yes", generation=0),
         _s6_gen_row("m", parents=["v1::z"], generation=1), _s6_gen_row("a", parents=["v1::m"], generation=2)])
     assert tuple(item.expected_generation for item in result.assessments) == (2, 1, 0)
+
+
+def test_PR009_reverse_chain_propagation_and_identity_lookup_have_bounded_work():
+    """Catch repeated scans and linear key lookup without a wall-clock gate."""
+    import sys
+
+    observations = []
+    for size in (128, 512):
+        rows = tuple(_s6_gen_row(f"n{index:06d}",
+            "yes" if index == size - 1 else "no",
+            [] if index == size - 1 else [f"v1::n{index + 1:06d}"],
+            size - 1 - index) for index in range(size))
+        keys = tuple(row.record_key for row in rows)
+        counts = [0, 0]
+
+        def trace(frame, event, arg):
+            if frame.f_code is validate_generation_declarations.__code__:
+                if event == "line":
+                    counts[0] += 1
+                return trace
+            if frame.f_code is RecordKey.__eq__.__code__ and event == "call":
+                counts[1] += 1
+            return None
+
+        previous = sys.gettrace()
+        sys.settrace(trace)
+        try:
+            result = validate_generation_declarations(keys, rows)
+        finally:
+            sys.settrace(previous)
+        assert [item.expected_generation for item in result.assessments] == list(reversed(range(size)))
+        assert not any(item.mismatch for item in result.assessments)
+        observations.append(counts)
+    # Four times the records permits sorting overhead, but excludes quadratic
+    # dependency scans and tuple-membership comparisons (both formerly >15x).
+    assert all(0 < large < small * 6 for small, large in zip(*observations))
+
+
+def test_PR009_grounding_reset_and_blocked_branches_propagate_independently():
+    result = _s6_generations([
+        _s6_gen_row("anchor", "yes", ["cycle"], 0),
+        _s6_gen_row("cycle", parents=["anchor"], generation=1),
+        _s6_gen_row("unknown", "unknown", generation=0),
+        _s6_gen_row("mixed", parents=["cycle", "unknown"], generation=2),
+        _s6_gen_row("descendant", parents=["mixed"], generation=3),
+    ])
+    values = {item.record_key.record_id: item for item in result.assessments}
+    assert values["anchor"].expected_generation == 0
+    assert values["cycle"].expected_generation == 1
+    assert values["unknown"].reason_codes == ("GROUNDING_UNKNOWN",)
+    for name in ("mixed", "descendant"):
+        assert values[name].expected_generation is None
+        assert values[name].reason_codes == ("PARENT_GENERATION_UNAVAILABLE",)
+    assert not any(message.code == ErrorCode.LINEAGE_CYCLE.value for message in result.messages)
 
 
 def test_PR009_unknown_grounding_expected_generation_unavailable():

@@ -269,3 +269,24 @@ Package version stays `0.1.0.dev3`; report schema stays `1.1`. Step 9 scale work
 and Step 10 candidate verification remain subsequent steps. Stop after Step 8.
 Existing branch synchronization approval continues; merge, tag and publication
 remain separate actions.
+
+## Step 9 execution instruction
+
+On 2026-09-26 UTC the Theory Owner instructed `Phase 5  Step  9 开始`.
+Work starts from Step 8 commit
+`f1c5309deda3ae4107c78f025cb2a7bb85ba2881` on `phase5-lineage`.
+This authorizes bounded adversarial and mutation checks, actual 100k sparse
+lineage execution on the designated reference profile, and full CLI/Hero
+measurements under P5-D10 and the approved performance policy.
+
+The initial reverse-chain probe demonstrates quadratic generation scans and
+identity lookup. The plan's explicit narrow allowance applies: replace those
+operations with behavior-preserving immediate-dependency propagation and a key
+set, with generation and input/lineage neighbor regression. No scientific
+definition or unrelated kernel is opened. The single current source boundary
+advances to Step 8; no new governance mechanism is introduced.
+
+Package version remains `0.1.0.dev3`; report schema remains `1.1`. Step 10 owns
+the complete candidate environment matrix, release checks and dev4 handoff.
+Stop after Step 9. Existing branch synchronization approval continues; merge,
+tag and publication remain separate actions.

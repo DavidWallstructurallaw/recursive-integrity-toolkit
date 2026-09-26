@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections import deque
 from pathlib import Path
 from ..config import ResourceLimits
 from datetime import datetime, timezone
@@ -793,13 +794,15 @@ def validate_generation_declarations(
 ) -> GenerationValidationResult:
     """Validate non-grounding counts using only safely established dependencies.
 
-    This internal input check does not construct or traverse an ancestry graph.
-    Monotone bounded scans propagate established expected counts; declarations
-    never seed expected values. Stalled dependencies remain unavailable, without
+    This internal input check propagates counts through immediate dependencies;
+    it does not calculate ancestry or lineage depth. Each established dependency
+    is consumed once; declarations never seed expected values. Stalled
+    dependencies remain unavailable, without
     inferring a cycle. Grounding yes establishes zero directly, independently of
     lineage depth. Parent validity and incomplete-provenance errors stay visible.
     """
     keys = _parent_keys(loaded_keys)
+    key_set = set(keys)
     promoted = _join_options(None, strict_mode, strict_warning_codes)
     order = _checked_order(version_order, tuple(sorted({key.dataset_version for key in keys})))
     if type(provenance) is not tuple:
@@ -817,7 +820,7 @@ def validate_generation_declarations(
         key = assessed.record_key
         if key in rows:
             raise _fail(ErrorCode.PROVENANCE_DUPLICATE_ROW, "duplicate generation input identity", "record_id", assessed.location, key)
-        if key not in keys:
+        if key not in key_set:
             raise _fail(ErrorCode.PROVENANCE_UNMATCHED_ROW, "generation input has no matching loaded record", "record_id", assessed.location, key)
         rows[key] = assessed
     lookup = _parent_lookup(keys, order)
@@ -856,27 +859,31 @@ def validate_generation_declarations(
             reasons[key] = ("PARENT_UNRESOLVED",)
         elif any(ref.temporal_status == "unavailable" for ref in parents[key].references):
             reasons[key] = ("PARENT_CHRONOLOGY_UNAVAILABLE",)
-    # At most one new count per record. No queue of graph nodes or topological sort.
     pending = set(keys) - set(expected) - set(reasons)
-    # An existing declared version order can schedule scans, without deriving a
-    # topological order from parent edges. Same-version dependencies may need
-    # repeated scans. No stalled dependency is ever relabelled as a cycle.
-    positions = lookup[2]
-    scan_order = tuple(item[3] for item in sorted(
-        (positions.get(key.dataset_version, 0), key.dataset_version, key.record_id, key)
-        for key in pending))
-    for _ in range(len(pending)):
-        newly_established: set[RecordKey] = set()
-        for key in scan_order:
-            if key not in pending:
-                continue
-            dependencies = parents[key].references
-            if all(ref.parent_key in expected for ref in dependencies):
-                expected[key] = 1 + max(expected[ref.parent_key] for ref in dependencies)
-                newly_established.add(key)
-        if not newly_established:
-            break
-        pending.difference_update(newly_established)
+    # Only validated grounding seeds the queue. Unavailable dependencies never
+    # enter it, and stalled dependencies are never relabelled as cycles. Grounded
+    # records still reset to zero independently of their own parent declarations.
+    dependents: dict[RecordKey, list[RecordKey]] = {}
+    remaining: dict[RecordKey, int] = {}
+    largest_parent: dict[RecordKey, int] = {}
+    for key in keys:
+        if key not in pending:
+            continue
+        dependencies = parents[key].references
+        remaining[key] = len(dependencies)
+        largest_parent[key] = 0
+        for ref in dependencies:
+            dependents.setdefault(ref.parent_key, []).append(key)
+    ready = deque(key for key in keys if key in expected)
+    while ready:
+        parent = ready.popleft()
+        for child in dependents.get(parent, ()):
+            largest_parent[child] = max(largest_parent[child], expected[parent])
+            remaining[child] -= 1
+            if remaining[child] == 0:
+                expected[child] = 1 + largest_parent[child]
+                pending.remove(child)
+                ready.append(child)
     for key in pending:
         reasons[key] = ("PARENT_GENERATION_UNAVAILABLE",)
     assessments: list[GenerationAssessment] = []

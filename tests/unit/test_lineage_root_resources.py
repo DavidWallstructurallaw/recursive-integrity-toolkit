@@ -25,7 +25,7 @@ def _key(identity):
 
 
 def _validation(declarations, *, grounding=None, transformation=None, reverse=False):
-    """Construct a current validated input handoff without legacy generation."""
+    """Construct a validated handoff with generation omitted to isolate ancestry."""
     records, provenance = [], []
     items = list(declarations.items())
     if reverse:
@@ -202,6 +202,33 @@ def test_root_propagation_is_iterative_for_a_chain_beyond_python_recursion_depth
     assert result.resource_usage.root_union_visit_count == size - 1
     assert result.cycles.lineage_depth == size - 1
     assert all(entry.external_root_keys == frozenset({_key(anchor)}) for entry in result.records)
+
+
+@pytest.mark.parametrize("visit_limit", [256, 257])
+def test_layered_fan_in_counts_repeated_paths_and_rejects_the_next_visit(visit_limit):
+    roots = [f"v1::r{index:02d}" for index in range(32)]
+    middles = [f"v1::m{index}" for index in range(4)]
+    declarations = {**{root: [] for root in roots}, **{middle: roots for middle in middles},
+                    "v2::target": [*middles, roots[0]]}
+    result = _analyze(declarations, grounding={root: "yes" for root in roots},
+                      max_root_memberships=192, max_root_union_visits=visit_limit)
+    usage = result.resource_usage
+    assert (usage.admitted_node_count, usage.admitted_edge_count) == (37, 133)
+    assert usage.stored_root_membership_count == 192
+    assert usage.root_union_visit_count == visit_limit
+    assert result.cycles.lineage_depth == 2
+    if visit_limit == 256:
+        assert result.execution_status is ExecutionStatus.FAILED
+        assert result.records is result.grounded_record_count is result.root_contributions is None
+        assert result.resolved_lineage_coverage is None
+        assert usage.exhausted_limit == "max_root_union_visits" and usage.attempted_value == 257
+    else:
+        assert result.execution_status is ExecutionStatus.COMPLETED
+        assert usage.exhausted_limit is usage.attempted_value is None
+        assert result.records[0].external_root_keys == frozenset(_key(root) for root in roots)
+        assert result.grounded_record_count == 1
+        assert result.ancestry_concentration_hhi == 1 / 32
+        assert result.effective_external_root_count == 32.0
 
 
 @pytest.mark.parametrize("limits,limit_name,expected_nodes,expected_edges", [

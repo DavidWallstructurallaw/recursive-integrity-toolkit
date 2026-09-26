@@ -2,11 +2,11 @@
 
 A local-first research toolkit for examining recursive closure exposure in synthetic-data and recursive-data pipelines under explicit representations and assumptions.
 
-## Current milestone: Phase 5 explicit lineage CLI
+## Current milestone: Phase 5 lineage scale validation
 
 Development version `0.1.0.dev3` provides local input validation, JSON and Markdown audit reports, privacy controls, one explicitly ordered dataset comparison and a packaged Hero example. The mathematical core includes literal topic/label and exact record-form representations, exact duplicates, support/diversity, provenance composition, direct closure-exposure bounds, tail ranking and explicitly invoked closed-resampling scenarios. Actual acceptance and execution evidence are recorded in `PHASE_4_COMPLETION.md`, `PHASE_4_VALIDATION_REPORT.md` and `PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md`.
 
-Phase 5 Steps 1-8 add validated graphs, cycles, depth, external ancestry, root concentration, lineage closure bounds and descriptive shared-root evidence through explicit Python calls or `audit --lineage` and `example --lineage`. Repeatable local context inputs supply ancestors while the primary version keeps its own metric scopes. JSON and Markdown use report schema 1.1. Step 9 scale/mutation work and Step 10 candidate verification remain pending. Longitudinal orchestration remains Phase 6A work; external reopening and experiment orchestration remain Phase 6B work. The CLI does not execute simulations. HTML output is deferred. No stable release, main merge or registry publication is implied by this development milestone.
+Phase 5 Steps 1-9 add validated graphs, cycles, depth, external ancestry, root concentration, lineage closure bounds and descriptive shared-root evidence through explicit Python calls or `audit --lineage` and `example --lineage`. Repeatable local context inputs supply ancestors while the primary version keeps its own metric scopes. JSON and Markdown use report schema 1.1. Bounded mutation checks and actual 100k lineage measurement are complete; Step 10 candidate verification remains pending. Longitudinal orchestration remains Phase 6A work; external reopening and experiment orchestration remain Phase 6B work. The CLI does not execute simulations. HTML output is deferred. No stable release, main merge or registry publication is implied by this development milestone.
 
 ## Install and run
 
@@ -120,7 +120,9 @@ Identity is `(dataset_version, record_id)`. Missing, null, declared unknown, zer
 
 Standard reports exclude raw content, private notes, full embeddings and secrets. `--redacted` additionally protects paths and structural identifiers; record IDs default to keyed hashes, with explicit preserve/omit options. Aggregate values and errors remain visible. Input/configuration hashes are linkable, and pseudonyms provide no statistical anonymity. Exact content hashes describe record form and cannot establish semantic equivalence or authorship. Content references are read only through explicit Python `LOCAL_REF` requests; CLI audit/validate do not activate that reader.
 
-The Phase 4 Step 10 reference-container measurement completed the 100,000-record synthetic metadata audit in **1,362.4708 seconds**, with **7.12 GiB peak process RSS**, approximately **443 MB JSON** and **165 MB Markdown**. This is a demanding, verbose report workload; plan memory, disk space and runtime before applying it to large datasets. Those observations are neither an SLA nor evidence for lineage performance, which Phase 5 Step 9 will measure. Full-scale Python allocation tracing was omitted after a separately recorded bounded tracing-overhead measurement. See [measurement method](tests/performance/README.md) and the phase validation record for actual environment and scope.
+The Phase 4 Step 10 reference-container measurement completed the 100,000-record synthetic metadata audit in **1,362.4708 seconds**, with **7.12 GiB peak process RSS**, approximately **443 MB JSON** and **165 MB Markdown**. This is a demanding, verbose report workload; plan memory, disk space and runtime before applying it to large datasets. Those observations are neither an SLA nor evidence for lineage performance. Full-scale Python allocation tracing was omitted after a separately recorded bounded tracing-overhead measurement.
+
+[Phase 5 Step 9](PHASE_5_STEP_9.md) measured an actual 100,000-record deep chain through loading, complete validation and ancestry API analysis in **123.36 seconds**, with **1.71 GiB peak RSS**. This excludes full audit reports and ordinary metrics, so it is not comparable to the Phase 4 workload. A separate 1,000-record lineage CLI audit through JSON/Markdown took **11.15 seconds**; lineage-enabled Hero runs took **0.99, 1.08 and 1.01 seconds**. See the [measurement method](tests/performance/README.md) for exact workloads, resource guards and limitations.
 
 ## Verification and development artifacts
 
