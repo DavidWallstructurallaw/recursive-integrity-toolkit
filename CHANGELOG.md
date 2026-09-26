@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.0.dev4: Phase 5 lineage candidate
+
+Added explicit canonical lineage graphs, iterative cycles and structural depth,
+strict external ancestry, root incidence/fractional mass, ancestry concentration,
+lineage closure intervals and descriptive shared-root evidence. Schema 1.1 and
+standard/redacted JSON/Markdown retain partial, unavailable and unknown states.
+`audit --lineage` and `example --lineage` support dedicated local ancestor context
+without changing primary metric denominators. Input validation remains analytical-
+execution-free. Finite node, edge, root-membership and work limits are explicit.
+
+Replaced measured quadratic generation scans with immediate dependency
+propagation while preserving declarations and scientific results. The actual
+100k reverse-chain input/ancestry API baseline is 123.36 seconds and 1.71 GiB
+peak RSS; full audit serialization is excluded. Seven bounded mutations were
+detected by current behavioral tests. Step 10 verifies supported environments,
+packaging, installed ordinary/lineage Hero and reproducibility through the
+existing candidate workflow. Actual acceptance is in `PHASE_5_COMPLETION.md`.
+
+Historical source-migration machinery was consolidated into current behavioral
+controls and recoverable Git evidence. Phase 6A/6B, CLI simulation, HTML, main
+merge, tag and publication remain outside this development milestone.
+
 ## 0.1.0.dev3: Phase 4 report and CLI milestone
 
 Added a validated twelve-section JSON report contract, Markdown rendering, explicit evidence assembly, standard/redacted privacy views and safe local report publication. The installed CLI supports input-only `validate`, single-version `audit`, one explicitly ordered compatible pair and a packaged local `example`; help/version remain import-safe. Reports preserve five evidence classes, unknown/unavailable states, scope/denominator metadata, partial errors and deferred capabilities.

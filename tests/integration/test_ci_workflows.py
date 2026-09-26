@@ -29,9 +29,11 @@ def test_full_matrix_requires_explicit_candidate_selection(repo_root):
     assert "pull_request:" in text
     assert "docs/**" not in text and "docs/lineage_contract.md" not in text.split("  workflow_dispatch:", 1)[0]
     assert "default: focused" in text and "options: [focused, candidate]" in text
+    assert "types: [opened, synchronize, reopened, labeled]" in text
     for job in ("core", "parquet", "performance", "hero", "security"):
         body = re.search(r"^  " + job + r":\n(.*?)(?=^  [a-z_]+:|\Z)", text, re.M | re.S).group(1)
         assert "github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'" in body
+        assert "github.event.action == 'labeled' && github.event.label.name == 'verification:candidate'" in body
     focused = text.split("  focused:\n", 1)[1].split("\n  core:", 1)[0]
     assert "inputs.gate != 'candidate'" in focused
     assert "test_current_verification.py" in focused and "test_lineage_fixture_inputs.py" in focused
@@ -137,8 +139,12 @@ def test_current_junit_gate_requires_actual_parquet_cases(repo_root, tmp_path):
         _release_tools(repo_root)["verify_junit"](_junit(tmp_path, '<testcase name="mock_parquet"/>'), require_parquet=True)
 
 
-def test_current_junit_gate_accepts_three_real_case_names(repo_root, tmp_path):
-    names = ("test_PR002_parquet_real_roundtrip", "test_PR002_parquet_real_row_limit", "test_PR002_parquet_real_invalid_file")
+def test_current_junit_gate_accepts_real_case_names(repo_root, tmp_path):
+    names = (
+        "test_PR002_parquet_real_roundtrip", "test_PR002_parquet_real_row_limit", "test_PR002_parquet_real_invalid_file",
+        "test_context_table_uses_existing_local_parsers_and_normalizer[parquet]",
+        "test_context_loaders_and_repeated_inputs_keep_primary_only_denominators[parquet]",
+    )
     body = "".join(f'<testcase classname="real" name="{name}"/>' for name in names)
-    result = _release_tools(repo_root)["verify_junit"](_junit(tmp_path, body, 'tests="3"'), require_parquet=True)
-    assert result["real_parquet_cases"] == 3
+    result = _release_tools(repo_root)["verify_junit"](_junit(tmp_path, body, 'tests="5"'), require_parquet=True)
+    assert result["real_parquet_cases"] == 5

@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 import json
+import os
 
 import pytest
 
@@ -31,7 +32,7 @@ def _bundle(tmp_path, declarations):
     return AuditBundle(tuple(sources))
 
 
-@pytest.mark.parametrize("file_format", ("csv", "jsonl", "parquet"))
+@pytest.mark.parametrize("file_format", ("csv", "jsonl") + (("parquet",) if os.environ.get("RIT_TEST_PARQUET") == "1" else ()))
 def test_context_table_uses_existing_local_parsers_and_normalizer(tmp_path, file_format):
     path = tmp_path / f"context.{file_format}"
     row = {"dataset_version": "v1", "record_id": "a", "content": "private content"}
@@ -40,8 +41,8 @@ def test_context_table_uses_existing_local_parsers_and_normalizer(tmp_path, file
     elif file_format == "jsonl":
         _records(path, [row])
     else:
-        arrow = pytest.importorskip("pyarrow")
-        parquet = pytest.importorskip("pyarrow.parquet")
+        import pyarrow as arrow
+        import pyarrow.parquet as parquet
         parquet.write_table(arrow.Table.from_pylist([row]), path)
     loaded = load_table(InputSource(FileRole.LINEAGE_CONTEXT, path))
     normalized = normalize_table(loaded)

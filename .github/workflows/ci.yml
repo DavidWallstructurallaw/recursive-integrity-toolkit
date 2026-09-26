@@ -2,6 +2,7 @@ name: Current verification
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths-ignore:
       - README.md
       - CHANGELOG.md
@@ -15,7 +16,8 @@ on:
       - PHASE_4_COMPLETION.md
       - PHASE_4_VALIDATION_REPORT.md
       - PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md
-      - PHASE_5_STEP_1.md
+      - PHASE_5_STEP_*.md
+      - PHASE_5_COMPLETION.md
   workflow_dispatch:
     inputs:
       gate:
@@ -34,7 +36,7 @@ defaults:
 
 jobs:
   focused:
-    if: github.event_name != 'workflow_dispatch' || inputs.gate != 'candidate'
+    if: (github.event_name != 'workflow_dispatch' || inputs.gate != 'candidate') && github.event.action != 'labeled'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -50,7 +52,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install ".[test]"
-      - name: Check Step 9 generation propagation, lineage resources and affected boundaries
+      - name: Check current lineage, reports and affected boundaries
         run: |
           set -euo pipefail
           python scripts/check_spec_consistency.py
@@ -60,7 +62,7 @@ jobs:
           python -m pytest -p no:cacheprovider -q tests/integration/test_phase3_metric_pipeline.py tests/integration/test_phase5_lineage_cli.py tests/integration/test_phase5_lineage_reports.py tests/integration/test_phase5_lineage_privacy.py tests/integration/test_phase4_cli.py tests/integration/test_hero_end_to_end.py tests/integration/test_partial_lineage_report.py tests/golden/test_phase4_reports.py tests/unit/test_PR013_report_schema.py tests/unit/test_PR015_redaction.py tests/integration/test_no_network.py tests/integration/test_current_verification.py tests/integration/test_ci_workflows.py tests/integration/test_no_algorithms.py tests/integration/test_repository_structure.py
 
   core:
-    if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'
+    if: (github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate') || (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'verification:candidate')
     name: Core (${{ matrix.dependencies }}) on ${{ matrix.os }} with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -129,7 +131,7 @@ jobs:
           retention-days: 30
 
   parquet:
-    if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'
+    if: (github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate') || (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'verification:candidate')
     name: Real optional Parquet on Ubuntu with Python 3.12
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -170,7 +172,7 @@ jobs:
           retention-days: 30
 
   performance:
-    if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'
+    if: (github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate') || (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'verification:candidate')
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -204,11 +206,11 @@ jobs:
           retention-days: 30
 
   hero:
-    if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'
+    if: (github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate') || (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'verification:candidate')
     uses: ./.github/workflows/golden.yml
 
   security:
-    if: github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate'
+    if: (github.event_name == 'workflow_dispatch' && inputs.gate == 'candidate') || (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'verification:candidate')
     uses: ./.github/workflows/security.yml
 
   delivery:

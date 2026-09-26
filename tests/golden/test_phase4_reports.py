@@ -648,7 +648,7 @@ import recursive_integrity_toolkit as package
 installed = Path(package.__file__).resolve().parent
 assert not installed.is_relative_to(repository), installed
 distribution = importlib.metadata.distribution('recursive-integrity-toolkit')
-assert distribution.version == package.__version__ == '0.1.0.dev3'
+assert distribution.version == package.__version__ == '0.1.0.dev4'
 members = {str(p).replace('\\', '/') for p in distribution.files or ()}
 modules = sorted(p for p in installed.rglob('*.py'))
 assert len(modules) == 40

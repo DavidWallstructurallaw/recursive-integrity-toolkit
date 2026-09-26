@@ -157,7 +157,7 @@
       "expected_exit": 0,
       "expected": {
         "/run/report_schema_version": "1.1",
-        "/run/toolkit_version": "0.1.0.dev3",
+        "/run/toolkit_version": "0.1.0.dev4",
         "/run/run_status": "complete",
         "/run/network_call_count": 0,
         "/run/network_count_scope": "toolkit_managed_outbound_operations",
@@ -486,7 +486,7 @@
       "expected_exit": 0,
       "expected": {
         "/run/report_schema_version": "1.1",
-        "/run/toolkit_version": "0.1.0.dev3",
+        "/run/toolkit_version": "0.1.0.dev4",
         "/run/run_status": "complete",
         "/run/network_call_count": 0,
         "/run/network_count_scope": "toolkit_managed_outbound_operations",
@@ -651,7 +651,7 @@
       "expected_exit": 0,
       "expected": {
         "/run/report_schema_version": "1.1",
-        "/run/toolkit_version": "0.1.0.dev3",
+        "/run/toolkit_version": "0.1.0.dev4",
         "/run/run_status": "complete",
         "/run/network_call_count": 0,
         "/run/network_count_scope": "toolkit_managed_outbound_operations",

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "recursive-integrity-toolkit"
-version = "0.1.0.dev3"
+version = "0.1.0.dev4"
 description = "Local-first, auditable research toolkit for recursive data integrity"
 readme = "README.md"
 requires-python = ">=3.11"

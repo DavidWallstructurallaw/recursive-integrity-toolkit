@@ -1,11 +1,33 @@
 # Theory Traceability
 
-## Current Phase 5 Step 1 status
+## Current Phase 5 implementation
 
-The Phase 5 plan and decisions are approved. T4, T6, full PR-008, PR-009 depth and
-T3 lineage bounds now have fixed [implementation contracts](lineage_contract.md)
-and independent fixtures. Their general lineage algorithms remain unimplemented.
-The existing Phase 3 mathematics and Phase 4 reports/CLI remain the current runtime.
+Development version `0.1.0.dev4` implements the approved [lineage contract](lineage_contract.md)
+and preserves the existing mathematical definitions and direct calculations.
+
+| Owner | Current implementation | Independent behavioral coverage |
+|---|---|---|
+| PR-008 | Retained immediate-parent evidence and canonical graph adjacency with target/context isolation | Parent batch, graph and context-input suites; missing, ambiguous, future, duplicate and malformed references |
+| T6 | Iterative cyclic-component detection and affected-path propagation | Self-cycle, multi-node SCC, disjoint components, bounded witnesses and unaffected branches |
+| PR-009 | Structural depth in `lineage/cycles.py`; generation remains separate in input validation | Same-version chains, missing/unknown inputs, cycles, grounded resets and declaration mismatch |
+| T4 | Strict external ancestry, G/C/U, root incidence, fractional mass, HHI and effective roots | Frozen Hero and hand-authored partial/carryover/diamond/all-closed/all-unresolved oracles |
+| T3 | Explicit lineage closure bounds from the full target partition | Rational interval, unavailable and denominator cases alongside preserved direct bounds |
+| PR-012, PR-013, PR-015, PR-016 | Schema 1.1, evidence metadata, privacy and deterministic lineage reporting | Typed/wire semantic negatives, forged/stale results, standard/redacted output and input permutation cases |
+| PR-011 and package boundary | Explicit CLI dispatch, context formats, installed ordinary/lineage Hero | Context isolation, input-only validation, clean installs and real optional Parquet |
+
+The Hero's eight v2 targets resolve to five external roots, HHI 1/4, effective
+roots 4 and lineage bounds [0,0], while direct bounds remain [1/2,1/2]. The partial
+oracle fixes N/G/C/U at 4/2/1/1, incidence 2 and 1, fractional masses 3/2 and 1/2,
+HHI 5/8, effective roots 8/5 and lineage bounds [1/4,1/2]. These expectations were
+specified independently of production calculations. Root incidence uses N;
+fractional concentration normalizes over G. No confidence discount is introduced.
+
+Seven bounded Step 9 mutations were detected by current tests, covering wrong
+denominators, duplicate memberships, carryover roots, unknown-state propagation,
+cycle propagation, interval order and HHI inversion. [Step 9](../PHASE_5_STEP_9.md)
+records those experiments; [completion](../PHASE_5_COMPLETION.md) records the
+candidate. No new theorem, formula identifier, calibrated risk score, Phase 6A
+longitudinal orchestration or Phase 6B reopening is claimed.
 
 The sections below retain historical implementation explanations. Current checks
 protect owner/layer boundaries and current behavior; they no longer require

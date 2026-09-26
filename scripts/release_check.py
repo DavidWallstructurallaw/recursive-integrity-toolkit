@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Step 9 opens only the measured generation dependency optimization. Historical dispatch, source-body
+Step 10 opens only the dev4 version declarations. Historical dispatch, source-body
 migrations and phase registries are recoverable from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
 """
@@ -24,12 +24,19 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "f1c5309deda3ae4107c78f025cb2a7bb85ba2881"
+ACCEPTED_COMMIT = "15d50c3d992265e716b0b27e69c43107d947d21d"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/")
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
-    "src/recursive_integrity_toolkit/io/validation.py",
+    "src/recursive_integrity_toolkit/__init__.py",
+    "pyproject.toml",
 })
-PARQUET_CASES = {"test_PR002_parquet_real_roundtrip", "test_PR002_parquet_real_row_limit", "test_PR002_parquet_real_invalid_file"}
+PARQUET_CASES = {
+    "test_PR002_parquet_real_roundtrip",
+    "test_PR002_parquet_real_row_limit",
+    "test_PR002_parquet_real_invalid_file",
+    "test_context_table_uses_existing_local_parsers_and_normalizer[parquet]",
+    "test_context_loaders_and_repeated_inputs_keep_primary_only_denominators[parquet]",
+}
 HERO_NAMES = {"records_v1.csv", "records_v2.csv", "provenance.csv", "config.json", "version_order.json", "EXPECTED_OUTPUTS.md"}
 RESOURCES = {f"src/recursive_integrity_toolkit/data/hero/{name}": f"examples/hero/{name}" for name in HERO_NAMES}
 RESOURCES["src/recursive_integrity_toolkit/data/report.schema.json"] = "schemas/report.schema.json"
@@ -67,7 +74,7 @@ def verify_source_scope(root: Path = ROOT) -> dict:
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
-            raise ValueError(f"Unauthorized product mutation outside Step 9 scope: {name}")
+            raise ValueError(f"Unauthorized product mutation outside Step 10 scope: {name}")
     for prefix in PROTECTED_PREFIXES:
         paths = list((root / prefix).rglob("*"))
         if (root / prefix).is_symlink() or any(path.is_symlink() for path in paths):
@@ -79,7 +86,7 @@ def verify_source_scope(root: Path = ROOT) -> dict:
                   and not path.relative_to(root).as_posix().startswith(
                       "src/recursive_integrity_toolkit.egg-info/")}
         if actual != {name for name in expected if name.startswith(prefix)}:
-            raise ValueError(f"Unauthorized product file-set mutation during Step 9: {prefix}")
+            raise ValueError(f"Unauthorized product file-set mutation during Step 10: {prefix}")
     return {"protected_product_files": len(expected) - len(CURRENT_IMPLEMENTATION_PATHS),
             "authorized_implementation_files": len(CURRENT_IMPLEMENTATION_PATHS),
             "product_file_inventory": "unchanged"}

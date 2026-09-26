@@ -401,7 +401,7 @@ claim that current implementation, installed artifacts or remote jobs have passe
 
 ## Phase 5 Step 7 current-schema consolidation
 
-Current canonical fixtures use report schema 1.1 and package 0.1.0.dev3.
+Current canonical fixtures use report schema 1.1 and package 0.1.0.dev4.
 Ordinary CLI calls report lineage execution as `not_requested`; explicit lineage
 report assembly is covered by the current integration suite. Original numeric
 expectations are retained. Prior schema 1.0 fixtures and the original authority

@@ -3,10 +3,10 @@
 Owner IDs:
     Technical Maintainer, PR-016
 
-Future inputs:
+Inputs:
     Installed package metadata only.
 
-Future outputs:
+Outputs:
     Stable package version and intentionally approved public imports.
 
 Assumptions:
@@ -16,9 +16,9 @@ Limits:
     No data loading, configuration, metric, lineage, report, or optional dependency is imported here.
 
 Current phase status:
-    Phase 1 package scaffold with version exposure only.
+    Phase 5 development package; root import exposes the version only.
 """
 
-__version__ = "0.1.0.dev3"
+__version__ = "0.1.0.dev4"
 
 __all__ = ["__version__"]

@@ -2,11 +2,11 @@
 
 ## Current Phase 5 boundary
 
-Phase 5 Step 9 is approved. Runtime remains at `0.1.0.dev3`, with executable
-report schema 1.1 for every report. Bounded adversarial/mutation checks and actual
-lineage scale measurements follow the accepted explicit CLI and context inputs.
-The measured generation bottleneck receives only the plan-authorized dependency
-propagation optimization. Step 10 candidate verification remains pending.
+Phase 5 Step 10 verifies development version `0.1.0.dev4`, with executable
+report schema 1.1 for every report. The implemented lineage, CLI/context inputs,
+bounded mutation checks and scale measurements are retained. Candidate status,
+exact source, actual jobs and delivery limits are recorded in
+[Phase 5 completion](../PHASE_5_COMPLETION.md).
 Stable v0.1 publication, a tag and main merge require
 separate authorization.
 
@@ -20,9 +20,9 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The existing source check advances its single reference to the completed Step 8
-commit; no new Phase 5 hash registry is needed. During Step 9 it permits changes
-only to `io/validation.py` for the measured generation optimization.
+The existing source check advances its single reference to the completed Step 9
+commit; no new Phase 5 hash registry is needed. During Step 10 it permits changes
+only to `pyproject.toml` and the package root version declaration for dev4.
 It retains the exact product file inventory and
 rejects unrelated runtime, package-metadata and canonical Hero changes.
 The frozen Phase 0 specification hashes are unchanged. Sixteen frozen
@@ -38,12 +38,18 @@ changes require formatting and affected consistency checks. As implementation
 scope changes, update the focused selection to affected owners and dependency
 neighbors. It does not establish candidate acceptance.
 
-Dispatch `ci.yml` with `gate=candidate` for a stable candidate. The workflow runs:
+Dispatch `ci.yml` with `gate=candidate` for a stable candidate. When the default
+branch does not yet contain the dispatch-capable workflow, add the
+`verification:candidate` label to its PR to select the same jobs. Only that label
+event selects the matrix; subsequent commits use the ordinary affected gate.
+Remove and re-add the label to select a changed candidate. A label is a scheduling
+choice and does not grant source authority, merge permission or release approval.
+The workflow runs:
 
 | Role | Required execution |
 |---|---|
 | Core | Ubuntu/Windows, Python 3.11/3.12, current/minimum compatible dependencies; PyArrow absent |
-| Optional Parquet | Ubuntu/Python 3.12, real PyArrow with roundtrip, row-limit and invalid-file regressions |
+| Optional Parquet | Ubuntu/Python 3.12, real PyArrow with roundtrip, row-limit, invalid-file and both context-input regressions |
 | Canonical Hero and mathematics | Frozen mathematical cases, report goldens and packaged Hero behavior |
 | Security | No-network, input/path, privacy/redaction and output-publication boundaries |
 | Reference performance | One Ubuntu/Python 3.12 profile, including required actual 100k workloads |
@@ -61,6 +67,11 @@ The existing minimum compatible pair remains NumPy 2.0.0/pandas 2.2.2. Record
 actual resolved dependencies, `pip check`, Python/platform, commands, results
 and material limitations. A skipped, failed, duplicate or uncollected required
 test cannot stand in for a passing result. No raw test-count growth target is used.
+
+`RIT_TEST_PARQUET=1` collects all five real-PyArrow cases and missing PyArrow is a
+failure. Core profiles set it to `0`, verify PyArrow is absent and collect the
+complete non-Parquet suite. Selecting a supported profile never uses skip/xfail
+to represent success.
 
 Hero and security are reusable candidate roles and may also be dispatched
 explicitly for a relevant change. Delivery requires core, Parquet, performance,

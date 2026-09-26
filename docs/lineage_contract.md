@@ -1,13 +1,13 @@
 # Phase 5 Lineage Contract
 
-Status: **approved implementation target, fixed in Phase 5 Step 1**.
+Status: **implemented Phase 5 contract; dev4 candidate verification in Step 10**.
 
 Authority: [Phase 5 decisions](../PHASE_5_DECISIONS.md), approved Phase 5 plan,
 `PROJECT_INSTRUCTIONS.md` section 4.4 and the approved UD decisions. Relevant
 frozen owners are T4, T6, PR-008, PR-009 and T3 lineage bounds. The original
 definitions/specifications remain unchanged.
 
-This document defines interfaces for Steps 2-8. Step 2 implements retained batch
+This document defines the implemented interfaces from Steps 2-8. Step 2 implements retained batch
 parent evidence and `build_lineage_graph` with immutable scope, adjacency and
 node/edge limits. Step 3 adds `analyze_cycles` for iterative cycle detection,
 unaffected topology and structural depth. Step 4 adds `analyze_lineage` for
@@ -16,8 +16,9 @@ fractional mass and ancestry concentration. Step 6 adds explicit lineage closure
 and shared-root proxy calls. Step 7 integrates explicitly supplied lineage
 results into schema 1.1, canonical assembly and privacy-safe JSON/Markdown.
 Step 8 integrates explicit CLI lineage invocation and local context input options.
-The package remains at
-`0.1.0.dev3`; the executable report schema is `1.1`.
+Step 9 adds measured scale/resource evidence and behavior-preserving generation
+dependency propagation. The package is `0.1.0.dev4`; the executable report schema
+is `1.1`. See [completion](../PHASE_5_COMPLETION.md) for candidate gate results.
 
 ## 1. Scope and reference semantics
 
@@ -44,7 +45,8 @@ version; split target/context roles for one version are outside this phase.
 Duplicate canonical keys across any roles fail validation.
 
 Keep `ParentValidationResult.declaration_state` values `absent`, `null`, `empty`
-and `declared`. The current generation adapter normalizes absent parent fields to null; Step 2 must recover the retained `CanonicalRow.field_states` distinction when constructing its batch result. Only `empty` explicitly declares no parents. Missing provenance
+and `declared`. The batch resolver uses retained `CanonicalRow.field_states` to
+preserve absent versus null fields. Only `empty` explicitly declares no parents. Missing provenance
 is separately identified. Reuse `ParentReference`, its canonical identity,
 `source_references`, resolution status and chronology. The Step 2 batch resolver
 retains a per-record result or per-record failure, original declaration counts

@@ -49,7 +49,7 @@ Quoted code literals represent supplied data, including identifiers and labels. 
 | `["run_status"]` | `"complete"` |
 | `["started_at"]` | `"2000-01-01T00:00:00+00:00"` |
 | `["strict_mode"]` | false |
-| `["toolkit_version"]` | `"0.1.0.dev3"` |
+| `["toolkit_version"]` | `"0.1.0.dev4"` |
 
 **`["identifier_protection"]["limitations"]`**
 
@@ -4282,7 +4282,7 @@ No entries supplied. Empty list: `[]`.
 
 **Report footer**
 
-Toolkit version: `"0.1.0.dev3"`; report schema version: `"1.1"`.
+Toolkit version: `"0.1.0.dev4"`; report schema version: `"1.1"`.
 
 Evidence-class legend:
 

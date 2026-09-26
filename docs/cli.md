@@ -1,6 +1,6 @@
 # CLI
 
-Development version `0.1.0.dev3` supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
+Development version `0.1.0.dev4` supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
 
 ## Packaged local example
 

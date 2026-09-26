@@ -6,6 +6,7 @@ import csv
 import importlib
 import inspect
 import json
+import os
 from pathlib import Path
 import socket
 
@@ -20,8 +21,8 @@ def _write(path, rows):
             writer.writeheader()
             writer.writerows(rows)
     elif path.suffix == ".parquet":
-        arrow = pytest.importorskip("pyarrow")
-        parquet = pytest.importorskip("pyarrow.parquet")
+        import pyarrow as arrow
+        import pyarrow.parquet as parquet
         parquet.write_table(arrow.Table.from_pylist(rows), path)
     else:
         path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
@@ -99,7 +100,7 @@ def _assert_primary_metrics(report, *, content=False):
         assert duplicates["value"] == 1 and duplicates["scope"]["record_count"] == 2
 
 
-@pytest.mark.parametrize("context_format", ["csv", "jsonl", "parquet"])
+@pytest.mark.parametrize("context_format", ["csv", "jsonl"] + (["parquet"] if os.environ.get("RIT_TEST_PARQUET") == "1" else []))
 def test_context_loaders_and_repeated_inputs_keep_primary_only_denominators(tmp_path, capsys, repo_root, context_format):
     args, primary, contexts, provenance, config = _inputs(tmp_path, context_format=context_format, content=True)
     before = {path: path.read_bytes() for path in (primary, *contexts, provenance, config)}

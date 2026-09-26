@@ -1,6 +1,6 @@
 # Report Schema
 
-Status: Phase 5 Step 8 development report contract (`0.1.0.dev3`). Schema version: `1.1`.
+Status: Phase 5 dev4 development report contract (`0.1.0.dev4`). Schema version: `1.1`.
 
 The authoritative public shape is `schemas/report.schema.json`, Draft 2020-12. Runtime validation is implemented in `result.py` using the standard library. `report_schema()` returns a detached copy of the same declarative contract. No runtime schema package, filesystem lookup or remote resolver is used. The `$schema` and `$id` identifiers are descriptive; all references are local `$defs` references.
 

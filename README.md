@@ -2,15 +2,15 @@
 
 A local-first research toolkit for examining recursive closure exposure in synthetic-data and recursive-data pipelines under explicit representations and assumptions.
 
-## Current milestone: Phase 5 lineage scale validation
+## Current milestone: Phase 5 lineage candidate
 
-Development version `0.1.0.dev3` provides local input validation, JSON and Markdown audit reports, privacy controls, one explicitly ordered dataset comparison and a packaged Hero example. The mathematical core includes literal topic/label and exact record-form representations, exact duplicates, support/diversity, provenance composition, direct closure-exposure bounds, tail ranking and explicitly invoked closed-resampling scenarios. Actual acceptance and execution evidence are recorded in `PHASE_4_COMPLETION.md`, `PHASE_4_VALIDATION_REPORT.md` and `PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md`.
+Development version `0.1.0.dev4` provides local input validation, JSON and Markdown audit reports, privacy controls, one explicitly ordered dataset comparison and a packaged Hero example. The mathematical core includes literal topic/label and exact record-form representations, exact duplicates, support/diversity, provenance composition, direct closure-exposure bounds, tail ranking and explicitly invoked closed-resampling scenarios. Actual acceptance and execution evidence are recorded in `PHASE_4_COMPLETION.md`, `PHASE_4_VALIDATION_REPORT.md` and `PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md`.
 
-Phase 5 Steps 1-9 add validated graphs, cycles, depth, external ancestry, root concentration, lineage closure bounds and descriptive shared-root evidence through explicit Python calls or `audit --lineage` and `example --lineage`. Repeatable local context inputs supply ancestors while the primary version keeps its own metric scopes. JSON and Markdown use report schema 1.1. Bounded mutation checks and actual 100k lineage measurement are complete; Step 10 candidate verification remains pending. Longitudinal orchestration remains Phase 6A work; external reopening and experiment orchestration remain Phase 6B work. The CLI does not execute simulations. HTML output is deferred. No stable release, main merge or registry publication is implied by this development milestone.
+Phase 5 adds validated graphs, cycles, depth, external ancestry, root concentration, lineage closure bounds and descriptive shared-root evidence through explicit Python calls or `audit --lineage` and `example --lineage`. Repeatable local context inputs supply ancestors while the primary version keeps its own metric scopes. JSON and Markdown use report schema 1.1. Bounded mutation checks and actual 100k lineage measurement are complete. Step 10 verifies the dev4 candidate; [Phase 5 completion](PHASE_5_COMPLETION.md) records its actual gate status and limitations. Longitudinal orchestration remains Phase 6A work; external reopening and experiment orchestration remain Phase 6B work. The CLI does not execute simulations. HTML output is deferred. No stable release, main merge or registry publication is implied by this development milestone.
 
 ## Install and run
 
-Python 3.11 and 3.12 on Ubuntu and Windows form the verified environment matrix. From a checkout:
+Python 3.11 and 3.12 on Ubuntu and Windows form the supported candidate matrix. From a checkout:
 
 ```bash
 python -m pip install .

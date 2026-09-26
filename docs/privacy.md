@@ -1,6 +1,6 @@
 # Privacy and Local Input Boundaries
 
-Status: Phase 5 Step 8 CLI/context milestone (`0.1.0.dev3`, report schema `1.1`). `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
+Status: Phase 5 dev4 candidate (`0.1.0.dev4`, report schema `1.1`). `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
 
 Package import does not contact a network, open user audit files, require optional PyArrow or start a service. Runtime operates on explicitly supplied local files and declarations. No telemetry, background worker, plugin, cloud client, database, model download or LLM service exists. CI/package installation acquire dependencies separately; CI uses synthetic fixtures only.
 

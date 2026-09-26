@@ -1,6 +1,6 @@
 # Phase 5 Decisions and Current Authorization
 
-Status: **PLAN APPROVED; STEPS 1-8 COMPLETE; PHASE INCOMPLETE**.
+Status: **PLAN APPROVED; STEPS 1-9 COMPLETE; STEP 10 AUTHORIZED**.
 
 On 2026-09-23 UTC the Theory Owner instructed:
 `批准，Phase 5  step 1开始`.
@@ -290,3 +290,24 @@ Package version remains `0.1.0.dev3`; report schema remains `1.1`. Step 10 owns
 the complete candidate environment matrix, release checks and dev4 handoff.
 Stop after Step 9. Existing branch synchronization approval continues; merge,
 tag and publication remain separate actions.
+
+## Step 10 execution instruction
+
+On 2026-09-26 UTC the Theory Owner instructed `Phase 5 Step 10`.
+Work starts from Step 9 commit
+`15d50c3d992265e716b0b27e69c43107d947d21d` on `phase5-lineage`.
+This authorizes the planned dev4 version update, public documentation and
+traceability, complete canonical regression, supported candidate matrix,
+packaging, clean installs, reproducibility and concise completion handoff.
+
+The single source boundary advances to Step 9 and opens only `pyproject.toml`
+and the package root version declaration. Frozen definitions, schemas, Hero
+inputs and analytical code remain protected. Existing workflow triggers may be
+adapted for explicit candidate selection; existing optional-Parquet collection
+must distinguish the actual installed and absent dependency profiles without
+skips. These are bounded repairs to the existing delivery path.
+
+`PHASE_5_COMPLETION.md` records actual candidate status and limits. Administrative
+report successors reuse applicable verified candidate evidence without another
+matrix. Stop at the Phase 5 boundary. Existing branch synchronization approval
+continues; Phase 6A/6B, merge, tag and publication remain separate actions.

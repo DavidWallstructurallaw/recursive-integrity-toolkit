@@ -10,7 +10,7 @@ def test_package_metadata_and_entry_points(repo_root: Path) -> None:
     config = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
     project = config["project"]
     assert project["name"] == "recursive-integrity-toolkit"
-    assert project["version"] == "0.1.0.dev3"
+    assert project["version"] == "0.1.0.dev4"
     assert project["requires-python"] == ">=3.11"
     assert project["license"] == "Apache-2.0"
     assert project["scripts"] == {
