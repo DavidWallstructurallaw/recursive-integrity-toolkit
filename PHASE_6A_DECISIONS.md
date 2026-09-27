@@ -2,14 +2,14 @@
 
 | Field | Value |
 |---|---|
-| Status | APPROVED; Step 9 candidate verification in progress |
+| Status | APPROVED; Steps 1 through 9 complete |
 | Authority | Theory Owner instructions through `Phase 6A Step 9 开始` |
 | Authorization date | 2026-09-26 America/Los_Angeles; 2026-09-27 UTC |
 | Approved plan | `PHASE_6A_PLAN.md` version 1.0, delivered at `753829a79fb6aa550d58dcd6fced360399c597e9` |
 | Accepted product baseline | Phase 5 completion `f09521907558a193e6438d9acb316adb9e191195` |
 | Working branch | `phase6a-longitudinal` |
 | Current scope | dev5 candidate, current documentation/traceability, canonical regression, compatibility, full reference measurements and delivery |
-| Current runtime | `0.1.0.dev5` candidate; report schema `1.2` |
+| Current runtime | Verified development candidate `0.1.0.dev5`; report schema `1.2` |
 | Eventual phase target | `0.1.0.dev5`, report schema `1.2` |
 
 The instruction starts Step 1 under the delivered plan without stated exceptions.
@@ -476,3 +476,13 @@ all real-Parquet cases, including source and installed longitudinal loaders.
 A draft PR and the existing candidate label are scheduling/delivery mechanisms;
 no main merge, tag, stable release, registry publication or Phase 6B execution
 is authorized by this step.
+
+Candidate `157109717079c9db9f02ac65ec1493709f37d8a4` passed all 13 required
+jobs in workflow run `36327281529`: eight core profiles, real Parquet,
+Hero/mathematics, security, reference performance and dependent delivery.
+The first candidate's two legacy metadata-oracle failures and every measured
+performance attempt remain disclosed in the completion record. The correction
+requires schema 1.2's empty longitudinal family and `not_requested` execution;
+it changes no runtime or scientific assertion. Phase 6A is complete within
+the approved scope. The final administrative successor updates only this
+decision status, the plan status and the completion record.
