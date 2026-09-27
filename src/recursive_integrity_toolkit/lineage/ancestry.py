@@ -1,6 +1,6 @@
 """Resolve external roots, coverage, concentration and shared-root evidence.
 
-Owner IDs: T4; Phase 6A Step 6.
+Owner IDs: T4; Phase 6A Step 7.
 
 Validated explicit grounding supplies anchors. Iterative dependency scheduling
 unions complete root sets; unknown branches never supply exact roots. Logical
@@ -8,7 +8,7 @@ membership and candidate-visit budgets bound propagation before each work unit.
 The allocation is topological and makes no causal or scientific quality claim.
 
 Current phase status:
-    Phase 6A Step 6 verifies selected handoffs through retained certificates.
+    Phase 6A Step 7 adapts verified selected evidence for the actual primary.
     Legacy primary-only analysis and its input-bound handoffs remain supported.
     No file or network I/O, generation calculation or implicit invocation.
 """
@@ -348,7 +348,9 @@ class LineageAnalysisResult:
                     or self.reference_coverage_reason_codes != ()):
                 raise _invalid("ancestry reference coverage disagrees with original declarations")
         object.__setattr__(self, "scope", scope)
-        object.__setattr__(self, "cycles", cycles)
+        # The original CycleAnalysis is already immutable. Retain it after
+        # complete revalidation so selected and ordinary primary summaries can
+        # share the same structural evidence without another retained copy.
         object.__setattr__(self, "resource_usage", usage)
         object.__setattr__(self, "messages", messages)
 
@@ -1123,6 +1125,47 @@ def validate_selected_lineage_result(validation: BundleValidationResult, *, sele
     if result.messages != _messages(expected_messages):
         raise _invalid("selected lineage diagnostics disagree with retained metadata")
     _validate_selected_roots(result, metadata)
+
+
+def primary_lineage_from_selected(
+    validation: BundleValidationResult, *, selection, result: SelectedLineageResult,
+) -> LineageAnalysisResult:
+    """Expose verified actual-primary evidence through the ordinary result type.
+
+    The selected graph and cycles already use the actual primary input scope.
+    This adapter retains those cycle observations and the primary target's
+    immutable ancestry rows. It cannot select a comparison or context target,
+    and never runs graph construction, cycle discovery or root propagation.
+    """
+    validate_selected_lineage_result(validation, selection=selection, result=result)
+    targets = tuple(target for target in result.targets
+                    if target.scope.target_dataset_version == selection.primary_version)
+    if (len(targets) != 1 or targets[0].scope != result.shared_graph.scope
+            or result.shared_cycles.scope != result.shared_graph.scope):
+        raise _invalid("ordinary lineage requires the exact actual-primary selected scope")
+    target = targets[0]
+    return LineageAnalysisResult(
+        scope=target.scope, execution_status=target.execution_status,
+        execution_reason_codes=target.execution_reason_codes, records=target.records,
+        cycles=result.shared_cycles, grounded_record_count=target.grounded_record_count,
+        closed_record_count=target.closed_record_count,
+        unresolved_record_count=target.unresolved_record_count,
+        records_with_resolved_external_ancestry=target.records_with_resolved_external_ancestry,
+        resolved_lineage_coverage=target.resolved_lineage_coverage,
+        external_ancestry_coverage=target.external_ancestry_coverage,
+        ancestry_coverage_reason_codes=target.ancestry_coverage_reason_codes,
+        declared_parent_reference_count=target.declared_parent_reference_count,
+        resolved_parent_reference_count=target.resolved_parent_reference_count,
+        unresolved_parent_reference_count=target.unresolved_parent_reference_count,
+        resolved_parent_edge_coverage=target.resolved_parent_edge_coverage,
+        no_declared_parents=target.no_declared_parents,
+        reference_coverage_reason_codes=target.reference_coverage_reason_codes,
+        root_contributions=target.root_contributions,
+        distinct_external_root_count=target.distinct_external_root_count,
+        ancestry_concentration_hhi=target.ancestry_concentration_hhi,
+        effective_external_root_count=target.effective_external_root_count,
+        resource_usage=target.resource_usage, messages=target.messages,
+        input_signature=_lineage_input_signature(validation))
 
 
 def _validate_selected_structure(graph, cycles, certificate):

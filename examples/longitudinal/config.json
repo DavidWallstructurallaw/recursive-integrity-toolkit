@@ -1,0 +1,12 @@
+{
+  "representation": {
+    "name": "topic",
+    "source": "topic_field",
+    "field": "topic",
+    "version": "topics-v1",
+    "missing_value_policy": "exclude"
+  },
+  "longitudinal": {
+    "state_semantics": "Literal fixture topic categories"
+  }
+}

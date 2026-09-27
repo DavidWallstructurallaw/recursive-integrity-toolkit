@@ -2,14 +2,14 @@
 
 | Field | Value |
 |---|---|
-| Status | APPROVED; Step 6 canonical reporting and privacy |
-| Authority | Theory Owner instructions through `Phase 6A Step 6 继续` |
+| Status | APPROVED; Step 7 CLI, configuration and installed examples |
+| Authority | Theory Owner instructions through `Phase 6A Step 7 继续` |
 | Authorization date | 2026-09-26 America/Los_Angeles; 2026-09-27 UTC |
 | Approved plan | `PHASE_6A_PLAN.md` version 1.0, delivered at `753829a79fb6aa550d58dcd6fced360399c597e9` |
 | Accepted product baseline | Phase 5 completion `f09521907558a193e6438d9acb316adb9e191195` |
 | Working branch | `phase6a-longitudinal` |
-| Current scope | Canonical longitudinal reporting, schema 1.2, protected identities and consumer validation |
-| Current runtime | `0.1.0.dev4`; Step 6 updates report schema to `1.2` |
+| Current scope | Explicit longitudinal CLI/configuration, independent three-version example and installation boundaries |
+| Current runtime | `0.1.0.dev4`; report schema `1.2` |
 | Eventual phase target | `0.1.0.dev5`, report schema `1.2` |
 
 The instruction starts Step 1 under the delivered plan without stated exceptions.
@@ -351,3 +351,56 @@ nine product paths: longitudinal coordinator, selected ancestry, report contract
 assembly, Markdown, safe logging, CLI report-shape integration, canonical schema
 and packaged mirror. No new module or dependency is added. Step 7 and Phase 6B
 remain unstarted. See `PHASE_6A_STEP_6.md` for verification and remaining scope.
+
+## Step 7 execution record
+
+The Theory Owner requested `Phase 6A Step 7 继续` on 2026-09-26
+America/Los_Angeles (2026-09-27 UTC). The accepted starting commit is
+`edbcf9ac2ba152f17db6f722750275a1cb235cb3`. P6A-D01 through P6A-D08 and
+section 2 of the longitudinal contract govern this integration.
+
+Configuration now parses immutable, inert series options, per-version
+representations and full directed mappings. Input modules do not import the
+analytical coordinator. Effective CLI declarations enter the configuration
+hash; unchanged ordinary defaults retain their prior hash. Common and per-version
+declarations cannot compete, and CLI/config singleton conflicts are rejected
+even when their values agree. Exact loaded coverage, chronology, pair schedule
+and map totality remain the existing selection/compatibility owners' checks.
+
+`audit --longitudinal` accepts repeated comparison inputs and explicit order;
+optional `--baseline first`, tail and lineage flags keep their independent
+meanings. `validate` accepts repeated input roles and structurally valid inert
+series config, including enabled config, without calculation. It rejects explicit
+execution flags. Ordinary audit still accepts at most one comparison. The
+version admission default remains 100. No filename, invocation or lexical
+chronology is inferred.
+
+The actual primary's ordinary summary reuses selected distribution, provenance
+and direct-bound evidence. `primary_lineage_from_selected` validates the complete
+selected result and exact actual-primary target before adapting it to the
+ordinary lineage result type. It retains immutable cycle and ancestry evidence,
+including partial/resource-limited outcomes, and reruns no graph, SCC or root
+algorithm. Comparison/context targets cannot enter this adapter as primary.
+
+Selection failures retain independently valid snapshots only when complete
+populations and explicit declarations are available. The failure API accepts
+an immutable `selection_errors` tuple for original order/file errors already
+retained in bundle validation. It restricts accepted codes, severities and fields,
+checks selected-file version counts against loaded records, and binds retained
+messages and inventory to the private signature. Consumers recheck that evidence.
+This relies on the existing trusted validated-input boundary; it does not
+authenticate arbitrary caller-created bundles. Invalid population shapes produce
+a safe error report. Missing required representation/semantics is a configuration
+error before analysis; no declaration is fabricated to produce a snapshot.
+
+`example --longitudinal` uses the six unchanged Hero resources. The additive
+`--dataset longitudinal --longitudinal` selector uses a separate seven-resource
+three-version example, with a README outside the package and independent rational
+expectations. Its intentional missing provenance remains a warning and never
+becomes explicit unknown. Baseline and tail remain opt-in audit options.
+
+The source gate advances to Step 6 and admits 21 Step 7 paths, protecting the
+remaining 54 product files. All 14 packaged resources have exact canonical
+mirrors. Package/schema remain `0.1.0.dev4` / `1.2`; no dependency, package module,
+release, merge or tag is added. Steps 8-9 and Phase 6B remain unstarted.
+See `PHASE_6A_STEP_7.md` for the final verification evidence.

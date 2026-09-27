@@ -1,13 +1,13 @@
 # Longitudinal comparison contract
 
-Status: **APPROVED CONTRACT; STEP 6 CANONICAL REPORTS IMPLEMENTED**.
+Status: **APPROVED CONTRACT; STEP 7 CLI AND CONFIGURATION IMPLEMENTED**.
 
 Authority: `PHASE_6A_PLAN.md`, P6A-D01 through P6A-D08, and
 `PHASE_6A_DECISIONS.md`. Existing definitions and Phase 3-5 meanings remain in
 force. This document fixes the staged interfaces. Current package dev4 and
 schema 1.2 implement Python selection, compatibility, distributions,
 provenance/direct-closure changes, explicitly requested selected lineage and
-canonical JSON/Markdown series reports. Config/CLI enablement remains Step 7.
+canonical JSON/Markdown series reports and explicit CLI/configuration enablement.
 Implementation clarifications are
 recorded in `PHASE_6A_DECISIONS.md`.
 
@@ -152,16 +152,20 @@ graph. `validate` loads the records for current input/reference checks only.
 `example --longitudinal` requests the unchanged Hero pair; adding `--lineage`
 requests both Hero lineage snapshots. It uses no first-baseline default or tail
 default. Standard/redacted output and exclusive output-directory rules remain.
+Step 7 also provides `example --dataset longitudinal --longitudinal` for the
+separate three-version packaged example. The dataset selector defaults to Hero;
+the new dataset requires explicit longitudinal enablement.
 
 ## 3. Immutable internal interfaces
 
-The following names/fields define the forthcoming record-series interface.
+The following names/fields define the record-series interface.
 Types may reuse existing immutable leaves. Constructors and consumers validate
 literal types, unique identities and binding; a caller-created object is not
 proof of correctness. Step 1 added no runtime types. Step 2 implemented declarations,
 mapping envelopes, scopes, pairs and selection. Steps 3-5 add snapshot/pair/series
-results for distribution, provenance/direct work and selected lineage;
-configuration options and public report integration remain deferred.
+results for distribution, provenance/direct work and selected lineage.
+Step 6 implements public reporting; Step 7 implements the inert configuration
+types and explicit CLI dispatch without analytical imports in input modules.
 
 | Type | Required fields |
 |---|---|
@@ -190,7 +194,11 @@ validate_longitudinal_selection(validation, selection) -> LongitudinalSelection
 analyze_longitudinal(validation, *, selection, lineage=False,
                      tail_options=None, lineage_limits=None) -> LongitudinalResult
 analyze_selected_lineage(validation, *, selection, limits=None) -> SelectedLineageResult
-assemble_report(..., longitudinal=None) -> CanonicalReport
+primary_lineage_from_selected(validation, *, selection, result) -> LineageAnalysisResult
+analyze_longitudinal_failure(validation, *, declarations, baseline="none",
+                            max_versions=100, mappings=(), lineage=False,
+                            tail_options=None, selection_errors=()) -> LongitudinalFailureResult
+assemble_report(..., longitudinal=None, longitudinal_failure=None) -> CanonicalReport
 ```
 
 Selection is pure input/contract validation, not calculation. The coordinator

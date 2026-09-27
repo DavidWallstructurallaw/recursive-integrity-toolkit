@@ -1811,6 +1811,7 @@ class LongitudinalFailureResult:
     messages: tuple[ValidationMessage, ...]
     reason_codes: tuple[str, ...]
     input_signature: str = field(repr=False)
+    selection_errors: tuple[ValidationMessage, ...] = ()
 
     def __post_init__(self):
         _baseline(self.baseline)
@@ -1829,6 +1830,8 @@ class LongitudinalFailureResult:
                 or type(self.messages) is not tuple or not self.messages
                 or any(type(m) is not ValidationMessage for m in self.messages)
                 or type(self.reason_codes) is not tuple or not self.reason_codes
+                or type(self.selection_errors) is not tuple
+                or any(type(m) is not ValidationMessage for m in self.selection_errors)
                 or type(self.input_signature) is not str or not self.input_signature):
             raise _invalid("failed series requires a complete immutable request and evidence")
         if self.tail_options is not None:
@@ -1841,7 +1844,39 @@ class LongitudinalFailureResult:
         return ExecutionStatus.FAILED
 
 
-def _failed_request(validation, declarations, mappings, baseline, max_versions, lineage, tail_options):
+def _retained_selection_errors(validation, errors):
+    """Bind prior CLI rejection to retained validation and physical input evidence."""
+    if type(errors) is not tuple or any(type(item) is not ValidationMessage for item in errors):
+        raise _invalid("selection errors must be immutable validation evidence")
+    if len(set(errors)) != len(errors):
+        raise _invalid("selection errors cannot repeat")
+    for item in errors:
+        if (item.severity is not ValidationSeverity.ERROR or item not in validation.validation_messages
+                or type(item.message) is not str or not item.message
+                or item.record_key is not None or item.row_number is not None or item.line_number is not None):
+            raise _invalid("selection rejection must already be retained by input validation")
+        if item.code == ErrorCode.VERSION_ORDER_CONFLICT.value:
+            if (item.file_role is not FileRole.VERSION_ORDER or item.field not in
+                    ("version_order", "version_rank", "version_timestamps", "timestamp_tiebreak",
+                     "invocation_order", "loaded_versions")):
+                raise _invalid("retained chronology rejection has an invalid source")
+        elif item.code == ErrorCode.SCHEMA_TYPE.value:
+            entries = tuple(entry for entry in validation.inventory
+                if entry.role is item.file_role and str(entry.path) == item.file_path)
+            if (item.file_role not in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE)
+                    or item.field != "dataset_version" or len(entries) != 1):
+                raise _invalid("file selection rejection must identify one loaded selected input")
+            versions = {row.record_key.dataset_version for row in validation.records
+                if row.location.file_role is item.file_role and row.location.file_path == item.file_path}
+            if len(versions) == 1:
+                raise _invalid("a valid selected file cannot claim a version-count rejection")
+        else:
+            raise _invalid("unsupported retained selection rejection")
+    return errors
+
+
+def _failed_request(validation, declarations, mappings, baseline, max_versions, lineage, tail_options,
+                    selection_errors=()):
     _baseline(baseline)
     _limit(max_versions)
     if (type(lineage) is not bool or type(declarations) is not tuple
@@ -1849,19 +1884,24 @@ def _failed_request(validation, declarations, mappings, baseline, max_versions, 
             or type(mappings) is not tuple or any(type(m) is not LongitudinalMapping for m in mappings)):
         raise _invalid("failed selection requires typed declarations and explicit request options")
     options = None if tail_options is None else _tail_options(tail_options)
+    retained = _retained_selection_errors(validation, selection_errors)
     try:
         select_longitudinal_versions(validation, declarations=declarations, mappings=mappings,
                                      baseline=baseline, max_versions=max_versions)
     except CanonicalValidationError as error:
         failure = _message(error, "longitudinal_selection")
     else:
-        raise _invalid("valid selection cannot be supplied as a failed series")
+        if not retained:
+            raise _invalid("valid selection cannot be supplied as a failed series")
+        failure = None
+    failures = tuple(dict.fromkeys((*retained, *((failure,) if failure is not None else ()))))
     rows, populations, selected, context, _, joined = _populations(validation)
-    reasons = ("R_LONGITUDINAL_RESOURCE_LIMIT" if
-        failure.code == ErrorCode.LONGITUDINAL_RESOURCE_LIMIT_EXCEEDED.value else
-        "R_LONGITUDINAL_SELECTION_INVALID", failure.code)
+    resource_failure = any(item.code == ErrorCode.LONGITUDINAL_RESOURCE_LIMIT_EXCEEDED.value
+                           for item in failures)
+    reasons = tuple(dict.fromkeys(("R_LONGITUDINAL_RESOURCE_LIMIT" if resource_failure else
+        "R_LONGITUDINAL_SELECTION_INVALID", *(item.code for item in failures))))
     scopes = []
-    if failure.code != ErrorCode.LONGITUDINAL_RESOURCE_LIMIT_EXCEEDED.value:
+    if not resource_failure:
         seen = set()
         for declaration in declarations:
             version = declaration.dataset_version
@@ -1881,8 +1921,11 @@ def _failed_request(validation, declarations, mappings, baseline, max_versions, 
     signature = sha256_canonical((binding, tuple((m.earlier_version, m.later_version,
         _plain(m.declaration)) for m in mappings), lineage,
         None if options is None else {f.name: _plain(getattr(options, f.name)) for f in fields(options)},
-        reasons))
-    return tuple(scopes), context, failure, reasons, signature, options
+        reasons, tuple((item.code, item.severity.value, item.message,
+            item.file_role.value, item.file_path, item.field) for item in retained),
+        tuple((entry.role.value, str(entry.path), entry.sha256, entry.size_bytes, entry.row_count)
+              for entry in validation.inventory) if retained else ()))
+    return tuple(scopes), context, failures, reasons, signature, options
 
 
 def analyze_longitudinal_failure(
@@ -1890,6 +1933,7 @@ def analyze_longitudinal_failure(
     baseline: str = "none", max_versions: int = 100,
     mappings: tuple[LongitudinalMapping, ...] = (), lineage: bool = False,
     tail_options: TailSelectionOptions | None = None,
+    selection_errors: tuple[ValidationMessage, ...] = (),
 ) -> LongitudinalFailureResult:
     """Retain independent evidence after a confirmed selection rejection.
 
@@ -1897,8 +1941,8 @@ def analyze_longitudinal_failure(
     order identifies rows only. Admission failures perform no snapshot work;
     no failure path invents chronology, compares endpoints, or runs lineage.
     """
-    scopes, context, failure, reasons, signature, options = _failed_request(
-        validation, declarations, mappings, baseline, max_versions, lineage, tail_options)
+    scopes, context, failures, reasons, signature, options = _failed_request(
+        validation, declarations, mappings, baseline, max_versions, lineage, tail_options, selection_errors)
     grouped = {scope.dataset_version: [] for scope in scopes}
     for row in validation.records:
         if row.record_key.dataset_version in grouped:
@@ -1908,9 +1952,9 @@ def analyze_longitudinal_failure(
     if lineage:
         snapshots = tuple(replace(snapshot, family_statuses=(*snapshot.family_statuses[:-1],
             _family("lineage", ExecutionStatus.FAILED, reasons))) for snapshot in snapshots)
-    messages = tuple(dict.fromkeys((failure, *(m for s in snapshots for m in s.messages))))
+    messages = tuple(dict.fromkeys((*failures, *(m for s in snapshots for m in s.messages))))
     return LongitudinalFailureResult(declarations, mappings, snapshots, context, len(declarations),
-        baseline, max_versions, lineage, options, messages, reasons, signature)
+        baseline, max_versions, lineage, options, messages, reasons, signature, selection_errors)
 
 
 def validate_longitudinal_failure(validation: BundleValidationResult, *, result: LongitudinalFailureResult):
@@ -1918,13 +1962,13 @@ def validate_longitudinal_failure(validation: BundleValidationResult, *, result:
     if type(result) is not LongitudinalFailureResult:
         raise _invalid("consumer requires a typed failed series")
     replace(result)
-    scopes, context, failure, reasons, signature, options = _failed_request(validation,
+    scopes, context, failures, reasons, signature, options = _failed_request(validation,
         result.declarations, result.mappings, result.baseline, result.max_versions,
-        result.lineage_requested, result.tail_options)
+        result.lineage_requested, result.tail_options, result.selection_errors)
     if (len(scopes) != len(result.snapshots) or result.context_versions != context
             or result.reason_codes != reasons or result.input_signature != signature
             or result.tail_options != options
-            or result.messages != tuple(dict.fromkeys((failure,
+            or result.messages != tuple(dict.fromkeys((*failures,
                 *(m for s in result.snapshots for m in s.messages))))):
         raise _invalid("failed series evidence differs from the current request or input")
     for scope, snapshot in zip(scopes, result.snapshots):
