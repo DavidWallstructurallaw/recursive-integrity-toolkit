@@ -1,7 +1,8 @@
-"""Select ordered snapshots and coordinate observed distribution changes.
+"""Select snapshots and coordinate observed distribution/provenance changes.
 
 Owner IDs:
-    PR-002, PR-007, PR-011, T1, T2; P6A-D01 through P6A-D04 and P6A-D08.
+    PR-002, PR-004, PR-005, PR-007, PR-011, T1, T2, T3;
+    P6A-D01 through P6A-D05 and P6A-D08.
 
 Inputs:
     Retained BundleValidationResult, explicit snapshot declarations, pair-local
@@ -17,11 +18,11 @@ Assumptions:
 
 Limits:
     Selection performs no calculation. Analysis delegates existing distribution,
-    comparison and tail owners. No I/O, graph, simulation, report or CLI dispatch.
-    Provenance/direct-closure integration remains explicitly deferred to Step 4.
+    comparison, tail, provenance and direct-bound owners. No I/O, graph,
+    simulation, report or CLI dispatch. Lineage remains opt-in future work.
 
 Current phase status:
-    Phase 6A Step 3 snapshot distributions and observed changes. Import-safe.
+    Phase 6A Step 4 provenance and direct-closure changes. Import-safe.
 """
 from __future__ import annotations
 
@@ -35,7 +36,7 @@ from ..io.validation import join_provenance, resolve_version_order
 from ..models import (
     BundleValidationResult, CalculationEvidenceClass, CalculationMetadata,
     CalculationReason, CalculationScope, CalculationStatus, CanonicalRow,
-    ContentMode, ExplicitPairContext, FileRole, RecordKey, RepresentationDescriptor,
+    ContentMode, ExplicitPairContext, FileRole, ProvenanceJoinResult, RecordKey, RepresentationDescriptor,
     ScalarCalculation, TailSelectionOptions, ValidationCoverage, ValidationMessage,
     ValidationSeverity, VersionOrderResult,
 )
@@ -47,10 +48,12 @@ from ..representations.content_hash import assign_content_states, select_content
 from ..representations.field import assign_field_states, select_field_representation
 from ..result import ExecutionStatus
 from ..utils.hashing import sha256_canonical
+from .bounds import DirectClosureExposureBounds, direct_closure_exposure
 from .diversity import (
     StateDistributionResult, SupportComparison, _harmonize_distribution,
     calculate_state_distribution, compare_support,
 )
+from .provenance import ProvenanceCompositionResult, summarize_provenance
 from .tail import TailSelectionResult, _options as _tail_options, select_tail
 
 
@@ -306,7 +309,9 @@ def _populations(validation: BundleValidationResult):
     context = tuple(sorted(version for version in roles if FileRole.LINEAGE_CONTEXT in roles[version]))
     selected = set(by_version) - set(context)
     # Join validation rejects duplicate/unmatched or malformed supplied provenance.
-    joined = join_provenance(validation.records, validation.provenance)
+    promoted = _promotions(validation)
+    joined = join_provenance(validation.records, validation.provenance,
+                             strict_mode=bool(promoted), strict_warning_codes=promoted)
     return rows, by_version, selected, context, primary[0], joined
 
 
@@ -335,7 +340,8 @@ def _binding(rows, joined, order, declarations, pairs, baseline, max_versions, c
     pair_declarations = tuple((pair.earlier_version, pair.later_version, pair.kinds,
                                _plain(pair.mapping)) for pair in pairs)
     try:
-        return sha256_canonical((records, joined.provenance_supplied, provenance, _plain(order.declarations),
+        return sha256_canonical((records, joined.provenance_supplied, provenance, joined.promoted_warning_codes,
+            _plain(order.declarations),
             _plain(declarations), pair_declarations, baseline, max_versions, content_mode.value))
     except (TypeError, ValueError):
         raise _invalid("selection input binding requires canonical literal data") from None
@@ -469,6 +475,23 @@ class LongitudinalFamilyStatus:
             raise _invalid("family status must retain its explicit execution reasons")
 
 
+_DISTRIBUTION_DELTAS = ("record_count_delta", "support_delta", "gini_simpson_diversity_delta")
+_COVERAGE_DELTAS = ("provenance_row_coverage_delta", "provenance_required_field_coverage_delta",
+                    "grounding_field_coverage_delta")
+_PROVENANCE_DELTAS = (*_COVERAGE_DELTAS, "missing_provenance_share_delta")
+_DIRECT_DELTAS = ("direct_closure_lower_bound_delta", "direct_closure_upper_bound_delta",
+                  "direct_closure_interval_width_delta")
+_SOURCE_CATEGORIES = ("human", "synthetic", "mixed", "sensor", "unknown")
+_DELTA_METADATA = {
+    "record_count_delta": ("T1", "F-018", "records"),
+    "support_delta": ("T1", "F-005", "states"),
+    "gini_simpson_diversity_delta": ("T1", "F-018", "dimensionless"),
+    **{name: ("PR-004", "F-018", "ratio") for name in _PROVENANCE_DELTAS},
+    "source_type_share_deltas": ("PR-005", "F-018", "ratio"),
+    **{name: ("T3", "F-018", "ratio") for name in _DIRECT_DELTAS},
+}
+
+
 @dataclass(frozen=True, slots=True)
 class LongitudinalDelta:
     """A difference with two endpoint scopes; no pooled population or denominator."""
@@ -500,11 +523,10 @@ class LongitudinalDelta:
         for value in (self.metric_name, self.owner_id, self.formula_id, self.unit):
             if not _literal_text(value):
                 raise _invalid("delta metadata requires literal declarations")
-        expected = {"record_count_delta": ("T1", "F-018", "records"),
-                    "support_delta": ("T1", "F-005", "states"),
-                    "gini_simpson_diversity_delta": ("T1", "F-018", "dimensionless")}
-        if expected.get(self.metric_name) != (self.owner_id, self.formula_id, self.unit):
+        if _DELTA_METADATA.get(self.metric_name) != (self.owner_id, self.formula_id, self.unit):
             raise _invalid("delta ownership, formula and unit must match the approved field")
+        if self.metric_name not in _DISTRIBUTION_DELTAS and self.representation is not None:
+            raise _invalid("provenance and direct-bound deltas have no representation basis")
         if (type(self.earlier_scope) is not CalculationScope or type(self.later_scope) is not CalculationScope
                 or len(self.earlier_scope.dataset_versions) != 1 or len(self.later_scope.dataset_versions) != 1
                 or self.earlier_scope.dataset_versions == self.later_scope.dataset_versions
@@ -588,8 +610,8 @@ class SnapshotSummary:
     representation_excluded_record_count: ScalarCalculation
     family_statuses: tuple[LongitudinalFamilyStatus, ...]
     messages: tuple[ValidationMessage, ...] = ()
-    provenance: None = None
-    direct_closure: None = None
+    provenance: ProvenanceCompositionResult | None = field(default=None, repr=False)
+    direct_closure: DirectClosureExposureBounds | None = field(default=None, repr=False)
     lineage: None = None
 
     def __post_init__(self) -> None:
@@ -614,8 +636,32 @@ class SnapshotSummary:
                     or self.distribution.coverage.numerator != counts[0]
                     or self.distribution.coverage.denominator != self.record_count.value):
                 raise _invalid("snapshot distribution must retain its independent unweighted denominator")
-        if self.provenance is not None or self.direct_closure is not None or self.lineage is not None:
-            raise _invalid("later analytical families remain deferred in this step")
+        if self.lineage is not None:
+            raise _invalid("selected lineage remains deferred in this step")
+        provenance, bounds = self.provenance, self.direct_closure
+        if not self.record_count.value:
+            if provenance is not None or bounds is not None:
+                raise _invalid("empty snapshots cannot supply fabricated provenance calculations")
+        elif (type(provenance) is not ProvenanceCompositionResult
+                or type(bounds) is not DirectClosureExposureBounds
+                or provenance.scope != _provenance_scope(self.scope)
+                or provenance.analyzed_record_count.value != self.record_count.value
+                or provenance.weighted_source is not None or bounds.scope != provenance.scope
+                or bounds.denominator != self.record_count.value
+                or (bounds.known_open_count, bounds.known_closed_count, bounds.unresolved_grounding_count) !=
+                   (provenance.direct_grounding.known_open_count.value,
+                    provenance.direct_grounding.known_closed_count.value,
+                    provenance.direct_grounding.unresolved_grounding_count.value)
+                or bounds.provenance_row_coverage != provenance.provenance_row_coverage
+                or bounds.provenance_required_field_coverage != provenance.provenance_required_field_coverage
+                or bounds.grounding_field_coverage != provenance.grounding_field_coverage
+                or bounds.validation_messages != provenance.validation_messages
+                or bounds.input_has_errors != provenance.input_has_errors):
+            raise _invalid("snapshot provenance and bounds must retain their complete population and evidence")
+        if bounds is not None:
+            _validate_snapshot_bounds(provenance, bounds)
+        if self.family_statuses[1:3] != _snapshot_evidence_families(provenance, bounds):
+            raise _invalid("snapshot evidence availability differs from its family status")
 
 
 @dataclass(frozen=True, slots=True)
@@ -626,6 +672,7 @@ class LongitudinalPairResult:
     deltas: tuple[LongitudinalDelta, ...]
     tail_disappearance: TailDisappearanceResult | None
     family_statuses: tuple[LongitudinalFamilyStatus, ...]
+    source_type_share_deltas: MappingProxyType = field(repr=False)
     messages: tuple[ValidationMessage, ...] = ()
 
     def __post_init__(self) -> None:
@@ -633,17 +680,25 @@ class LongitudinalPairResult:
         if (type(self.pair) is not LongitudinalPair or type(self.deltas) is not tuple
                 or any(type(delta) is not LongitudinalDelta for delta in self.deltas)
                 or tuple(delta.metric_name for delta in self.deltas) !=
-                ("record_count_delta", "support_delta", "gini_simpson_diversity_delta")):
-            raise _invalid("pair result requires all three scoped distribution deltas")
-        for delta in self.deltas:
+                (*_DISTRIBUTION_DELTAS, *_PROVENANCE_DELTAS, *_DIRECT_DELTAS)):
+            raise _invalid("pair result requires the complete scoped delta inventory")
+        shares = self.source_type_share_deltas
+        if (type(shares) not in (dict, MappingProxyType) or tuple(shares) != _SOURCE_CATEGORIES
+                or any(type(d) is not LongitudinalDelta or d.metric_name != "source_type_share_deltas"
+                       for d in shares.values())):
+            raise _invalid("source-share deltas require all five declared categories")
+        object.__setattr__(self, "source_type_share_deltas", MappingProxyType(dict(shares)))
+        for delta in (*self.deltas, *shares.values()):
             if (delta.earlier_scope.dataset_versions != (self.pair.earlier_version,)
                     or delta.later_scope.dataset_versions != (self.pair.later_version,)):
                 raise _invalid("pair delta endpoints disagree with the scheduled pair")
         if self.compatibility is None:
-            if self.support_comparison is not None or any(d.value is not None for d in self.deltas):
+            if self.support_comparison is not None or any(d.value is not None for d in (*self.deltas, *shares.values())):
                 raise _invalid("blocked pair cannot carry available comparison values")
         elif self.compatibility != self.pair.compatibility:
             raise _invalid("pair result must retain its declared compatible basis")
+        if self.family_statuses[1:3] != _pair_evidence_families(self.deltas, shares, self.messages):
+            raise _invalid("pair evidence availability differs from its family status")
         comparison = self.support_comparison
         if comparison is not None:
             if (type(comparison) is not SupportComparison or comparison.status is not CalculationStatus.AVAILABLE
@@ -689,10 +744,18 @@ class LongitudinalResult:
                 raise _invalid("analyzed snapshot no longer matches its selected declaration")
         snapshots = {s.scope.dataset_version: s for s in self.snapshots}
         for pair in self.comparisons:
+            earlier, later = snapshots[pair.pair.earlier_version], snapshots[pair.pair.later_version]
             count = pair.deltas[0]
-            if (count.earlier_value != snapshots[pair.pair.earlier_version].record_count.value
-                    or count.later_value != snapshots[pair.pair.later_version].record_count.value):
+            if (count.earlier_value != earlier.record_count.value or count.later_value != later.record_count.value):
                 raise _invalid("record-count delta must use the complete endpoint populations")
+            expected = tuple(_evidence_delta(name, earlier, later, pair.compatibility)
+                             for name in (*_PROVENANCE_DELTAS, *_DIRECT_DELTAS))
+            shares = {category: _evidence_delta("source_type_share_deltas", earlier, later,
+                        pair.compatibility, category=category) for category in _SOURCE_CATEGORIES}
+            if pair.deltas[3:] != expected or pair.source_type_share_deltas != shares:
+                raise _invalid("provenance/direct deltas must retain their exact endpoint evidence")
+            if any(message not in pair.messages for message in _pair_provenance_errors(earlier, later)):
+                raise _invalid("pair execution cannot discard its endpoints' provenance errors")
         options = None if self.tail_options is None else _tail_options(self.tail_options)
         if self.input_signature != _analysis_signature(self.selection, options):
             raise _invalid("series input binding differs from its selection or tail request")
@@ -702,10 +765,8 @@ class LongitudinalResult:
                 or any(type(code) is not str or not code for code in self.reason_codes)
                 or type(self.messages) is not tuple or any(type(m) is not ValidationMessage for m in self.messages)):
             raise _invalid("series execution status and diagnostics require immutable typed values")
-        useful = any(delta.status is CalculationStatus.AVAILABLE for pair in self.comparisons for delta in pair.deltas)
-        if (self.execution_status is not (ExecutionStatus.PARTIAL if useful else ExecutionStatus.FAILED)
-                or "R_LONGITUDINAL_FAMILIES_DEFERRED" not in self.reason_codes):
-            raise _invalid("Step 3 result must disclose its deferred required families")
+        if (self.execution_status, self.reason_codes) != _series_execution(self.snapshots, self.comparisons):
+            raise _invalid("series execution must reflect all requested snapshot and pair families")
 
 
 def _result_rows(families, messages):
@@ -724,12 +785,152 @@ def _family(family, status, reasons=()):
     return LongitudinalFamilyStatus(family, status, tuple(dict.fromkeys(str(code) for code in reasons)))
 
 
-def _families(distribution, tail=None):
-    return (distribution,
-        _family("provenance", ExecutionStatus.DEFERRED, ("R_LONGITUDINAL_FAMILIES_DEFERRED",)),
-        _family("direct_closure", ExecutionStatus.DEFERRED, ("R_LONGITUDINAL_FAMILIES_DEFERRED",)),
+def _families(distribution, provenance, direct, tail=None):
+    return (distribution, provenance, direct,
         tail or _family("tail", ExecutionStatus.NOT_REQUESTED, ("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",)),
         _family("lineage", ExecutionStatus.NOT_REQUESTED, ("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",)))
+
+
+def _promotions(validation):
+    if type(validation.provenance_join) is not ProvenanceJoinResult:
+        raise _invalid("series provenance requires the retained validation join")
+    # join_provenance validates the literal registry and rebuilds warning severity.
+    return validation.provenance_join.promoted_warning_codes
+
+
+def _provenance_scope(snapshot):
+    # Same complete population, using the existing provenance owner's convention.
+    return replace(snapshot.population_scope,
+        denominator_basis="all_valid_records_in_selected_dataset_scope",
+        scope_id=snapshot.population_scope.scope_id + "-provenance")
+
+
+def _snapshot_evidence_families(provenance, bounds):
+    if provenance is None:
+        return tuple(_family(name, ExecutionStatus.FAILED, (CalculationReason.EMPTY_SCOPE,))
+                     for name in ("provenance", "direct_closure"))
+    errors = _input_error_codes(_local_provenance_errors(provenance))
+    reasons = tuple(dict.fromkeys((*provenance.source.reason_codes, *provenance.confidence.reason_codes, *errors)))
+    return (_family("provenance", ExecutionStatus.PARTIAL if reasons else ExecutionStatus.COMPLETED, reasons),
+            _family("direct_closure", (ExecutionStatus.PARTIAL if errors else ExecutionStatus.COMPLETED)
+                    if bounds.status is CalculationStatus.AVAILABLE else ExecutionStatus.FAILED,
+                    (*bounds.lower_bound.reason_codes, *errors)))
+
+
+def _input_error_codes(messages):
+    return tuple(dict.fromkeys(m.code for m in messages
+        if m.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)))
+
+
+def _local_provenance_errors(provenance):
+    if provenance is None:
+        return ()
+    keys = set(provenance.scope.included_record_keys)
+    return tuple(m for m in provenance.validation_messages if m.record_key in keys
+                 and m.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL))
+
+
+def _pair_provenance_errors(earlier, later):
+    return tuple(dict.fromkeys((*_local_provenance_errors(earlier.provenance),
+                               *_local_provenance_errors(later.provenance))))
+
+
+def _snapshot_provenance(snapshot, validation):
+    if not snapshot.population_scope.included_record_keys:
+        return None, None
+    promoted = _promotions(validation)
+    # Keep the owner join's full-input identity/error checks. Only coverage and
+    # composition are scoped. Context and other snapshots never enter N.
+    joined = join_provenance(validation.records, validation.provenance,
+        dataset_versions=(snapshot.dataset_version,), strict_mode=bool(promoted), strict_warning_codes=promoted)
+    provenance = summarize_provenance(joined, scope=_provenance_scope(snapshot))
+    return provenance, direct_closure_exposure(provenance)
+
+
+def _validate_snapshot_bounds(provenance, bounds):
+    total = bounds.denominator
+    counts = bounds.known_open_count, bounds.known_closed_count, bounds.unresolved_grounding_count
+    if (any(type(count) is not int or count < 0 for count in counts) or sum(counts) != total
+            or bounds.denominator_basis != bounds.scope.denominator_basis):
+        raise _invalid("snapshot direct counts must partition the complete population")
+    available = provenance.provenance_required_field_coverage.numerator > 0
+    expected = (counts[1] / total, (counts[1] + counts[2]) / total, counts[2] / total)
+    for scalar, field_name, formula, value in zip(
+            (bounds.lower_bound, bounds.upper_bound, bounds.interval_width),
+            ("lower_bound", "upper_bound", "interval_width"), ("F-009", "F-010", None), expected):
+        if (type(scalar) is not ScalarCalculation or scalar.metadata.scope != bounds.scope
+                or scalar.metadata.metric_name != "direct_closure_exposure_" + field_name
+                or scalar.metadata.owner_id != "T3" or scalar.metadata.formula_id != formula
+                or scalar.metadata.unit != "ratio" or scalar.metadata.representation is not None
+                or scalar.metadata.evidence_class is not CalculationEvidenceClass.DERIVED_METRIC
+                or scalar.status is not (CalculationStatus.AVAILABLE if available else CalculationStatus.UNAVAILABLE)
+                or scalar.value != (value if available else None)
+                or scalar.reason_codes != (() if available else (CalculationReason.PROVENANCE_FIELD_UNAVAILABLE,))):
+            raise _invalid("snapshot direct interval must preserve its existing count envelope and availability")
+
+
+def _evidence_endpoint(snapshot, name, category):
+    provenance, bounds = snapshot.provenance, snapshot.direct_closure
+    scope = provenance.scope if provenance is not None else _provenance_scope(snapshot.scope)
+    total = len(scope.included_record_keys)
+    if provenance is None:
+        return scope, None, total, None, (CalculationReason.EMPTY_SCOPE,)
+    if name in _COVERAGE_DELTAS:
+        coverage = getattr(provenance, name.removesuffix("_delta"))
+        return scope, coverage.ratio, total, coverage, ()
+    if name == "source_type_share_deltas":
+        source = provenance.source
+        return (scope, None if source.shares is None else dict(source.shares)[category],
+                total, source.field_coverage, source.reason_codes)
+    if name == "missing_provenance_share_delta":
+        scalar, coverage = provenance.missing_provenance_share, provenance.provenance_row_coverage
+    else:
+        scalar = getattr(bounds, name.removeprefix("direct_closure_").removesuffix("_delta"))
+        coverage = bounds.grounding_field_coverage
+    return scope, scalar.value, total, coverage, scalar.reason_codes
+
+
+def _evidence_delta(name, earlier, later, basis, *, category=None):
+    left_scope, left, left_n, left_coverage, left_reasons = _evidence_endpoint(earlier, name, category)
+    right_scope, right, right_n, right_coverage, right_reasons = _evidence_endpoint(later, name, category)
+    reasons = tuple(dict.fromkeys((() if basis is not None else
+        (CalculationReason.REPRESENTATION_INCOMPATIBLE,)) + left_reasons + right_reasons))
+    owner, formula, unit = _DELTA_METADATA[name]
+    return LongitudinalDelta(name, owner, formula, unit, left_scope, right_scope, None,
+        left, right, None if reasons else right - left,
+        CalculationStatus.UNAVAILABLE if reasons else CalculationStatus.AVAILABLE, reasons,
+        left_n, right_n, left_coverage, right_coverage, left_reasons, right_reasons)
+
+
+def _delta_family(name, deltas, errors):
+    reasons = tuple(dict.fromkeys((*errors, *(reason for delta in deltas for reason in delta.reason_codes))))
+    available = sum(delta.status is CalculationStatus.AVAILABLE for delta in deltas)
+    status = (ExecutionStatus.COMPLETED if available == len(deltas) and not errors else
+              ExecutionStatus.PARTIAL if available else ExecutionStatus.FAILED)
+    return _family(name, status, reasons)
+
+
+def _pair_evidence_families(deltas, shares, messages):
+    # Only provenance diagnostics in these rows carry record identities;
+    # representation/tail execution errors have their separate family owners.
+    errors = _input_error_codes(m for m in messages if m.record_key is not None)
+    return (_delta_family("provenance", (*deltas[3:7], *shares.values()), errors),
+            _delta_family("direct_closure", deltas[7:], errors))
+
+
+def _series_execution(snapshots, comparisons):
+    reasons = []
+    if any(pair.compatibility is None for pair in comparisons):
+        reasons.append("R_LONGITUDINAL_PAIR_BLOCKED")
+    if any(f.execution_status not in (ExecutionStatus.COMPLETED, ExecutionStatus.NOT_REQUESTED)
+           for item in (*snapshots, *comparisons) for f in item.family_statuses):
+        reasons.append("R_LONGITUDINAL_ENDPOINT_UNAVAILABLE")
+    reasons.extend(_input_error_codes(message for item in (*snapshots, *comparisons) for message in item.messages))
+    useful = any(delta.status is CalculationStatus.AVAILABLE for pair in comparisons
+                 for delta in (*pair.deltas, *pair.source_type_share_deltas.values()))
+    status = (ExecutionStatus.COMPLETED if not reasons else
+              ExecutionStatus.PARTIAL if useful else ExecutionStatus.FAILED)
+    return status, tuple(reasons)
 
 
 def _message(error, field_name):
@@ -745,13 +946,13 @@ def _count(name, count, snapshot, *, representation=None, reasons=()):
                              None if reasons else count, reasons)
 
 
-def _snapshot_distribution(snapshot, records, ordinal, content_mode):
+def _snapshot_distribution(snapshot, records, ordinal, validation):
     declaration = snapshot.declaration
     config = declaration.representation
     distribution, messages, reasons = None, (), ()
     try:
         if config.source == "content_hash":
-            if content_mode is ContentMode.LOCAL_REF and records:
+            if validation.content_mode is ContentMode.LOCAL_REF and records:
                 raise _invalid("local-reference content payloads are unavailable to series analysis",
                                code=ErrorCode.CONTENT_REF_MISSING)
             represented = assign_content_states(records, dataset_versions=(snapshot.dataset_version,),
@@ -779,8 +980,13 @@ def _snapshot_distribution(snapshot, records, ordinal, content_mode):
     if distribution is not None:
         reasons = distribution.unweighted.reason_codes
     status = ExecutionStatus.PARTIAL if reasons else ExecutionStatus.COMPLETED
+    provenance, bounds = _snapshot_provenance(snapshot, validation)
+    provenance_family, direct_family = _snapshot_evidence_families(provenance, bounds)
+    if provenance is not None:
+        messages += provenance.validation_messages
     return SnapshotSummary(snapshot, distribution, record_count, included, excluded,
-        _families(_family("distribution", status, reasons)), messages)
+        _families(_family("distribution", status, reasons), provenance_family, direct_family),
+        messages, provenance, bounds)
 
 
 def _distribution_reasons(snapshot):
@@ -871,7 +1077,12 @@ def _tail_disappearance(options, basis, comparison, earlier, later, a, reasons):
 def _pair_result(pair, earlier, later, order, options):
     basis, comparison, a, b, reasons, messages = _pair_distributions(pair, earlier, later, order)
     deltas = tuple(_delta(name, earlier, later, basis, a, b, reasons, comparison=comparison)
-        for name in ("record_count_delta", "support_delta", "gini_simpson_diversity_delta"))
+        for name in _DISTRIBUTION_DELTAS)
+    deltas += tuple(_evidence_delta(name, earlier, later, basis) for name in (*_PROVENANCE_DELTAS, *_DIRECT_DELTAS))
+    shares = {category: _evidence_delta("source_type_share_deltas", earlier, later, basis, category=category)
+              for category in _SOURCE_CATEGORIES}
+    messages += _pair_provenance_errors(earlier, later)
+    provenance_family, direct_family = _pair_evidence_families(deltas, shares, messages)
     distribution_status = (ExecutionStatus.COMPLETED if comparison is not None else
                            ExecutionStatus.PARTIAL if basis is not None else ExecutionStatus.FAILED)
     tail, tail_status = None, None
@@ -881,7 +1092,8 @@ def _pair_result(pair, earlier, later, order, options):
         tail_status = _family("tail", ExecutionStatus.COMPLETED if tail.status is CalculationStatus.AVAILABLE
                               else ExecutionStatus.FAILED, tail.reason_codes)
     return LongitudinalPairResult(pair, basis, comparison, deltas, tail,
-        _families(_family("distribution", distribution_status, reasons), tail_status), messages)
+        _families(_family("distribution", distribution_status, reasons), provenance_family, direct_family, tail_status),
+        shares, messages)
 
 
 def analyze_longitudinal(
@@ -893,9 +1105,10 @@ def analyze_longitudinal(
     Records are grouped once and each selected distribution runs once. Context
     supplies no snapshot denominator. Unavailable endpoints preserve record
     deltas only under a valid comparison basis; state sets remain null. Tail is
-    opt-in and uses the harmonized earlier distribution. Required provenance and
-    direct closure remain explicitly deferred until Step 4, so this staged
-    result cannot claim a completed full series. Lineage options await Step 5.
+    opt-in and uses the harmonized earlier distribution. Each nonempty snapshot
+    retains its complete provenance and direct-bound results, independently of
+    representation exclusions. All pair deltas require a compatible basis.
+    Lineage options await Step 5.
     """
     if type(lineage) is not bool or lineage or lineage_limits is not None:
         raise _invalid("selected lineage execution is deferred to Phase 6A Step 5")
@@ -905,20 +1118,14 @@ def analyze_longitudinal(
     for row in validation.records:
         if row.record_key.dataset_version in grouped:
             grouped[row.record_key.dataset_version].append(row)
-    snapshots = tuple(_snapshot_distribution(scope, tuple(grouped[scope.dataset_version]), index, validation.content_mode)
+    snapshots = tuple(_snapshot_distribution(scope, tuple(grouped[scope.dataset_version]), index, validation)
                       for index, scope in enumerate(selection.snapshots, 1))
     index = {snapshot.scope.dataset_version: snapshot for snapshot in snapshots}
     comparisons = tuple(_pair_result(pair, index[pair.earlier_version], index[pair.later_version],
                                     selection.version_order, options) for pair in selection.pairs)
-    useful = any(delta.status is CalculationStatus.AVAILABLE for pair in comparisons for delta in pair.deltas)
-    reasons = ["R_LONGITUDINAL_FAMILIES_DEFERRED"]
-    if any(pair.compatibility is None for pair in comparisons):
-        reasons.append("R_LONGITUDINAL_PAIR_BLOCKED")
-    if any(f.execution_status in (ExecutionStatus.PARTIAL, ExecutionStatus.FAILED)
-           for pair in comparisons for f in pair.family_statuses if f.family in ("distribution", "tail")):
-        reasons.append("R_LONGITUDINAL_ENDPOINT_UNAVAILABLE")
-    messages = tuple(message for item in (*snapshots, *comparisons) for message in item.messages)
+    status, reasons = _series_execution(snapshots, comparisons)
+    # A full-input required-field diagnostic may be inherited by multiple
+    # snapshot joins. Retain it once in the series without dropping local copies.
+    messages = tuple(dict.fromkeys(message for item in (*snapshots, *comparisons) for message in item.messages))
     signature = _analysis_signature(selection, options)
-    return LongitudinalResult(selection, snapshots, comparisons,
-        ExecutionStatus.PARTIAL if useful else ExecutionStatus.FAILED,
-        tuple(reasons), messages, signature, options)
+    return LongitudinalResult(selection, snapshots, comparisons, status, reasons, messages, signature, options)

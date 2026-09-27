@@ -96,11 +96,12 @@ def test_frozen_snapshot_and_pair_oracles(case, tmp_path, tail):
             assert pair.tail_disappearance is None
             assert _family(pair, "tail").execution_status is ExecutionStatus.NOT_REQUESTED
     assert result.selection.version_order.loaded_versions == validation.version_order.loaded_versions
-    assert result.execution_status is ExecutionStatus.PARTIAL  # required Step 4 families are deferred
-    assert result.reason_codes[0] == "R_LONGITUDINAL_FAMILIES_DEFERRED"
+    incomplete = case["case_id"] in ("incompatible_middle", "all_excluded_later", "identified_empty_later")
+    assert result.execution_status is (ExecutionStatus.PARTIAL if incomplete else ExecutionStatus.COMPLETED)
+    assert "R_LONGITUDINAL_FAMILIES_DEFERRED" not in result.reason_codes
     for item in (*result.snapshots, *result.comparisons):
-        assert _family(item, "provenance").execution_status is ExecutionStatus.DEFERRED
-        assert _family(item, "direct_closure").execution_status is ExecutionStatus.DEFERRED
+        assert _family(item, "provenance").execution_status is not ExecutionStatus.DEFERRED
+        assert _family(item, "direct_closure").execution_status is not ExecutionStatus.DEFERRED
         assert _family(item, "lineage").execution_status is ExecutionStatus.NOT_REQUESTED
 
 
@@ -352,7 +353,8 @@ def test_version_renaming_preserves_ordered_numerical_observations(tmp_path):
 
 @pytest.mark.parametrize("mutation", ["missing_snapshot", "reversed_pairs", "tail_binding", "completed", "denominator"])
 def test_result_constructors_reject_scope_enablement_and_status_forgery(tmp_path, mutation):
-    _, result = _analyze(_case(), tmp_path)
+    case = _case("all_excluded_later") if mutation == "completed" else _case()
+    _, result = _analyze(case, tmp_path)
     with pytest.raises(CanonicalValidationError):
         if mutation == "missing_snapshot":
             replace(result, snapshots=result.snapshots[:-1])
@@ -460,17 +462,16 @@ def test_inline_content_uses_existing_exact_hash_assignment(tmp_path):
     assert result.comparisons[0].support_comparison.extinct_states == ()
 
 
-def test_analysis_never_dispatches_graph_provenance_bounds_scenarios_or_io(tmp_path, monkeypatch):
+def test_analysis_never_dispatches_graph_scenarios_or_io(tmp_path, monkeypatch):
     import builtins
     from recursive_integrity_toolkit.lineage import ancestry, graph
-    from recursive_integrity_toolkit.metrics import bounds, provenance, resampling, tail
+    from recursive_integrity_toolkit.metrics import resampling, tail
 
     validation = _load_case(_case(), tmp_path)
     selection = _select(_case(), validation)
     def forbidden(*args, **kwargs):
-        pytest.fail("Step 3 dispatched a deferred, stochastic or I/O operation")
+        pytest.fail("series dispatched a deferred, stochastic or I/O operation")
     for module, name in ((graph, "build_lineage_graph"), (ancestry, "analyze_lineage"),
-            (provenance, "summarize_provenance"), (bounds, "direct_closure_exposure"),
             (tail, "one_step_extinction_probability"), (builtins, "open")):
         monkeypatch.setattr(module, name, forbidden)
     for name in ("expected_diversity_after_steps", "simulate_closed_resampling"):

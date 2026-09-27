@@ -1,13 +1,13 @@
 # Longitudinal comparison contract
 
-Status: **APPROVED CONTRACT; STEP 3 DISTRIBUTION ANALYSIS IMPLEMENTED**.
+Status: **APPROVED CONTRACT; STEP 4 PROVENANCE/DIRECT CHANGES IMPLEMENTED**.
 
 Authority: `PHASE_6A_PLAN.md`, P6A-D01 through P6A-D08, and
 `PHASE_6A_DECISIONS.md`. Existing definitions and Phase 3-5 meanings remain in
 force. This document fixes the staged interfaces. Current package dev4 and
-schema 1.1 implement Python selection, compatibility and the Step 3 distribution
-analysis portion. Provenance/direct-closure changes, selected lineage, config/CLI
-and public series reports remain future work. Implementation clarifications are
+schema 1.1 implement Python selection, compatibility, distributions and
+provenance/direct-closure changes. Selected lineage, config/CLI and public series
+reports remain future work. Implementation clarifications are
 recorded in `PHASE_6A_DECISIONS.md`.
 
 ## 1. Scope and ownership
@@ -158,9 +158,9 @@ The following names/fields define the forthcoming record-series interface.
 Types may reuse existing immutable leaves. Constructors and consumers validate
 literal types, unique identities and binding; a caller-created object is not
 proof of correctness. Step 1 added no runtime types. Step 2 implemented declarations,
-mapping envelopes, scopes, pairs and selection. Step 3 adds snapshot/pair/series
-results for distribution work; configuration options and later families remain
-deferred.
+mapping envelopes, scopes, pairs and selection. Steps 3-4 add snapshot/pair/series
+results for distribution and provenance/direct work; configuration options and
+selected lineage remain deferred.
 
 | Type | Required fields |
 |---|---|
@@ -218,11 +218,25 @@ comparison gate. Snapshot summaries carry observed full/eligible/excluded counts
 The internal `LongitudinalDelta` keeps separate scope references, endpoint values,
 denominators, coverage and reasons. `TailDisappearanceResult` keeps its explicit
 rule and earlier harmonized selection. These are staged Python results, not new
-schema-1.1 output fields. Required provenance/direct-closure families retain
-`ExecutionStatus.DEFERRED` and `R_LONGITUDINAL_FAMILIES_DEFERRED` until Step 4;
-the overall staged execution cannot yet be `completed`. This temporary internal
-state does not extend the final public status inventory below. `lineage=True`
-or a non-null `lineage_limits` remains a structured error until Step 5.
+schema-1.1 output fields. Step 4 replaces required provenance/direct-closure
+deferral with per-version existing result objects and the named comparison
+deltas. `source_type_share_deltas` is an immutable five-category map of
+`LongitudinalDelta` values. Missing provenance remains a separate scalar delta.
+Empty snapshots retain null provenance/bounds, N=0 and `EMPTY_SCOPE`; nonempty
+snapshots retain the existing full-population denominator convention. All new
+deltas have null representation and obey the common pair compatibility gate.
+
+The requested Python analysis can now be `completed` when all required values
+are available without errors. Valid zero coverage or a conservative direct
+interval remains available. Required-field or strict-promoted errors retain
+finite scalar values when valid, but affected local family wrappers and overall
+execution are partial. Scoped joins retain full-input required-field errors;
+an error outside the selected endpoint remains visible globally without changing
+the unaffected local wrapper. Strict warning policy is forwarded and bound to
+selection. Per-version numerical kernels execute once; joins retain their
+existing full-input validation scans, to be assessed at the Step 8 preflight.
+`lineage=True` or a non-null `lineage_limits` remains a structured error until
+Step 5. No public schema or report field is implemented by this step.
 
 The input bundle retains its existing `ContentMode`, and selection includes it
 in its private binding. Inline content uses the existing exact-content owner.

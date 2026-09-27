@@ -2,13 +2,13 @@
 
 | Field | Value |
 |---|---|
-| Status | APPROVED; Step 3 distribution and observed-change implementation |
-| Authority | Theory Owner instructions through `Phase 6A Step 3 开始` |
+| Status | APPROVED; Step 4 provenance and direct-closure implementation |
+| Authority | Theory Owner instructions through `Phase 6A Step 4 继续` |
 | Authorization date | 2026-09-26 America/Los_Angeles; 2026-09-27 UTC |
 | Approved plan | `PHASE_6A_PLAN.md` version 1.0, delivered at `753829a79fb6aa550d58dcd6fced360399c597e9` |
 | Accepted product baseline | Phase 5 completion `f09521907558a193e6438d9acb316adb9e191195` |
 | Working branch | `phase6a-longitudinal` |
-| Current scope | Snapshot distributions, record/support/diversity changes, optional earlier-tail disappearance and affected checks |
+| Current scope | Per-version provenance and direct-closure summaries, coverage/source-share/interval deltas and affected checks |
 | Current runtime | `0.1.0.dev4`, report schema `1.1`; version metadata unchanged |
 | Eventual phase target | `0.1.0.dev5`, report schema `1.2` |
 
@@ -184,4 +184,60 @@ There is no new module, dependency, CLI flag, configuration parser, public schem
 approval mechanism or verification framework.
 
 See [PHASE_6A_STEP_3.md](PHASE_6A_STEP_3.md) for completed checks and the next
-boundary. Step 4 has not started.
+boundary at that delivery. Step 4 authorization follows below.
+
+## Step 4 authorization and implementation clarifications
+
+The Theory Owner requested `Phase 6A Step 4 继续` on 2026-09-26
+America/Los_Angeles (2026-09-27 UTC). Work starts from Step 3 commit
+`e6f8b1f8e2f83907041e972d77d74bfc7101a919` on `phase6a-longitudinal`.
+
+- Every nonempty snapshot calls the existing scoped provenance join,
+  `summarize_provenance` and `direct_closure_exposure`. Their result types,
+  source/confidence categories, direct assignments, observed evidence and
+  formulas remain unchanged. The scope retains the complete selected version
+  population with the existing provenance denominator convention. Context and
+  representation exclusions cannot change that population.
+- An explicitly empty snapshot has no provenance/direct result and retains
+  `EMPTY_SCOPE`. No fake row or empty legacy join is created. Its pair endpoints
+  retain N=0, null ratios and side-specific reasons, while an otherwise compatible
+  record-count delta can remain available.
+- Pair results add three named coverage deltas, missing-provenance share and
+  three direct-interval deltas. `source_type_share_deltas` is a detached immutable
+  five-category mapping of scalar deltas. Every new delta is F-018, ratio,
+  derived_metric, with separate full-population scopes, N, coverage and reasons;
+  its representation is null. All comparisons obey the same compatibility/map
+  coverage gate as distribution changes.
+- Missing provenance is separate from explicit unknown and the five declared
+  source categories. An absent or empty manifest can supply measured zero
+  coverage/source shares and missing share one, but no usable direct interval.
+  Valid declared unknown can supply the conservative interval [0,1]. Incomplete
+  required rows stay unresolved, and unavailable source fields never become a
+  partial category table or fabricated zero. Confidence remains undiscounted.
+- Required provenance/direct families now execute, replacing Step 3 deferral.
+  All requested available, error-free families yield `completed`; useful values
+  alongside unavailable or errored work yield `partial`; no comparison values
+  yields `failed`. A zero coverage ratio or conservative interval does not alone
+  cause partial execution. Scalar availability remains separate from errors:
+  local provenance errors make affected snapshot/pair family wrappers partial
+  while retaining valid values. Unaffected endpoint/pair wrappers remain usable.
+- Scoped joins retain the owner's full-input required-field diagnostics. Errors
+  from another snapshot/context stay visible and prevent overall completion,
+  without being attributed to an unaffected local population. Duplicate inherited
+  diagnostics are deduplicated in the series message tuple. Strict warning
+  promotions are forwarded from the retained validation join and included in the
+  private selection binding, so changed policy invalidates stale selection reuse.
+- Snapshot constructors check the direct count partition, scalar ownership,
+  interval endpoints and availability; series constructors bind new deltas to
+  snapshot endpoints. These checks do not make caller-created results proof of
+  input authenticity. Step 6 still owns public result-consumer revalidation.
+
+The source gate advances to `e6f8b1f` and opens only
+`metrics/longitudinal.py`; all mathematical kernels, other product files, schema,
+Hero resources and package version metadata remain protected. Per-version joins
+retain existing full-input checks and therefore repeat global validation scans
+as version count grows. Step 8 must assess that cost in the planned bounded
+preflight; no performance claim or new cache is introduced here.
+
+See [PHASE_6A_STEP_4.md](PHASE_6A_STEP_4.md) for verification and limitations.
+Step 5 has not started. Runtime remains `0.1.0.dev4`, report schema `1.1`.
