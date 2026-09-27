@@ -28,7 +28,7 @@ def protected_copy(repo_root, tmp_path):
 @pytest.mark.parametrize("mutation", ["formula", "new_module", "deleted_module",
                                      "nested_metadata", "similar_metadata", "new_example"])
 def test_current_scope_rejects_unauthorized_product_changes(current_tools, protected_copy, mutation):
-    """Current selection work does not authorize unrelated product changes."""
+    """Candidate version metadata does not authorize unrelated product changes."""
     verify = current_tools["verify_source_scope"]
     generated = protected_copy / "src/recursive_integrity_toolkit.egg-info"
     generated.mkdir(exist_ok=True)
@@ -57,13 +57,22 @@ def test_current_scope_rejects_unauthorized_product_changes(current_tools, prote
 
 
 @pytest.mark.parametrize("mutation", ["missing", "symlink"])
-def test_current_authorized_new_module_must_be_a_regular_file(current_tools, protected_copy, mutation):
+def test_current_authorized_version_module_must_be_a_regular_file(current_tools, protected_copy, mutation):
     current_tools["verify_source_scope"](protected_copy)
-    target = protected_copy / "src/recursive_integrity_toolkit/metrics/longitudinal.py"
+    target = protected_copy / "src/recursive_integrity_toolkit/__init__.py"
     target.unlink()
     if mutation == "symlink":
-        target.symlink_to(target.with_name("diversity.py"))
+        target.symlink_to(target.with_name("config.py"))
     with pytest.raises(ValueError):
+        current_tools["verify_source_scope"](protected_copy)
+
+
+@pytest.mark.parametrize("relative", ["pyproject.toml", "src/recursive_integrity_toolkit/__init__.py"])
+def test_current_version_allowance_rejects_other_edits(current_tools, protected_copy, relative):
+    current_tools["verify_source_scope"](protected_copy)
+    target = protected_copy / relative
+    target.write_bytes(target.read_bytes() + b"\n# Unrelated candidate change.\n")
+    with pytest.raises(ValueError, match="Only the dev5 version update"):
         current_tools["verify_source_scope"](protected_copy)
 
 

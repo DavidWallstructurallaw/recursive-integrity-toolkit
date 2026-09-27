@@ -1,12 +1,13 @@
 # Development and Release Verification
 
-## Current Phase 5 boundary
+## Current Phase 6A candidate boundary
 
-Phase 5 Step 10 verifies development version `0.1.0.dev4`, with executable
-report schema 1.1 for every report. The implemented lineage, CLI/context inputs,
-bounded mutation checks and scale measurements are retained. Candidate status,
-exact source, actual jobs and delivery limits are recorded in
-[Phase 5 completion](../PHASE_5_COMPLETION.md).
+Phase 6A Step 9 verifies development version `0.1.0.dev5`, with executable
+report schema 1.2 for every report. Ordered series selection, distribution,
+provenance and closure changes, selected lineage, CLI/configuration and bounded
+adversarial/preflight checks are implemented. Candidate status, exact source,
+actual jobs, measurement attempts and delivery limits are recorded in
+[Phase 6A completion](../PHASE_6A_COMPLETION.md).
 Stable v0.1 publication, a tag and main merge require
 separate authorization.
 
@@ -20,13 +21,15 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The existing source check advances its single reference to the completed Step 9
-commit; no new Phase 5 hash registry is needed. During Step 10 it permits changes
-only to `pyproject.toml` and the package root version declaration for dev4.
+The existing source check advances its single reference to accepted Phase 6A
+Step 8 commit `69e4e05ea19910290d38738d6ec83e3ffcdde091`. During Step 9 it permits
+only the exact dev4-to-dev5 version edits in `pyproject.toml` and the package
+root version declaration. It protects 73 other product files.
 It retains the exact product file inventory and
 rejects unrelated runtime, package-metadata and canonical Hero changes.
 The frozen Phase 0 specification hashes are unchanged. Sixteen frozen
-specifications and seven packaged resource copies remain protected. The source
+specifications, 41 package modules and fourteen packaged resource copies remain
+protected. The source
 inventory excludes only the generated `src/recursive_integrity_toolkit.egg-info/`
 metadata directory; similarly named or nested paths are not excluded, and
 symlink rejection and shipped-package inventory checks remain in force.
@@ -49,26 +52,48 @@ The workflow runs:
 | Role | Required execution |
 |---|---|
 | Core | Ubuntu/Windows, Python 3.11/3.12, current/minimum compatible dependencies; PyArrow absent |
-| Optional Parquet | Ubuntu/Python 3.12, real PyArrow with roundtrip, row-limit, invalid-file and both context-input regressions |
+| Optional Parquet | Ubuntu/Python 3.12, real PyArrow with roundtrip, row-limit, invalid-file, context-input, longitudinal CLI and installed privacy regressions |
 | Canonical Hero and mathematics | Frozen mathematical cases, report goldens and packaged Hero behavior |
 | Security | No-network, input/path, privacy/redaction and output-publication boundaries |
 | Reference performance | One Ubuntu/Python 3.12 profile, including required actual 100k workloads |
 | Package/delivery | Wheel/sdist integrity, clean installed execution, reproducibility and tracked-source archive |
 
 Compatibility cells run complete canonical regression with
-`--ignore=tests/performance`. The designated performance job runs
-`tests/performance` once, avoiding nine repetitions of the costly 100k report
-workload. The current sparse-lineage benchmark executes a real 100k reverse chain
+`--ignore=tests/performance`. The designated Ubuntu/Python 3.12 performance job
+runs the actual 100k longitudinal case in its own pytest process, then runs
+the remaining `tests/performance` cases once. Each invocation has a separate
+JUnit and retained temporary directory. This prevents a prior large workload's
+pytest-parent high-water mark from setting the longitudinal child's RSS floor.
+Every existing performance case remains selected exactly once; the expensive
+workloads are not repeated across compatibility cells. The job timeout is
+75 minutes. The sparse-lineage benchmark executes a real 100k reverse chain
 through file loading, complete input/generation validation and ancestry analysis.
 Separate bounded deep-chain and high-fan-in cases measure the full lineage CLI
-through JSON/Markdown. The canonical Hero is measured afresh with lineage enabled.
+through JSON/Markdown. Longitudinal measurements cover three-version workloads,
+a 20-version/37-pair workload and the canonical Hero with and without lineage.
+The full series case loads 100,000 total records: 100 context anchors and three
+selected populations of 33,300. All three pairs and complete JSON/Markdown
+publication are measured, with unchanged default lineage guards. Its practical
+1,800-second subprocess timeout is an operational guard, not an approved SLA.
+
+The reference job uses these separate selections, retaining both XML files and
+attempt directories in its performance artifact:
+
+```bash
+python -m pytest -q tests/performance/test_longitudinal_runtime.py::test_longitudinal_100k_complete_reports \
+  --basetemp=/absolute/evidence/longitudinal-100k-attempts \
+  --junitxml=/absolute/evidence/longitudinal-100k.xml
+python -m pytest -q tests/performance -k 'not test_longitudinal_100k_complete_reports' \
+  --basetemp=/absolute/evidence/performance-attempts \
+  --junitxml=/absolute/evidence/performance.xml
+```
 
 The existing minimum compatible pair remains NumPy 2.0.0/pandas 2.2.2. Record
 actual resolved dependencies, `pip check`, Python/platform, commands, results
 and material limitations. A skipped, failed, duplicate or uncollected required
 test cannot stand in for a passing result. No raw test-count growth target is used.
 
-`RIT_TEST_PARQUET=1` collects all five real-PyArrow cases and missing PyArrow is a
+`RIT_TEST_PARQUET=1` collects all ten designated real-PyArrow cases and missing PyArrow is a
 failure. Core profiles set it to `0`, verify PyArrow is absent and collect the
 complete non-Parquet suite. Selecting a supported profile never uses skip/xfail
 to represent success.
@@ -100,7 +125,9 @@ Build twice from the same committed source and recorded environment with
 timestamps may differ. Keep installed import/input-only checks with numerical
 and optional imports blocked separate from actual mathematical/audit execution.
 Installed checks cover the existing public APIs, CLI, privacy, safe output and
-both ordinary and explicitly enabled lineage Hero runs. The lineage smoke checks
+ordinary, explicitly enabled lineage and longitudinal Hero runs, plus the
+packaged three-version example. They exercise installed CSV, JSONL and real
+Parquet series with standard, hashed and omitted identifier views. The lineage smoke checks
 the frozen G/C/U partition, root incidence/concentration, direct and lineage
 bounds, proxy status, privacy and schema outside the checkout with network
 blocked. Schema and Hero resources must match their canonical source bytes.
@@ -118,13 +145,23 @@ RSS are separate observations. Do not substitute a small workload or extrapolati
 for required actual 100k execution. See [performance details](../tests/performance/README.md).
 
 Phase 4's metadata-only 100k run took about 1,362.47 seconds and 7.12 GiB peak RSS.
-It did not execute general ancestry. Step 9's actual 100k ancestry API run took
+It did not execute general ancestry. Phase 5 Step 9's actual 100k ancestry API run took
 123.36 seconds and 1.71 GiB peak RSS, excluding full audit serialization and
 ordinary metrics. Its 1,000-record full CLI run took 11.15 seconds. Those scopes
 are distinct from the Phase 4 workload and do not imply a comparable speedup.
-See [Step 9 results](../PHASE_5_STEP_9.md) for environment and all attempts.
+See [Phase 5 Step 9 results](../PHASE_5_STEP_9.md) for environment and all attempts.
 Comparable regression review uses the approved >20% time or >50%
 memory thresholds. Operational timeouts are resource guards, not product SLAs.
+
+[Phase 6A Step 8](../PHASE_6A_STEP_8.md) retains the bounded longitudinal
+preflights: complete 1,000/10,000-record CLI runs took 11.46/124.65 seconds;
+the latter reached 766,644,224 bytes peak process RSS and wrote 42,908,064 JSON
+bytes plus 26,943,450 Markdown bytes. These totals include 100 context anchors.
+All final Hero series runs took 0.94-1.11 seconds; their inherited RSS floor
+prevents a workload-specific memory comparison. The new series, ordinary
+metadata report and reverse-chain ancestry API have different workload scopes.
+The candidate record reports actual 100k results without extrapolating the
+bounded series timings or treating cross-workload differences as a speedup.
 
 Reuse unchanged successful candidate evidence for nonauthoritative administrative
 successors and disclose that reuse. Repeat affected gates when executable or

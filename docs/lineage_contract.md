@@ -1,6 +1,6 @@
 # Phase 5 Lineage Contract
 
-Status: **implemented Phase 5 contract; dev4 candidate verification in Step 10**.
+Status: **implemented Phase 5 contract, preserved by the Phase 6A dev5 candidate**.
 
 Authority: [Phase 5 decisions](../PHASE_5_DECISIONS.md), approved Phase 5 plan,
 `PROJECT_INSTRUCTIONS.md` section 4.4 and the approved UD decisions. Relevant
@@ -17,8 +17,14 @@ and shared-root proxy calls. Step 7 integrates explicitly supplied lineage
 results into schema 1.1, canonical assembly and privacy-safe JSON/Markdown.
 Step 8 integrates explicit CLI lineage invocation and local context input options.
 Step 9 adds measured scale/resource evidence and behavior-preserving generation
-dependency propagation. The package is `0.1.0.dev4`; the executable report schema
-is `1.1`. See [completion](../PHASE_5_COMPLETION.md) for candidate gate results.
+dependency propagation. That candidate was `0.1.0.dev4` with report schema
+`1.1`; its results are in [Phase 5 completion](../PHASE_5_COMPLETION.md).
+The current Phase 6A candidate is `0.1.0.dev5` with schema `1.2` for all reports.
+Its selected-target/shared-graph extension is defined in the
+[longitudinal contract](longitudinal_contract.md), with current verification in
+[Phase 6A completion](../PHASE_6A_COMPLETION.md). The step-specific schema 1.1
+references below describe the original Phase 5 integration and its preserved
+ordinary lineage meanings.
 
 ## 1. Scope and reference semantics
 

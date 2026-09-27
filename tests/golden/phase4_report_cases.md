@@ -413,3 +413,10 @@ Current canonical fixtures use report schema 1.2 and package 0.1.0.dev4.
 Ordinary reports retain the existing Hero scientific values and explicitly
 record series analysis as `not_requested`. The independent numeric assertions
 remain unchanged. Prior schema 1.1 fixtures remain auditable in Git history.
+
+## Phase 6A dev5 candidate metadata
+
+Current canonical fixtures use package `0.1.0.dev5` and retain report schema
+`1.2`. Only the declared toolkit version changes from the accepted Step 8
+fixtures; every mathematical value, status, population, capability, diagnostic
+and privacy expectation is retained. Earlier version entries above are historical.

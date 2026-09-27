@@ -1,6 +1,6 @@
 # Report Schema
 
-Status: Phase 6A Step 7 development report contract (`0.1.0.dev4`). Schema version: `1.2`.
+Status: Phase 6A dev5 candidate report contract (`0.1.0.dev5`). Schema version: `1.2`. Candidate verification is recorded in [Phase 6A completion](../PHASE_6A_COMPLETION.md).
 
 The authoritative public shape is `schemas/report.schema.json`, Draft 2020-12. Runtime validation is implemented in `result.py` using the standard library. `report_schema()` returns a detached copy of the same declarative contract. No runtime schema package, filesystem lookup or remote resolver is used. The `$schema` and `$id` identifiers are descriptive; all references are local `$defs` references.
 

@@ -1,8 +1,8 @@
-"""Explicit clean-install Step 7 checks, run outside the source checkout.
+"""Explicit clean-install candidate checks, run outside the source checkout.
 
 This file uses sys.executable by default, as in wheel-installed CI. A separate
 wheel-installed environment can be selected explicitly:
-RIT_STEP7_INSTALLED_PYTHON=/absolute/environment/bin/python pytest <this file>
+RIT_INSTALLED_PYTHON=/absolute/environment/bin/python pytest <this file>
 The tests never invoke pip or download dependencies. A missing installed
 distribution is a setup error, not a silent skip. Source-only runs can provide
 the override or exclude this file with --ignore.
@@ -39,7 +39,7 @@ runpy.run_module("recursive_integrity_toolkit", run_name="__main__")
 
 @pytest.fixture(scope="module")
 def installed_python():
-    value = os.environ.get("RIT_STEP7_INSTALLED_PYTHON", sys.executable)
+    value = os.environ.get("RIT_INSTALLED_PYTHON", sys.executable)
     path = Path(value)
     assert path.is_absolute() and path.is_file(), "Installed interpreter must be an existing absolute path"
     return path
@@ -64,7 +64,7 @@ def _report(directory):
     payload = json.loads((directory / "report.json").read_text())
     validate_report(payload)
     assert payload["run"]["report_schema_version"] == "1.2"
-    assert payload["run"]["toolkit_version"] == "0.1.0.dev4"
+    assert payload["run"]["toolkit_version"] == "0.1.0.dev5"
     assert payload["run"]["network_call_count"] == 0
     assert payload["simulations"] == {}
     assert payload["capabilities"] == payload["observability"]["capabilities"]

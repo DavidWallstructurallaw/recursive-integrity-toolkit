@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.1.0.dev5: Phase 6A longitudinal candidate
+
+Added explicitly ordered multi-version comparison with adjacent pairs and an
+optional first-snapshot baseline. Selected snapshots retain distribution,
+provenance, direct closure and optional lineage/tail evidence. Changes use
+later-minus-earlier values, their own endpoint denominators and explicit
+compatibility gates. Missing provenance remains distinct from declared unknown,
+and observed disappearance can be followed by reappearance.
+
+Added `audit --longitudinal`, repeatable comparison inputs, inert declarative
+configuration, selected-target lineage from one shared graph, and a packaged
+three-version JSONL example. Schema 1.2 retains the twelve report sections with
+referenced series scopes, bounded details, exact aggregate counts and
+aggregate-preserving hash/omit privacy. Ordinary commands also emit schema 1.2;
+strict schema-1.1 readers must explicitly adopt the new schema. Input-only
+validation never enables series execution.
+
+Removed measured repeated full-input joins and role scans, and repeated cycle
+descendant-set construction, while retaining complete source validation and
+semantic handoff checks. Eight finite semantic mutations were detected.
+Step 8 complete CLI preflights took 11.46 seconds for 1,000 loaded records and
+124.65 seconds for 10,000; all six final Hero series attempts were below five
+seconds. Details, every attempt and RSS limitations are in `PHASE_6A_STEP_8.md`.
+
+Step 9 candidate verification covers canonical regression, supported
+OS/Python/dependency profiles, installed wheel/sdist execution, security,
+reproducibility and actual 100k longitudinal output. Actual status, tested source,
+attempts and remaining delivery limits are recorded in `PHASE_6A_COMPLETION.md`.
+No result from an earlier candidate certifies changed code. Phase 6B experimental orchestration, CLI
+simulation, HTML, main merge, tag and publication remain outside this milestone.
+
 ## 0.1.0.dev4: Phase 5 lineage candidate
 
 Added explicit canonical lineage graphs, iterative cycles and structural depth,

@@ -1,15 +1,18 @@
 # Longitudinal comparison contract
 
-Status: **APPROVED CONTRACT; STEP 7 CLI AND CONFIGURATION IMPLEMENTED**.
+Status: **IMPLEMENTED PHASE 6A CONTRACT; DEV5 CANDIDATE VERIFICATION**.
 
 Authority: `PHASE_6A_PLAN.md`, P6A-D01 through P6A-D08, and
 `PHASE_6A_DECISIONS.md`. Existing definitions and Phase 3-5 meanings remain in
-force. This document fixes the staged interfaces. Current package dev4 and
+force. This document fixes the staged interfaces. Current package dev5 and
 schema 1.2 implement Python selection, compatibility, distributions,
 provenance/direct-closure changes, explicitly requested selected lineage and
 canonical JSON/Markdown series reports and explicit CLI/configuration enablement.
 Implementation clarifications are
 recorded in `PHASE_6A_DECISIONS.md`.
+Actual candidate verification, source identity and measurement limits are recorded
+in [Phase 6A completion](../PHASE_6A_COMPLETION.md). Historical step references
+below identify when each interface was introduced.
 
 ## 1. Scope and ownership
 
@@ -242,8 +245,13 @@ finite scalar values when valid, but affected local family wrappers and overall
 execution are partial. Scoped joins retain full-input required-field errors;
 an error outside the selected endpoint remains visible globally without changing
 the unaffected local wrapper. Strict warning policy is forwarded and bound to
-selection. Per-version numerical kernels execute once; joins retain their
-existing full-input validation scans, to be assessed at the Step 8 preflight.
+selection. Per-version numerical kernels execute once. Step 8 prepares one fresh
+complete provenance join per consuming invocation and groups selected populations,
+immutable matches and diagnostics once. It retains global required-field errors,
+locally scoped warnings, strict promotions and the original owner ordering.
+Public consumers revalidate complete raw inputs; a retained join is never a
+persistent or trusted cache. This removes repeated per-snapshot joins without
+changing the full-input evidence boundary.
 Step 5 implements `lineage=True` with optional typed `LineageLimits`; supplying
 limits while lineage is false remains a structured error. Snapshot `lineage`
 retains its target-only summary and `lineage_closure` its existing bounds wrapper.
@@ -651,7 +659,7 @@ Renderers consume the validated canonical report without calculation or I/O.
 `LongitudinalResult` after `validate_longitudinal_result(bundle, *, result)`.
 Existing ordinary result arguments retain their meaning and are independently
 optional. Supplying a series does not choose an arbitrary legacy pair. All
-ordinary and series reports declare schema `1.2`; the package remains dev4.
+ordinary and series reports declare schema `1.2`; the package is `0.1.0.dev5`.
 
 After a confirmed selection rejection, callers may use
 `analyze_longitudinal_failure(bundle, *, declarations, baseline, max_versions,
@@ -690,7 +698,11 @@ endpoint support counts match. Coverage/source/lineage cases keep each version's
 own denominator. Mapping, incompatible/empty, context-only, all-unknown/G=0 and
 partial variants supply independent future acceptance expectations.
 
-Step 2 implements selection/contracts. Later steps add calculations, selected
-lineage, schema/CLI, bounded adversarial measurement and candidate acceptance in
-the approved order. This document adds no metadata service, approval framework,
-new source evidence ontology, persistent cache or empirical causal claim.
+Steps 2-7 implement selection/contracts, calculations, selected lineage,
+schema/privacy and CLI. Step 8 verifies finite semantic mutations, actual
+100-version/197-pair admission, exact aggregates with capped details, shared
+resource exhaustion and complete bounded CLI measurements. Step 9 verifies
+the dev5 candidate, including installed delivery and the actual 100k series
+workload. The plan and completion record distinguish implemented behavior from
+the checks actually executed. This document adds no metadata service, approval
+framework, new source evidence ontology, persistent cache or empirical causal claim.

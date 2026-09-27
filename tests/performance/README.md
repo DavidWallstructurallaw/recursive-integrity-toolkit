@@ -1,8 +1,10 @@
 # Performance measurements
 
-Current scheduling: Phase 6A Step 8 executes bounded longitudinal preflights.
-Step 9 runs the actual 100k longitudinal workload once on the designated
-Ubuntu/Python 3.12 reference profile, alongside retained candidate gates.
+Current scheduling: Phase 6A Step 9 runs the actual 100k longitudinal workload
+once on the designated Ubuntu/Python 3.12 reference profile. The case starts
+in its own pytest process before a second invocation executes the remaining
+performance cases once. Both invocations retain JUnit, complete reports and
+per-attempt observations. Step 8 bounded preflights remain historical evidence.
 Compatibility cells run bounded structural cases outside this performance
 directory. The existing complete 100k metadata benchmark and 100k deep-chain
 ancestry API measurement retain their distinct scopes.
@@ -125,7 +127,7 @@ python -m pytest tests/performance/test_longitudinal_runtime.py -k 'hero or 1000
 # Step 8, bounded larger preflight after reviewing the small observation.
 python -m pytest 'tests/performance/test_longitudinal_runtime.py::test_longitudinal_bounded_complete_reports[10000]' --junitxml=longitudinal-10k.xml
 # Step 9 reference profile, actual full workload once.
-python -m pytest tests/performance/test_longitudinal_runtime.py -k 100k --junitxml=longitudinal-100k.xml
+python -m pytest tests/performance/test_longitudinal_runtime.py::test_longitudinal_100k_complete_reports --basetemp=/absolute/unused/longitudinal-100k --junitxml=longitudinal-100k.xml
 ```
 
 See [Step 8 results](../../PHASE_6A_STEP_8.md) for the actual preflight evidence

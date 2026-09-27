@@ -1,6 +1,6 @@
 # Privacy and Local Input Boundaries
 
-Status: Phase 5 dev4 candidate (`0.1.0.dev4`, report schema `1.1`). `PRIVACY_AND_DATA_HANDLING.md` remains authoritative.
+Status: Phase 6A dev5 candidate (`0.1.0.dev5`, report schema `1.2`). `PRIVACY_AND_DATA_HANDLING.md` remains authoritative. See [Phase 6A completion](../PHASE_6A_COMPLETION.md) for actual candidate verification.
 
 Package import does not contact a network, open user audit files, require optional PyArrow or start a service. Runtime operates on explicitly supplied local files and declarations. No telemetry, background worker, plugin, cloud client, database, model download or LLM service exists. CI/package installation acquire dependencies separately; CI uses synthetic fixtures only.
 
@@ -202,14 +202,16 @@ IDs. Audit/validate additionally accept `--record-ids preserve|hash|omit` and
 `--id-salt-file`; both require redacted mode. Without a supplied secret, pseudonyms
 are stable only within that run. Fresh runs keep analytical values stable while
 changing their pseudonyms. Example supports `--redacted` with its default record-ID
-mode, and always extracts the unchanged public Hero inputs.
+mode, and extracts unchanged public inputs from the selected Hero or
+three-version example.
 
 Console stderr and both report formats preserve diagnostic severity, code, counts
 and safe locations. Warning scopes contain version/count/denominator/scope-ID
 summaries rather than complete repeated identity lists. Each distinct context is
-retained. Full input identity lists remain in the appropriate report scope unless
-the selected privacy mode omits them. The scope summary is a report-size control
-and does not provide additional anonymity.
+retained. Ordinary report sections retain their existing scope identity lists
+unless the selected privacy mode omits them. Series fields reference shared
+scope summaries without repeating complete memberships. Scope summaries control
+report size and do not provide additional anonymity.
 
 These CLI commands never activate content-reference resolution. They neither
 modify inputs nor execute strings embedded in metadata, mappings or reports.
@@ -226,3 +228,26 @@ decompression memory. A limit failure preserves available earlier observations
 and independent metrics, with a nonzero exit and unavailable dependent values.
 Context identities, roots, unresolved-record lists and cycle witnesses are
 protected in reports and stderr under the same selected privacy mode.
+
+## Longitudinal disclosure
+
+Series privacy covers selected/context versions, states, root keys, directed
+mapping keys and values, declaration text, paths and diagnostics. Redacted views
+omit state-meaning text. A state pseudonym is local to its declared basis;
+matching pseudonym text across distinct bases supplies no semantic identity.
+Version pseudonyms consistently join snapshot, context and mapping references.
+Internal input-binding digests and graph certificates are never public fields.
+
+Structural snapshot, comparison, basis and scope IDs remain usable references.
+Hash mode protects the associated literal identifiers; omit mode preserves
+valid references and exact aggregates while nulling protected literals and
+disclosing omitted detail. The 100-row cap applies after exact set/count
+calculation, before privacy transformation. No membership, denominator, status,
+evidence class or numerical value changes because identifiers are hidden.
+Valid partial results and scoped errors remain visible in both report formats.
+
+One supplied retrospective graph supports every selected lineage snapshot.
+It may include metadata learned after a snapshot's date. Privacy and chronology
+checks cannot reconstruct historical knowledge or authenticate user-supplied
+provenance. Each graph/input guard applies to its defined combined scope;
+selected-version admission and detail caps do not bound total process memory.

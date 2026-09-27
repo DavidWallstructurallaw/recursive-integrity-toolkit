@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6A Step 8 narrows changes to measured shared-work bottlenecks.
+Phase 6A Step 9 freezes runtime behavior and permits the dev5 version update.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
@@ -25,15 +25,14 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "9897ac7f531c3b1cbcd3b04ef4205f2c277540df"
+ACCEPTED_COMMIT = "69e4e05ea19910290d38738d6ec83e3ffcdde091"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/")
 LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
                       "provenance.jsonl", "config.json", "version_order.json",
                       "EXPECTED_OUTPUTS.md"}
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
-    "src/recursive_integrity_toolkit/metrics/longitudinal.py",
-    "src/recursive_integrity_toolkit/lineage/ancestry.py",
-    "src/recursive_integrity_toolkit/reports/assembly.py",
+    "pyproject.toml",
+    "src/recursive_integrity_toolkit/__init__.py",
 })
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",
@@ -41,6 +40,11 @@ PARQUET_CASES = {
     "test_PR002_parquet_real_invalid_file",
     "test_context_table_uses_existing_local_parsers_and_normalizer[parquet]",
     "test_context_loaders_and_repeated_inputs_keep_primary_only_denominators[parquet]",
+    "test_real_loaders_order_by_declaration_and_keep_all_snapshot_populations[False-parquet]",
+    "test_real_loaders_order_by_declaration_and_keep_all_snapshot_populations[True-parquet]",
+    "test_installed_record_loaders_baseline_and_privacy_modes[preserve-parquet]",
+    "test_installed_record_loaders_baseline_and_privacy_modes[hash-parquet]",
+    "test_installed_record_loaders_baseline_and_privacy_modes[omit-parquet]",
 }
 HERO_NAMES = {"records_v1.csv", "records_v2.csv", "provenance.csv", "config.json", "version_order.json", "EXPECTED_OUTPUTS.md"}
 RESOURCES = {f"src/recursive_integrity_toolkit/data/hero/{name}": f"examples/hero/{name}" for name in HERO_NAMES}
@@ -80,6 +84,8 @@ def verify_source_scope(root: Path = ROOT) -> dict:
                 if name.startswith(PROTECTED_PREFIXES) or name == "pyproject.toml"}
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
+        if name in CURRENT_IMPLEMENTATION_PATHS and current != raw.replace(b'"0.1.0.dev4"', b'"0.1.0.dev5"'):
+            raise ValueError(f"Only the dev5 version update is authorized in: {name}")
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
             raise ValueError(f"Unauthorized product mutation outside the current step scope: {name}")
     # New authorized modules must exist as regular files; deletions stay blocked.
@@ -1119,8 +1125,8 @@ def smoke_installed_cli(wheel: Path) -> None:
 
 
 def installed_example_program() -> str:
-    """Independent installed acceptance, using frozen section 8 Hero values."""
-    return r'''import hashlib, importlib.abc, json, socket, sys, urllib.request
+    """Independent installed Hero and three-version example acceptance."""
+    return r'''import hashlib, importlib.abc, json, math, socket, sys, urllib.request
 from pathlib import Path
 sys.path.insert(0,sys.argv[1])
 import recursive_integrity_toolkit as package
@@ -1210,11 +1216,47 @@ for name,privacy in (('lineage',[]),('lineage-redacted',['--redacted'])):
   assert roots[0]['record_key']=={'dataset_version':'v1','record_id':'v1_01'}
  for p in (destination/'inputs').iterdir():
   assert p.read_bytes()==resources.joinpath('data','hero',p.name).read_bytes()
+for dataset,lineage,privacy in (('hero',True,False),('longitudinal',False,True)):
+ destination=work/('series-'+dataset)
+ arguments=['example','--longitudinal','--dataset',dataset,'--out',str(destination)]
+ if lineage:arguments.append('--lineage')
+ if privacy:arguments.append('--redacted')
+ assert main(arguments)==0
+ current=json.loads((destination/'reports/report.json').read_bytes())
+ jsonschema.Draft202012Validator(json.loads(resources.joinpath('data','report.schema.json').read_bytes())).validate(current)
+ assert current['run']['toolkit_version']==package.__version__=='0.1.0.dev5'
+ assert current['run']['report_schema_version']=='1.2' and current['run']['run_status']=='complete'
+ assert current['run']['network_call_count']==0 and current['simulations']=={} and current['errors']==[]
+ assert current['capabilities']==current['observability']['capabilities']
+ assert current['capabilities']['dataset_longitudinal']['longitudinal_execution']['status']=='completed'
+ snapshots=current['derived_metrics']['longitudinal']['snapshots']
+ comparisons=current['derived_metrics']['longitudinal']['comparisons']
+ if dataset=='hero':
+  assert [row['support_size']['value'] for row in snapshots]==[8,5]
+  assert [row['gini_simpson_diversity']['value'] for row in snapshots]==[7/8,3/4]
+  assert len(comparisons)==1
+  assert [comparisons[0][name]['value'] for name in ('support_delta','gini_simpson_diversity_delta','direct_closure_lower_bound_delta')]==[-3,-1/8,1/2]
+  assert [comparisons[0][name]['value'] for name in ('distinct_external_root_count_delta','ancestry_concentration_hhi_delta','effective_external_root_count_delta')]==[-3,1/8,-4]
+ else:
+  assert [row['support_size']['value'] for row in snapshots]==[3,2,3]
+  assert [row['support_delta']['value'] for row in comparisons]==[-1,1]
+  for name,values in (('gini_simpson_diversity_delta',[-1/8,1/6]),('direct_closure_lower_bound_delta',[1/4,1/12])):
+   assert all(math.isclose(row[name]['value'],value) for row,value in zip(comparisons,values,strict=True))
+  assert [row['missing_provenance_share']['value'] for row in snapshots]==[0,1/4,0]
+  assert [row['source_type_shares']['value']['unknown'] for row in snapshots]==[0,0,1/3]
+  assert current['observed_facts']['longitudinal']['shared_lineage'] is None
+ markdown=(destination/'reports/report.md').read_text(encoding='utf-8')
+ assert markdown.startswith('# Recursive Integrity Audit Report')
+ if privacy:
+  assert current['run']['privacy_mode']=='redacted'
+  assert str(work) not in json.dumps(current)+markdown
+ for p in (destination/'inputs').iterdir():
+  assert p.read_bytes()==resources.joinpath('data',dataset,p.name).read_bytes()
 for relative,digest in expected.items():
  assert hashlib.sha256(resources.joinpath(*relative.split('/')).read_bytes()).hexdigest()==digest
 for p in (target/'inputs').iterdir():
  assert p.read_bytes()==resources.joinpath('data','hero',p.name).read_bytes()
-print('installed Hero: ordinary and explicit lineage, frozen numerical oracles, local schema, exact resources, core-only, standard/redacted, no overwrite, blocked network: PASS')
+print('installed examples: ordinary Hero, explicit lineage, longitudinal Hero and three-version adjacency; frozen numerical oracles, local schema, exact resources, core-only, standard/redacted, no overwrite, blocked network: PASS')
 '''
 
 

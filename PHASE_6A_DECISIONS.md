@@ -2,14 +2,14 @@
 
 | Field | Value |
 |---|---|
-| Status | APPROVED; Step 8 complete |
-| Authority | Theory Owner instructions through `Phase 6A Step 8 开始` |
+| Status | APPROVED; Step 9 candidate verification in progress |
+| Authority | Theory Owner instructions through `Phase 6A Step 9 开始` |
 | Authorization date | 2026-09-26 America/Los_Angeles; 2026-09-27 UTC |
 | Approved plan | `PHASE_6A_PLAN.md` version 1.0, delivered at `753829a79fb6aa550d58dcd6fced360399c597e9` |
 | Accepted product baseline | Phase 5 completion `f09521907558a193e6438d9acb316adb9e191195` |
 | Working branch | `phase6a-longitudinal` |
-| Current scope | Finite semantic mutations, resource boundaries, shared-work assessment and bounded complete CLI measurements |
-| Current runtime | `0.1.0.dev4`; report schema `1.2` |
+| Current scope | dev5 candidate, current documentation/traceability, canonical regression, compatibility, full reference measurements and delivery |
+| Current runtime | `0.1.0.dev5` candidate; report schema `1.2` |
 | Eventual phase target | `0.1.0.dev5`, report schema `1.2` |
 
 The instruction starts Step 1 under the delivered plan without stated exceptions.
@@ -455,3 +455,24 @@ ancestry and report assembly paths. All other product files, frozen specificatio
 Hero/longitudinal examples and report schemas remain protected. See
 `PHASE_6A_STEP_8.md` for mutation detection, every performance attempt, regression
 results and the limits of those observations.
+
+## Step 9 execution record
+
+The Theory Owner requested `Phase 6A Step 9 开始` on 2026-09-26
+America/Los_Angeles (2026-09-27 UTC), starting from accepted Step 8 commit
+`69e4e05ea19910290d38738d6ec83e3ffcdde091`. This authorizes dev5 candidate
+preparation and the final verification/handoff in plan sections 5-7.
+
+The package version advances to `0.1.0.dev5`; report schema stays `1.2`.
+Current version assertions and canonical report metadata advance together,
+with every mathematical, scope, diagnostic and privacy expectation preserved.
+The single existing source gate advances to accepted Step 8 and permits only
+the two exact version declaration edits. Existing CI schedules the supported
+matrix and delivery; the new 100k longitudinal case runs once in its own
+reference-profile pytest process. Current candidate identity checks include
+all real-Parquet cases, including source and installed longitudinal loaders.
+
+`PHASE_6A_COMPLETION.md` records actual results and remaining limitations.
+A draft PR and the existing candidate label are scheduling/delivery mechanisms;
+no main merge, tag, stable release, registry publication or Phase 6B execution
+is authorized by this step.

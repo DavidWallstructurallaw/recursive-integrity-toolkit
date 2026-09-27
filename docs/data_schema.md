@@ -87,7 +87,7 @@ Content is read only by explicit LOCAL_REF requests through PR-017 containment a
 
 The bundle returns inventory, records, optional provenance, join evidence, chronology, generation when available, capability classification, mapping evidence, resolved-content identities and diagnostics. It writes no report. Check has_errors independently of maximum level. Content/parent-family failures can coexist with independent valid metadata; fatal structural input errors raise.
 
-Hero input validation qualifies as Level 4 without metric calculation. Model longitudinal remains unavailable. Scenario declarations may establish experimental eligibility without execution. The separately invoked calculation calls below provide approved fields. CLI audit orchestrates these calls and renders reports through the separate report contract. Phase 5 adds explicit lineage/ancestry dispatch and dedicated context inputs; see the lineage contract. `report.schema.json` defines the current schema 1.1 public report.
+Hero input validation qualifies as Level 4 without metric calculation. Model longitudinal remains unavailable. Scenario declarations may establish experimental eligibility without execution. The separately invoked calculation calls below provide approved fields. CLI audit orchestrates these calls and renders reports through the separate report contract. Explicit lineage/ancestry dispatch supports dedicated context inputs; Phase 6A adds ordered selected snapshots, pair schedules and optional shared lineage through the [longitudinal contract](longitudinal_contract.md). `report.schema.json` defines the current schema 1.2 public report. Configuration remains inert during input validation.
 
 
 ## Literal field representations
