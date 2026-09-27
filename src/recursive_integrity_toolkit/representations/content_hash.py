@@ -87,6 +87,20 @@ def _payload_snapshot(resolved_content, selected, content_mode: ContentMode) -> 
     return payloads
 
 
+def select_content_representation(*, representation_name: str, representation_version: str,
+                                  normalization_profile: str) -> RepresentationSelection:
+    """Validate exact-content metadata without assigning states or reading content."""
+    if not _literal_text(representation_name) or not _literal_text(representation_version):
+        raise _representation_error(ErrorCode.CONFIG_INVALID, "exact-content identity declarations must be complete")
+    if type(normalization_profile) is not str or normalization_profile != "exact_utf8_v1":
+        raise _representation_error(ErrorCode.CONFIG_INVALID, "unsupported exact-content profile")
+    descriptor = RepresentationDescriptor(
+        representation_name, "content_hash", representation_version, "utf8_identity_then_sha256",
+        field_name="content", missing_value_policy="error", normalization_profile=normalization_profile,
+    )
+    return RepresentationSelection(descriptor, "explicit_content_configuration", ("content",))
+
+
 def assign_content_states(
     records: tuple[CanonicalRow, ...], *, dataset_versions: tuple[str, ...], scope_id: str,
     representation_name: str, representation_version: str, normalization_profile: str,
@@ -107,10 +121,8 @@ def assign_content_states(
         raise _representation_error(ErrorCode.CONFIG_INVALID, "unsupported exact-content profile")
     selected = _selected_records(records, dataset_versions)
     payloads = _payload_snapshot(resolved_content, selected, content_mode)
-    descriptor = RepresentationDescriptor(
-        representation_name, "content_hash", representation_version, "utf8_identity_then_sha256",
-        field_name="content", missing_value_policy="error", normalization_profile=normalization_profile,
-    )
+    selection = select_content_representation(representation_name=representation_name,
+        representation_version=representation_version, normalization_profile=normalization_profile)
     assignments, snapshots, keys, states = [], [], [], []
     seen_bytes = {}
     for key, values, location in selected:
@@ -127,7 +139,7 @@ def assign_content_states(
         states.append((key, "value"))
     scope = CalculationScope(dataset_versions, tuple(keys), (), "included_representation_records", scope_id)
     result = RepresentationResult(
-        RepresentationSelection(descriptor, "explicit_content_configuration", ("content",)),
+        selection,
         scope, tuple(assignments), tuple(states),
         ValidationCoverage(len(keys), len(keys), "selected_valid_records"),
         CalculationStatus.AVAILABLE if keys else CalculationStatus.UNAVAILABLE,

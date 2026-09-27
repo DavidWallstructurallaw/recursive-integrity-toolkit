@@ -1,11 +1,13 @@
 # Longitudinal comparison contract
 
-Status: **APPROVED PHASE 6A STEP 1 CONTRACT; RUNTIME IMPLEMENTATION DEFERRED**.
+Status: **APPROVED CONTRACT; STEP 2 PYTHON SELECTION IMPLEMENTED**.
 
 Authority: `PHASE_6A_PLAN.md`, P6A-D01 through P6A-D08, and
 `PHASE_6A_DECISIONS.md`. Existing definitions and Phase 3-5 meanings remain in
-force. This document fixes the forthcoming interfaces. Current package dev4 and
-schema 1.1 do not yet implement them. Code examples describe future calls.
+force. This document fixes the staged interfaces. Current package dev4 and
+schema 1.1 implement only the Python selection and declaration-compatibility
+portion. Analysis, selected lineage, config/CLI and public series reports remain
+future work. Step 2 clarifications are recorded in `PHASE_6A_DECISIONS.md`.
 
 ## 1. Scope and ownership
 
@@ -154,12 +156,15 @@ default. Standard/redacted output and exclusive output-directory rules remain.
 The following names/fields define the forthcoming record-series interface.
 Types may reuse existing immutable leaves. Constructors and consumers validate
 literal types, unique identities and binding; a caller-created object is not
-proof of correctness. No new runtime types are added in Step 1.
+proof of correctness. Step 1 added no runtime types. Step 2 implements declarations,
+mapping envelopes, snapshot scopes, pairs and selection only; options/results
+remain deferred.
 
 | Type | Required fields |
 |---|---|
 | `LongitudinalOptions` | `enabled`, `baseline`, `state_semantics`, `versions`, `mappings`; defaults as above |
 | `SnapshotDeclaration` | `dataset_version`, `representation`, `state_semantics`, `missing_state_id`, `empty_scope` (Python only, false by default) |
+| `LongitudinalMapping` | `earlier_version`, `later_version`, `declaration`; Python envelope for the approved mapping shape |
 | `LongitudinalSelection` | `primary_version`, `selected_versions`, `context_versions`, `version_order`, `selected_order`, `snapshots`, `pairs`, `max_versions`, `input_signature` |
 | `SnapshotScope` | `dataset_version`, `population_scope`, `representation_scope`, `declaration`; scopes are existing CalculationScope objects |
 | `LongitudinalPair` | `earlier_version`, `later_version`, `kinds`, `mapping`; kinds is an immutable nonempty subset of `adjacent`, `baseline` in that order |
@@ -177,7 +182,8 @@ The public computational entry points are:
 
 ```python
 select_longitudinal_versions(validation, *, declarations, baseline="none",
-                             max_versions=100) -> LongitudinalSelection
+                             max_versions=100, mappings=()) -> LongitudinalSelection
+validate_longitudinal_selection(validation, selection) -> LongitudinalSelection
 analyze_longitudinal(validation, *, selection, lineage=False,
                      tail_options=None, lineage_limits=None) -> LongitudinalResult
 analyze_selected_lineage(validation, *, selection, limits=None) -> SelectedLineageResult
@@ -190,6 +196,14 @@ Input-only modules cannot import that analytical coordinator. Per-snapshot
 representation validation constructs final representation scopes during analysis;
 selection need only bind complete population scopes and declarations before then.
 Do not fabricate an empty representation scope to imply that assignment ran.
+
+Step 2 retains `baseline` in the selection and adds declaration-only
+`compatibility`/`reason_codes` to each pair. `pair.status` reflects that limited
+check. A compatible basis says nothing about distribution availability or map
+totality on actual states. Malformed explicit maps and missing/conflicting
+chronology raise structured input errors. Valid independent snapshots remain
+usable by the existing APIs; preserving them in a failed series report belongs
+to later orchestration. The selector has no file access or analytical dispatch.
 
 ### 3.1 Selection invariants and empty scopes
 
@@ -206,6 +220,12 @@ snapshot with `empty_scope=true` only when no records of that version are loaded
 the version is separately declared in the chronology, and no context role claims
 it. CLI empty files remain input/selection errors. Selected empty declarations
 remain explicit in the selection, never added as fake loaded rows or versions.
+
+For the Python empty-snapshot path, `primary_version` remains the nonempty input
+primary and is latest among loaded selected versions. An explicitly identified
+empty snapshot can follow that primary. This does not relax the CLI rule, where
+every selected file is nonempty. Empty declarations require chronology membership
+and explicit `empty_scope=true`; ordinary unloaded order entries remain unselected.
 
 For empty endpoints, a narrow compatibility helper reuses existing descriptor,
 meaning and directed mapping checks with selected chronology. It does not forge

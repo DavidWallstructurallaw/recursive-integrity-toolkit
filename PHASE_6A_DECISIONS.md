@@ -2,14 +2,14 @@
 
 | Field | Value |
 |---|---|
-| Status | APPROVED; Step 1 contract record |
-| Authority | Theory Owner instruction: `phase 6a step 1开始` |
+| Status | APPROVED; Step 2 selection implementation |
+| Authority | Theory Owner instructions: `phase 6a step 1开始`; `Phase 6A Step 2继续` |
 | Authorization date | 2026-09-26 America/Los_Angeles; 2026-09-27 UTC |
 | Approved plan | `PHASE_6A_PLAN.md` version 1.0, delivered at `753829a79fb6aa550d58dcd6fced360399c597e9` |
 | Accepted product baseline | Phase 5 completion `f09521907558a193e6438d9acb316adb9e191195` |
 | Working branch | `phase6a-longitudinal` |
-| Current scope | Contracts, independent acceptance inputs and affected current checks |
-| Current runtime | `0.1.0.dev4`, report schema `1.1`; unchanged by Step 1 |
+| Current scope | Ordered snapshot selection, pair schedule, declaration compatibility and affected checks |
+| Current runtime | `0.1.0.dev4`, report schema `1.1`; version metadata unchanged |
 | Eventual phase target | `0.1.0.dev5`, report schema `1.2` |
 
 The instruction starts Step 1 under the delivered plan without stated exceptions.
@@ -32,8 +32,8 @@ to synchronize project work continues on the planned development branch.
 
 The exact proposed runtime types, field names, serialized configuration, public
 report inventory, statuses, reasons and edge cases are fixed in
-[docs/longitudinal_contract.md](docs/longitudinal_contract.md). They are future
-implementation contracts. Step 1 does not add these types to the running package,
+[docs/longitudinal_contract.md](docs/longitudinal_contract.md). They are staged
+implementation contracts. Step 1 did not add these types to the running package,
 accept new CLI flags, or claim that schema 1.2 already exists.
 
 ## Step 1 clarifications
@@ -80,7 +80,7 @@ kernels. Future series expectations remain independent acceptance targets.
 Passing Step 1 checks does not certify later orchestration, multi-target lineage,
 new CLI/config parsing or schema 1.2.
 
-## Current verification boundary
+## Step 1 verification boundary
 
 Update the single existing accepted Git reference to the delivered plan commit
 `753829a`. Step 1's product implementation allowlist is empty. All runtime,
@@ -95,5 +95,44 @@ order, representation, provenance or lineage checks may run where they validate
 the actual new acceptance inputs. Full candidate matrices, package rebuilds,
 100k measurements and publication are outside this step.
 
-See [PHASE_6A_STEP_1.md](PHASE_6A_STEP_1.md) for actual completed changes and
-verification. Step 2 remains the next separately authorized implementation step.
+See [PHASE_6A_STEP_1.md](PHASE_6A_STEP_1.md) for its completed changes and
+verification.
+
+## Step 2 authorization and interface clarifications
+
+The Theory Owner requested `Phase 6A Step 2继续` on 2026-09-27 UTC. Work starts
+from Step 1 commit `6f5cc9c64a93ed6442a867f869037ec57f1d2265`. It implements the
+Python selection and declaration-compatibility boundary. Step 3 calculations,
+config/CLI dispatch, schema 1.2 and candidate publication remain deferred.
+
+- `select_longitudinal_versions` accepts additive `mappings=()` containing
+  immutable `LongitudinalMapping` endpoint/declaration envelopes. This supplies
+  the pair mappings already required by the approved contract, without accepting
+  configuration or executable mapping adapters early.
+- Selection retains `baseline`. Each pair additionally retains declaration-only
+  `compatibility` and `reason_codes`. A differing unmapped basis retains the
+  scheduled unavailable pair. Invalid explicit mappings are input errors.
+  Actual state coverage, distribution availability and numerical results are
+  not certified by a compatible declaration.
+- The Python primary remains the actual nonempty primary role, latest among
+  loaded selected versions. A separately identified empty snapshot may precede
+  or follow it. CLI still requires every selected file to be nonempty and its
+  primary to be the latest selected version. No input role or loaded inventory
+  is modified to represent a Python empty snapshot.
+- Missing/conflicting chronology raises a structured selection error. The
+  original snapshots remain intact for independent existing APIs. Later analysis
+  and CLI integration must preserve those independent results when recording a
+  failed cross-version family; Step 2 does not claim that orchestration yet.
+- `validate_longitudinal_selection` reconstructs the selection against current
+  canonical records/provenance, complete populations, roles, chronology and
+  declarations before a consumer may reuse it. Selected lineage will still need
+  its inherited parent/graph binding and validation in Step 5.
+
+The current verification reference advances to `6f5cc9c`. Its four authorized
+product paths are `metrics/longitudinal.py`, `representations/compatibility.py`,
+`representations/content_hash.py` and `errors.py`. The existing gate admits the
+one new module only through that explicit path, requires it to be a regular
+file, and retains all unrelated source/schema/Hero/version protections. No new
+phase dispatcher or historical source migration was added.
+
+See [PHASE_6A_STEP_2.md](PHASE_6A_STEP_2.md) for actual checks and limitations.

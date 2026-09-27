@@ -7,17 +7,17 @@
 | Project | Recursive Integrity Toolkit |
 | Phase | Phase 6A: longitudinal dataset comparison |
 | Document version / date | 1.0 / 2026-09-26 |
-| Status | APPROVED; Step 1 authorized |
+| Status | APPROVED; Steps 1 and 2 authorized |
 | Theory Owner | Xiangyu Guo |
 | Accepted starting commit | `f09521907558a193e6438d9acb316adb9e191195` |
 | Accepted source tree | `da6b0bc3ab64b417ef5be86050f9f932149bc712` |
 | Baseline branch / package / report schema | `phase5-lineage` / `0.1.0.dev4` / `1.1` |
 | Implementation branch | `phase6a-longitudinal`, from plan commit `753829a79fb6aa550d58dcd6fced360399c597e9` on the accepted Phase 5 history |
 | Proposed completed-phase package / schema | `0.1.0.dev5` / `1.2` |
-| Current authorization | Plan approved through explicit Step 1 instruction on 2026-09-26 America/Los_Angeles |
+| Current authorization | Step 2 continuation explicitly requested on 2026-09-27 UTC |
 | Merge, tag, publication authorization | None |
 
-The Theory Owner instructed “phase 6a step 1开始” on 2026-09-26 America/Los_Angeles (2026-09-27 UTC), authorizing Step 1 under this plan with no stated exceptions. P6A-D01 through P6A-D08 are approved. Execution continues one authorized step at a time. See `PHASE_6A_DECISIONS.md` and `docs/longitudinal_contract.md` for the Step 1 contract record. This authorization does not start Step 2 or Phase 6B.
+The Theory Owner instructed “phase 6a step 1开始” on 2026-09-26 America/Los_Angeles (2026-09-27 UTC), authorizing Step 1 under this plan with no stated exceptions. P6A-D01 through P6A-D08 are approved. The subsequent instruction “Phase 6A Step 2继续” authorizes Step 2 only. Execution continues one authorized step at a time. See `PHASE_6A_DECISIONS.md` and `docs/longitudinal_contract.md` for the contract record. Step 3 and Phase 6B have not started.
 
 ## 1. Starting point and authority
 

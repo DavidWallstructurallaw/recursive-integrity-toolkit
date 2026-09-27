@@ -28,7 +28,7 @@ def protected_copy(repo_root, tmp_path):
 @pytest.mark.parametrize("mutation", ["formula", "new_module", "deleted_module",
                                      "nested_metadata", "similar_metadata"])
 def test_current_scope_rejects_unauthorized_product_changes(current_tools, protected_copy, mutation):
-    """Lineage report integration does not authorize unrelated product changes."""
+    """Current selection work does not authorize unrelated product changes."""
     verify = current_tools["verify_source_scope"]
     generated = protected_copy / "src/recursive_integrity_toolkit.egg-info"
     generated.mkdir(exist_ok=True)
@@ -52,6 +52,17 @@ def test_current_scope_rejects_unauthorized_product_changes(current_tools, prote
         (extra / "unauthorized.py").write_text("def score(): return 1\n", encoding="utf-8")
     with pytest.raises(ValueError):
         verify(protected_copy)
+
+
+@pytest.mark.parametrize("mutation", ["missing", "symlink"])
+def test_current_authorized_new_module_must_be_a_regular_file(current_tools, protected_copy, mutation):
+    current_tools["verify_source_scope"](protected_copy)
+    target = protected_copy / "src/recursive_integrity_toolkit/metrics/longitudinal.py"
+    target.unlink()
+    if mutation == "symlink":
+        target.symlink_to(target.with_name("diversity.py"))
+    with pytest.raises(ValueError):
+        current_tools["verify_source_scope"](protected_copy)
 
 
 def test_specification_changes_cannot_self_authorize(current_tools, repo_root, tmp_path):

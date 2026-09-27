@@ -651,7 +651,7 @@ distribution = importlib.metadata.distribution('recursive-integrity-toolkit')
 assert distribution.version == package.__version__ == '0.1.0.dev4'
 members = {str(p).replace('\\', '/') for p in distribution.files or ()}
 modules = sorted(p for p in installed.rglob('*.py'))
-assert len(modules) == 40
+assert len(modules) == 41
 hashes = {p.relative_to(installed).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in modules}
 assert all('recursive_integrity_toolkit/' + p in members for p in hashes), 'Package must be installed from a wheel'
 resources = sorted(p for p in (installed / 'data').rglob('*') if p.is_file())

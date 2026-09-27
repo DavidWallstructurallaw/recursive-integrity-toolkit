@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6A Step 1 is contract-only and opens no product implementation paths.
+Phase 6A Step 2 opens only selection and shared representation declaration checks.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
@@ -25,9 +25,14 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "753829a79fb6aa550d58dcd6fced360399c597e9"
+ACCEPTED_COMMIT = "6f5cc9c64a93ed6442a867f869037ec57f1d2265"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/")
-CURRENT_IMPLEMENTATION_PATHS = frozenset()
+CURRENT_IMPLEMENTATION_PATHS = frozenset({
+    "src/recursive_integrity_toolkit/metrics/longitudinal.py",
+    "src/recursive_integrity_toolkit/representations/compatibility.py",
+    "src/recursive_integrity_toolkit/representations/content_hash.py",
+    "src/recursive_integrity_toolkit/errors.py",
+})
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",
     "test_PR002_parquet_real_row_limit",
@@ -73,6 +78,10 @@ def verify_source_scope(root: Path = ROOT) -> dict:
         current = _regular_file(root, name).read_bytes()
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
             raise ValueError(f"Unauthorized product mutation outside the current step scope: {name}")
+    # New authorized modules must exist as regular files; deletions stay blocked.
+    authorized_inventory = set(expected) | CURRENT_IMPLEMENTATION_PATHS
+    for name in CURRENT_IMPLEMENTATION_PATHS - set(expected):
+        _regular_file(root, name)
     for prefix in PROTECTED_PREFIXES:
         paths = list((root / prefix).rglob("*"))
         if (root / prefix).is_symlink() or any(path.is_symlink() for path in paths):
@@ -83,11 +92,11 @@ def verify_source_scope(root: Path = ROOT) -> dict:
                   # It is outside the package; all product paths stay protected.
                   and not path.relative_to(root).as_posix().startswith(
                       "src/recursive_integrity_toolkit.egg-info/")}
-        if actual != {name for name in expected if name.startswith(prefix)}:
+        if actual != {name for name in authorized_inventory if name.startswith(prefix)}:
             raise ValueError(f"Unauthorized product file-set mutation during the current step: {prefix}")
-    return {"protected_product_files": len(expected) - len(CURRENT_IMPLEMENTATION_PATHS),
+    return {"protected_product_files": len(set(expected) - CURRENT_IMPLEMENTATION_PATHS),
             "authorized_implementation_files": len(CURRENT_IMPLEMENTATION_PATHS),
-            "product_file_inventory": "unchanged"}
+            "product_file_inventory": "current_authorized"}
 
 
 def verify_frozen_specifications(root: Path = ROOT) -> dict:
