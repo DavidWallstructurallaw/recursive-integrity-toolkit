@@ -1840,6 +1840,10 @@ def _longitudinal_report(payload, bundle, value, failure):
             (["tail"] if source.tail_options is not None else []) + (["lineage"] if source.lineage_requested else []),
         "snapshot_statuses": [], "comparison_statuses": []}
     identities, basis_ids, snapshot_map, bases = {}, {}, {}, {}
+    roles_by_version = {}
+    if snapshots:
+        for record in bundle.records:
+            roles_by_version.setdefault(record.record_key.dataset_version, set()).add(record.location.file_role.value)
     for ordinal, snapshot in enumerate(snapshots, 1):
         snapshot_id = f"s{ordinal:04d}"
         version = snapshot.scope.dataset_version
@@ -1856,7 +1860,7 @@ def _longitudinal_report(payload, bundle, value, failure):
         identities[version], basis_ids[version], snapshot_map[version] = snapshot_id, basis_id, snapshot
         population_id = snapshot_id + ".population"
         representation_id = snapshot_id + ".representation" if snapshot.scope.representation_scope is not None else None
-        roles = {record.location.file_role.value for record in bundle.records if record.record_key.dataset_version == version}
+        roles = roles_by_version.get(version, ())
         longitudinal["snapshots"].append({"snapshot_id": snapshot_id, "dataset_version": version,
             "ordinal": ordinal, "input_role": "declared_empty" if declaration.empty_scope else next(iter(roles)),
             "empty_scope": declaration.empty_scope, "population_scope_id": population_id,

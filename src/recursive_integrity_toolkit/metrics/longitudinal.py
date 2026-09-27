@@ -22,7 +22,7 @@ Limits:
     one shared graph/root analysis. No I/O, simulation, report or CLI dispatch.
 
 Current phase status:
-    Phase 6A Step 5 shared selected lineage and observed changes. Import-safe.
+    Phase 6A Step 8 shares invocation-local validated snapshot inputs. Import-safe.
 """
 from __future__ import annotations
 
@@ -1104,14 +1104,59 @@ def _pair_provenance_errors(earlier, later):
                                *_local_provenance_errors(later.provenance))))
 
 
-def _snapshot_provenance(snapshot, validation):
+def _snapshot_inputs(validation, versions, *, joined=None):
+    """Group complete inputs once and project one freshly checked owner join.
+
+    This private workspace lives only inside one calculation/consumer call.
+    Required-field errors retain their full-input visibility; other notices and
+    coverage stay version-local. No retained input join is trusted as a cache.
+    """
+    if joined is None:
+        promoted = _promotions(validation)
+        joined = join_provenance(validation.records, validation.provenance,
+            strict_mode=bool(promoted), strict_warning_codes=promoted)
+    rows = {version: [] for version in versions}
+    matches = {version: [] for version in versions}
+    messages = {version: [] for version in versions}
+    for row in validation.records:
+        version = row.record_key.dataset_version
+        if version in rows:
+            rows[version].append(row)
+    for match in joined.matches:
+        version = match.record_key.dataset_version
+        if version in matches:
+            matches[version].append(match)
+    required_errors = []
+    for message in joined.messages:
+        if message.code == ErrorCode.SCHEMA_REQUIRED_FIELD.value:
+            required_errors.append(message)
+        elif message.record_key.dataset_version in messages:
+            messages[message.record_key.dataset_version].append(message)
+    required_errors = tuple(required_errors)
+    inputs = {}
+    for version in versions:
+        selected = tuple(matches[version])
+        scoped = None
+        if selected:
+            missing = tuple(match.record_key for match in selected if match.provenance is None)
+            present = tuple(match.provenance for match in selected if match.provenance is not None)
+            denominator = len(selected)
+            basis = "all_valid_records_in_selected_dataset_scope"
+            scoped = ProvenanceJoinResult((version,), tuple(match.record_key for match in selected),
+                joined.provenance_supplied, selected, missing,
+                ValidationCoverage(len(present), denominator, basis),
+                ValidationCoverage(sum(row.required_fields_valid for row in present), denominator, basis),
+                ValidationCoverage(sum(row.grounding_known for row in present), denominator, basis),
+                required_errors + tuple(messages[version]), joined.promoted_warning_codes)
+        inputs[version] = (tuple(rows[version]), scoped)
+    return inputs
+
+
+def _snapshot_provenance(snapshot, validation, joined=None):
     if not snapshot.population_scope.included_record_keys:
         return None, None
-    promoted = _promotions(validation)
-    # Keep the owner join's full-input identity/error checks. Only coverage and
-    # composition are scoped. Context and other snapshots never enter N.
-    joined = join_provenance(validation.records, validation.provenance,
-        dataset_versions=(snapshot.dataset_version,), strict_mode=bool(promoted), strict_warning_codes=promoted)
+    if joined is None:
+        _, joined = _snapshot_inputs(validation, (snapshot.dataset_version,))[snapshot.dataset_version]
     provenance = summarize_provenance(joined, scope=_provenance_scope(snapshot))
     return provenance, direct_closure_exposure(provenance)
 
@@ -1217,7 +1262,7 @@ def _count(name, count, snapshot, *, representation=None, reasons=()):
                              None if reasons else count, reasons)
 
 
-def _snapshot_distribution(snapshot, records, ordinal, validation):
+def _snapshot_distribution(snapshot, records, ordinal, validation, joined=None):
     declaration = snapshot.declaration
     config = declaration.representation
     distribution, messages, reasons = None, (), ()
@@ -1251,7 +1296,7 @@ def _snapshot_distribution(snapshot, records, ordinal, validation):
     if distribution is not None:
         reasons = distribution.unweighted.reason_codes
     status = ExecutionStatus.PARTIAL if reasons else ExecutionStatus.COMPLETED
-    provenance, bounds = _snapshot_provenance(snapshot, validation)
+    provenance, bounds = _snapshot_provenance(snapshot, validation, joined)
     provenance_family, direct_family = _snapshot_evidence_families(provenance, bounds)
     if provenance is not None:
         messages += provenance.validation_messages
@@ -1392,11 +1437,9 @@ def analyze_longitudinal(
         lineage_limits = _limits(LineageLimits() if lineage_limits is None else lineage_limits)
     options = None if tail_options is None else _tail_options(tail_options)
     selection = validate_longitudinal_selection(validation, selection)
-    grouped = {version: [] for version in selection.selected_versions}
-    for row in validation.records:
-        if row.record_key.dataset_version in grouped:
-            grouped[row.record_key.dataset_version].append(row)
-    snapshots = tuple(_snapshot_distribution(scope, tuple(grouped[scope.dataset_version]), index, validation)
+    inputs = _snapshot_inputs(validation, selection.selected_versions)
+    snapshots = tuple(_snapshot_distribution(scope, inputs[scope.dataset_version][0], index, validation,
+                                            inputs[scope.dataset_version][1])
                       for index, scope in enumerate(selection.snapshots, 1))
     shared, usage, lineage_signature = None, None, None
     if lineage:
@@ -1531,16 +1574,13 @@ def _handoff_distribution(validation, snapshot, rows):
     return messages
 
 
-def _handoff_provenance(validation, snapshot):
+def _handoff_provenance(validation, snapshot, joined):
     """Validate source declarations, direct classes, coverage and owner metadata."""
     from .provenance import _checked_join, _composition, _direct, _metadata, _scalar
     from .bounds import _metric
 
     if not snapshot.record_count.value:
         return ()
-    promoted = _promotions(validation)
-    joined = join_provenance(validation.records, validation.provenance,
-        dataset_versions=(snapshot.scope.dataset_version,), strict_mode=bool(promoted), strict_warning_codes=promoted)
     scope, entries, messages = _checked_join(joined, _provenance_scope(snapshot.scope))
     total, missing = len(entries), len(joined.missing_record_keys)
     coverages = (joined.provenance_row_coverage, joined.provenance_required_field_coverage,
@@ -1592,8 +1632,23 @@ def validate_longitudinal_snapshot(validation: BundleValidationResult, snapshot:
         raise _invalid("snapshot handoff requires typed validation and summary")
     replace(snapshot)
     replace(snapshot.scope)
+    version = snapshot.scope.dataset_version
+    if snapshot.scope.population_scope.included_record_keys:
+        rows, joined = _snapshot_inputs(validation, (version,))[version]
+    else:
+        # Standalone explicitly empty Python snapshots have no provenance join.
+        rows = tuple(row for row in validation.records if row.record_key.dataset_version == version)
+        joined = None
+    _validate_snapshot(validation, snapshot, rows, joined)
+
+
+def _validate_snapshot(validation, snapshot, rows, joined):
+    """Check one snapshot using this consumer call's fresh, complete inputs."""
+    if type(validation) is not BundleValidationResult or type(snapshot) is not SnapshotSummary:
+        raise _invalid("snapshot handoff requires typed validation and summary")
+    replace(snapshot)
+    replace(snapshot.scope)
     replace(snapshot.scope.declaration)
-    rows = tuple(row for row in validation.records if row.record_key.dataset_version == snapshot.scope.dataset_version)
     keys = tuple(key for key, _, _ in _selected_records(rows, (snapshot.scope.dataset_version,)))
     scope = snapshot.scope.population_scope
     if (scope.included_record_keys != keys or scope.excluded_record_keys
@@ -1603,7 +1658,7 @@ def validate_longitudinal_snapshot(validation: BundleValidationResult, snapshot:
             or rows and any(row.location.file_role not in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE)
                             for row in rows)):
         raise _invalid("snapshot handoff must preserve its complete selected input population")
-    messages = _handoff_distribution(validation, snapshot, rows) + _handoff_provenance(validation, snapshot)
+    messages = _handoff_distribution(validation, snapshot, rows) + _handoff_provenance(validation, snapshot, joined)
     _handoff_equal(snapshot.family_statuses[3],
         _family("tail", ExecutionStatus.NOT_REQUESTED, ("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",)),
         "snapshot tail execution")
@@ -1766,9 +1821,10 @@ def validate_longitudinal_result(validation: BundleValidationResult, *, result: 
         raise _invalid("longitudinal handoff requires its typed result")
     validate_longitudinal_selection(validation, result.selection)
     replace(result)
+    inputs = _snapshot_inputs(validation, result.selection.selected_versions)
     snapshots = {}
     for ordinal, snapshot in enumerate(result.snapshots, 1):
-        validate_longitudinal_snapshot(validation, snapshot)
+        _validate_snapshot(validation, snapshot, *inputs[snapshot.scope.dataset_version])
         scope = snapshot.scope.representation_scope
         if scope is not None and scope.scope_id != f"longitudinal-representation-{ordinal:04d}":
             raise _invalid("representation scope reference disagrees with selected chronology")
@@ -1925,7 +1981,8 @@ def _failed_request(validation, declarations, mappings, baseline, max_versions, 
             item.file_role.value, item.file_path, item.field) for item in retained),
         tuple((entry.role.value, str(entry.path), entry.sha256, entry.size_bytes, entry.row_count)
               for entry in validation.inventory) if retained else ()))
-    return tuple(scopes), context, failures, reasons, signature, options
+    inputs = _snapshot_inputs(validation, tuple(scope.dataset_version for scope in scopes), joined=joined)
+    return tuple(scopes), context, failures, reasons, signature, options, inputs
 
 
 def analyze_longitudinal_failure(
@@ -1941,13 +1998,10 @@ def analyze_longitudinal_failure(
     order identifies rows only. Admission failures perform no snapshot work;
     no failure path invents chronology, compares endpoints, or runs lineage.
     """
-    scopes, context, failures, reasons, signature, options = _failed_request(
+    scopes, context, failures, reasons, signature, options, inputs = _failed_request(
         validation, declarations, mappings, baseline, max_versions, lineage, tail_options, selection_errors)
-    grouped = {scope.dataset_version: [] for scope in scopes}
-    for row in validation.records:
-        if row.record_key.dataset_version in grouped:
-            grouped[row.record_key.dataset_version].append(row)
-    snapshots = tuple(_snapshot_distribution(scope, tuple(grouped[scope.dataset_version]), index, validation)
+    snapshots = tuple(_snapshot_distribution(scope, inputs[scope.dataset_version][0], index, validation,
+                                            inputs[scope.dataset_version][1])
                       for index, scope in enumerate(scopes, 1))
     if lineage:
         snapshots = tuple(replace(snapshot, family_statuses=(*snapshot.family_statuses[:-1],
@@ -1962,7 +2016,7 @@ def validate_longitudinal_failure(validation: BundleValidationResult, *, result:
     if type(result) is not LongitudinalFailureResult:
         raise _invalid("consumer requires a typed failed series")
     replace(result)
-    scopes, context, failures, reasons, signature, options = _failed_request(validation,
+    scopes, context, failures, reasons, signature, options, inputs = _failed_request(validation,
         result.declarations, result.mappings, result.baseline, result.max_versions,
         result.lineage_requested, result.tail_options, result.selection_errors)
     if (len(scopes) != len(result.snapshots) or result.context_versions != context
@@ -1975,7 +2029,7 @@ def validate_longitudinal_failure(validation: BundleValidationResult, *, result:
         if (snapshot.scope.population_scope != scope.population_scope
                 or snapshot.scope.declaration != scope.declaration):
             raise _invalid("failed series snapshot differs from its complete declaration")
-        validate_longitudinal_snapshot(validation, snapshot)
+        _validate_snapshot(validation, snapshot, *inputs[snapshot.scope.dataset_version])
         expected = (_family("lineage", ExecutionStatus.FAILED, reasons) if result.lineage_requested else
                     _family("lineage", ExecutionStatus.NOT_REQUESTED, ("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",)))
         if snapshot.family_statuses[-1] != expected:

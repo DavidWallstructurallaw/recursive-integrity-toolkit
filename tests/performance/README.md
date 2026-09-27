@@ -1,11 +1,11 @@
 # Performance measurements
 
-Current scheduling: Phase 5 candidate verification runs this directory once on
-the designated Ubuntu/Python 3.12 reference profile. Compatibility cells run the
-canonical suite without this performance directory. The existing complete 100k
-report benchmark remains required. Phase 5 Step 9 replaces the sparse-lineage
-placeholder with an actual 100k deep-chain API measurement and bounded complete
-CLI lineage measurements. These workloads have distinct scopes.
+Current scheduling: Phase 6A Step 8 executes bounded longitudinal preflights.
+Step 9 runs the actual 100k longitudinal workload once on the designated
+Ubuntu/Python 3.12 reference profile, alongside retained candidate gates.
+Compatibility cells run bounded structural cases outside this performance
+directory. The existing complete 100k metadata benchmark and 100k deep-chain
+ancestry API measurement retain their distinct scopes.
 
 Phase 4 Step 10 extends the retained Phase 3 calculation observations with public
 CLI audit measurements ending only after both `report.json` and `report.md` have
@@ -34,6 +34,123 @@ with `--lineage` in three fresh, untraced processes. It additionally asserts
 G=8, C=U=0, five roots, HHI=1/4, four effective roots and lineage bounds `[0,0]`.
 All three outer wall times are reviewed against the same under-five-second
 reference target. No fastest-run selection or universal laptop guarantee applies.
+
+## Phase 6A complete longitudinal reports
+
+`test_longitudinal_hero_complete_reports` uses the unchanged canonical Hero
+files with explicit longitudinal mode, with and without lineage. Each mode
+retains three fresh untraced attempts, including full JSON and Markdown
+publication. The expected supports remain 8 and 5, diversity 7/8 and 3/4,
+support retention 5/8, and direct closure change +1/2. Lineage additionally
+requires roots 8 to 5, HHI 1/8 to 1/4 and effective roots 8 to 4. Every outer
+wall time is reported against the existing under-five-second reference target;
+a miss requires review and remains in the evidence.
+
+`test_longitudinal_bounded_complete_reports` and
+`test_longitudinal_100k_complete_reports` share one deterministic generator.
+The loaded total includes exactly 100 context anchors and three equally sized
+selected versions. Thus totals 1,000, 10,000 and 100,000 have respectively 300,
+3,300 and 33,300 records per selected version. Step 8 selects the first two
+sizes. The 100,000-record test remains a separately selected Step 9 candidate
+measurement; a bounded observation never replaces that measurement.
+
+For selected version indices 0, 1, 2, topic and target-supported anchor counts
+are respectively 100, 50, 25. Row `i` has topic `s{i % support:03d}` and one
+parent `roots::r{i % support:03d}`. All context rows are confirmed human,
+parentless, explicitly externally grounded anchors. Version 1 is human and
+explicitly grounded with the accepted one-parent carryover declaration.
+Version 2 alternates those declarations on even rows with confirmed synthetic,
+ungrounded, generated records on odd rows. Version 3 uses the latter synthetic
+declaration throughout. Every target has generation 1; context has generation
+0. Required content is fixed synthetic metadata and receives no content
+similarity analysis. Comparison file arguments are deliberately reversed;
+explicit configuration supplies chronology. Baseline `first` requests the
+three unique pairs v1/v2, v1/v3 and v2/v3.
+
+Independent exact-rational expectations, authored directly from those rules:
+
+| Quantity | v1 | v2 | v3 |
+| --- | ---: | ---: | ---: |
+| Topic support | 100 | 50 | 25 |
+| Diversity | 99/100 | 49/50 | 24/25 |
+| Human / synthetic shares | 1 / 0 | 1/2 / 1/2 | 0 / 1 |
+| Provenance row / required / grounding coverage | 1 / 1 / 1 | 1 / 1 / 1 | 1 / 1 / 1 |
+| Direct closure lower and upper | 0 | 1/2 | 1 |
+| Grounded / closed / unresolved target counts | N / 0 / 0 | N / 0 / 0 | N / 0 / 0 |
+| Distinct roots | 100 | 50 | 25 |
+| HHI | 1/100 | 1/50 | 1/25 |
+| Effective roots | 100 | 50 | 25 |
+| Lineage lower / upper / width | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 |
+
+All source-share, coverage, direct-bound and lineage deltas are checked as
+later minus earlier against these independent quantities. Support disappearance
+and retention are checked exactly. For loaded total T, graph admissions are T
+nodes and T-100 edges, stored root memberships are T, union visits are T-100,
+and maximum depth is 1. The selected total is T-100; the 100 context anchors
+never enter a snapshot denominator. The ordinary primary-only lineage summary
+counts both comparison populations and the anchors as its context, which is
+reported separately from the series context count.
+
+No resource limits are raised: graph defaults remain 200,000 nodes, 1,000,000
+edges, 1,000,000 root memberships and 10,000,000 root-union visits. The existing
+measurement fixture records construction-excluded fresh-process wall time,
+CLI interval, actual process peak RSS, both report sizes, exact input bytes and
+hashes, environment, command and all stdout/stderr. An additional ordinary
+JUnit property records selected/context populations, versions, pairs, state
+counts, graph work and the separately timed input construction. There is no
+allocation tracing for these workloads, no fastest-run selection and no new
+benchmark service or registry.
+
+Fresh interpreters can still report an inherited pre-CLI RSS high-water floor
+on systems where that counter survives fork/exec. Both before/after values are
+retained. A report that finishes below that floor cannot establish the smaller
+workload's own peak; disclose the floor and do not subtract it. This occurred
+for the final compact and Hero measurements after parent-side parsing of the
+10,000-record report. Their wall times and scientific checks remain complete,
+while their recorded RSS is explicitly subject to that inherited floor. The
+1,000- and 10,000-record runs exceeded their own pre-CLI floors. The standalone
+100k selection starts a separate pytest process for its single workload.
+
+Bounded reports have a 300-second process guard. The full reference workload
+has a provisional 1,800-second guard, to be reviewed with its actual Step 9
+measurement. These limits bound test operation; they do not establish a new
+runtime or RSS SLA, extrapolate a measured 100k result, or change analytical
+resource defaults. Full attempts remain recorded even when a guard expires.
+
+Exact selection commands:
+
+```sh
+# Step 8, initial small workload and all six Hero attempts.
+python -m pytest tests/performance/test_longitudinal_runtime.py -k 'hero or 1000]' --junitxml=longitudinal-small.xml
+# Step 8, bounded larger preflight after reviewing the small observation.
+python -m pytest 'tests/performance/test_longitudinal_runtime.py::test_longitudinal_bounded_complete_reports[10000]' --junitxml=longitudinal-10k.xml
+# Step 9 reference profile, actual full workload once.
+python -m pytest tests/performance/test_longitudinal_runtime.py -k 100k --junitxml=longitudinal-100k.xml
+```
+
+See [Step 8 results](../../PHASE_6A_STEP_8.md) for the actual preflight evidence
+and the scoped investigation of repeated work.
+
+`test_longitudinal_many_versions_complete_reports` retains one untraced complete
+CLI observation for the compact profile-investigation workload: 20 selected
+versions of 10 rows each plus 20 context anchors, 220 total loaded rows. Each
+selected version contains ten uniformly occupied topics and one reference per
+row to the corresponding first ten context anchors. All selected provenance is
+confirmed synthetic and directly ungrounded. All context is confirmed human and
+externally grounded. Thus each snapshot has support 10, diversity 9/10, direct
+closure [1,1], G=10, C=U=0, ten external roots, HHI=1/10, ten effective roots,
+and lineage closure [0,0]. All available deltas are zero. Baseline `first`
+produces 37 unique comparisons, comprising 19 adjacent and 19 baseline pairs
+with their first pair shared. Shared graph work is 220 nodes, 200 edges, 220
+root memberships and 200 union visits at depth 1. The test has a 180-second
+guard and uses exactly the input bytes of the bounded cProfile investigation.
+The profiled observations are labeled separately and never compared as ordinary
+untraced wall times. Structural tests additionally verify pair scheduling and
+shared work independently of runtime.
+
+```sh
+python -m pytest tests/performance/test_longitudinal_runtime.py -k many_versions --junitxml=longitudinal-many-versions.xml
+```
 
 ## Current sparse lineage and fan-in
 
@@ -165,4 +282,5 @@ The inherited Phase 3 calculation-only timings do not measure the Phase 4 comple
 report path. Comparable runtime growth above 20% or memory growth above 50%
 requires review. Every attempt, including failed preliminary fixture construction
 or target misses, belongs in execution evidence. These observations cover the
-implemented audit and explicit Phase 5 lineage scope; Phase 6 behavior remains deferred.
+implemented audit, explicit lineage and the selected Phase 6A measurement scope.
+Phase 6B experiments and model-performance claims remain outside these workloads.

@@ -1197,6 +1197,7 @@ def _validate_selected_structure(graph, cycles, certificate):
     if set(owner_ranks.values()) != set(range(len(owner_ranks))):
         raise _invalid("selected lineage quotient ranks must uniquely cover every component")
     affected, members = set(cycles.affected_record_keys), set(cycles.cycle_member_record_keys)
+    affected_descendants = affected - members
     positions = {key: index for index, key in enumerate(cycles.topological_order)}
     for child in graph.node_keys:
         parents = graph.parents_by_child[child]
@@ -1207,7 +1208,7 @@ def _validate_selected_structure(graph, cycles, certificate):
                 raise _invalid("selected lineage affected scope omits a cycle descendant")
             if child not in affected and positions[parent] >= positions[child]:
                 raise _invalid("selected lineage topology contradicts an accepted edge")
-        if child in affected - members and not any(parent in affected for parent in parents):
+        if child in affected_descendants and not any(parent in affected for parent in parents):
             raise _invalid("selected lineage affected scope includes an unsupported record")
         reasons = _local_depth_reasons(graph, child)
         if child in affected:

@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6A Step 7 opens CLI/configuration and packaged longitudinal examples.
+Phase 6A Step 8 narrows changes to measured shared-work bottlenecks.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
@@ -25,7 +25,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "edbcf9ac2ba152f17db6f722750275a1cb235cb3"
+ACCEPTED_COMMIT = "9897ac7f531c3b1cbcd3b04ef4205f2c277540df"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/")
 LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
                       "provenance.jsonl", "config.json", "version_order.json",
@@ -33,13 +33,7 @@ LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl"
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
     "src/recursive_integrity_toolkit/metrics/longitudinal.py",
     "src/recursive_integrity_toolkit/lineage/ancestry.py",
-    "src/recursive_integrity_toolkit/cli.py",
-    "src/recursive_integrity_toolkit/config.py",
-    "schemas/config.schema.json",
-    "pyproject.toml",
-    "examples/longitudinal/README.md",
-    *(f"examples/longitudinal/{name}" for name in LONGITUDINAL_NAMES),
-    *(f"src/recursive_integrity_toolkit/data/longitudinal/{name}" for name in LONGITUDINAL_NAMES),
+    "src/recursive_integrity_toolkit/reports/assembly.py",
 })
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",

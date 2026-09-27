@@ -2,13 +2,13 @@
 
 | Field | Value |
 |---|---|
-| Status | APPROVED; Step 7 CLI, configuration and installed examples |
-| Authority | Theory Owner instructions through `Phase 6A Step 7 继续` |
+| Status | APPROVED; Step 8 complete |
+| Authority | Theory Owner instructions through `Phase 6A Step 8 开始` |
 | Authorization date | 2026-09-26 America/Los_Angeles; 2026-09-27 UTC |
 | Approved plan | `PHASE_6A_PLAN.md` version 1.0, delivered at `753829a79fb6aa550d58dcd6fced360399c597e9` |
 | Accepted product baseline | Phase 5 completion `f09521907558a193e6438d9acb316adb9e191195` |
 | Working branch | `phase6a-longitudinal` |
-| Current scope | Explicit longitudinal CLI/configuration, independent three-version example and installation boundaries |
+| Current scope | Finite semantic mutations, resource boundaries, shared-work assessment and bounded complete CLI measurements |
 | Current runtime | `0.1.0.dev4`; report schema `1.2` |
 | Eventual phase target | `0.1.0.dev5`, report schema `1.2` |
 
@@ -404,3 +404,54 @@ remaining 54 product files. All 14 packaged resources have exact canonical
 mirrors. Package/schema remain `0.1.0.dev4` / `1.2`; no dependency, package module,
 release, merge or tag is added. Steps 8-9 and Phase 6B remain unstarted.
 See `PHASE_6A_STEP_7.md` for the final verification evidence.
+
+## Step 8 execution record
+
+The Theory Owner requested `Phase 6A Step 8 开始` on 2026-09-26
+America/Los_Angeles (2026-09-27 UTC). Work starts from accepted commit
+`9897ac7f531c3b1cbcd3b04ef4205f2c277540df`. This authorizes the finite mutation
+set, bounded resource/adversarial tests, complete CLI scale preflights and a
+defined 100,000-record reference workload. Step 9 candidate verification remains
+separate; no runtime/schema version bump or release action is authorized here.
+
+Measurement identified repeated full-input provenance joins in every snapshot
+calculation and consumer check. Step 8 adds a private invocation-local input
+workspace: a fresh owner join validates all records and supplied provenance,
+then complete version populations, immutable matches and ordered diagnostics
+are grouped once. All required-field errors remain visible globally, while
+warnings, strict promotions, coverage and denominators remain scoped exactly as
+in an independent owner join. Each public calculation/consumer boundary retains
+fresh input validation; the retained input join is never an unchecked cache.
+Standalone explicitly empty Python snapshot validation retains its previous
+no-provenance behavior. Failed-series handoffs reuse the full join already
+validated while confirming their rejection.
+
+Two additional narrow changes preserve behavior: report assembly collects input
+roles once, and selected-lineage certificate checking builds the affected
+non-cycle-member set once instead of once per loaded node. The latter repeated
+set construction was demonstrated at 25 and 313 nodes before the fix. Structural,
+root, cycle, depth and arithmetic checks remain in place; graph/SCC/root analysis
+still executes once. No persistent cache, new abstraction framework or dependency
+is introduced.
+
+Actual 100-loaded-version tests verify 99 adjacent or 197 deduplicated baseline
+comparisons. Over-limit selection is rejected before snapshot kernels. Context
+does not consume selected-version slots. High-cardinality state, context and root
+details preserve full aggregates and explicit omissions in standard/hash/omit
+reports. Later shared-budget exhaustion clears all incomplete root outputs while
+retaining independent snapshot/reference evidence.
+
+The reference generator loads 100 context anchors plus three equal selected
+populations. Totals 1,000, 10,000 and 100,000 therefore use 300, 3,300 and 33,300
+records per selected version. Topic and target-supported root inventories are
+100, 50 and 25; direct closure is 0, 1/2 and 1, while resolved lineage closure
+remains zero. Independent rational assertions cover all scheduled comparisons,
+coverage and deterministic graph work. Step 8 executes the two smaller sizes;
+the 100,000-record end-to-end run is established for Step 9 and is not claimed as
+measured here. Default graph/version limits remain unchanged.
+
+The source gate advances to Step 7 and admits only the coordinator, selected
+ancestry and report assembly paths. All other product files, frozen specifications,
+Hero/longitudinal examples and report schemas remain protected. See
+`PHASE_6A_STEP_8.md` for mutation detection, every performance attempt, regression
+results and the limits of those observations.
