@@ -34,7 +34,7 @@
     "python_version": null,
     "random_seed": null,
     "redacted_mode": false,
-    "report_schema_version": "1.1",
+    "report_schema_version": "1.2",
     "resolved_options": {
       "comparison_requested": true,
       "privacy_mode": "standard",
@@ -188,6 +188,31 @@
       "Input hashes identify supplied bytes and do not certify authenticity.",
       "Only allowlisted evidence fields are assembled; raw content, extras, notes and embeddings are not exported."
     ],
+    "longitudinal": {
+      "baseline": "none",
+      "comparison_count": 0,
+      "comparisons": [],
+      "context_version_count": 0,
+      "context_versions": {
+        "detail_status": "complete",
+        "items": [],
+        "limit": 100,
+        "omission_reasons": [],
+        "omitted_count": 0,
+        "returned_count": 0,
+        "total_count": 0
+      },
+      "detail_limit": 100,
+      "max_versions": 100,
+      "order_source": null,
+      "primary_snapshot_id": null,
+      "redaction": null,
+      "representations": [],
+      "requested": false,
+      "scopes": [],
+      "selected_version_count": 0,
+      "snapshots": []
+    },
     "representation": {
       "binning_or_mapping_rule": "literal_field_value",
       "field_name": "topic",
@@ -337,6 +362,15 @@
           "supplied_explicit_pair_support_and_diversity"
         ],
         "execution_status": "partial",
+        "longitudinal_execution": {
+          "comparison_statuses": [],
+          "reason_codes": [
+            "R_LONGITUDINAL_NOT_REQUESTED"
+          ],
+          "requested_families": [],
+          "snapshot_statuses": [],
+          "status": "not_requested"
+        },
         "notes": [
           "Input eligibility only; downstream analytical implementations remain deferred.",
           "No cross-version metric or state mapping executes here.",
@@ -543,6 +577,15 @@
         "supplied_explicit_pair_support_and_diversity"
       ],
       "execution_status": "partial",
+      "longitudinal_execution": {
+        "comparison_statuses": [],
+        "reason_codes": [
+          "R_LONGITUDINAL_NOT_REQUESTED"
+        ],
+        "requested_families": [],
+        "snapshot_statuses": [],
+        "status": "not_requested"
+      },
       "notes": [
         "Input eligibility only; downstream analytical implementations remain deferred.",
         "No cross-version metric or state mapping executes here.",
@@ -1204,6 +1247,10 @@
         "unit": "edges",
         "value": 0
       }
+    },
+    "longitudinal": {
+      "shared_lineage": null,
+      "snapshots": []
     },
     "provenance": {
       "analyzed_record_count": {
@@ -3847,6 +3894,10 @@
         "unit": "ratio",
         "value": 1.0
       }
+    },
+    "longitudinal": {
+      "comparisons": [],
+      "snapshots": []
     },
     "provenance": {
       "missing_provenance_share": {

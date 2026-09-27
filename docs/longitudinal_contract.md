@@ -1,13 +1,14 @@
 # Longitudinal comparison contract
 
-Status: **APPROVED CONTRACT; STEP 5 SELECTED LINEAGE CHANGES IMPLEMENTED**.
+Status: **APPROVED CONTRACT; STEP 6 CANONICAL REPORTS IMPLEMENTED**.
 
 Authority: `PHASE_6A_PLAN.md`, P6A-D01 through P6A-D08, and
 `PHASE_6A_DECISIONS.md`. Existing definitions and Phase 3-5 meanings remain in
 force. This document fixes the staged interfaces. Current package dev4 and
-schema 1.1 implement Python selection, compatibility, distributions,
-provenance/direct-closure changes and explicitly requested selected lineage.
-Config/CLI and public series reports remain future work. Implementation clarifications are
+schema 1.2 implement Python selection, compatibility, distributions,
+provenance/direct-closure changes, explicitly requested selected lineage and
+canonical JSON/Markdown series reports. Config/CLI enablement remains Step 7.
+Implementation clarifications are
 recorded in `PHASE_6A_DECISIONS.md`.
 
 ## 1. Scope and ownership
@@ -319,9 +320,14 @@ The existing ordinary primary-only API remains unchanged.
 
 `validate_selected_lineage_result(validation, *, selection, result)` validates
 current binding, complete populations and retained parent evidence without
-reexecuting graph/cycle/root analysis. It does not authenticate arbitrary
-caller-created root derivations; public consumers must still revalidate their
-required evidence. Existing malformed parent syntax is rejected by selection.
+reexecuting graph/cycle/root analysis. Step 6 adds a private immutable certificate
+for completed roots/reasons and SCC quotient ranks. The consumer checks accepted
+edges, SCC connectivity/ranks and affected nodes, local depth/root equations,
+target aggregates and completed membership/union work counts. It reuses the
+immutable root sets and never serializes the certificate. Root-aborted runs
+retain no root prefix; their failure counters establish limit consistency,
+not runtime attestation. Input truth still depends on the supplied validated
+bundle. Existing malformed parent syntax is rejected by selection.
 Node/edge admission failure remains a typed standalone exception, caught by the
 series coordinator to retain independent snapshot calculations and failed lineage
 rows. Root-stage failure retains shared graph/reference/depth results with every
@@ -630,6 +636,36 @@ results, incomplete selected targets, unresolved foreign scope references,
 duplicate pair rows, wrong order, altered arithmetic or invalid redacted rows.
 It validates supplied arithmetic; it does not run the series or rebuild graphs.
 Renderers consume the validated canonical report without calculation or I/O.
+
+### 5.4 Implemented report handoff
+
+`assemble_report(bundle, *, run, longitudinal=result)` consumes a
+`LongitudinalResult` after `validate_longitudinal_result(bundle, *, result)`.
+Existing ordinary result arguments retain their meaning and are independently
+optional. Supplying a series does not choose an arbitrary legacy pair. All
+ordinary and series reports declare schema `1.2`; the package remains dev4.
+
+After a confirmed selection rejection, callers may use
+`analyze_longitudinal_failure(bundle, *, declarations, baseline, max_versions,
+mappings, lineage, tail_options)` and pass its `LongitudinalFailureResult` as
+`longitudinal_failure` to assembly. Selection failure retains independently
+usable snapshot calculations in declaration order, with no chronological claim,
+primary reference or comparison schedule. Missing/conflicting chronology does
+not discard valid single-snapshot observations. Version admission failure
+performs no per-snapshot work and retains the exact requested selection count.
+The failure consumer validates the rejection and snapshot handoffs without
+running calculation kernels. Successful and failed series handoffs are mutually
+exclusive.
+
+Consumer validation checks assignments against the retained input representation,
+complete target populations, source classifications/coverage, count-derived
+intervals, pair-local mapping/set/tail evidence, metadata, finite arithmetic,
+family status and input binding. It does not use a result signature as proof of
+the values. Canonical validation additionally checks public references and
+arithmetic after serialization and after privacy transformation. Main envelope
+coverage retains the existing ratio/null wire type; delta endpoint coverage
+retains its full numerator/denominator/ratio object. Reference deltas additionally
+retain both endpoint `no_declared_parents` flags.
 
 ## 6. Independent acceptance and implementation boundary
 

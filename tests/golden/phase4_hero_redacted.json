@@ -33,7 +33,7 @@
     "python_version": null,
     "random_seed": null,
     "redacted_mode": true,
-    "report_schema_version": "1.1",
+    "report_schema_version": "1.2",
     "resolved_options": {
       "comparison_requested": true,
       "privacy_mode": "redacted",
@@ -187,6 +187,31 @@
       "Input hashes identify supplied bytes and do not certify authenticity.",
       "Only allowlisted evidence fields are assembled; raw content, extras, notes and embeddings are not exported."
     ],
+    "longitudinal": {
+      "baseline": "none",
+      "comparison_count": 0,
+      "comparisons": [],
+      "context_version_count": 0,
+      "context_versions": {
+        "detail_status": "complete",
+        "items": [],
+        "limit": 100,
+        "omission_reasons": [],
+        "omitted_count": 0,
+        "returned_count": 0,
+        "total_count": 0
+      },
+      "detail_limit": 100,
+      "max_versions": 100,
+      "order_source": null,
+      "primary_snapshot_id": null,
+      "redaction": null,
+      "representations": [],
+      "requested": false,
+      "scopes": [],
+      "selected_version_count": 0,
+      "snapshots": []
+    },
     "representation": {
       "binning_or_mapping_rule": "hmac-sha256:18da0fd476e3b47330cd178d9efef7c39c415771e8f8bd5cb6a7f13e9681a9b3",
       "field_name": "hmac-sha256:47e6ffdde83ab627afa8a2c8617571bf1cf11f84faf6415e021a437406b58765",
@@ -336,6 +361,15 @@
           "supplied_explicit_pair_support_and_diversity"
         ],
         "execution_status": "partial",
+        "longitudinal_execution": {
+          "comparison_statuses": [],
+          "reason_codes": [
+            "R_LONGITUDINAL_NOT_REQUESTED"
+          ],
+          "requested_families": [],
+          "snapshot_statuses": [],
+          "status": "not_requested"
+        },
         "notes": [
           "Input eligibility only; downstream analytical implementations remain deferred.",
           "No cross-version metric or state mapping executes here.",
@@ -542,6 +576,15 @@
         "supplied_explicit_pair_support_and_diversity"
       ],
       "execution_status": "partial",
+      "longitudinal_execution": {
+        "comparison_statuses": [],
+        "reason_codes": [
+          "R_LONGITUDINAL_NOT_REQUESTED"
+        ],
+        "requested_families": [],
+        "snapshot_statuses": [],
+        "status": "not_requested"
+      },
       "notes": [
         "Input eligibility only; downstream analytical implementations remain deferred.",
         "No cross-version metric or state mapping executes here.",
@@ -1203,6 +1246,10 @@
         "unit": "edges",
         "value": 0
       }
+    },
+    "longitudinal": {
+      "shared_lineage": null,
+      "snapshots": []
     },
     "provenance": {
       "analyzed_record_count": {
@@ -3846,6 +3893,10 @@
         "unit": "ratio",
         "value": 1.0
       }
+    },
+    "longitudinal": {
+      "comparisons": [],
+      "snapshots": []
     },
     "provenance": {
       "missing_provenance_share": {

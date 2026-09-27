@@ -406,3 +406,10 @@ Ordinary CLI calls report lineage execution as `not_requested`; explicit lineage
 report assembly is covered by the current integration suite. Original numeric
 expectations are retained. Prior schema 1.0 fixtures and the original authority
 hashes remain auditable in Git history. No source-binding migration is added.
+
+## Phase 6A Step 6 current-schema consolidation
+
+Current canonical fixtures use report schema 1.2 and package 0.1.0.dev4.
+Ordinary reports retain the existing Hero scientific values and explicitly
+record series analysis as `not_requested`. The independent numeric assertions
+remain unchanged. Prior schema 1.1 fixtures remain auditable in Git history.

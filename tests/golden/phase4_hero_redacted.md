@@ -37,7 +37,7 @@ Quoted code literals represent supplied data, including identifiers and labels. 
 | `["python_version"]` | Unavailable (null): `"private_or_nonstandard_metadata_omitted"` |
 | `["random_seed"]` | Unavailable (null): `"not_recorded"` |
 | `["redacted_mode"]` | true |
-| `["report_schema_version"]` | `"1.1"` |
+| `["report_schema_version"]` | `"1.2"` |
 | `["resolved_options"]["comparison_requested"]` | true |
 | `["resolved_options"]["privacy_mode"]` | `"redacted"` |
 | `["resolved_options"]["record_id_mode"]` | `"hash"` |
@@ -127,6 +127,27 @@ Quoted code literals represent supplied data, including identifiers and labels. 
 | `["artifacts"][4]["schema_fields"]` | `[]` |
 | `["artifacts"][4]["size_bytes"]` | 36 |
 | `["artifacts"][4]["validation_status"]` | `"completed"` |
+| `["longitudinal"]["baseline"]` | `"none"` |
+| `["longitudinal"]["comparison_count"]` | 0 |
+| `["longitudinal"]["comparisons"]` | `[]` |
+| `["longitudinal"]["context_version_count"]` | 0 |
+| `["longitudinal"]["context_versions"]["detail_status"]` | `"complete"` |
+| `["longitudinal"]["context_versions"]["items"]` | `[]` |
+| `["longitudinal"]["context_versions"]["limit"]` | 100 |
+| `["longitudinal"]["context_versions"]["omission_reasons"]` | `[]` |
+| `["longitudinal"]["context_versions"]["omitted_count"]` | 0 |
+| `["longitudinal"]["context_versions"]["returned_count"]` | 0 |
+| `["longitudinal"]["context_versions"]["total_count"]` | 0 |
+| `["longitudinal"]["detail_limit"]` | 100 |
+| `["longitudinal"]["max_versions"]` | 100 |
+| `["longitudinal"]["order_source"]` | Unavailable (null): No value supplied for this optional or inapplicable field. |
+| `["longitudinal"]["primary_snapshot_id"]` | Unavailable (null): No value supplied for this optional or inapplicable field. |
+| `["longitudinal"]["redaction"]` | Unavailable (null): No value supplied for this optional or inapplicable field. |
+| `["longitudinal"]["representations"]` | `[]` |
+| `["longitudinal"]["requested"]` | false |
+| `["longitudinal"]["scopes"]` | `[]` |
+| `["longitudinal"]["selected_version_count"]` | 0 |
+| `["longitudinal"]["snapshots"]` | `[]` |
 | `["representation"]["binning_or_mapping_rule"]` | `"hmac-sha256:18da0fd476e3b47330cd178d9efef7c39c415771e8f8bd5cb6a7f13e9681a9b3"` |
 | `["representation"]["field_name"]` | `"hmac-sha256:47e6ffdde83ab627afa8a2c8617571bf1cf11f84faf6415e021a437406b58765"` |
 | `["representation"]["missing_state_id"]` | Unavailable (null): No value supplied for this optional or inapplicable field. |
@@ -289,6 +310,11 @@ Coverage details and unresolved counts, when supplied, follow below. Related dia
 | `["coverage_details"]` | `{}` |
 | `["coverage_reason"]` | Unavailable (null): No null reason is required when the associated value is supplied. |
 | `["execution_scope"]` | `["supplied_explicit_pair_support_and_diversity"]` |
+| `["longitudinal_execution"]["comparison_statuses"]` | `[]` |
+| `["longitudinal_execution"]["reason_codes"]` | `["R_LONGITUDINAL_NOT_REQUESTED"]` |
+| `["longitudinal_execution"]["requested_families"]` | `[]` |
+| `["longitudinal_execution"]["snapshot_statuses"]` | `[]` |
+| `["longitudinal_execution"]["status"]` | `"not_requested"` |
 | `["notes"]` | `["Input eligibility only; downstream analytical implementations remain deferred.", "No cross-version metric or state mapping executes here.", "Executed only the supplied explicit-pair support/diversity comparison; no adjacent-pair discovery, lineage/provenance trajectory or relative-change calculation."]` |
 | `["requirements_met"]` | `["explicit_order_and_compatible_representation"]` |
 | `["requirements_missing"]` | `[]` |
@@ -616,6 +642,18 @@ Denominator: 8; coverage (ratio): 1.0.
 | `"hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d"` | `"hmac-sha256:c45259baf1db3285bd3b9cb81d1637bfcd7ac34589868894e6ad63ee93577a0a"` |
 | `"hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d"` | `"hmac-sha256:c60be35d2fffdab2e6c81834408613d778914041c0ecd3f4a0f5be53541dc7bd"` |
 | `"hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d"` | `"hmac-sha256:27864c18901ea515a772984044b552f7cb3a0d2a058bd1a67a9b53dc49c4ab5d"` |
+
+`["observed_facts"]["longitudinal"]["shared_lineage"]`
+
+| Field | Value |
+|---|---|
+| Value | Unavailable (null): No value supplied for this optional or inapplicable field. |
+
+`["observed_facts"]["longitudinal"]["snapshots"]`
+
+| Field | Value |
+|---|---|
+| Value | `[]` |
 
 ### Analytical result
 
@@ -2575,6 +2613,18 @@ Denominator: 8; coverage (ratio): 1.0.
 | `"hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d"` | `"hmac-sha256:c60be35d2fffdab2e6c81834408613d778914041c0ecd3f4a0f5be53541dc7bd"` |
 | `"hmac-sha256:70696b56c6ef6dbd4145752d88c4da6f71498a8f35a521e3946d89acc2a56a5d"` | `"hmac-sha256:27864c18901ea515a772984044b552f7cb3a0d2a058bd1a67a9b53dc49c4ab5d"` |
 
+`["derived_metrics"]["longitudinal"]["comparisons"]`
+
+| Field | Value |
+|---|---|
+| Value | `[]` |
+
+`["derived_metrics"]["longitudinal"]["snapshots"]`
+
+| Field | Value |
+|---|---|
+| Value | `[]` |
+
 ### Analytical result
 
 `["derived_metrics"]["provenance"]["missing_provenance_share"]`
@@ -4281,7 +4331,7 @@ No entries supplied. Empty list: `[]`.
 
 **Report footer**
 
-Toolkit version: `"0.1.0.dev4"`; report schema version: `"1.1"`.
+Toolkit version: `"0.1.0.dev4"`; report schema version: `"1.2"`.
 
 Evidence-class legend:
 

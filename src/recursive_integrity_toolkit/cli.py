@@ -460,7 +460,10 @@ def _execute(namespace):
         report = assemble_report(bundle, run=_run_metadata(options, namespace.command, started_at, started_clock), **results)
         if namespace.command == "validate":
             payload = report.to_dict()
-            for section in ("derived_metrics", "proxy_signals", "simulations"):
+            # Retain schema 1.2's explicit unrequested series metadata. No
+            # analytical values are calculated by the validate command.
+            payload["derived_metrics"] = {"longitudinal": payload["derived_metrics"]["longitudinal"]}
+            for section in ("proxy_signals", "simulations"):
                 payload[section] = {}
             report = CanonicalReport.from_dict(payload)
         return _publish(report, options, protection, input_paths, exits)

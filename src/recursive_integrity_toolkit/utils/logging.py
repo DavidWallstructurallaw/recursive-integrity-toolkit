@@ -51,6 +51,7 @@ _TEMPLATES = {
     "E_PARENT_FUTURE_VERSION": ("A parent reference conflicts with declared version order.", "Check the parent reference against the declared version order."),
     "E_LINEAGE_CYCLE": ("Declared parent references contain a validated cycle.", "Correct the parent declarations before requesting dependent work."),
     "E_LINEAGE_RESOURCE_LIMIT_EXCEEDED": ("Lineage analysis reached a configured resource limit.", "Review the reported work counters and configured limit before reducing the input scope or explicitly adjusting that limit."),
+    "E_LONGITUDINAL_RESOURCE_LIMIT_EXCEEDED": ("The requested series exceeds the selected-version limit.", "Reduce the explicitly selected versions or explicitly adjust the selected-version limit before running the series."),
     "E_VERSION_ORDER_CONFLICT": ("Version-order declarations conflict.", "Supply one consistent explicit version order."),
     "E_REPRESENTATION_INCOMPATIBLE": ("The supplied representations are incompatible.", "Supply compatible explicit representation declarations."),
     "E_MAPPING_SOURCE_FIELD_MISSING": ("A declared mapping source field is missing.", "Correct the explicit mapping or supply its source field."),
@@ -83,6 +84,7 @@ _FIELDS = frozenset({
     "transformation", "generation", "human_reviewed", "batch_id", "timestamp",
     "grounding_evidence_ref", "source_uri", "license_id", "weight",
     "representation", "version_order", "pair_order", "representation_compatibility",
+    "longitudinal", "longitudinal_selection", "longitudinal_snapshot", "max_versions",
 })
 _EXCEPTION_TYPES = (
     ToolkitError, ConfigurationError, InputError, SchemaError, SecurityError,

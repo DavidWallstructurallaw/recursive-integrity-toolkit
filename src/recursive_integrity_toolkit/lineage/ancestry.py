@@ -1,6 +1,6 @@
 """Resolve external roots, coverage, concentration and shared-root evidence.
 
-Owner IDs: T4; Phase 6A Step 5.
+Owner IDs: T4; Phase 6A Step 6.
 
 Validated explicit grounding supplies anchors. Iterative dependency scheduling
 unions complete root sets; unknown branches never supply exact roots. Logical
@@ -8,7 +8,7 @@ membership and candidate-visit budgets bound propagation before each work unit.
 The allocation is topological and makes no causal or scientific quality claim.
 
 Current phase status:
-    Phase 6A Step 5 adds selected targets over one shared lineage resolution.
+    Phase 6A Step 6 verifies selected handoffs through retained certificates.
     Legacy primary-only analysis and its input-bound handoffs remain supported.
     No file or network I/O, generation calculation or implicit invocation.
 """
@@ -18,7 +18,7 @@ from dataclasses import dataclass, field, replace
 from heapq import heapify, heappop, heappush
 from math import fsum, isfinite
 from types import MappingProxyType
-from typing import Literal
+from typing import Literal, Mapping
 
 from ..errors import ErrorCode, LineageResourceLimitError
 from ..io.validation import join_provenance
@@ -27,10 +27,13 @@ from ..models import (
 )
 from ..result import ExecutionStatus, ReportStatus
 from ..utils.hashing import canonical_json_bytes, sha256_canonical
-from .cycles import CycleAnalysis, DepthAssessment, analyze_cycles, _local_depth_reasons
+from .cycles import (
+    CycleAnalysis, DepthAssessment, analyze_cycles, _local_depth_reasons, _WITNESS_EDGE_LIMIT,
+)
 from .graph import (
     LineageGraph, LineageLimits, LineageResourceUsage, LineageScope,
-    _integer, _invalid, _key, _limits, _messages, _safe_evidence, build_lineage_graph,
+    _accepted_parents, _integer, _invalid, _key, _limits, _messages, _safe_evidence,
+    build_lineage_graph,
 )
 
 
@@ -846,6 +849,75 @@ class TargetLineageSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class _SelectedLineageCertificate:
+    """Internal local-equation evidence; never a report identity collection.
+
+    Complete root sets include context so a consumer can check each parent
+    equation without invoking the resolver. Condensation ranks certify that
+    declared cyclic components contain every cycle in the retained graph.
+    Resource-aborted runs retain no partial root sets.
+    """
+    component_ranks: Mapping[RecordKey, int]
+    roots: Mapping[RecordKey, frozenset[RecordKey] | None] | None
+    reasons: Mapping[RecordKey, tuple[str, ...]] | None
+
+    def __post_init__(self) -> None:
+        if type(self.component_ranks) not in (dict, MappingProxyType):
+            raise _invalid("selected lineage certificate requires immutable rank evidence")
+        ranks = {}
+        for key, rank in self.component_ranks.items():
+            _key(key)
+            _integer(rank)
+            ranks[key] = rank
+        if (self.roots is None) != (self.reasons is None):
+            raise _invalid("selected lineage root certificate must be complete or absent")
+        if self.roots is not None:
+            if (type(self.roots) not in (dict, MappingProxyType)
+                    or type(self.reasons) not in (dict, MappingProxyType)
+                    or set(self.roots) != set(ranks) or set(self.reasons) != set(ranks)):
+                raise _invalid("selected lineage root certificate must cover all loaded nodes")
+            for key, roots in self.roots.items():
+                if roots is not None:
+                    if type(roots) is not frozenset or not roots <= ranks.keys():
+                        raise _invalid("selected lineage certificate has unsupported root identities")
+                _reasons(self.reasons[key], _ROOT_REASONS)
+                if (roots is None) != bool(self.reasons[key]):
+                    raise _invalid("selected lineage certificate roots and reasons disagree")
+            object.__setattr__(self, "roots", MappingProxyType(dict(self.roots)))
+            object.__setattr__(self, "reasons", MappingProxyType(dict(self.reasons)))
+        object.__setattr__(self, "component_ranks", MappingProxyType(ranks))
+
+
+def _selected_certificate(graph, cycles, roots, reasons):
+    """Retain a condensation ordering from already discovered components."""
+    owners = {key: component[0] for component in cycles.cyclic_components for key in component}
+    owners.update((key, key) for key in graph.node_keys if key not in owners)
+    parents = {owner: set() for owner in owners.values()}
+    children = {owner: set() for owner in owners.values()}
+    for child in graph.node_keys:
+        for parent in graph.parents_by_child[child]:
+            a, b = owners[parent], owners[child]
+            if a != b:
+                parents[b].add(a)
+                children[a].add(b)
+    remaining = {key: len(values) for key, values in parents.items()}
+    ready = [key for key, count in remaining.items() if count == 0]
+    heapify(ready)
+    ranks = {}
+    while ready:
+        owner = heappop(ready)
+        ranks[owner] = len(ranks)
+        for child in children[owner]:
+            remaining[child] -= 1
+            if not remaining[child]:
+                heappush(ready, child)
+    if len(ranks) != len(parents):
+        raise _invalid("selected lineage component certificate has incomplete coverage")
+    return _SelectedLineageCertificate(
+        {key: ranks[owners[key]] for key in graph.node_keys}, roots, reasons)
+
+
+@dataclass(frozen=True, slots=True)
 class SelectedLineageResult:
     """Chronological target summaries with one shared graph and cycle result."""
     selected_versions: tuple[str, ...]
@@ -858,6 +930,7 @@ class SelectedLineageResult:
     messages: tuple[ValidationMessage, ...]
     input_signature: str = field(repr=False)
     selection_signature: str = field(repr=False)
+    certificate: _SelectedLineageCertificate = field(repr=False, compare=False)
 
     def __post_init__(self) -> None:
         _signature(self.input_signature)
@@ -865,6 +938,9 @@ class SelectedLineageResult:
         graph, cycles = self.shared_graph, self.shared_cycles
         if type(graph) is not LineageGraph or type(cycles) is not CycleAnalysis:
             raise _invalid("selected lineage requires shared typed graph and cycle evidence")
+        if type(self.certificate) is not _SelectedLineageCertificate:
+            raise _invalid("selected lineage requires retained handoff evidence")
+        replace(self.certificate)
         if (cycles.scope != graph.scope or tuple(sorted(cycles.depths_by_record)) != graph.node_keys
                 or not set(graph.messages) <= set(cycles.messages)):
             raise _invalid("selected graph and cycle evidence disagree")
@@ -878,6 +954,9 @@ class SelectedLineageResult:
         if type(self.resource_usage) is not LineageResourceUsage:
             raise _invalid("selected lineage requires a typed shared work counter")
         replace(self.resource_usage)
+        if (set(self.certificate.component_ranks) != set(graph.node_keys)
+                or (self.certificate.roots is None) != (self.resource_usage.exhausted_limit is not None)):
+            raise _invalid("selected lineage handoff evidence disagrees with its loaded work")
         if (self.resource_usage.admitted_node_count != graph.resource_usage.admitted_node_count
                 or self.resource_usage.admitted_edge_count != graph.resource_usage.admitted_edge_count
                 or self.resource_usage.limits != graph.resource_usage.limits):
@@ -996,15 +1075,16 @@ def analyze_selected_lineage(
                                  sum(target.grounded_record_count + target.closed_record_count for target in targets),
                                  sum(target.unresolved_record_count for target in targets)))
     return SelectedLineageResult(selection.selected_order, graph, cycles, tuple(targets), usage,
-                                 status, status_reasons, messages, signature, selection.input_signature)
+                                 status, status_reasons, messages, signature, selection.input_signature,
+                                 _selected_certificate(graph, cycles, roots, reasons))
 
 
 def validate_selected_lineage_result(validation: BundleValidationResult, *, selection, result) -> None:
-    """Reject stale scope/declaration handoffs without rerunning graph algorithms.
+    """Check supplied local equations without running analysis or root resolution.
 
-    Frozen result constructors check internal arithmetic and common evidence.
-    This binding is a consistency guard, not proof that a caller-created result
-    is authentic; future report consumers retain their deeper validation duties.
+    Completed certificates bind every context and selected root to its parent
+    evidence. Aborted work has no root values; its counters are checked for
+    consistency, not treated as an authoritative runtime attestation.
     """
     from ..metrics.longitudinal import validate_longitudinal_selection
 
@@ -1012,6 +1092,8 @@ def validate_selected_lineage_result(validation: BundleValidationResult, *, sele
     if type(result) is not SelectedLineageResult:
         raise _invalid("selected lineage handoff requires its typed result")
     replace(result)
+    replace(result.shared_graph)
+    replace(result.shared_cycles)
     if (result.selected_versions != selection.selected_order
             or result.selection_signature != selection.input_signature
             or result.input_signature != _selected_lineage_signature(
@@ -1028,3 +1110,167 @@ def validate_selected_lineage_result(validation: BundleValidationResult, *, sele
                    result.shared_graph.parent_evidence_by_record[item.child_key]
                    for item in retained.assessments)):
         raise _invalid("selected lineage graph disagrees with retained parent evidence")
+    graph, cycles = result.shared_graph, result.shared_cycles
+    if graph.messages != _messages(validation.validation_messages + retained.messages):
+        raise _invalid("selected lineage graph diagnostics disagree with retained input")
+    _validate_selected_structure(graph, cycles, result.certificate)
+    metadata, metadata_messages = _metadata(validation, graph)
+    expected_messages = cycles.messages + metadata_messages
+    if result.resource_usage.exhausted_limit is not None:
+        expected_messages += (ValidationMessage(
+            ErrorCode.LINEAGE_RESOURCE_LIMIT_EXCEEDED.value, ValidationSeverity.ERROR,
+            "Lineage root propagation exhausted its resource budget."),)
+    if result.messages != _messages(expected_messages):
+        raise _invalid("selected lineage diagnostics disagree with retained metadata")
+    _validate_selected_roots(result, metadata)
+
+
+def _validate_selected_structure(graph, cycles, certificate):
+    """Verify claimed SCCs, quotient ranks and depth equations, not discover SCCs."""
+    owners = {key: component[0] for component in cycles.cyclic_components for key in component}
+    owners.update((key, key) for key in graph.node_keys if key not in owners)
+    ranks = certificate.component_ranks
+    self_keys = set(graph.self_parent_record_keys)
+    for component in cycles.cyclic_components:
+        members = set(component)
+        if len(component) == 1 and component[0] not in self_keys:
+            raise _invalid("selected lineage singleton cycle lacks self-parent evidence")
+        if any(ranks[key] != ranks[component[0]] for key in component):
+            raise _invalid("selected lineage component ranks split a claimed cycle")
+        # Two restricted reachability checks certify strong connectivity of
+        # each supplied component without searching for new components.
+        for adjacency in (graph.parents_by_child, graph.children_by_parent):
+            visited, pending = {component[0]}, [component[0]]
+            while pending:
+                for neighbor in adjacency[pending.pop()]:
+                    if neighbor in members and neighbor not in visited:
+                        visited.add(neighbor)
+                        pending.append(neighbor)
+            if visited != members:
+                raise _invalid("selected lineage component is not strongly connected")
+    if not self_keys <= set(cycles.cycle_member_record_keys):
+        raise _invalid("selected lineage cycles omit retained self-parent evidence")
+    owner_ranks = {owner: ranks[owner] for owner in set(owners.values())}
+    if set(owner_ranks.values()) != set(range(len(owner_ranks))):
+        raise _invalid("selected lineage quotient ranks must uniquely cover every component")
+    affected, members = set(cycles.affected_record_keys), set(cycles.cycle_member_record_keys)
+    positions = {key: index for index, key in enumerate(cycles.topological_order)}
+    for child in graph.node_keys:
+        parents = graph.parents_by_child[child]
+        for parent in parents:
+            if owners[parent] != owners[child] and ranks[parent] >= ranks[child]:
+                raise _invalid("selected lineage quotient rank contradicts an accepted edge")
+            if parent in affected and child not in affected:
+                raise _invalid("selected lineage affected scope omits a cycle descendant")
+            if child not in affected and positions[parent] >= positions[child]:
+                raise _invalid("selected lineage topology contradicts an accepted edge")
+        if child in affected - members and not any(parent in affected for parent in parents):
+            raise _invalid("selected lineage affected scope includes an unsupported record")
+        reasons = _local_depth_reasons(graph, child)
+        if child in affected:
+            reasons.add("CYCLE_AFFECTED")
+            depth = None
+        else:
+            parent_depths = [cycles.depths_by_record[parent].lineage_depth for parent in parents]
+            if any(value is None for value in parent_depths):
+                reasons.add("INCOMPLETE_PARENT_DEPTH")
+            depth = None if reasons else 1 + max(parent_depths, default=-1)
+        if cycles.depths_by_record[child] != DepthAssessment(depth, tuple(sorted(reasons))):
+            raise _invalid("selected lineage depth contradicts its parent equation")
+    for detail in cycles.component_details:
+        witness = detail.witness_record_keys
+        if witness is None and detail.member_count <= _WITNESS_EDGE_LIMIT:
+            raise _invalid("selected lineage cycle witness omission lacks a diagnostic limit")
+        if witness is not None and any(
+                b not in graph.children_by_parent[a] and not (a == b and a in self_keys)
+                for a, b in zip(witness, witness[1:])):
+            raise _invalid("selected lineage cycle witness includes an unsupported edge")
+    expected_messages = graph.messages
+    if cycles.cyclic_components:
+        expected_messages += (ValidationMessage(
+            ErrorCode.LINEAGE_CYCLE.value, ValidationSeverity.ERROR,
+            "A cyclic component was detected in the loaded lineage graph."),)
+    if cycles.messages != _messages(expected_messages):
+        raise _invalid("selected lineage cycle diagnostics disagree with structural evidence")
+
+
+def _validate_selected_roots(result, metadata):
+    """Check complete root memberships and reasons against local parent evidence."""
+    graph, cycles, certificate = result.shared_graph, result.shared_cycles, result.certificate
+    if certificate.roots is None:
+        return
+    roots, reasons = certificate.roots, certificate.reasons
+    affected = set(cycles.affected_record_keys)
+    membership_count = union_count = 0
+    for key in graph.node_keys:
+        parents = graph.parents_by_child[key]
+        failures = _local_depth_reasons(graph, key)
+        if key in affected:
+            failures.add("CYCLE_AFFECTED")
+        else:
+            row = metadata[key].provenance
+            if row is None:
+                failures.add("MISSING_PROVENANCE")
+            else:
+                if not row.required_fields_valid:
+                    failures.add("MISSING_REQUIRED_PROVENANCE")
+                grounding = row.values.get("external_grounding")
+                if grounding == "unknown":
+                    failures.add("UNKNOWN_GROUNDING")
+                if (grounding == "yes" and parents
+                        and (len(parents) != 1 or row.values.get("transformation") != "carryover")):
+                    failures.add("GROUNDED_PARENT_RULE_UNSUPPORTED")
+            for parent in parents:
+                if roots[parent] is None:
+                    failures.add("INCOMPLETE_PARENT_ANCESTRY")
+                    failures.update(reasons[parent])
+        if reasons[key] != tuple(sorted(failures)) or (roots[key] is None) != bool(failures):
+            raise _invalid("selected lineage root uncertainty contradicts retained evidence")
+        if failures:
+            continue
+        if not parents:
+            expected = frozenset((key,)) if row.values["external_grounding"] == "yes" else frozenset()
+            if roots[key] != expected:
+                raise _invalid("selected lineage root anchor contradicts retained grounding")
+        else:
+            unsupported = set(roots[key])
+            for parent in parents:
+                if not roots[parent] <= roots[key]:
+                    raise _invalid("selected lineage roots omit a complete parent contribution")
+                unsupported.difference_update(roots[parent])
+                union_count += len(roots[parent])
+            if unsupported:
+                raise _invalid("selected lineage roots include an unsupported parent contribution")
+        membership_count += len(roots[key])
+    usage = result.resource_usage
+    if (usage.stored_root_membership_count != membership_count
+            or usage.root_union_visit_count != union_count):
+        raise _invalid("selected lineage completed work counters disagree with its root certificate")
+    for target in result.targets:
+        for record in target.records:
+            if (record.external_root_keys != roots[record.record_key]
+                    or record.reason_codes != reasons[record.record_key]):
+                raise _invalid("selected lineage target roots disagree with verified parent evidence")
+
+
+def validate_lineage_graph_exhaustion(validation: BundleValidationResult, *, usage) -> None:
+    """Validate node/edge rejection from retained counts without building a graph."""
+    if type(usage) is not LineageResourceUsage:
+        raise _invalid("lineage graph exhaustion requires typed usage evidence")
+    replace(usage)
+    if type(validation) is not BundleValidationResult or validation.parent_validation is None:
+        raise _invalid("lineage graph exhaustion requires retained parent evidence")
+    limits = usage.limits
+    node_count = len(validation.records)
+    if node_count > limits.max_nodes:
+        expected = LineageResourceUsage(limits.max_nodes, 0, 0, 0, limits,
+                                        "max_nodes", limits.max_nodes + 1)
+    else:
+        edge_count = sum(len(_accepted_parents(_safe_evidence(item, item.child_key)))
+                         for item in validation.parent_validation.assessments)
+        if edge_count <= limits.max_edges:
+            raise _invalid("lineage graph exhaustion has no rejected node or edge admission")
+        expected = LineageResourceUsage(node_count, limits.max_edges, 0, 0, limits,
+                                        "max_edges", limits.max_edges + 1)
+    if usage != expected:
+        raise _invalid("lineage graph exhaustion disagrees with retained admission evidence")

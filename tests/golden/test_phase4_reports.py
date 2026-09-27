@@ -741,7 +741,12 @@ def phase4_step9_assert_all_markdown_fields(report, text):
         obj = get(report, path)
         endpoint = hits[index + 1].start() if index + 1 < len(hits) else len(text)
         block = text[match.end():endpoint]
-        next_section = re.search(r'^## ', block, re.M)
+        # Schema 1.2 includes structural series tables between analytical
+        # envelopes. They are independent blocks, outside this envelope's
+        # compact array tables, and retain their own literal golden coverage.
+        next_section = re.search(
+            r'^##(?:#)? |^`\["(?:observed_facts|derived_metrics|proxy_signals|simulations)"\]',
+            block, re.M)
         if next_section:
             block = block[:next_section.start()]
         covered = set()

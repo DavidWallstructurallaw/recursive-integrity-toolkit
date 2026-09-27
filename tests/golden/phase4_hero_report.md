@@ -37,7 +37,7 @@ Quoted code literals represent supplied data, including identifiers and labels. 
 | `["python_version"]` | Unavailable (null): `"private_or_nonstandard_metadata_omitted"` |
 | `["random_seed"]` | Unavailable (null): `"not_recorded"` |
 | `["redacted_mode"]` | false |
-| `["report_schema_version"]` | `"1.1"` |
+| `["report_schema_version"]` | `"1.2"` |
 | `["resolved_options"]["comparison_requested"]` | true |
 | `["resolved_options"]["privacy_mode"]` | `"standard"` |
 | `["resolved_options"]["record_id_mode"]` | `"preserve"` |
@@ -128,6 +128,27 @@ Quoted code literals represent supplied data, including identifiers and labels. 
 | `["artifacts"][4]["schema_fields"]` | `[]` |
 | `["artifacts"][4]["size_bytes"]` | 36 |
 | `["artifacts"][4]["validation_status"]` | `"completed"` |
+| `["longitudinal"]["baseline"]` | `"none"` |
+| `["longitudinal"]["comparison_count"]` | 0 |
+| `["longitudinal"]["comparisons"]` | `[]` |
+| `["longitudinal"]["context_version_count"]` | 0 |
+| `["longitudinal"]["context_versions"]["detail_status"]` | `"complete"` |
+| `["longitudinal"]["context_versions"]["items"]` | `[]` |
+| `["longitudinal"]["context_versions"]["limit"]` | 100 |
+| `["longitudinal"]["context_versions"]["omission_reasons"]` | `[]` |
+| `["longitudinal"]["context_versions"]["omitted_count"]` | 0 |
+| `["longitudinal"]["context_versions"]["returned_count"]` | 0 |
+| `["longitudinal"]["context_versions"]["total_count"]` | 0 |
+| `["longitudinal"]["detail_limit"]` | 100 |
+| `["longitudinal"]["max_versions"]` | 100 |
+| `["longitudinal"]["order_source"]` | Unavailable (null): No value supplied for this optional or inapplicable field. |
+| `["longitudinal"]["primary_snapshot_id"]` | Unavailable (null): No value supplied for this optional or inapplicable field. |
+| `["longitudinal"]["redaction"]` | Unavailable (null): No value supplied for this optional or inapplicable field. |
+| `["longitudinal"]["representations"]` | `[]` |
+| `["longitudinal"]["requested"]` | false |
+| `["longitudinal"]["scopes"]` | `[]` |
+| `["longitudinal"]["selected_version_count"]` | 0 |
+| `["longitudinal"]["snapshots"]` | `[]` |
 | `["representation"]["binning_or_mapping_rule"]` | `"literal_field_value"` |
 | `["representation"]["field_name"]` | `"topic"` |
 | `["representation"]["missing_state_id"]` | Unavailable (null): No value supplied for this optional or inapplicable field. |
@@ -290,6 +311,11 @@ Coverage details and unresolved counts, when supplied, follow below. Related dia
 | `["coverage_details"]` | `{}` |
 | `["coverage_reason"]` | Unavailable (null): No null reason is required when the associated value is supplied. |
 | `["execution_scope"]` | `["supplied_explicit_pair_support_and_diversity"]` |
+| `["longitudinal_execution"]["comparison_statuses"]` | `[]` |
+| `["longitudinal_execution"]["reason_codes"]` | `["R_LONGITUDINAL_NOT_REQUESTED"]` |
+| `["longitudinal_execution"]["requested_families"]` | `[]` |
+| `["longitudinal_execution"]["snapshot_statuses"]` | `[]` |
+| `["longitudinal_execution"]["status"]` | `"not_requested"` |
 | `["notes"]` | `["Input eligibility only; downstream analytical implementations remain deferred.", "No cross-version metric or state mapping executes here.", "Executed only the supplied explicit-pair support/diversity comparison; no adjacent-pair discovery, lineage/provenance trajectory or relative-change calculation."]` |
 | `["requirements_met"]` | `["explicit_order_and_compatible_representation"]` |
 | `["requirements_missing"]` | `[]` |
@@ -617,6 +643,18 @@ Denominator: 8; coverage (ratio): 1.0.
 | `"v2"` | `"v2_06"` |
 | `"v2"` | `"v2_07"` |
 | `"v2"` | `"v2_08"` |
+
+`["observed_facts"]["longitudinal"]["shared_lineage"]`
+
+| Field | Value |
+|---|---|
+| Value | Unavailable (null): No value supplied for this optional or inapplicable field. |
+
+`["observed_facts"]["longitudinal"]["snapshots"]`
+
+| Field | Value |
+|---|---|
+| Value | `[]` |
 
 ### Analytical result
 
@@ -2576,6 +2614,18 @@ Denominator: 8; coverage (ratio): 1.0.
 | `"v2"` | `"v2_07"` |
 | `"v2"` | `"v2_08"` |
 
+`["derived_metrics"]["longitudinal"]["comparisons"]`
+
+| Field | Value |
+|---|---|
+| Value | `[]` |
+
+`["derived_metrics"]["longitudinal"]["snapshots"]`
+
+| Field | Value |
+|---|---|
+| Value | `[]` |
+
 ### Analytical result
 
 `["derived_metrics"]["provenance"]["missing_provenance_share"]`
@@ -4282,7 +4332,7 @@ No entries supplied. Empty list: `[]`.
 
 **Report footer**
 
-Toolkit version: `"0.1.0.dev4"`; report schema version: `"1.1"`.
+Toolkit version: `"0.1.0.dev4"`; report schema version: `"1.2"`.
 
 Evidence-class legend:
 

@@ -2,14 +2,14 @@
 
 | Field | Value |
 |---|---|
-| Status | APPROVED; Step 5 shared selected lineage and changes |
-| Authority | Theory Owner instructions through `Phase 6A Step 5 继续` |
+| Status | APPROVED; Step 6 canonical reporting and privacy |
+| Authority | Theory Owner instructions through `Phase 6A Step 6 继续` |
 | Authorization date | 2026-09-26 America/Los_Angeles; 2026-09-27 UTC |
 | Approved plan | `PHASE_6A_PLAN.md` version 1.0, delivered at `753829a79fb6aa550d58dcd6fced360399c597e9` |
 | Accepted product baseline | Phase 5 completion `f09521907558a193e6438d9acb316adb9e191195` |
 | Working branch | `phase6a-longitudinal` |
-| Current scope | Shared selected-target lineage, target summaries, compatible lineage deltas and affected checks |
-| Current runtime | `0.1.0.dev4`, report schema `1.1`; version metadata unchanged |
+| Current scope | Canonical longitudinal reporting, schema 1.2, protected identities and consumer validation |
+| Current runtime | `0.1.0.dev4`; Step 6 updates report schema to `1.2` |
 | Eventual phase target | `0.1.0.dev5`, report schema `1.2` |
 
 The instruction starts Step 1 under the delivered plan without stated exceptions.
@@ -314,3 +314,40 @@ The source gate advances to `390f5f6`, authorizing only
 No module, dependency, configuration/CLI dispatch or schema field is added.
 See [PHASE_6A_STEP_5.md](PHASE_6A_STEP_5.md) for verification and limitations.
 Step 6 has not started; package/schema remain `0.1.0.dev4` / `1.1`.
+
+## Step 6 execution record
+
+The Theory Owner requested `Phase 6A Step 6 继续` on 2026-09-26
+America/Los_Angeles (2026-09-27 UTC). The accepted starting commit is
+`e8d888614a2d6d2ce446cc0c86d9577036f27cd8`.
+
+The Step 1 public inventory is implemented under schema 1.2 with its packaged
+mirror. Ordinary reports also use 1.2; package metadata remains dev4. Explicit
+series handoffs populate their own canonical fields and execution mirrors,
+without implicitly filling legacy pair fields. JSON and Markdown share the
+canonical safe view. Structural references, basis-local state pseudonyms,
+identity omission and bounded nested details retain exact numerical aggregates.
+
+Selection failure now has an explicit computational/result handoff that preserves
+independent snapshots without inventing chronology. Admission failure performs
+no per-snapshot calculation. Assembly validates both normal and failed handoffs
+without running analytical kernels. The existing validate command retains empty
+unrequested series metadata for the new schema; analytical dispatch and CLI/config
+enablement remain unchanged.
+
+Completed lineage now retains a private immutable derivation certificate using
+the existing root sets. Consumer checks verify roots, cycles, depth, scope,
+arithmetic and completed work counts against supplied evidence. Interrupted root
+work does not retain an exact prefix; its failure counters establish declared
+limit consistency only. No certificate or internal input signature is public.
+
+Canonical checks preserve endpoint coverage and reasons exactly, including
+zero-reference and zero-grounded conventions. Incomplete mappings remain failed
+pair rows with null evaluated collision evidence and usable independent
+snapshots. No scientific or observability meaning is broadened.
+
+The current source gate advances to the accepted Step 5 commit and authorizes
+nine product paths: longitudinal coordinator, selected ancestry, report contract,
+assembly, Markdown, safe logging, CLI report-shape integration, canonical schema
+and packaged mirror. No new module or dependency is added. Step 7 and Phase 6B
+remain unstarted. See `PHASE_6A_STEP_6.md` for verification and remaining scope.

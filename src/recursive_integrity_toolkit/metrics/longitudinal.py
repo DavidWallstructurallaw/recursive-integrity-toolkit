@@ -26,7 +26,7 @@ Current phase status:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields, replace
+from dataclasses import dataclass, field, fields, is_dataclass, replace
 from math import isfinite
 from types import MappingProxyType
 from typing import TYPE_CHECKING
@@ -1411,3 +1411,529 @@ def analyze_longitudinal(
     signature = _analysis_signature(selection, options, lineage, lineage_limits, lineage_signature)
     return LongitudinalResult(selection, snapshots, comparisons, status, reasons, messages, signature, options,
                              shared, lineage, lineage_limits, lineage_signature, usage)
+
+
+def _handoff_equal(actual, expected, label):
+    """Require canonical literal types as well as values, including nested leaves."""
+    if type(actual) is not type(expected):
+        raise _invalid(label + " has an invalid handoff type")
+    if is_dataclass(expected):
+        for item in fields(expected):
+            _handoff_equal(getattr(actual, item.name), getattr(expected, item.name), label)
+    elif type(expected) in (dict, MappingProxyType):
+        if tuple(actual) != tuple(expected):
+            raise _invalid(label + " has different handoff keys")
+        for key in expected:
+            _handoff_equal(actual[key], expected[key], label)
+    elif type(expected) is tuple:
+        if len(actual) != len(expected):
+            raise _invalid(label + " has different handoff membership")
+        for left, right in zip(actual, expected):
+            _handoff_equal(left, right, label)
+    elif actual != expected:
+        raise _invalid(label + " disagrees with its retained input evidence")
+
+
+def _handoff_distribution(validation, snapshot, rows):
+    """Check assignment evidence and supplied arithmetic without metric dispatch."""
+    from ..models import RecordStateAssignment, WeightingOptions
+    from ..representations.base import _representation_error
+    from ..representations.content_hash import exact_content_bytes
+    from ..utils.hashing import sha256_bytes
+    from .diversity import _metrics
+
+    declaration, scope = snapshot.scope.declaration, snapshot.scope.representation_scope
+    config = declaration.representation
+    reasons, messages = (), ()
+    counts, included, exclusions = {}, [], []
+    try:
+        if config.source == "content_hash":
+            if validation.content_mode is ContentMode.LOCAL_REF and rows:
+                raise _invalid("local-reference content payloads are unavailable to series analysis",
+                               code=ErrorCode.CONTENT_REF_MISSING)
+            selection = select_content_representation(representation_name=config.name,
+                representation_version=config.version, normalization_profile=config.normalization_profile)
+        else:
+            selection = select_field_representation(tuple(rows), dataset_versions=(snapshot.scope.dataset_version,),
+                config=config, missing_state_id=declaration.missing_state_id)
+        selected = _selected_records(tuple(rows), (snapshot.scope.dataset_version,))
+        # Check collisions before missing-cell failures, as the assignment owner does.
+        for key, values, location in selected:
+            if (config.source != "content_hash" and declaration.missing_state_id is not None
+                    and values.get(config.field) == declaration.missing_state_id):
+                raise _representation_error(ErrorCode.CONFIG_INVALID,
+                    "missing-state ID collides with an observed value", field_name=config.field,
+                    key=key, location=location)
+        raw_by_digest = {}
+        for key, values, location in selected:
+            if config.source == "content_hash":
+                raw = exact_content_bytes(values["content"], normalization_profile=config.normalization_profile)
+                state = sha256_bytes(raw)
+                if state in raw_by_digest and raw_by_digest[state] != raw:
+                    raise _representation_error(ErrorCode.SCHEMA_TYPE, "equal content digests have unequal bytes",
+                                               field_name="content", key=key, location=location)
+                raw_by_digest[state] = raw
+            else:
+                state = values.get(config.field)
+                if state is None:
+                    if config.missing_value_policy == "error":
+                        raise _representation_error(ErrorCode.SCHEMA_REQUIRED_FIELD,
+                            "missing state blocks this representation", field_name=config.field,
+                            key=key, location=location)
+                    if config.missing_value_policy == "exclude":
+                        exclusions.append(RecordStateAssignment(key, None, CalculationReason.REPRESENTATION_MISSING))
+                        continue
+                    state = declaration.missing_state_id
+            included.append(key)
+            counts[state] = counts.get(state, 0) + 1
+    except CanonicalValidationError as error:
+        reasons = ((CalculationReason.CONTENT_UNAVAILABLE,) if error.code is ErrorCode.CONTENT_REF_MISSING
+                   else (CalculationReason.REPRESENTATION_MISSING,))
+        messages = (_message(error, "longitudinal_snapshot"),)
+        if scope is not None or snapshot.distribution is not None:
+            raise _invalid("failed snapshot assignment cannot supply a distribution")
+    else:
+        if scope is None or snapshot.distribution is None:
+            raise _invalid("valid snapshot assignment cannot be silently omitted")
+        expected_scope = CalculationScope((snapshot.scope.dataset_version,), tuple(included),
+            tuple(item.record_key for item in exclusions), "included_representation_records", scope.scope_id)
+        _handoff_equal(scope, expected_scope, "representation population")
+        total = len(included)
+        reason = CalculationReason.EMPTY_SCOPE if not rows else CalculationReason.ALL_EXCLUDED if not total else None
+        reason_args = dict(reason=reason) if reason else {}
+        metric = _metrics(tuple((state, counts[state] / total) for state in sorted(counts)), counts, None,
+            scope=scope, representation=selection.descriptor, weighting=WeightingOptions(),
+            basis="explicit_counts_divided_by_included_records" if reason is None else "empirical_assignments",
+            denominator=total if total else None, denominator_basis=scope.denominator_basis, **reason_args)
+        if reason is None:
+            metric = replace(metric, input_basis="empirical_assignments",
+                frequency_metadata=replace(metric.frequency_metadata, method="empirical_assignments; n_i/N"),
+                count_metadata=replace(metric.count_metadata, method="count included record-state assignments"))
+        expected = StateDistributionResult(metric, None,
+            ValidationCoverage(total, len(rows), "selected_valid_records"), selection.selection_basis,
+            selection.messages, tuple(exclusions))
+        _handoff_equal(snapshot.distribution, expected, "snapshot distribution")
+        reasons = metric.reason_codes
+    descriptor = _descriptor_for(declaration)
+    for actual, expected in (
+        (snapshot.record_count, _count("record_count", len(rows), snapshot.scope)),
+        (snapshot.representation_eligible_record_count, _count("representation_eligible_record_count",
+            None if scope is None else len(scope.included_record_keys), snapshot.scope,
+            representation=descriptor, reasons=reasons if scope is None else ())),
+        (snapshot.representation_excluded_record_count, _count("representation_excluded_record_count",
+            None if scope is None else len(scope.excluded_record_keys), snapshot.scope,
+            representation=descriptor, reasons=reasons if scope is None else ())),
+    ):
+        _handoff_equal(actual, expected, "snapshot count")
+    _handoff_equal(snapshot.family_statuses[0],
+        _family("distribution", ExecutionStatus.PARTIAL if reasons else ExecutionStatus.COMPLETED, reasons),
+        "snapshot distribution execution")
+    return messages
+
+
+def _handoff_provenance(validation, snapshot):
+    """Validate source declarations, direct classes, coverage and owner metadata."""
+    from .provenance import _checked_join, _composition, _direct, _metadata, _scalar
+    from .bounds import _metric
+
+    if not snapshot.record_count.value:
+        return ()
+    promoted = _promotions(validation)
+    joined = join_provenance(validation.records, validation.provenance,
+        dataset_versions=(snapshot.scope.dataset_version,), strict_mode=bool(promoted), strict_warning_codes=promoted)
+    scope, entries, messages = _checked_join(joined, _provenance_scope(snapshot.scope))
+    total, missing = len(entries), len(joined.missing_record_keys)
+    coverages = (joined.provenance_row_coverage, joined.provenance_required_field_coverage,
+                 joined.grounding_field_coverage)
+    names = ("provenance_row_coverage", "provenance_required_field_coverage", "grounding_field_coverage")
+    expected = ProvenanceCompositionResult(scope, _composition(entries, scope, "source_type"),
+        _composition(entries, scope, "provenance_confidence"), _direct(entries, scope, messages), None,
+        *coverages,
+        tuple(_metadata(name, "PR-004", "F-008" if name == "provenance_row_coverage" else None,
+                        "ratio", scope, "Reuse Phase 2 coverage; Definitions 3.10-3.12") for name in names),
+        _scalar("analyzed_record_count", "PR-004", total, scope, "All selected valid records"),
+        _scalar("records_with_matching_rows", "PR-004", total - missing, scope, "Phase 2 matched-row inventory"),
+        _scalar("missing_provenance_count", "PR-004", missing, scope, "Phase 2 missing-row inventory"),
+        _scalar("missing_provenance_share", "PR-004", missing / total, scope,
+                "Definitions 11.4; missing rows / all selected valid records", unit="ratio", derived=True),
+        joined.provenance_supplied,
+        any(m.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL) for m in messages),
+        messages, tuple(joined.promoted_warning_codes))
+    _handoff_equal(snapshot.provenance, expected, "snapshot provenance")
+    grounding = expected.direct_grounding
+    opened, closed, unresolved = (grounding.known_open_count.value, grounding.known_closed_count.value,
+                                 grounding.unresolved_grounding_count.value)
+    available = coverages[1].numerator > 0
+    bounds = DirectClosureExposureBounds(scope, opened, closed, unresolved, total, scope.denominator_basis,
+        *tuple(_metric("direct_closure_exposure_" + name, formula, value if available else None, scope,
+                       method if available else "no usable required-provenance row")
+            for name, formula, value, method in (
+                ("lower_bound", "F-009", closed / total, "known_closed_count / total_record_count"),
+                ("upper_bound", "F-010", (closed + unresolved) / total,
+                 "(known_closed_count + unresolved_grounding_count) / total_record_count"),
+                ("interval_width", None, unresolved / total,
+                 "upper_bound - lower_bound = unresolved_grounding_count / total_record_count"))),
+        provenance_row_coverage=coverages[0], provenance_required_field_coverage=coverages[1],
+        grounding_field_coverage=coverages[2], confidence_field_coverage=expected.confidence.field_coverage,
+        confidence_status=expected.confidence.status, confidence_counts=expected.confidence.counts,
+        input_has_errors=expected.input_has_errors, validation_messages=messages)
+    _handoff_equal(snapshot.direct_closure, bounds, "snapshot direct interval")
+    return messages
+
+
+def validate_longitudinal_snapshot(validation: BundleValidationResult, snapshot: SnapshotSummary) -> None:
+    """Validate one complete input population, without requiring series chronology.
+
+    This consumer checks literal assignments, supplied tables and scalar arithmetic.
+    It invokes no representation assignment, metric coordinator or graph builder.
+    Shared lineage derivation is validated once by the enclosing series consumer.
+    """
+    if type(validation) is not BundleValidationResult or type(snapshot) is not SnapshotSummary:
+        raise _invalid("snapshot handoff requires typed validation and summary")
+    replace(snapshot)
+    replace(snapshot.scope)
+    replace(snapshot.scope.declaration)
+    rows = tuple(row for row in validation.records if row.record_key.dataset_version == snapshot.scope.dataset_version)
+    keys = tuple(key for key, _, _ in _selected_records(rows, (snapshot.scope.dataset_version,)))
+    scope = snapshot.scope.population_scope
+    if (scope.included_record_keys != keys or scope.excluded_record_keys
+            or scope.dataset_versions != (snapshot.scope.dataset_version,)
+            or scope.denominator_basis != "selected_valid_records"
+            or not rows and not snapshot.scope.declaration.empty_scope
+            or rows and any(row.location.file_role not in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE)
+                            for row in rows)):
+        raise _invalid("snapshot handoff must preserve its complete selected input population")
+    messages = _handoff_distribution(validation, snapshot, rows) + _handoff_provenance(validation, snapshot)
+    _handoff_equal(snapshot.family_statuses[3],
+        _family("tail", ExecutionStatus.NOT_REQUESTED, ("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",)),
+        "snapshot tail execution")
+    if snapshot.lineage is not None:
+        replace(snapshot.lineage)
+        replace(snapshot.lineage_closure)
+        messages += snapshot.lineage.messages
+    elif snapshot.family_statuses[-1].execution_status is ExecutionStatus.NOT_REQUESTED:
+        _handoff_equal(snapshot.family_statuses[-1],
+            _family("lineage", ExecutionStatus.NOT_REQUESTED, ("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",)),
+            "snapshot lineage execution")
+    elif snapshot.family_statuses[-1].execution_status is not ExecutionStatus.NOT_REQUESTED:
+        # Graph admission diagnostics are checked against actual loaded evidence
+        # by the enclosing consumer. Independent snapshot validation preserves them.
+        if any(message.code == ErrorCode.LINEAGE_RESOURCE_LIMIT_EXCEEDED.value for message in snapshot.messages):
+            messages += (ValidationMessage(ErrorCode.LINEAGE_RESOURCE_LIMIT_EXCEEDED.value,
+                ValidationSeverity.ERROR, "lineage computation exceeded an explicit resource limit",
+                field="longitudinal_lineage"),)
+    _handoff_equal(snapshot.messages, tuple(dict.fromkeys(messages)), "snapshot diagnostics")
+
+
+def _handoff_comparison(pair, earlier, later, order):
+    """Validate pair-local mapped tables, state sets and all five legacy scalars."""
+    from ..representations.compatibility import validate_representation_compatibility
+    from .diversity import _pair_metadata
+
+    basis = pair.compatibility
+    a = None if earlier.distribution is None else earlier.distribution.unweighted
+    b = None if later.distribution is None else later.distribution.unweighted
+    if basis is None:
+        return None, None, a, b, (CalculationReason.REPRESENTATION_INCOMPATIBLE,), (
+            ValidationMessage(ErrorCode.REPRESENTATION_INCOMPATIBLE.value, ValidationSeverity.ERROR,
+                "pair declarations have no compatible comparison basis", field="longitudinal_pair"),)
+    try:
+        original_a, original_b = a, b
+        available = a is not None and b is not None and a.status is b.status is CalculationStatus.AVAILABLE
+        compatibility = None
+        if available:
+            compatibility = validate_representation_compatibility(
+                ExplicitPairContext(a.scope, b.scope, a.representation, b.representation, order),
+                earlier_state_semantics=basis.earlier_state_semantics,
+                later_state_semantics=basis.later_state_semantics, state_mapping=pair.mapping)
+        if pair.mapping is not None:
+            forward = pair.mapping.direction == "earlier_to_later"
+            source = a if forward else b
+            if source is None:
+                raise _invalid("mapping coverage requires its source representation", code=ErrorCode.REPRESENTATION_INCOMPATIBLE)
+            source = _harmonize_distribution(source, pair.mapping)
+            a, b = (source, b) if forward else (a, source)
+        if not available:
+            reasons = tuple(dict.fromkeys(_distribution_reasons(earlier) + _distribution_reasons(later)))
+            return basis, None, a, b, reasons, ()
+        left, right = set(a.support), set(b.support)
+        specs = (
+            ("support_delta", "F-005", "states", len(right) - len(left), "later support_size minus earlier support_size"),
+            ("support_loss_count", None, "states", len(left - right), "cardinality of earlier support minus later support"),
+            ("support_added_count", None, "states", len(right - left), "cardinality of later support minus earlier support"),
+            ("support_retention_ratio", "F-006", "ratio", len(left & right) / len(left),
+             "intersection support size / earlier positive-mass support size"),
+            ("gini_simpson_diversity_delta", "F-018", "dimensionless",
+             b.gini_simpson_diversity.value - a.gini_simpson_diversity.value,
+             "later Gini-Simpson diversity minus earlier diversity"))
+        scalars = tuple(ScalarCalculation(_pair_metadata(name, formula, unit, compatibility, a.weighting, method),
+                                         CalculationStatus.AVAILABLE, value)
+                        for name, formula, unit, value, method in specs)
+        sets = tuple(_pair_metadata(name, None, "set_of_states", compatibility, a.weighting, method)
+                     for name, method in (("extinct_states", "earlier support minus later support"),
+                                          ("added_states", "later support minus earlier support"),
+                                          ("retained_states", "earlier support intersect later support")))
+        expected = SupportComparison(compatibility, original_a, original_b, a, b, CalculationStatus.AVAILABLE, (),
+            *scalars, tuple(sorted(left - right)), tuple(sorted(right - left)), tuple(sorted(left & right)),
+            len(left), "earlier_positive_mass_support_in_harmonized_representation", sets,
+            (("earlier", original_a.support_size.value, a.support_size.value),
+             ("later", original_b.support_size.value, b.support_size.value)))
+        return basis, expected, a, b, (), ()
+    except CanonicalValidationError as error:
+        return None, None, None, None, (CalculationReason.REPRESENTATION_INCOMPATIBLE,), (
+            _message(error, "longitudinal_pair"),)
+
+
+def _handoff_tail(options, basis, comparison, earlier, later, a, reasons):
+    from .tail import RarityEntry, _invalid as invalid_tail, _metadata
+
+    tail, messages = None, ()
+    if not reasons:
+        ranked = sorted(a.states, key=lambda row: (row.state_frequency, row.state_count, row.state_id))
+        if options.rule == "state_list" and set(options.state_ids) - set(a.support):
+            reasons = (CalculationReason.UNSUPPORTED_OPTION,)
+            messages = (_message(invalid_tail("tail state list contains an absent or zero-count state"),
+                                 "longitudinal_tail"),)
+        else:
+            selected = {row.state_id for row in ranked
+                if (options.rule == "singleton_count" and row.state_count == 1
+                    or options.rule == "count_at_or_below" and row.state_count <= options.count_threshold
+                    or options.rule == "frequency_at_or_below" and row.state_frequency <= options.frequency_threshold
+                    or options.rule == "state_list" and row.state_id in options.state_ids)}
+            scope, representation = a.scope, a.representation
+            method = "Definitions 10.1-10.6; explicit " + options.rule
+            total = len(scope.included_record_keys)
+            tail = TailSelectionResult(scope, representation, options, a.input_basis, a.status, a.reason_codes,
+                total, scope.denominator_basis, tuple(sorted(selected)),
+                tuple(RarityEntry(row.state_id, row.state_count, row.state_frequency, index, row.state_id in selected)
+                      for index, row in enumerate(ranked, 1)),
+                ScalarCalculation(_metadata("tail_support_size", "states", scope, representation, method),
+                                  CalculationStatus.AVAILABLE, len(selected)),
+                ScalarCalculation(_metadata("tail_record_share", "ratio", scope, representation,
+                    method + "; selected counts / included records"), CalculationStatus.AVAILABLE,
+                    sum(row.state_count for row in ranked if row.state_id in selected) / total),
+                _metadata("rarity_rank", "ordinal_rank", scope, representation,
+                          "ascending frequency, then count, then Unicode state ID; 1-based ordinal"),
+                _metadata("tail_membership", "set_of_states", scope, representation, method),
+                a.count_metadata, a.frequency_metadata)
+    lost = None if reasons else tuple(sorted(set(tail.tail_membership) & set(comparison.extinct_states)))
+    return TailDisappearanceResult(options,
+        earlier.scope.representation_scope or earlier.scope.population_scope,
+        later.scope.representation_scope or later.scope.population_scope,
+        None if basis is None else basis.harmonized_representation, tail,
+        None if a is None else a.frequency_denominator,
+        CalculationStatus.UNAVAILABLE if reasons else CalculationStatus.AVAILABLE,
+        reasons, None if lost is None else len(lost), lost), messages
+
+
+def _validate_longitudinal_pair(result, earlier, later, order, options, lineage):
+    pair = result.pair
+    basis, comparison, a, b, reasons, messages = _handoff_comparison(pair, earlier, later, order)
+    _handoff_equal(result.support_comparison, comparison, "scheduled support comparison")
+    deltas = tuple(_delta(name, earlier, later, basis, a, b, reasons, comparison=comparison)
+                   for name in _DISTRIBUTION_DELTAS)
+    deltas += tuple(_evidence_delta(name, earlier, later, basis) for name in (*_PROVENANCE_DELTAS, *_DIRECT_DELTAS))
+    shares = {category: _evidence_delta("source_type_share_deltas", earlier, later, basis, category=category)
+              for category in _SOURCE_CATEGORIES}
+    messages += _pair_provenance_errors(earlier, later)
+    provenance_family, direct_family = _pair_evidence_families(deltas, shares, messages)
+    distribution_status = (ExecutionStatus.COMPLETED if comparison is not None else
+                           ExecutionStatus.PARTIAL if basis is not None else ExecutionStatus.FAILED)
+    tail, tail_family = None, None
+    if options is not None:
+        tail, tail_messages = _handoff_tail(options, basis, comparison, earlier, later, a, reasons)
+        messages += tail_messages
+        tail_family = _family("tail", ExecutionStatus.COMPLETED if tail.status is CalculationStatus.AVAILABLE
+                              else ExecutionStatus.FAILED, tail.reason_codes)
+    families = _families(_family("distribution", distribution_status, reasons), provenance_family, direct_family, tail_family)
+    lineage_deltas = ()
+    if lineage:
+        lineage_deltas = tuple(_lineage_delta(name, earlier, later, basis) for name in _LINEAGE_DELTA_METADATA)
+        families = (*families[:-1], _lineage_pair_family(lineage_deltas, earlier, later))
+    expected = LongitudinalPairResult(pair, basis, comparison, deltas, tail, families, shares, messages, lineage_deltas)
+    _handoff_equal(result, expected, "scheduled pair")
+
+
+def validate_longitudinal_result(validation: BundleValidationResult, *, result: LongitudinalResult) -> None:
+    """Validate a supplied series handoff against current input and arithmetic.
+
+    Binding alone cannot certify caller-created aggregates. This checks complete
+    membership, assignments, declared evidence, owner metadata, pair arithmetic
+    and requested shared lineage evidence. No analysis entry point, representation
+    assignment, tail selector, graph builder or cycle analyzer is invoked.
+    """
+    if type(result) is not LongitudinalResult:
+        raise _invalid("longitudinal handoff requires its typed result")
+    validate_longitudinal_selection(validation, result.selection)
+    replace(result)
+    snapshots = {}
+    for ordinal, snapshot in enumerate(result.snapshots, 1):
+        validate_longitudinal_snapshot(validation, snapshot)
+        scope = snapshot.scope.representation_scope
+        if scope is not None and scope.scope_id != f"longitudinal-representation-{ordinal:04d}":
+            raise _invalid("representation scope reference disagrees with selected chronology")
+        snapshots[snapshot.scope.dataset_version] = snapshot
+    if result.lineage_requested:
+        from ..lineage.ancestry import validate_selected_lineage_result, _selected_lineage_signature
+        if result.lineage_input_signature != _selected_lineage_signature(validation, result.selection, result.lineage_limits):
+            raise _invalid("requested lineage binding disagrees with its input")
+        if result.shared_lineage is not None:
+            validate_selected_lineage_result(validation, selection=result.selection, result=result.shared_lineage)
+        else:
+            from ..lineage.ancestry import validate_lineage_graph_exhaustion
+            validate_lineage_graph_exhaustion(validation, usage=result.lineage_resource_usage)
+            failure = _message(LineageResourceLimitError(result.lineage_resource_usage), "longitudinal_lineage")
+            family = _family("lineage", ExecutionStatus.FAILED, ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",))
+            for snapshot in result.snapshots:
+                if failure not in snapshot.messages or snapshot.family_statuses[-1] != family:
+                    raise _invalid("graph admission failure must retain its exact status and diagnostic")
+    for pair in result.comparisons:
+        _validate_longitudinal_pair(pair, snapshots[pair.pair.earlier_version], snapshots[pair.pair.later_version],
+                                  result.selection.version_order, result.tail_options, result.lineage_requested)
+    messages = tuple(dict.fromkeys(message for item in (*result.snapshots, *result.comparisons)
+                                  for message in item.messages))
+    _handoff_equal(result.messages, messages, "series diagnostics")
+
+
+@dataclass(frozen=True, slots=True)
+class LongitudinalFailureResult:
+    """Rejected selection with independent evidence and no inferred chronology."""
+
+    declarations: tuple[SnapshotDeclaration, ...]
+    mappings: tuple[LongitudinalMapping, ...]
+    snapshots: tuple[SnapshotSummary, ...]
+    context_versions: tuple[str, ...]
+    selected_version_count: int
+    baseline: str
+    max_versions: int
+    lineage_requested: bool
+    tail_options: TailSelectionOptions | None
+    messages: tuple[ValidationMessage, ...]
+    reason_codes: tuple[str, ...]
+    input_signature: str = field(repr=False)
+
+    def __post_init__(self):
+        _baseline(self.baseline)
+        _limit(self.max_versions)
+        if (type(self.declarations) is not tuple
+                or any(type(d) is not SnapshotDeclaration for d in self.declarations)
+                or type(self.mappings) is not tuple
+                or any(type(m) is not LongitudinalMapping for m in self.mappings)
+                or type(self.snapshots) is not tuple
+                or any(type(s) is not SnapshotSummary for s in self.snapshots)
+                or type(self.context_versions) is not tuple
+                or any(type(v) is not str for v in self.context_versions)
+                or type(self.selected_version_count) is not int
+                or self.selected_version_count != len(self.declarations)
+                or type(self.lineage_requested) is not bool
+                or type(self.messages) is not tuple or not self.messages
+                or any(type(m) is not ValidationMessage for m in self.messages)
+                or type(self.reason_codes) is not tuple or not self.reason_codes
+                or type(self.input_signature) is not str or not self.input_signature):
+            raise _invalid("failed series requires a complete immutable request and evidence")
+        if self.tail_options is not None:
+            _tail_options(self.tail_options)
+        if any(s.lineage is not None or s.lineage_closure is not None for s in self.snapshots):
+            raise _invalid("failed selection cannot claim selected lineage work")
+
+    @property
+    def execution_status(self):
+        return ExecutionStatus.FAILED
+
+
+def _failed_request(validation, declarations, mappings, baseline, max_versions, lineage, tail_options):
+    _baseline(baseline)
+    _limit(max_versions)
+    if (type(lineage) is not bool or type(declarations) is not tuple
+            or any(type(d) is not SnapshotDeclaration for d in declarations)
+            or type(mappings) is not tuple or any(type(m) is not LongitudinalMapping for m in mappings)):
+        raise _invalid("failed selection requires typed declarations and explicit request options")
+    options = None if tail_options is None else _tail_options(tail_options)
+    try:
+        select_longitudinal_versions(validation, declarations=declarations, mappings=mappings,
+                                     baseline=baseline, max_versions=max_versions)
+    except CanonicalValidationError as error:
+        failure = _message(error, "longitudinal_selection")
+    else:
+        raise _invalid("valid selection cannot be supplied as a failed series")
+    rows, populations, selected, context, _, joined = _populations(validation)
+    reasons = ("R_LONGITUDINAL_RESOURCE_LIMIT" if
+        failure.code == ErrorCode.LONGITUDINAL_RESOURCE_LIMIT_EXCEEDED.value else
+        "R_LONGITUDINAL_SELECTION_INVALID", failure.code)
+    scopes = []
+    if failure.code != ErrorCode.LONGITUDINAL_RESOURCE_LIMIT_EXCEEDED.value:
+        seen = set()
+        for declaration in declarations:
+            version = declaration.dataset_version
+            if version in seen:
+                continue
+            seen.add(version)
+            if version in context or declaration.empty_scope != (version not in populations):
+                continue
+            if version not in selected and not declaration.empty_scope:
+                continue
+            scopes.append(SnapshotScope(version,
+                CalculationScope((version,), tuple(populations.get(version, ())), (),
+                    "selected_valid_records", f"longitudinal-population-{len(scopes) + 1:04d}"),
+                None, declaration))
+    binding = _binding(rows, joined, validation.version_order, declarations, (),
+                       baseline, max_versions, validation.content_mode)
+    signature = sha256_canonical((binding, tuple((m.earlier_version, m.later_version,
+        _plain(m.declaration)) for m in mappings), lineage,
+        None if options is None else {f.name: _plain(getattr(options, f.name)) for f in fields(options)},
+        reasons))
+    return tuple(scopes), context, failure, reasons, signature, options
+
+
+def analyze_longitudinal_failure(
+    validation: BundleValidationResult, *, declarations: tuple[SnapshotDeclaration, ...],
+    baseline: str = "none", max_versions: int = 100,
+    mappings: tuple[LongitudinalMapping, ...] = (), lineage: bool = False,
+    tail_options: TailSelectionOptions | None = None,
+) -> LongitudinalFailureResult:
+    """Retain independent evidence after a confirmed selection rejection.
+
+    This calculation entry point is separate from report assembly. Declaration
+    order identifies rows only. Admission failures perform no snapshot work;
+    no failure path invents chronology, compares endpoints, or runs lineage.
+    """
+    scopes, context, failure, reasons, signature, options = _failed_request(
+        validation, declarations, mappings, baseline, max_versions, lineage, tail_options)
+    grouped = {scope.dataset_version: [] for scope in scopes}
+    for row in validation.records:
+        if row.record_key.dataset_version in grouped:
+            grouped[row.record_key.dataset_version].append(row)
+    snapshots = tuple(_snapshot_distribution(scope, tuple(grouped[scope.dataset_version]), index, validation)
+                      for index, scope in enumerate(scopes, 1))
+    if lineage:
+        snapshots = tuple(replace(snapshot, family_statuses=(*snapshot.family_statuses[:-1],
+            _family("lineage", ExecutionStatus.FAILED, reasons))) for snapshot in snapshots)
+    messages = tuple(dict.fromkeys((failure, *(m for s in snapshots for m in s.messages))))
+    return LongitudinalFailureResult(declarations, mappings, snapshots, context, len(declarations),
+        baseline, max_versions, lineage, options, messages, reasons, signature)
+
+
+def validate_longitudinal_failure(validation: BundleValidationResult, *, result: LongitudinalFailureResult):
+    """Check a failed request and its independent handoffs without calculations."""
+    if type(result) is not LongitudinalFailureResult:
+        raise _invalid("consumer requires a typed failed series")
+    replace(result)
+    scopes, context, failure, reasons, signature, options = _failed_request(validation,
+        result.declarations, result.mappings, result.baseline, result.max_versions,
+        result.lineage_requested, result.tail_options)
+    if (len(scopes) != len(result.snapshots) or result.context_versions != context
+            or result.reason_codes != reasons or result.input_signature != signature
+            or result.tail_options != options
+            or result.messages != tuple(dict.fromkeys((failure,
+                *(m for s in result.snapshots for m in s.messages))))):
+        raise _invalid("failed series evidence differs from the current request or input")
+    for scope, snapshot in zip(scopes, result.snapshots):
+        if (snapshot.scope.population_scope != scope.population_scope
+                or snapshot.scope.declaration != scope.declaration):
+            raise _invalid("failed series snapshot differs from its complete declaration")
+        validate_longitudinal_snapshot(validation, snapshot)
+        expected = (_family("lineage", ExecutionStatus.FAILED, reasons) if result.lineage_requested else
+                    _family("lineage", ExecutionStatus.NOT_REQUESTED, ("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",)))
+        if snapshot.family_statuses[-1] != expected:
+            raise _invalid("failed series lineage must retain its selection failure")
+    return result
