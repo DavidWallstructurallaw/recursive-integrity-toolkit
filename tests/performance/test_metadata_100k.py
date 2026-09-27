@@ -146,7 +146,9 @@ def _phase4_step10_assert_metadata_report(path, size=100000):
     assert report["capabilities"]["lineage"]["execution_status"] == "not_requested"
     assert report["capabilities"]["content_diagnostics"]["execution_status"] == "completed"
     assert report["capabilities"]["content_diagnostics"]["execution_scope"] == ["supplied_distribution:audit-representation"]
-    assert set(metrics) == {"closure_exposure", "diversity", "provenance", "support"}
+    assert set(metrics) == {"closure_exposure", "diversity", "provenance", "support", "longitudinal"}
+    assert metrics["longitudinal"] == {"snapshots": [], "comparisons": []}
+    assert report["capabilities"]["dataset_longitudinal"]["longitudinal_execution"]["status"] == "not_requested"
     assert report["simulations"] == {}
 
 
