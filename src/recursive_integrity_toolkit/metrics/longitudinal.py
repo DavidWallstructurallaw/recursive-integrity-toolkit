@@ -1,7 +1,7 @@
-"""Select explicit snapshot populations and declaration-compatible pairs.
+"""Select ordered snapshots and coordinate observed distribution changes.
 
 Owner IDs:
-    PR-007, PR-011, T1; P6A-D01 through P6A-D03 and P6A-D08.
+    PR-002, PR-007, PR-011, T1, T2; P6A-D01 through P6A-D04 and P6A-D08.
 
 Inputs:
     Retained BundleValidationResult, explicit snapshot declarations, pair-local
@@ -9,38 +9,49 @@ Inputs:
 
 Outputs:
     Immutable complete population scopes, validated chronology, deterministic
-    pair schedule, declaration-only compatibility and a private input binding.
+    pair schedule, original distributions, pair-local changes and input binding.
 
 Assumptions:
     Primary/comparison roles select records; context and chronology-only entries
     cannot silently acquire snapshot membership. Meanings remain declarations.
 
 Limits:
-    No I/O, assignment, distributions, deltas, tail, graph, simulation, report or
-    CLI dispatch. Map totality on actual states belongs to consuming kernels.
+    Selection performs no calculation. Analysis delegates existing distribution,
+    comparison and tail owners. No I/O, graph, simulation, report or CLI dispatch.
+    Provenance/direct-closure integration remains explicitly deferred to Step 4.
 
 Current phase status:
-    Phase 6A Step 2 selection and compatibility only. Import-safe.
+    Phase 6A Step 3 snapshot distributions and observed changes. Import-safe.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields, replace
+from math import isfinite
 from types import MappingProxyType
 
 from ..config import RepresentationConfig
 from ..errors import CanonicalValidationError, ErrorCode
 from ..io.validation import join_provenance, resolve_version_order
 from ..models import (
-    BundleValidationResult, CalculationReason, CalculationScope, CalculationStatus,
-    CanonicalRow, FileRole, RecordKey, RepresentationDescriptor, VersionOrderResult,
+    BundleValidationResult, CalculationEvidenceClass, CalculationMetadata,
+    CalculationReason, CalculationScope, CalculationStatus, CanonicalRow,
+    ContentMode, ExplicitPairContext, FileRole, RecordKey, RepresentationDescriptor,
+    ScalarCalculation, TailSelectionOptions, ValidationCoverage, ValidationMessage,
+    ValidationSeverity, VersionOrderResult,
 )
 from ..representations.base import _literal_text, _selected_records
 from ..representations.compatibility import (
     RepresentationBasisCompatibility, StateMappingDeclaration, validate_representation_basis,
 )
-from ..representations.content_hash import select_content_representation
-from ..representations.field import select_field_representation
+from ..representations.content_hash import assign_content_states, select_content_representation
+from ..representations.field import assign_field_states, select_field_representation
+from ..result import ExecutionStatus
 from ..utils.hashing import sha256_canonical
+from .diversity import (
+    StateDistributionResult, SupportComparison, _harmonize_distribution,
+    calculate_state_distribution, compare_support,
+)
+from .tail import TailSelectionResult, _options as _tail_options, select_tail
 
 
 def _invalid(message: str, *, code: ErrorCode = ErrorCode.CONFIG_INVALID,
@@ -258,6 +269,8 @@ def _populations(validation: BundleValidationResult):
     if (type(validation) is not BundleValidationResult or type(validation.records) is not tuple
             or not validation.records or any(type(row) is not CanonicalRow for row in validation.records)):
         raise _invalid("selection requires a nonempty validated record bundle")
+    if type(validation.content_mode) is not ContentMode:
+        raise _invalid("selection requires a retained explicit content mode")
     order = validation.version_order
     if type(order) is not VersionOrderResult:
         raise _invalid("selection requires retained version-order evidence")
@@ -311,7 +324,7 @@ def _plain(value):
     return value
 
 
-def _binding(rows, joined, order, declarations, pairs, baseline, max_versions):
+def _binding(rows, joined, order, declarations, pairs, baseline, max_versions, content_mode):
     # Canonical values include state/parent evidence. Private hashes and digests
     # never authorize public disclosure. Paths, row positions and extras are absent.
     records = tuple(((key.dataset_version, key.record_id), location.file_role.value, values)
@@ -323,7 +336,7 @@ def _binding(rows, joined, order, declarations, pairs, baseline, max_versions):
                                _plain(pair.mapping)) for pair in pairs)
     try:
         return sha256_canonical((records, joined.provenance_supplied, provenance, _plain(order.declarations),
-            _plain(declarations), pair_declarations, baseline, max_versions))
+            _plain(declarations), pair_declarations, baseline, max_versions, content_mode.value))
     except (TypeError, ValueError):
         raise _invalid("selection input binding requires canonical literal data") from None
 
@@ -420,7 +433,7 @@ def select_longitudinal_versions(
     pairs = tuple(pairs)
     return LongitudinalSelection(primary, tuple(sorted(declared)), context, checked, selected_order,
         snapshots, pairs, max_versions,
-        _binding(rows, joined, checked, declarations, pairs, baseline, max_versions), baseline)
+        _binding(rows, joined, checked, declarations, pairs, baseline, max_versions, validation.content_mode), baseline)
 
 
 def validate_longitudinal_selection(
@@ -438,3 +451,474 @@ def validate_longitudinal_selection(
     if checked != selection:
         raise _invalid("selection is stale or disagrees with complete current input")
     return checked
+
+
+@dataclass(frozen=True, slots=True)
+class LongitudinalFamilyStatus:
+    family: str
+    execution_status: ExecutionStatus
+    reason_codes: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if (type(self.family) is not str or self.family not in
+                ("distribution", "provenance", "direct_closure", "tail", "lineage")
+                or type(self.execution_status) is not ExecutionStatus
+                or type(self.reason_codes) is not tuple
+                or any(type(code) is not str or not code for code in self.reason_codes)
+                or (self.execution_status is ExecutionStatus.COMPLETED) != (not self.reason_codes)):
+            raise _invalid("family status must retain its explicit execution reasons")
+
+
+@dataclass(frozen=True, slots=True)
+class LongitudinalDelta:
+    """A difference with two endpoint scopes; no pooled population or denominator."""
+
+    metric_name: str
+    owner_id: str
+    formula_id: str
+    unit: str
+    earlier_scope: CalculationScope
+    later_scope: CalculationScope
+    representation: RepresentationDescriptor | None
+    earlier_value: int | float | None
+    later_value: int | float | None
+    value: int | float | None
+    status: CalculationStatus
+    reason_codes: tuple[CalculationReason, ...]
+    earlier_denominator: int | float | None = None
+    later_denominator: int | float | None = None
+    earlier_coverage: ValidationCoverage | None = None
+    later_coverage: ValidationCoverage | None = None
+    earlier_reason_codes: tuple[CalculationReason, ...] = ()
+    later_reason_codes: tuple[CalculationReason, ...] = ()
+    evidence_class: CalculationEvidenceClass = CalculationEvidenceClass.DERIVED_METRIC
+    method: str = "later minus earlier"
+    denominator: None = None
+    denominator_reason: str = "not_applicable_to_difference"
+
+    def __post_init__(self) -> None:
+        for value in (self.metric_name, self.owner_id, self.formula_id, self.unit):
+            if not _literal_text(value):
+                raise _invalid("delta metadata requires literal declarations")
+        expected = {"record_count_delta": ("T1", "F-018", "records"),
+                    "support_delta": ("T1", "F-005", "states"),
+                    "gini_simpson_diversity_delta": ("T1", "F-018", "dimensionless")}
+        if expected.get(self.metric_name) != (self.owner_id, self.formula_id, self.unit):
+            raise _invalid("delta ownership, formula and unit must match the approved field")
+        if (type(self.earlier_scope) is not CalculationScope or type(self.later_scope) is not CalculationScope
+                or len(self.earlier_scope.dataset_versions) != 1 or len(self.later_scope.dataset_versions) != 1
+                or self.earlier_scope.dataset_versions == self.later_scope.dataset_versions
+                or self.representation is not None and type(self.representation) is not RepresentationDescriptor
+                or type(self.status) is not CalculationStatus
+                or self.evidence_class is not CalculationEvidenceClass.DERIVED_METRIC
+                or self.formula_id not in ("F-005", "F-018") or self.method != "later minus earlier"
+                or self.denominator is not None or self.denominator_reason != "not_applicable_to_difference"):
+            raise _invalid("delta requires separate scopes and its approved method")
+        for reasons in (self.reason_codes, self.earlier_reason_codes, self.later_reason_codes):
+            if type(reasons) is not tuple or any(type(code) is not CalculationReason for code in reasons):
+                raise _invalid("delta reasons require the existing calculation registry")
+        for value in (self.earlier_value, self.later_value, self.value,
+                      self.earlier_denominator, self.later_denominator):
+            if value is not None:
+                try:
+                    valid = type(value) in (int, float) and isfinite(value)
+                except OverflowError:
+                    valid = False
+                if not valid:
+                    raise _invalid("delta endpoints and values must be finite numbers or null")
+        for coverage in (self.earlier_coverage, self.later_coverage):
+            if coverage is not None and type(coverage) is not ValidationCoverage:
+                raise _invalid("delta coverage requires a named coverage object")
+        if self.status is CalculationStatus.AVAILABLE:
+            if (self.earlier_value is None or self.later_value is None or self.reason_codes
+                    or self.earlier_reason_codes or self.later_reason_codes
+                    or self.value != self.later_value - self.earlier_value):
+                raise _invalid("available delta must equal its declared endpoint difference")
+        elif self.value is not None or not self.reason_codes:
+            raise _invalid("unavailable delta must be null with explicit reasons")
+
+
+@dataclass(frozen=True, slots=True)
+class TailDisappearanceResult:
+    """Earlier-tail membership and its observed later absence on this pair's basis."""
+
+    options: TailSelectionOptions
+    earlier_scope: CalculationScope
+    later_scope: CalculationScope
+    representation: RepresentationDescriptor | None
+    earlier_tail: TailSelectionResult | None = field(repr=False)
+    earlier_sample_size: int | None
+    status: CalculationStatus
+    reason_codes: tuple[CalculationReason, ...]
+    tail_extinction_count: int | None
+    tail_extinct_states: tuple[str, ...] | None = field(repr=False)
+    owner_id: str = "T2"
+    evidence_class: CalculationEvidenceClass = CalculationEvidenceClass.DERIVED_METRIC
+    method: str = "earlier tail intersect missing states"
+    interpretation: str = "extinct from the observed later version under the declared representation"
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "options", _tail_options(self.options))
+        if (type(self.earlier_scope) is not CalculationScope or type(self.later_scope) is not CalculationScope
+                or type(self.status) is not CalculationStatus or type(self.reason_codes) is not tuple
+                or any(type(code) is not CalculationReason for code in self.reason_codes)
+                or self.owner_id != "T2" or self.evidence_class is not CalculationEvidenceClass.DERIVED_METRIC
+                or self.method != "earlier tail intersect missing states"):
+            raise _invalid("observed tail disappearance requires its scoped method and reasons")
+        if self.status is CalculationStatus.AVAILABLE:
+            if (type(self.tail_extinct_states) is not tuple or type(self.tail_extinction_count) is not int
+                    or self.tail_extinction_count != len(self.tail_extinct_states) or self.reason_codes
+                    or type(self.earlier_tail) is not TailSelectionResult
+                    or self.earlier_tail.status is not CalculationStatus.AVAILABLE
+                    or self.earlier_sample_size != self.earlier_tail.denominator
+                    or self.earlier_scope != self.earlier_tail.scope
+                    or self.representation != self.earlier_tail.representation
+                    or not set(self.tail_extinct_states) <= set(self.earlier_tail.tail_membership)):
+                raise _invalid("available tail disappearance must retain its earlier selection")
+        elif self.tail_extinct_states is not None or self.tail_extinction_count is not None or not self.reason_codes:
+            raise _invalid("unavailable tail disappearance requires null sets and count")
+
+
+@dataclass(frozen=True, slots=True)
+class SnapshotSummary:
+    scope: SnapshotScope
+    distribution: StateDistributionResult | None = field(repr=False)
+    record_count: ScalarCalculation
+    representation_eligible_record_count: ScalarCalculation
+    representation_excluded_record_count: ScalarCalculation
+    family_statuses: tuple[LongitudinalFamilyStatus, ...]
+    messages: tuple[ValidationMessage, ...] = ()
+    provenance: None = None
+    direct_closure: None = None
+    lineage: None = None
+
+    def __post_init__(self) -> None:
+        _result_rows(self.family_statuses, self.messages)
+        if type(self.scope) is not SnapshotScope:
+            raise _invalid("snapshot summary requires a typed population")
+        for count in (self.record_count, self.representation_eligible_record_count,
+                      self.representation_excluded_record_count):
+            if (type(count) is not ScalarCalculation or count.metadata.scope != self.scope.population_scope
+                    or count.metadata.evidence_class is not CalculationEvidenceClass.OBSERVED_FACT):
+                raise _invalid("snapshot counts must retain their complete population and evidence class")
+        if self.record_count.value != len(self.scope.population_scope.included_record_keys):
+            raise _invalid("snapshot record count disagrees with the selected population")
+        scope = self.scope.representation_scope
+        counts = self.representation_eligible_record_count.value, self.representation_excluded_record_count.value
+        expected = (None, None) if scope is None else (len(scope.included_record_keys), len(scope.excluded_record_keys))
+        if counts != expected:
+            raise _invalid("representation counts disagree with their assigned scope")
+        if self.distribution is not None:
+            if (type(self.distribution) is not StateDistributionResult
+                    or self.distribution.unweighted.scope != scope or self.distribution.weighted is not None
+                    or self.distribution.coverage.numerator != counts[0]
+                    or self.distribution.coverage.denominator != self.record_count.value):
+                raise _invalid("snapshot distribution must retain its independent unweighted denominator")
+        if self.provenance is not None or self.direct_closure is not None or self.lineage is not None:
+            raise _invalid("later analytical families remain deferred in this step")
+
+
+@dataclass(frozen=True, slots=True)
+class LongitudinalPairResult:
+    pair: LongitudinalPair
+    compatibility: RepresentationBasisCompatibility | None = field(repr=False)
+    support_comparison: SupportComparison | None = field(repr=False)
+    deltas: tuple[LongitudinalDelta, ...]
+    tail_disappearance: TailDisappearanceResult | None
+    family_statuses: tuple[LongitudinalFamilyStatus, ...]
+    messages: tuple[ValidationMessage, ...] = ()
+
+    def __post_init__(self) -> None:
+        _result_rows(self.family_statuses, self.messages)
+        if (type(self.pair) is not LongitudinalPair or type(self.deltas) is not tuple
+                or any(type(delta) is not LongitudinalDelta for delta in self.deltas)
+                or tuple(delta.metric_name for delta in self.deltas) !=
+                ("record_count_delta", "support_delta", "gini_simpson_diversity_delta")):
+            raise _invalid("pair result requires all three scoped distribution deltas")
+        for delta in self.deltas:
+            if (delta.earlier_scope.dataset_versions != (self.pair.earlier_version,)
+                    or delta.later_scope.dataset_versions != (self.pair.later_version,)):
+                raise _invalid("pair delta endpoints disagree with the scheduled pair")
+        if self.compatibility is None:
+            if self.support_comparison is not None or any(d.value is not None for d in self.deltas):
+                raise _invalid("blocked pair cannot carry available comparison values")
+        elif self.compatibility != self.pair.compatibility:
+            raise _invalid("pair result must retain its declared compatible basis")
+        comparison = self.support_comparison
+        if comparison is not None:
+            if (type(comparison) is not SupportComparison or comparison.status is not CalculationStatus.AVAILABLE
+                    or comparison.original_earlier.scope.dataset_versions != (self.pair.earlier_version,)
+                    or comparison.original_later.scope.dataset_versions != (self.pair.later_version,)
+                    or self.deltas[1].value != comparison.support_delta.value
+                    or self.deltas[2].value != comparison.gini_simpson_diversity_delta.value):
+                raise _invalid("pair summary differs from its existing comparison kernel")
+        tail = self.tail_disappearance
+        if tail is not None:
+            if type(tail) is not TailDisappearanceResult:
+                raise _invalid("tail disappearance requires its typed comparison result")
+            if tail.status is CalculationStatus.AVAILABLE and (comparison is None or
+                    tail.tail_extinct_states != tuple(sorted(set(tail.earlier_tail.tail_membership)
+                                                            & set(comparison.extinct_states)))):
+                raise _invalid("observed tail loss must intersect the harmonized earlier tail")
+
+
+@dataclass(frozen=True, slots=True)
+class LongitudinalResult:
+    selection: LongitudinalSelection
+    snapshots: tuple[SnapshotSummary, ...]
+    comparisons: tuple[LongitudinalPairResult, ...]
+    execution_status: ExecutionStatus
+    reason_codes: tuple[str, ...]
+    messages: tuple[ValidationMessage, ...]
+    input_signature: str = field(repr=False)
+    tail_options: TailSelectionOptions | None = None
+    shared_lineage: None = None
+
+    def __post_init__(self) -> None:
+        if (type(self.selection) is not LongitudinalSelection or type(self.snapshots) is not tuple
+                or any(type(item) is not SnapshotSummary for item in self.snapshots)
+                or type(self.comparisons) is not tuple
+                or any(type(item) is not LongitudinalPairResult for item in self.comparisons)
+                or tuple(s.scope.dataset_version for s in self.snapshots) != self.selection.selected_order
+                or tuple(p.pair for p in self.comparisons) != self.selection.pairs
+                or self.shared_lineage is not None):
+            raise _invalid("series results must retain every selected snapshot and scheduled pair")
+        for selected, snapshot in zip(self.selection.snapshots, self.snapshots):
+            if (selected.population_scope != snapshot.scope.population_scope
+                    or selected.declaration != snapshot.scope.declaration):
+                raise _invalid("analyzed snapshot no longer matches its selected declaration")
+        snapshots = {s.scope.dataset_version: s for s in self.snapshots}
+        for pair in self.comparisons:
+            count = pair.deltas[0]
+            if (count.earlier_value != snapshots[pair.pair.earlier_version].record_count.value
+                    or count.later_value != snapshots[pair.pair.later_version].record_count.value):
+                raise _invalid("record-count delta must use the complete endpoint populations")
+        options = None if self.tail_options is None else _tail_options(self.tail_options)
+        if self.input_signature != _analysis_signature(self.selection, options):
+            raise _invalid("series input binding differs from its selection or tail request")
+        if any((pair.tail_disappearance is None) != (options is None) for pair in self.comparisons):
+            raise _invalid("series tail results must match explicit enablement")
+        if (type(self.execution_status) is not ExecutionStatus or type(self.reason_codes) is not tuple
+                or any(type(code) is not str or not code for code in self.reason_codes)
+                or type(self.messages) is not tuple or any(type(m) is not ValidationMessage for m in self.messages)):
+            raise _invalid("series execution status and diagnostics require immutable typed values")
+        useful = any(delta.status is CalculationStatus.AVAILABLE for pair in self.comparisons for delta in pair.deltas)
+        if (self.execution_status is not (ExecutionStatus.PARTIAL if useful else ExecutionStatus.FAILED)
+                or "R_LONGITUDINAL_FAMILIES_DEFERRED" not in self.reason_codes):
+            raise _invalid("Step 3 result must disclose its deferred required families")
+
+
+def _result_rows(families, messages):
+    if (type(families) is not tuple or any(type(f) is not LongitudinalFamilyStatus for f in families)
+            or tuple(f.family for f in families) != ("distribution", "provenance", "direct_closure", "tail", "lineage")
+            or type(messages) is not tuple or any(type(m) is not ValidationMessage for m in messages)):
+        raise _invalid("analytical summaries require immutable complete family rows and diagnostics")
+
+
+def _analysis_signature(selection, options):
+    return sha256_canonical((selection.input_signature, None if options is None else
+        (options.rule, options.count_threshold, options.frequency_threshold, options.state_ids)))
+
+
+def _family(family, status, reasons=()):
+    return LongitudinalFamilyStatus(family, status, tuple(dict.fromkeys(str(code) for code in reasons)))
+
+
+def _families(distribution, tail=None):
+    return (distribution,
+        _family("provenance", ExecutionStatus.DEFERRED, ("R_LONGITUDINAL_FAMILIES_DEFERRED",)),
+        _family("direct_closure", ExecutionStatus.DEFERRED, ("R_LONGITUDINAL_FAMILIES_DEFERRED",)),
+        tail or _family("tail", ExecutionStatus.NOT_REQUESTED, ("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",)),
+        _family("lineage", ExecutionStatus.NOT_REQUESTED, ("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",)))
+
+
+def _message(error, field_name):
+    return ValidationMessage(error.code.value, ValidationSeverity.ERROR, error.safe_message, field=field_name)
+
+
+def _count(name, count, snapshot, *, representation=None, reasons=()):
+    metadata = CalculationMetadata(name, "PR-002" if name == "record_count" else "PR-011", None,
+        CalculationEvidenceClass.OBSERVED_FACT, "records",
+        "PR-002.record_count" if name == "record_count" else "cardinality of explicit representation scope",
+        snapshot.population_scope, representation)
+    return ScalarCalculation(metadata, CalculationStatus.UNAVAILABLE if reasons else CalculationStatus.AVAILABLE,
+                             None if reasons else count, reasons)
+
+
+def _snapshot_distribution(snapshot, records, ordinal, content_mode):
+    declaration = snapshot.declaration
+    config = declaration.representation
+    distribution, messages, reasons = None, (), ()
+    try:
+        if config.source == "content_hash":
+            if content_mode is ContentMode.LOCAL_REF and records:
+                raise _invalid("local-reference content payloads are unavailable to series analysis",
+                               code=ErrorCode.CONTENT_REF_MISSING)
+            represented = assign_content_states(records, dataset_versions=(snapshot.dataset_version,),
+                scope_id=f"longitudinal-representation-{ordinal:04d}", representation_name=config.name,
+                representation_version=config.version, normalization_profile=config.normalization_profile,
+                content_mode=ContentMode.INLINE).representation
+        else:
+            represented = assign_field_states(records, dataset_versions=(snapshot.dataset_version,),
+                scope_id=f"longitudinal-representation-{ordinal:04d}", config=config,
+                missing_state_id=declaration.missing_state_id)
+        snapshot = replace(snapshot, representation_scope=represented.scope)
+        distribution = calculate_state_distribution(represented)
+    except CanonicalValidationError as error:
+        reasons = ((CalculationReason.CONTENT_UNAVAILABLE,) if error.code is ErrorCode.CONTENT_REF_MISSING
+                   else (CalculationReason.REPRESENTATION_MISSING,))
+        messages = (_message(error, "longitudinal_snapshot"),)
+    scope = snapshot.representation_scope
+    descriptor = _descriptor_for(declaration)
+    counts_reasons = reasons if scope is None else ()
+    record_count = _count("record_count", len(snapshot.population_scope.included_record_keys), snapshot)
+    included = _count("representation_eligible_record_count", None if scope is None else len(scope.included_record_keys),
+                      snapshot, representation=descriptor, reasons=counts_reasons)
+    excluded = _count("representation_excluded_record_count", None if scope is None else len(scope.excluded_record_keys),
+                      snapshot, representation=descriptor, reasons=counts_reasons)
+    if distribution is not None:
+        reasons = distribution.unweighted.reason_codes
+    status = ExecutionStatus.PARTIAL if reasons else ExecutionStatus.COMPLETED
+    return SnapshotSummary(snapshot, distribution, record_count, included, excluded,
+        _families(_family("distribution", status, reasons)), messages)
+
+
+def _distribution_reasons(snapshot):
+    if snapshot.distribution is not None:
+        return snapshot.distribution.unweighted.reason_codes
+    return tuple(CalculationReason(code) for code in snapshot.family_statuses[0].reason_codes)
+
+
+def _pair_distributions(pair, earlier, later, order):
+    """Use the pair kernel only with available, actually loaded endpoints."""
+    basis = pair.compatibility
+    a = None if earlier.distribution is None else earlier.distribution.unweighted
+    b = None if later.distribution is None else later.distribution.unweighted
+    if basis is None:
+        return None, None, a, b, (CalculationReason.REPRESENTATION_INCOMPATIBLE,), (
+            ValidationMessage(ErrorCode.REPRESENTATION_INCOMPATIBLE.value, ValidationSeverity.ERROR,
+                "pair declarations have no compatible comparison basis", field="longitudinal_pair"),)
+    try:
+        if a is not None and b is not None and a.status is b.status is CalculationStatus.AVAILABLE:
+            comparison = compare_support(a, b,
+                context=ExplicitPairContext(a.scope, b.scope, a.representation, b.representation, order),
+                earlier_state_semantics=basis.earlier_state_semantics,
+                later_state_semantics=basis.later_state_semantics, state_mapping=pair.mapping)
+            return basis, comparison, comparison.harmonized_earlier, comparison.harmonized_later, (), ()
+        # An unavailable/empty side never enters the legacy loaded-pair kernel.
+        # Reuse its owner for literal coverage and aggregation on any source that
+        # exists, so a missing map entry still blocks independent record deltas.
+        if pair.mapping is not None:
+            forward = pair.mapping.direction == "earlier_to_later"
+            source = a if forward else b
+            if source is None:
+                raise _invalid("mapping coverage requires its source representation", code=ErrorCode.REPRESENTATION_INCOMPATIBLE)
+            source = _harmonize_distribution(source, pair.mapping)
+            a, b = (source, b) if forward else (a, source)
+        reasons = tuple(dict.fromkeys(_distribution_reasons(earlier) + _distribution_reasons(later)))
+        return basis, None, a, b, reasons, ()
+    except CanonicalValidationError as error:
+        return None, None, None, None, (CalculationReason.REPRESENTATION_INCOMPATIBLE,), (
+            _message(error, "longitudinal_pair"),)
+
+
+def _delta(name, earlier, later, basis, a, b, reasons, *, comparison=None):
+    record = name == "record_count_delta"
+    formula, unit = ("F-018", "records") if record else (
+        ("F-005", "states") if name == "support_delta" else ("F-018", "dimensionless"))
+    if record:
+        left, right = earlier.record_count.value, later.record_count.value
+        left_scope, right_scope = earlier.scope.population_scope, later.scope.population_scope
+        left_reasons = right_reasons = ()
+        reasons = () if basis is not None else reasons
+    else:
+        metric = "support_size" if name == "support_delta" else "gini_simpson_diversity"
+        left, right = (None if a is None else getattr(a, metric).value), (None if b is None else getattr(b, metric).value)
+        left_scope = earlier.scope.representation_scope or earlier.scope.population_scope
+        right_scope = later.scope.representation_scope or later.scope.population_scope
+        left_reasons, right_reasons = _distribution_reasons(earlier), _distribution_reasons(later)
+    available = not reasons
+    # Existing pair scalars own F-005/F-018 distribution arithmetic.
+    value = (right - left if record else getattr(comparison, name).value) if available else None
+    return LongitudinalDelta(name, "T1", formula, unit, left_scope, right_scope,
+        None if record or basis is None else basis.harmonized_representation,
+        left, right, value, CalculationStatus.AVAILABLE if available else CalculationStatus.UNAVAILABLE, reasons,
+        None if record or a is None else a.frequency_denominator,
+        None if record or b is None else b.frequency_denominator,
+        None if record or earlier.distribution is None else earlier.distribution.coverage,
+        None if record or later.distribution is None else later.distribution.coverage,
+        left_reasons, right_reasons)
+
+
+def _tail_disappearance(options, basis, comparison, earlier, later, a, reasons):
+    tail, messages = None, ()
+    if not reasons:
+        try:
+            tail = select_tail(a, options=options)
+        except CanonicalValidationError as error:
+            reasons = (CalculationReason.UNSUPPORTED_OPTION,)
+            messages = (_message(error, "longitudinal_tail"),)
+    lost = None if reasons else tuple(sorted(set(tail.tail_membership) & set(comparison.extinct_states)))
+    return TailDisappearanceResult(options,
+        earlier.scope.representation_scope or earlier.scope.population_scope,
+        later.scope.representation_scope or later.scope.population_scope,
+        None if basis is None else basis.harmonized_representation, tail,
+        None if a is None else a.frequency_denominator,
+        CalculationStatus.UNAVAILABLE if reasons else CalculationStatus.AVAILABLE,
+        reasons, None if lost is None else len(lost), lost), messages
+
+
+def _pair_result(pair, earlier, later, order, options):
+    basis, comparison, a, b, reasons, messages = _pair_distributions(pair, earlier, later, order)
+    deltas = tuple(_delta(name, earlier, later, basis, a, b, reasons, comparison=comparison)
+        for name in ("record_count_delta", "support_delta", "gini_simpson_diversity_delta"))
+    distribution_status = (ExecutionStatus.COMPLETED if comparison is not None else
+                           ExecutionStatus.PARTIAL if basis is not None else ExecutionStatus.FAILED)
+    tail, tail_status = None, None
+    if options is not None:
+        tail, tail_messages = _tail_disappearance(options, basis, comparison, earlier, later, a, reasons)
+        messages += tail_messages
+        tail_status = _family("tail", ExecutionStatus.COMPLETED if tail.status is CalculationStatus.AVAILABLE
+                              else ExecutionStatus.FAILED, tail.reason_codes)
+    return LongitudinalPairResult(pair, basis, comparison, deltas, tail,
+        _families(_family("distribution", distribution_status, reasons), tail_status), messages)
+
+
+def analyze_longitudinal(
+    validation: BundleValidationResult, *, selection: LongitudinalSelection,
+    lineage: bool = False, tail_options: TailSelectionOptions | None = None, lineage_limits=None,
+) -> LongitudinalResult:
+    """Compute unweighted original snapshots and observed pair-local changes.
+
+    Records are grouped once and each selected distribution runs once. Context
+    supplies no snapshot denominator. Unavailable endpoints preserve record
+    deltas only under a valid comparison basis; state sets remain null. Tail is
+    opt-in and uses the harmonized earlier distribution. Required provenance and
+    direct closure remain explicitly deferred until Step 4, so this staged
+    result cannot claim a completed full series. Lineage options await Step 5.
+    """
+    if type(lineage) is not bool or lineage or lineage_limits is not None:
+        raise _invalid("selected lineage execution is deferred to Phase 6A Step 5")
+    options = None if tail_options is None else _tail_options(tail_options)
+    selection = validate_longitudinal_selection(validation, selection)
+    grouped = {version: [] for version in selection.selected_versions}
+    for row in validation.records:
+        if row.record_key.dataset_version in grouped:
+            grouped[row.record_key.dataset_version].append(row)
+    snapshots = tuple(_snapshot_distribution(scope, tuple(grouped[scope.dataset_version]), index, validation.content_mode)
+                      for index, scope in enumerate(selection.snapshots, 1))
+    index = {snapshot.scope.dataset_version: snapshot for snapshot in snapshots}
+    comparisons = tuple(_pair_result(pair, index[pair.earlier_version], index[pair.later_version],
+                                    selection.version_order, options) for pair in selection.pairs)
+    useful = any(delta.status is CalculationStatus.AVAILABLE for pair in comparisons for delta in pair.deltas)
+    reasons = ["R_LONGITUDINAL_FAMILIES_DEFERRED"]
+    if any(pair.compatibility is None for pair in comparisons):
+        reasons.append("R_LONGITUDINAL_PAIR_BLOCKED")
+    if any(f.execution_status in (ExecutionStatus.PARTIAL, ExecutionStatus.FAILED)
+           for pair in comparisons for f in pair.family_statuses if f.family in ("distribution", "tail")):
+        reasons.append("R_LONGITUDINAL_ENDPOINT_UNAVAILABLE")
+    messages = tuple(message for item in (*snapshots, *comparisons) for message in item.messages)
+    signature = _analysis_signature(selection, options)
+    return LongitudinalResult(selection, snapshots, comparisons,
+        ExecutionStatus.PARTIAL if useful else ExecutionStatus.FAILED,
+        tuple(reasons), messages, signature, options)

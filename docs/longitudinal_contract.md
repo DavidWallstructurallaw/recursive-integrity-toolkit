@@ -1,13 +1,14 @@
 # Longitudinal comparison contract
 
-Status: **APPROVED CONTRACT; STEP 2 PYTHON SELECTION IMPLEMENTED**.
+Status: **APPROVED CONTRACT; STEP 3 DISTRIBUTION ANALYSIS IMPLEMENTED**.
 
 Authority: `PHASE_6A_PLAN.md`, P6A-D01 through P6A-D08, and
 `PHASE_6A_DECISIONS.md`. Existing definitions and Phase 3-5 meanings remain in
 force. This document fixes the staged interfaces. Current package dev4 and
-schema 1.1 implement only the Python selection and declaration-compatibility
-portion. Analysis, selected lineage, config/CLI and public series reports remain
-future work. Step 2 clarifications are recorded in `PHASE_6A_DECISIONS.md`.
+schema 1.1 implement Python selection, compatibility and the Step 3 distribution
+analysis portion. Provenance/direct-closure changes, selected lineage, config/CLI
+and public series reports remain future work. Implementation clarifications are
+recorded in `PHASE_6A_DECISIONS.md`.
 
 ## 1. Scope and ownership
 
@@ -156,9 +157,10 @@ default. Standard/redacted output and exclusive output-directory rules remain.
 The following names/fields define the forthcoming record-series interface.
 Types may reuse existing immutable leaves. Constructors and consumers validate
 literal types, unique identities and binding; a caller-created object is not
-proof of correctness. Step 1 added no runtime types. Step 2 implements declarations,
-mapping envelopes, snapshot scopes, pairs and selection only; options/results
-remain deferred.
+proof of correctness. Step 1 added no runtime types. Step 2 implemented declarations,
+mapping envelopes, scopes, pairs and selection. Step 3 adds snapshot/pair/series
+results for distribution work; configuration options and later families remain
+deferred.
 
 | Type | Required fields |
 |---|---|
@@ -204,6 +206,30 @@ totality on actual states. Malformed explicit maps and missing/conflicting
 chronology raise structured input errors. Valid independent snapshots remain
 usable by the existing APIs; preserving them in a failed series report belongs
 to later orchestration. The selector has no file access or analytical dispatch.
+
+Step 3 implements `analyze_longitudinal` for distributions and optional pair-tail
+disappearance. It groups records once, assigns each snapshot once, and invokes
+the existing pair kernel once per available scheduled pair. Original summaries
+retain `StateDistributionResult`; successful comparisons retain `SupportComparison`.
+Unavailable endpoints have `support_comparison=None`, explicit delta/family
+reasons and null state sets. Their record delta can remain available after the
+comparison gate. Snapshot summaries carry observed full/eligible/excluded counts.
+
+The internal `LongitudinalDelta` keeps separate scope references, endpoint values,
+denominators, coverage and reasons. `TailDisappearanceResult` keeps its explicit
+rule and earlier harmonized selection. These are staged Python results, not new
+schema-1.1 output fields. Required provenance/direct-closure families retain
+`ExecutionStatus.DEFERRED` and `R_LONGITUDINAL_FAMILIES_DEFERRED` until Step 4;
+the overall staged execution cannot yet be `completed`. This temporary internal
+state does not extend the final public status inventory below. `lineage=True`
+or a non-null `lineage_limits` remains a structured error until Step 5.
+
+The input bundle retains its existing `ContentMode`, and selection includes it
+in its private binding. Inline content uses the existing exact-content owner.
+Nonempty local-reference content is unavailable to this series API because the
+bundle does not retain the actual resolved text. Neither reference paths nor
+earlier read-success markers substitute for that text. Field-based distributions
+remain usable under local-reference mode; analysis performs no file access.
 
 ### 3.1 Selection invariants and empty scopes
 

@@ -2,13 +2,13 @@
 
 | Field | Value |
 |---|---|
-| Status | APPROVED; Step 2 selection implementation |
-| Authority | Theory Owner instructions: `phase 6a step 1开始`; `Phase 6A Step 2继续` |
+| Status | APPROVED; Step 3 distribution and observed-change implementation |
+| Authority | Theory Owner instructions through `Phase 6A Step 3 开始` |
 | Authorization date | 2026-09-26 America/Los_Angeles; 2026-09-27 UTC |
 | Approved plan | `PHASE_6A_PLAN.md` version 1.0, delivered at `753829a79fb6aa550d58dcd6fced360399c597e9` |
 | Accepted product baseline | Phase 5 completion `f09521907558a193e6438d9acb316adb9e191195` |
 | Working branch | `phase6a-longitudinal` |
-| Current scope | Ordered snapshot selection, pair schedule, declaration compatibility and affected checks |
+| Current scope | Snapshot distributions, record/support/diversity changes, optional earlier-tail disappearance and affected checks |
 | Current runtime | `0.1.0.dev4`, report schema `1.1`; version metadata unchanged |
 | Eventual phase target | `0.1.0.dev5`, report schema `1.2` |
 
@@ -136,3 +136,52 @@ file, and retains all unrelated source/schema/Hero/version protections. No new
 phase dispatcher or historical source migration was added.
 
 See [PHASE_6A_STEP_2.md](PHASE_6A_STEP_2.md) for actual checks and limitations.
+
+## Step 3 authorization and implementation clarifications
+
+The Theory Owner requested `Phase 6A Step 3 开始` on 2026-09-26
+America/Los_Angeles (2026-09-27 UTC). Work starts from Step 2 commit
+`72123128366363231cb96cc23912bb608a69807e` on `phase6a-longitudinal`.
+
+- `analyze_longitudinal` implements unweighted original snapshot distributions,
+  the approved pair schedule, full-population record-count deltas, support and
+  diversity deltas, observed state sets and explicitly requested earlier-tail
+  disappearance. It delegates the existing assignment/distribution/pair/tail
+  owners and runs no resampling, provenance/direct-bound analysis or graph.
+- Snapshot results retain `StateDistributionResult`. Pair results retain the
+  existing `SupportComparison` when both distributions are available. A missing
+  or empty endpoint has no numerical pair object. Its separate delta/status rows
+  preserve null support/diversity, exact endpoint reasons and any eligible record
+  delta. Selection itself still has unassigned representation scopes.
+- `LongitudinalDelta` references separate endpoint scopes, values, denominators,
+  coverage and reasons. It never invents a pooled denominator. New record deltas
+  use F-018; existing support/diversity arithmetic remains in the pair kernel.
+  `TailDisappearanceResult` retains the earlier harmonized tail selection, rule,
+  sample size, descriptor, observed missing states and T2 method.
+- Missing mapping coverage blocks the pair, including its record delta, without
+  discarding valid original distributions or unrelated pairs. A failure in an
+  optional tail selection preserves the pair's completed distribution values.
+- Required provenance and direct-closure families retain the existing internal
+  `deferred` status and `R_LONGITUDINAL_FAMILIES_DEFERRED` until Step 4. Thus this
+  staged result is `partial` when useful comparisons exist and `failed` when no
+  comparison values exist. It cannot claim full-series completion. Tail and
+  lineage that were not requested have their explicit not-requested status;
+  true lineage enablement or limits are rejected until Step 5.
+- `BundleValidationResult` now retains the existing `ContentMode` declaration,
+  defaulting to inline for legacy typed construction. Validation forwards the
+  declared mode, and selection binds it. Local-reference paths are never hashed
+  as text. Because this bundle retains no resolved text payloads, exact-content
+  series analysis of nonempty local-reference snapshots is unavailable even if
+  earlier validation read the files. Field representations remain usable, and
+  no analysis function reopens content paths. Existing explicit content APIs
+  continue to accept caller-supplied resolved text.
+
+The current source gate advances to `7212312` and opens only
+`metrics/longitudinal.py`, `models.py` and `io/validation.py`. The latter two
+changes retain content-mode metadata only. All mathematical owners, executable
+schemas, canonical Hero resources and package version metadata remain protected.
+There is no new module, dependency, CLI flag, configuration parser, public schema,
+approval mechanism or verification framework.
+
+See [PHASE_6A_STEP_3.md](PHASE_6A_STEP_3.md) for completed checks and the next
+boundary. Step 4 has not started.
