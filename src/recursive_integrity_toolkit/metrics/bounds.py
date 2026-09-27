@@ -1,12 +1,13 @@
 """Compute separately labeled direct and lineage closure-exposure intervals.
 
 Owner IDs:
-    T3: F-009, F-010; Definitions 5.3-5.5 and 5.9; Phase 5 Step 6.
+    T3: F-009, F-010; Definitions 5.3-5.5 and 5.9; Phase 6A Step 5.
 
 Inputs:
     Explicit integer counts and a single-version scope, or the accepted Step 5
     ProvenanceCompositionResult for direct bounds. Explicit LineageAnalysisResult
-    for lineage bounds. No source files or parent references are read.
+    or selected TargetLineageSummary for lineage bounds. No source files or
+    parent references are read.
 
 Outputs:
     Immutable lower, upper and width calculations, denominator, operationalization
@@ -23,7 +24,7 @@ Limits:
     A count envelope alone never certifies usable dataset provenance.
 
 Current phase status:
-    Phase 5 Step 6 adds explicit lineage bounds. Direct behavior is unchanged.
+    Phase 6A Step 5 accepts target-only lineage summaries. Direct behavior is unchanged.
     Pure explicit calls; direct-only users do not import lineage modules.
 """
 from __future__ import annotations
@@ -45,7 +46,7 @@ from .provenance import (
 )
 
 if TYPE_CHECKING:
-    from ..lineage.ancestry import LineageAnalysisResult
+    from ..lineage.ancestry import LineageAnalysisResult, TargetLineageSummary
     from ..lineage.graph import LineageScope
     from ..result import ExecutionStatus, ReportStatus
 
@@ -356,11 +357,11 @@ class LineageClosureExposureBounds:
     A nonempty all-unresolved partition supplies [0, 1], retaining all errors.
     An aborted partition or an empty population cannot supply numeric bounds.
     """
-    source: LineageAnalysisResult = field(repr=False)
+    source: LineageAnalysisResult | TargetLineageSummary = field(repr=False)
 
     def __post_init__(self) -> None:
-        from ..lineage.ancestry import LineageAnalysisResult
-        if type(self.source) is not LineageAnalysisResult:
+        from ..lineage.ancestry import LineageAnalysisResult, TargetLineageSummary
+        if type(self.source) not in (LineageAnalysisResult, TargetLineageSummary):
             raise CanonicalValidationError(
                 ErrorCode.SCHEMA_TYPE, "lineage bounds require a typed lineage analysis",
                 field="lineage_closure_exposure")
@@ -461,6 +462,6 @@ class LineageClosureExposureBounds:
                 "No midpoint, calibrated risk threshold or causal claim.")
 
 
-def lineage_closure_exposure(result: LineageAnalysisResult) -> LineageClosureExposureBounds:
+def lineage_closure_exposure(result: LineageAnalysisResult | TargetLineageSummary) -> LineageClosureExposureBounds:
     """Explicit pure lineage interval request; keep direct bounds unchanged."""
     return LineageClosureExposureBounds(result)

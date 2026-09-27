@@ -1,8 +1,8 @@
-"""Select snapshots and coordinate observed distribution/provenance changes.
+"""Coordinate ordered distribution, provenance and requested lineage changes.
 
 Owner IDs:
-    PR-002, PR-004, PR-005, PR-007, PR-011, T1, T2, T3;
-    P6A-D01 through P6A-D05 and P6A-D08.
+    PR-002, PR-004, PR-005, PR-007, PR-008, PR-011, T1, T2, T3, T4;
+    P6A-D01 through P6A-D06 and P6A-D08.
 
 Inputs:
     Retained BundleValidationResult, explicit snapshot declarations, pair-local
@@ -18,20 +18,21 @@ Assumptions:
 
 Limits:
     Selection performs no calculation. Analysis delegates existing distribution,
-    comparison, tail, provenance and direct-bound owners. No I/O, graph,
-    simulation, report or CLI dispatch. Lineage remains opt-in future work.
+    comparison, tail, provenance and bound owners. Explicit lineage delegates
+    one shared graph/root analysis. No I/O, simulation, report or CLI dispatch.
 
 Current phase status:
-    Phase 6A Step 4 provenance and direct-closure changes. Import-safe.
+    Phase 6A Step 5 shared selected lineage and observed changes. Import-safe.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields, replace
 from math import isfinite
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from ..config import RepresentationConfig
-from ..errors import CanonicalValidationError, ErrorCode
+from ..errors import CanonicalValidationError, ErrorCode, LineageResourceLimitError
 from ..io.validation import join_provenance, resolve_version_order
 from ..models import (
     BundleValidationResult, CalculationEvidenceClass, CalculationMetadata,
@@ -46,15 +47,22 @@ from ..representations.compatibility import (
 )
 from ..representations.content_hash import assign_content_states, select_content_representation
 from ..representations.field import assign_field_states, select_field_representation
-from ..result import ExecutionStatus
+from ..result import ExecutionStatus, ReportStatus
 from ..utils.hashing import sha256_canonical
-from .bounds import DirectClosureExposureBounds, direct_closure_exposure
+from .bounds import (
+    DirectClosureExposureBounds, LineageClosureExposureBounds, direct_closure_exposure,
+    lineage_closure_exposure,
+)
 from .diversity import (
     StateDistributionResult, SupportComparison, _harmonize_distribution,
     calculate_state_distribution, compare_support,
 )
 from .provenance import ProvenanceCompositionResult, summarize_provenance
 from .tail import TailSelectionResult, _options as _tail_options, select_tail
+
+if TYPE_CHECKING:
+    from ..lineage.ancestry import SelectedLineageResult, TargetLineageSummary
+    from ..lineage.graph import LineageLimits, LineageResourceUsage
 
 
 def _invalid(message: str, *, code: ErrorCode = ErrorCode.CONFIG_INVALID,
@@ -491,6 +499,95 @@ _DELTA_METADATA = {
     **{name: ("T3", "F-018", "ratio") for name in _DIRECT_DELTAS},
 }
 
+_LINEAGE_DELTA_METADATA = {
+    "distinct_external_root_count_delta": ("T4", "roots"),
+    "ancestry_concentration_hhi_delta": ("T4", "ratio"),
+    "effective_external_root_count_delta": ("T4", "roots"),
+    "unresolved_parent_reference_count_delta": ("PR-008", "reference_entries"),
+    "resolved_parent_edge_coverage_delta": ("PR-008", "ratio"),
+    "resolved_lineage_coverage_delta": ("T4", "ratio"),
+    "external_ancestry_coverage_delta": ("T4", "ratio"),
+    "lineage_closure_lower_bound_delta": ("T3", "ratio"),
+    "lineage_closure_upper_bound_delta": ("T3", "ratio"),
+    "lineage_closure_interval_width_delta": ("T3", "ratio"),
+}
+
+
+@dataclass(frozen=True, slots=True)
+class LongitudinalLineageDelta:
+    """Series wrapper preserving finite partial ancestry values and both bases."""
+
+    metric_name: str
+    owner_id: str
+    unit: str
+    earlier_scope: CalculationScope
+    later_scope: CalculationScope
+    earlier_value: int | float | None
+    later_value: int | float | None
+    value: int | float | None
+    status: ReportStatus
+    reason_codes: tuple[str, ...]
+    earlier_denominator: int | None
+    later_denominator: int | None
+    earlier_coverage: ValidationCoverage | None
+    later_coverage: ValidationCoverage | None
+    earlier_reason_codes: tuple[str, ...]
+    later_reason_codes: tuple[str, ...]
+    earlier_status: ReportStatus
+    later_status: ReportStatus
+    formula_id: str = "F-018"
+    evidence_class: CalculationEvidenceClass = CalculationEvidenceClass.DERIVED_METRIC
+    representation: None = None
+    method: str = "later minus earlier"
+    denominator: None = None
+    denominator_reason: str = "not_applicable_to_difference"
+    earlier_no_declared_parents: bool | None = None
+    later_no_declared_parents: bool | None = None
+
+    def __post_init__(self) -> None:
+        if (_LINEAGE_DELTA_METADATA.get(self.metric_name) != (self.owner_id, self.unit)
+                or self.formula_id != "F-018" or self.method != "later minus earlier"
+                or self.evidence_class is not CalculationEvidenceClass.DERIVED_METRIC
+                or self.representation is not None or self.denominator is not None
+                or self.denominator_reason != "not_applicable_to_difference"):
+            raise _invalid("lineage delta must preserve its approved ownership and method")
+        if (type(self.earlier_scope) is not CalculationScope or type(self.later_scope) is not CalculationScope
+                or len(self.earlier_scope.dataset_versions) != 1 or len(self.later_scope.dataset_versions) != 1
+                or self.earlier_scope.dataset_versions == self.later_scope.dataset_versions
+                or self.earlier_scope.excluded_record_keys or self.later_scope.excluded_record_keys):
+            raise _invalid("lineage delta requires two complete target scopes")
+        for value in (self.earlier_value, self.later_value, self.value):
+            try:
+                valid = value is None or type(value) in (int, float) and isfinite(value)
+            except OverflowError:
+                valid = False
+            if not valid:
+                raise _invalid("lineage delta values must be finite numbers or null")
+        for denominator in (self.earlier_denominator, self.later_denominator):
+            if denominator is not None and (type(denominator) is not int or denominator < 0):
+                raise _invalid("lineage endpoint denominator must be an exact nonnegative count")
+        for coverage in (self.earlier_coverage, self.later_coverage):
+            if coverage is not None and type(coverage) is not ValidationCoverage:
+                raise _invalid("lineage endpoint coverage must retain its named basis")
+        for status, value, reasons in ((self.status, self.value, self.reason_codes),
+                (self.earlier_status, self.earlier_value, self.earlier_reason_codes),
+                (self.later_status, self.later_value, self.later_reason_codes)):
+            if (type(status) is not ReportStatus or status is ReportStatus.EXPERIMENTAL or type(reasons) is not tuple
+                    or any(type(code) is not str or not code for code in reasons)
+                    or (status is ReportStatus.UNAVAILABLE) != (value is None)
+                    or status is ReportStatus.AVAILABLE and reasons
+                    or status is not ReportStatus.AVAILABLE and not reasons):
+                raise _invalid("lineage delta status must preserve null, partial and available distinctions")
+        for flag in (self.earlier_no_declared_parents, self.later_no_declared_parents):
+            if flag is not None and type(flag) is not bool:
+                raise _invalid("reference coverage convention requires literal boolean flags")
+        if self.status is not ReportStatus.UNAVAILABLE:
+            if (self.earlier_value is None or self.later_value is None
+                    or self.value != self.later_value - self.earlier_value
+                    or (self.status is ReportStatus.PARTIAL) !=
+                       (ReportStatus.PARTIAL in (self.earlier_status, self.later_status))):
+                raise _invalid("lineage difference must retain both finite endpoints and partial dependency")
+
 
 @dataclass(frozen=True, slots=True)
 class LongitudinalDelta:
@@ -612,7 +709,8 @@ class SnapshotSummary:
     messages: tuple[ValidationMessage, ...] = ()
     provenance: ProvenanceCompositionResult | None = field(default=None, repr=False)
     direct_closure: DirectClosureExposureBounds | None = field(default=None, repr=False)
-    lineage: None = None
+    lineage: TargetLineageSummary | None = field(default=None, repr=False)
+    lineage_closure: LineageClosureExposureBounds | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         _result_rows(self.family_statuses, self.messages)
@@ -637,7 +735,15 @@ class SnapshotSummary:
                     or self.distribution.coverage.denominator != self.record_count.value):
                 raise _invalid("snapshot distribution must retain its independent unweighted denominator")
         if self.lineage is not None:
-            raise _invalid("selected lineage remains deferred in this step")
+            from ..lineage.ancestry import TargetLineageSummary
+            if (type(self.lineage) is not TargetLineageSummary
+                    or self.lineage.population_scope != self.scope.population_scope
+                    or type(self.lineage_closure) is not LineageClosureExposureBounds
+                    or self.lineage_closure.source != self.lineage
+                    or self.family_statuses[-1] != _lineage_snapshot_family(self)):
+                raise _invalid("lineage snapshot must retain its selected complete population and bounds")
+        elif self.lineage_closure is not None:
+            raise _invalid("lineage bounds require the selected target evidence")
         provenance, bounds = self.provenance, self.direct_closure
         if not self.record_count.value:
             if provenance is not None or bounds is not None:
@@ -674,9 +780,15 @@ class LongitudinalPairResult:
     family_statuses: tuple[LongitudinalFamilyStatus, ...]
     source_type_share_deltas: MappingProxyType = field(repr=False)
     messages: tuple[ValidationMessage, ...] = ()
+    lineage_deltas: tuple[LongitudinalLineageDelta, ...] = ()
 
     def __post_init__(self) -> None:
         _result_rows(self.family_statuses, self.messages)
+        if (type(self.lineage_deltas) is not tuple
+                or any(type(delta) is not LongitudinalLineageDelta for delta in self.lineage_deltas)
+                or self.lineage_deltas and tuple(d.metric_name for d in self.lineage_deltas)
+                    != tuple(_LINEAGE_DELTA_METADATA)):
+            raise _invalid("requested lineage deltas require the complete immutable inventory")
         if (type(self.pair) is not LongitudinalPair or type(self.deltas) is not tuple
                 or any(type(delta) is not LongitudinalDelta for delta in self.deltas)
                 or tuple(delta.metric_name for delta in self.deltas) !=
@@ -688,12 +800,13 @@ class LongitudinalPairResult:
                        for d in shares.values())):
             raise _invalid("source-share deltas require all five declared categories")
         object.__setattr__(self, "source_type_share_deltas", MappingProxyType(dict(shares)))
-        for delta in (*self.deltas, *shares.values()):
+        for delta in (*self.deltas, *shares.values(), *self.lineage_deltas):
             if (delta.earlier_scope.dataset_versions != (self.pair.earlier_version,)
                     or delta.later_scope.dataset_versions != (self.pair.later_version,)):
                 raise _invalid("pair delta endpoints disagree with the scheduled pair")
         if self.compatibility is None:
-            if self.support_comparison is not None or any(d.value is not None for d in (*self.deltas, *shares.values())):
+            if self.support_comparison is not None or any(d.value is not None for d in
+                    (*self.deltas, *shares.values(), *self.lineage_deltas)):
                 raise _invalid("blocked pair cannot carry available comparison values")
         elif self.compatibility != self.pair.compatibility:
             raise _invalid("pair result must retain its declared compatible basis")
@@ -727,7 +840,11 @@ class LongitudinalResult:
     messages: tuple[ValidationMessage, ...]
     input_signature: str = field(repr=False)
     tail_options: TailSelectionOptions | None = None
-    shared_lineage: None = None
+    shared_lineage: SelectedLineageResult | None = field(default=None, repr=False)
+    lineage_requested: bool = False
+    lineage_limits: LineageLimits | None = None
+    lineage_input_signature: str | None = field(default=None, repr=False)
+    lineage_resource_usage: LineageResourceUsage | None = None
 
     def __post_init__(self) -> None:
         if (type(self.selection) is not LongitudinalSelection or type(self.snapshots) is not tuple
@@ -735,8 +852,7 @@ class LongitudinalResult:
                 or type(self.comparisons) is not tuple
                 or any(type(item) is not LongitudinalPairResult for item in self.comparisons)
                 or tuple(s.scope.dataset_version for s in self.snapshots) != self.selection.selected_order
-                or tuple(p.pair for p in self.comparisons) != self.selection.pairs
-                or self.shared_lineage is not None):
+                or tuple(p.pair for p in self.comparisons) != self.selection.pairs):
             raise _invalid("series results must retain every selected snapshot and scheduled pair")
         for selected, snapshot in zip(self.selection.snapshots, self.snapshots):
             if (selected.population_scope != snapshot.scope.population_scope
@@ -756,9 +872,19 @@ class LongitudinalResult:
                 raise _invalid("provenance/direct deltas must retain their exact endpoint evidence")
             if any(message not in pair.messages for message in _pair_provenance_errors(earlier, later)):
                 raise _invalid("pair execution cannot discard its endpoints' provenance errors")
+            if self.lineage_requested:
+                expected_lineage = tuple(_lineage_delta(name, earlier, later, pair.compatibility)
+                                         for name in _LINEAGE_DELTA_METADATA)
+                if (pair.lineage_deltas != expected_lineage
+                        or pair.family_statuses[-1] != _lineage_pair_family(expected_lineage, earlier, later)):
+                    raise _invalid("lineage changes must retain their target values, coverage and execution")
+            elif pair.lineage_deltas:
+                raise _invalid("unrequested lineage cannot supply comparison values")
+        _validate_series_lineage(self)
         options = None if self.tail_options is None else _tail_options(self.tail_options)
-        if self.input_signature != _analysis_signature(self.selection, options):
-            raise _invalid("series input binding differs from its selection or tail request")
+        if self.input_signature != _analysis_signature(self.selection, options, self.lineage_requested,
+                                                       self.lineage_limits, self.lineage_input_signature):
+            raise _invalid("series input binding differs from its selection or requested calculations")
         if any((pair.tail_disappearance is None) != (options is None) for pair in self.comparisons):
             raise _invalid("series tail results must match explicit enablement")
         if (type(self.execution_status) is not ExecutionStatus or type(self.reason_codes) is not tuple
@@ -776,9 +902,152 @@ def _result_rows(families, messages):
         raise _invalid("analytical summaries require immutable complete family rows and diagnostics")
 
 
-def _analysis_signature(selection, options):
+def _analysis_signature(selection, options, lineage=False, limits=None, lineage_signature=None):
     return sha256_canonical((selection.input_signature, None if options is None else
-        (options.rule, options.count_threshold, options.frequency_threshold, options.state_ids)))
+        (options.rule, options.count_threshold, options.frequency_threshold, options.state_ids),
+        lineage, None if limits is None else (limits.max_nodes, limits.max_edges,
+            limits.max_root_memberships, limits.max_root_union_visits), lineage_signature))
+
+
+def _validate_series_lineage(result):
+    if type(result.lineage_requested) is not bool:
+        raise _invalid("lineage request must be a literal boolean")
+    if not result.lineage_requested:
+        if (any(value is not None for value in (result.shared_lineage, result.lineage_limits,
+                result.lineage_input_signature, result.lineage_resource_usage))
+                or any(s.lineage is not None for s in result.snapshots)
+                or any(item.family_statuses[-1].execution_status is not ExecutionStatus.NOT_REQUESTED
+                       for item in (*result.snapshots, *result.comparisons))):
+            raise _invalid("unrequested lineage cannot contain executed evidence")
+        return
+    from ..lineage.ancestry import SelectedLineageResult
+    from ..lineage.graph import LineageResourceUsage, _limits
+    limits = _limits(result.lineage_limits)
+    signature = result.lineage_input_signature
+    usage = result.lineage_resource_usage
+    if (type(signature) is not str or len(signature) != 64 or any(c not in "0123456789abcdef" for c in signature)
+            or type(usage) is not LineageResourceUsage or usage.limits != limits):
+        raise _invalid("requested lineage requires input binding and its exact work budget")
+    shared = result.shared_lineage
+    if shared is None:
+        if (usage.exhausted_limit not in ("max_nodes", "max_edges")
+                or any(s.lineage is not None or s.family_statuses[-1].execution_status is not ExecutionStatus.FAILED
+                       for s in result.snapshots)):
+            raise _invalid("missing shared graph must disclose its failed admission stage")
+    elif (type(shared) is not SelectedLineageResult or shared.selected_versions != result.selection.selected_order
+            or shared.selection_signature != result.selection.input_signature
+            or shared.input_signature != signature or shared.resource_usage != usage
+            or tuple(s.lineage for s in result.snapshots) != shared.targets):
+        raise _invalid("series lineage must retain the complete selected shared analysis")
+
+
+def _lineage_endpoint(snapshot, name, *, target=None, bounds=None):
+    target = snapshot.lineage if target is None else target
+    if target is None:
+        unknown_denominator = name in (
+            "ancestry_concentration_hhi_delta", "effective_external_root_count_delta",
+            "unresolved_parent_reference_count_delta", "resolved_parent_edge_coverage_delta")
+        denominator = None if unknown_denominator else len(snapshot.scope.population_scope.included_record_keys)
+        return None, denominator, None, ReportStatus.UNAVAILABLE, ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",), None
+    total = target.scope.target_record_count
+    metric = name.removesuffix("_delta")
+    reference = metric in ("unresolved_parent_reference_count", "resolved_parent_edge_coverage")
+    concentration = metric in ("ancestry_concentration_hhi", "effective_external_root_count")
+    if reference:
+        denominator = target.declared_parent_reference_count
+        coverage = None if denominator is None else ValidationCoverage(
+            target.resolved_parent_reference_count, denominator, "declared_parent_references")
+        value = getattr(target, metric)
+        status = ReportStatus.UNAVAILABLE if value is None else ReportStatus.AVAILABLE
+        reasons = target.reference_coverage_reason_codes
+        return value, denominator, coverage, status, reasons, target.no_declared_parents
+    denominator = target.grounded_record_count if concentration else total
+    resolved = target.records_with_resolved_external_ancestry
+    if metric in ("distinct_external_root_count", "ancestry_concentration_hhi", "effective_external_root_count"):
+        coverage = None if target.records is None else ValidationCoverage(
+            target.grounded_record_count, total, "all_valid_records_in_selected_dataset_scope")
+        value = getattr(target, metric)
+        status = target.concentration_status if concentration else target.root_metrics_status
+        reasons = (target.concentration_reason_codes if concentration and value is None else
+                   ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",) if target.records is None else
+                   ("UNRESOLVED_ANCESTRY",) if status is ReportStatus.PARTIAL else ())
+    else:
+        coverage = None if resolved is None else ValidationCoverage(
+            resolved, total, "all_valid_records_in_selected_dataset_scope")
+        if metric.startswith("lineage_closure_"):
+            bounds = snapshot.lineage_closure if bounds is None else bounds
+            value = getattr(bounds, metric.removeprefix("lineage_closure_"))
+            status, reasons = bounds.status, bounds.reason_codes
+        else:
+            value = getattr(target, metric)
+            status = ReportStatus.UNAVAILABLE if value is None else ReportStatus.AVAILABLE
+            reasons = target.ancestry_coverage_reason_codes
+    return value, denominator, coverage, status, reasons, None
+
+
+def _lineage_delta(name, earlier, later, basis):
+    a, an, ac, ast, ar, af = _lineage_endpoint(earlier, name)
+    b, bn, bc, bst, br, bf = _lineage_endpoint(later, name)
+    unavailable = basis is None or a is None or b is None
+    partial = ReportStatus.PARTIAL in (ast, bst)
+    reasons = tuple(dict.fromkeys(
+        (("R_LONGITUDINAL_PAIR_BLOCKED", CalculationReason.REPRESENTATION_INCOMPATIBLE.value) if basis is None else ())
+        + (("R_LONGITUDINAL_ENDPOINT_UNAVAILABLE",) if a is None or b is None else ())
+        + (("R_LONGITUDINAL_PARTIAL_COVERAGE",) if partial else ()) + ar + br
+        + tuple("EARLIER_" + reason for reason in ar if ast is ReportStatus.UNAVAILABLE)
+        + tuple("LATER_" + reason for reason in br if bst is ReportStatus.UNAVAILABLE)))
+    owner, unit = _LINEAGE_DELTA_METADATA[name]
+    return LongitudinalLineageDelta(name, owner, unit,
+        earlier.scope.population_scope, later.scope.population_scope, a, b, None if unavailable else b - a,
+        ReportStatus.UNAVAILABLE if unavailable else ReportStatus.PARTIAL if partial else ReportStatus.AVAILABLE,
+        reasons, an, bn, ac, bc, ar, br, ast, bst,
+        earlier_no_declared_parents=af, later_no_declared_parents=bf)
+
+
+def _lineage_family(statuses, reasons):
+    reasons = tuple(dict.fromkeys(reasons))
+    useful = any(status is not ReportStatus.UNAVAILABLE for status in statuses)
+    completed = all(status is ReportStatus.AVAILABLE for status in statuses) and not reasons
+    return _family("lineage", ExecutionStatus.COMPLETED if completed else
+                   ExecutionStatus.PARTIAL if useful else ExecutionStatus.FAILED, reasons)
+
+
+def _lineage_snapshot_family(snapshot, *, target=None, bounds=None):
+    target = snapshot.lineage if target is None else target
+    endpoints = tuple(_lineage_endpoint(snapshot, name, target=target, bounds=bounds)
+                      for name in _LINEAGE_DELTA_METADATA)
+    reasons = tuple(reason for endpoint in endpoints for reason in endpoint[4])
+    if target is not None:
+        reasons += target.execution_reason_codes
+    return _lineage_family(tuple(endpoint[3] for endpoint in endpoints), reasons)
+
+
+def _lineage_pair_family(deltas, earlier, later):
+    reasons = tuple(reason for delta in deltas for reason in delta.reason_codes)
+    for snapshot in (earlier, later):
+        if snapshot.lineage is not None:
+            reasons += snapshot.lineage.execution_reason_codes
+    return _lineage_family(tuple(delta.status for delta in deltas), reasons)
+
+
+def _attach_lineage(validation, selection, snapshots, limits):
+    from ..lineage.ancestry import analyze_selected_lineage, _selected_lineage_signature
+    signature = _selected_lineage_signature(validation, selection, limits)
+    try:
+        shared = analyze_selected_lineage(validation, selection=selection, limits=limits)
+    except LineageResourceLimitError as error:
+        family = _family("lineage", ExecutionStatus.FAILED, (error.reason_code,))
+        message = _message(error, "longitudinal_lineage")
+        return tuple(replace(snapshot, family_statuses=(*snapshot.family_statuses[:-1], family),
+                             messages=(*snapshot.messages, message)) for snapshot in snapshots), None, error.resource_usage, signature
+    attached = []
+    for snapshot, target in zip(snapshots, shared.targets, strict=True):
+        bounds = lineage_closure_exposure(target)
+        family = _lineage_snapshot_family(snapshot, target=target, bounds=bounds)
+        attached.append(replace(snapshot, lineage=target, lineage_closure=bounds,
+            family_statuses=(*snapshot.family_statuses[:-1], family),
+            messages=tuple(dict.fromkeys((*snapshot.messages, *target.messages)))))
+    return tuple(attached), shared, shared.resource_usage, signature
 
 
 def _family(family, status, reasons=()):
@@ -928,6 +1197,8 @@ def _series_execution(snapshots, comparisons):
     reasons.extend(_input_error_codes(message for item in (*snapshots, *comparisons) for message in item.messages))
     useful = any(delta.status is CalculationStatus.AVAILABLE for pair in comparisons
                  for delta in (*pair.deltas, *pair.source_type_share_deltas.values()))
+    useful = useful or any(delta.status is not ReportStatus.UNAVAILABLE for pair in comparisons
+                           for delta in pair.lineage_deltas)
     status = (ExecutionStatus.COMPLETED if not reasons else
               ExecutionStatus.PARTIAL if useful else ExecutionStatus.FAILED)
     return status, tuple(reasons)
@@ -1074,7 +1345,7 @@ def _tail_disappearance(options, basis, comparison, earlier, later, a, reasons):
         reasons, None if lost is None else len(lost), lost), messages
 
 
-def _pair_result(pair, earlier, later, order, options):
+def _pair_result(pair, earlier, later, order, options, lineage=False):
     basis, comparison, a, b, reasons, messages = _pair_distributions(pair, earlier, later, order)
     deltas = tuple(_delta(name, earlier, later, basis, a, b, reasons, comparison=comparison)
         for name in _DISTRIBUTION_DELTAS)
@@ -1091,9 +1362,12 @@ def _pair_result(pair, earlier, later, order, options):
         messages += tail_messages
         tail_status = _family("tail", ExecutionStatus.COMPLETED if tail.status is CalculationStatus.AVAILABLE
                               else ExecutionStatus.FAILED, tail.reason_codes)
-    return LongitudinalPairResult(pair, basis, comparison, deltas, tail,
-        _families(_family("distribution", distribution_status, reasons), provenance_family, direct_family, tail_status),
-        shares, messages)
+    families = _families(_family("distribution", distribution_status, reasons), provenance_family, direct_family, tail_status)
+    lineage_deltas = ()
+    if lineage:
+        lineage_deltas = tuple(_lineage_delta(name, earlier, later, basis) for name in _LINEAGE_DELTA_METADATA)
+        families = (*families[:-1], _lineage_pair_family(lineage_deltas, earlier, later))
+    return LongitudinalPairResult(pair, basis, comparison, deltas, tail, families, shares, messages, lineage_deltas)
 
 
 def analyze_longitudinal(
@@ -1108,10 +1382,14 @@ def analyze_longitudinal(
     opt-in and uses the harmonized earlier distribution. Each nonempty snapshot
     retains its complete provenance and direct-bound results, independently of
     representation exclusions. All pair deltas require a compatible basis.
-    Lineage options await Step 5.
+    Explicit lineage uses one shared graph/cycle/root pass and target-only
+    summaries. Its complete or partial values never change distribution scopes.
     """
-    if type(lineage) is not bool or lineage or lineage_limits is not None:
-        raise _invalid("selected lineage execution is deferred to Phase 6A Step 5")
+    if type(lineage) is not bool or not lineage and lineage_limits is not None:
+        raise _invalid("lineage requires an explicit boolean request before limits are supplied")
+    if lineage:
+        from ..lineage.graph import LineageLimits, _limits
+        lineage_limits = _limits(LineageLimits() if lineage_limits is None else lineage_limits)
     options = None if tail_options is None else _tail_options(tail_options)
     selection = validate_longitudinal_selection(validation, selection)
     grouped = {version: [] for version in selection.selected_versions}
@@ -1120,12 +1398,16 @@ def analyze_longitudinal(
             grouped[row.record_key.dataset_version].append(row)
     snapshots = tuple(_snapshot_distribution(scope, tuple(grouped[scope.dataset_version]), index, validation)
                       for index, scope in enumerate(selection.snapshots, 1))
+    shared, usage, lineage_signature = None, None, None
+    if lineage:
+        snapshots, shared, usage, lineage_signature = _attach_lineage(validation, selection, snapshots, lineage_limits)
     index = {snapshot.scope.dataset_version: snapshot for snapshot in snapshots}
     comparisons = tuple(_pair_result(pair, index[pair.earlier_version], index[pair.later_version],
-                                    selection.version_order, options) for pair in selection.pairs)
+                                    selection.version_order, options, lineage) for pair in selection.pairs)
     status, reasons = _series_execution(snapshots, comparisons)
     # A full-input required-field diagnostic may be inherited by multiple
     # snapshot joins. Retain it once in the series without dropping local copies.
     messages = tuple(dict.fromkeys(message for item in (*snapshots, *comparisons) for message in item.messages))
-    signature = _analysis_signature(selection, options)
-    return LongitudinalResult(selection, snapshots, comparisons, status, reasons, messages, signature, options)
+    signature = _analysis_signature(selection, options, lineage, lineage_limits, lineage_signature)
+    return LongitudinalResult(selection, snapshots, comparisons, status, reasons, messages, signature, options,
+                             shared, lineage, lineage_limits, lineage_signature, usage)

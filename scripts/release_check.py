@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6A Step 4 opens only the series coordinator for provenance/direct changes.
+Phase 6A Step 5 opens selected ancestry, lineage bounds and series integration.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
@@ -25,10 +25,12 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "e6f8b1f8e2f83907041e972d77d74bfc7101a919"
+ACCEPTED_COMMIT = "390f5f6d11fcc1d54a3008dd9c09cd60a86ebde4"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/")
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
     "src/recursive_integrity_toolkit/metrics/longitudinal.py",
+    "src/recursive_integrity_toolkit/lineage/ancestry.py",
+    "src/recursive_integrity_toolkit/metrics/bounds.py",
 })
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",

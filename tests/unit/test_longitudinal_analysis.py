@@ -400,7 +400,7 @@ def test_stale_selection_is_rejected_before_calculation(tmp_path, monkeypatch, c
         series.analyze_longitudinal(validation, selection=selection)
 
 
-@pytest.mark.parametrize("kwargs", [{"lineage": True}, {"lineage": 1}, {"lineage_limits": {}}, {"tail_options": {}},
+@pytest.mark.parametrize("kwargs", [{"lineage": True, "lineage_limits": {}}, {"lineage": 1}, {"lineage_limits": {}}, {"tail_options": {}},
                                    {"tail_options": "singleton_count"}])
 def test_unsupported_or_malformed_options_fail_before_execution(tmp_path, monkeypatch, kwargs):
     case = _case()

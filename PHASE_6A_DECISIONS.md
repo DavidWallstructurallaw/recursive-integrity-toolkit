@@ -2,13 +2,13 @@
 
 | Field | Value |
 |---|---|
-| Status | APPROVED; Step 4 provenance and direct-closure implementation |
-| Authority | Theory Owner instructions through `Phase 6A Step 4 继续` |
+| Status | APPROVED; Step 5 shared selected lineage and changes |
+| Authority | Theory Owner instructions through `Phase 6A Step 5 继续` |
 | Authorization date | 2026-09-26 America/Los_Angeles; 2026-09-27 UTC |
 | Approved plan | `PHASE_6A_PLAN.md` version 1.0, delivered at `753829a79fb6aa550d58dcd6fced360399c597e9` |
 | Accepted product baseline | Phase 5 completion `f09521907558a193e6438d9acb316adb9e191195` |
 | Working branch | `phase6a-longitudinal` |
-| Current scope | Per-version provenance and direct-closure summaries, coverage/source-share/interval deltas and affected checks |
+| Current scope | Shared selected-target lineage, target summaries, compatible lineage deltas and affected checks |
 | Current runtime | `0.1.0.dev4`, report schema `1.1`; version metadata unchanged |
 | Eventual phase target | `0.1.0.dev5`, report schema `1.2` |
 
@@ -240,4 +240,77 @@ as version count grows. Step 8 must assess that cost in the planned bounded
 preflight; no performance claim or new cache is introduced here.
 
 See [PHASE_6A_STEP_4.md](PHASE_6A_STEP_4.md) for verification and limitations.
-Step 5 has not started. Runtime remains `0.1.0.dev4`, report schema `1.1`.
+At that delivery, Step 5 had not started. Its authorization follows below.
+Runtime remains `0.1.0.dev4`, report schema `1.1`.
+
+## Step 5 authorization and implementation clarifications
+
+The Theory Owner requested `Phase 6A Step 5 继续` on 2026-09-26
+America/Los_Angeles (2026-09-27 UTC). Work starts from Step 4 commit
+`390f5f6d11fcc1d54a3008dd9c09cd60a86ebde4` on `phase6a-longitudinal`.
+
+- `lineage/ancestry.py` adds `analyze_selected_lineage`, immutable
+  `TargetLineageSummary` and `SelectedLineageResult`. It revalidates selection,
+  builds the loaded graph once, detects cycles once and resolves roots once with
+  one shared budget. Metadata reassessment also runs once. All target summaries
+  use the same supplied graph, with retrospective evidence semantics.
+- The shared graph/cycle objects retain the legacy primary scope. Separate target
+  summaries use their actual complete selected population and target-specific
+  lineage scope. No graph scope, file role or validation handoff is relabeled.
+  The ordinary graph and ancestry APIs still require their primary target.
+  Graph context in a target scope includes every loaded non-target node,
+  including other selected versions; none enters the target's N.
+- Target summaries retain only their own ancestry rows, root contributions,
+  counts, coverage, references and depth summaries. They share immutable
+  diagnostics/resource objects and reference existing immutable root sets.
+  Neither graph nor cycle/depth collections are copied per target. Selected
+  versions and targets use chronological selection order.
+- Existing identity resolution, chronology, grounding/carryover rules, G/C/U,
+  root allocation and resource counters are reused. Supporting root counts use
+  the target-supported union. HHI/effective roots use G, incidence uses N and
+  references preserve original declaration multiplicity. The selected API does
+  not invoke ordinary ancestry once per version.
+- The existing lineage bounds wrapper accepts a typed target-only summary,
+  retaining C/N, (C+U)/N and U/N with existing error/availability behavior.
+  It never adapts targets by constructing fake legacy results or cloning cycles.
+  Direct bounds and ordinary lineage bounds remain unchanged.
+- `analyze_longitudinal(..., lineage=True)` attaches shared results and target
+  bounds. Ten `LongitudinalLineageDelta` fields cover root count, HHI, effective
+  roots, unresolved references, reference coverage, resolved/external ancestry
+  coverage and lineage interval endpoints/width. They use F-018 with signed
+  endpoint units, null representation, complete population scopes and separate
+  values/denominators/coverage/reasons. Reference-count unit is `reference_entries`.
+  Every lineage delta obeys the existing representation/map coverage gate.
+- Lineage deltas use the three applicable `ReportStatus` values, leaving
+  `CalculationStatus` unchanged. Partial root/concentration values remain finite
+  with `R_LONGITUDINAL_PARTIAL_COVERAGE`; G=0 concentration remains unavailable.
+  Existing source reasons and explicit earlier/later unavailable reasons survive.
+  Parent-reference coverage keeps the inherited zero-declaration value 1 and
+  each endpoint's `no_declared_parents` flag alongside denominator zero.
+- Empty selected snapshots create no graph node. Their partition/root count is
+  the valid empty set/zero; population ratios and concentration stay unavailable.
+  Root-stage exhaustion removes every target's root partition and concentration,
+  including any previously visited prefix, while retaining graph, cycle,
+  reference and depth evidence. Node/edge admission raises the existing typed
+  exception in the standalone API; the coordinator catches it and preserves other
+  analytical families with explicit failed lineage rows. Known population
+  denominators survive graph-stage failure.
+- Disconnected cycles and inherited global graph errors remain visible in all
+  target execution summaries. Valid unaffected metrics can survive, but the
+  requested series cannot claim completion. Available reference calculations can
+  coexist with unavailable root metrics. No unrequested lineage runs; limits
+  without enablement are rejected before analytical dispatch.
+- The private selected signature combines existing lineage input binding,
+  selection binding and all four limits. `validate_selected_lineage_result`
+  rejects stale inputs, populations, selection or parent evidence without
+  rerunning graph/SCC/root algorithms. Constructors check target arithmetic and
+  shared evidence, and the coordinator binds deltas to snapshot endpoints.
+  This validates consistency; it does not authenticate caller-created root
+  derivations. Step 6 still requires consumer revalidation before public report
+  assembly. Existing malformed-parent selection rejection remains intact.
+
+The source gate advances to `390f5f6`, authorizing only
+`metrics/longitudinal.py`, `lineage/ancestry.py` and `metrics/bounds.py`.
+No module, dependency, configuration/CLI dispatch or schema field is added.
+See [PHASE_6A_STEP_5.md](PHASE_6A_STEP_5.md) for verification and limitations.
+Step 6 has not started; package/schema remain `0.1.0.dev4` / `1.1`.

@@ -1,13 +1,13 @@
 # Longitudinal comparison contract
 
-Status: **APPROVED CONTRACT; STEP 4 PROVENANCE/DIRECT CHANGES IMPLEMENTED**.
+Status: **APPROVED CONTRACT; STEP 5 SELECTED LINEAGE CHANGES IMPLEMENTED**.
 
 Authority: `PHASE_6A_PLAN.md`, P6A-D01 through P6A-D08, and
 `PHASE_6A_DECISIONS.md`. Existing definitions and Phase 3-5 meanings remain in
 force. This document fixes the staged interfaces. Current package dev4 and
-schema 1.1 implement Python selection, compatibility, distributions and
-provenance/direct-closure changes. Selected lineage, config/CLI and public series
-reports remain future work. Implementation clarifications are
+schema 1.1 implement Python selection, compatibility, distributions,
+provenance/direct-closure changes and explicitly requested selected lineage.
+Config/CLI and public series reports remain future work. Implementation clarifications are
 recorded in `PHASE_6A_DECISIONS.md`.
 
 ## 1. Scope and ownership
@@ -158,9 +158,9 @@ The following names/fields define the forthcoming record-series interface.
 Types may reuse existing immutable leaves. Constructors and consumers validate
 literal types, unique identities and binding; a caller-created object is not
 proof of correctness. Step 1 added no runtime types. Step 2 implemented declarations,
-mapping envelopes, scopes, pairs and selection. Steps 3-4 add snapshot/pair/series
-results for distribution and provenance/direct work; configuration options and
-selected lineage remain deferred.
+mapping envelopes, scopes, pairs and selection. Steps 3-5 add snapshot/pair/series
+results for distribution, provenance/direct work and selected lineage;
+configuration options and public report integration remain deferred.
 
 | Type | Required fields |
 |---|---|
@@ -235,8 +235,14 @@ an error outside the selected endpoint remains visible globally without changing
 the unaffected local wrapper. Strict warning policy is forwarded and bound to
 selection. Per-version numerical kernels execute once; joins retain their
 existing full-input validation scans, to be assessed at the Step 8 preflight.
-`lineage=True` or a non-null `lineage_limits` remains a structured error until
-Step 5. No public schema or report field is implemented by this step.
+Step 5 implements `lineage=True` with optional typed `LineageLimits`; supplying
+limits while lineage is false remains a structured error. Snapshot `lineage`
+retains its target-only summary and `lineage_closure` its existing bounds wrapper.
+Pair `lineage_deltas` contains ten `LongitudinalLineageDelta` rows, using
+available/partial/unavailable wrapper status without changing CalculationStatus.
+They retain complete population scopes, G/N/reference denominators as applicable,
+endpoint coverage/status/reasons and the explicit no-declared-parents convention.
+No public schema or report field is implemented by this step.
 
 The input bundle retains its existing `ContentMode`, and selection includes it
 in its private binding. Inline content uses the existing exact-content owner.
@@ -302,6 +308,24 @@ than trusting cached status labels.
 `population_scope` and the inherited Phase 5 ancestry/coverage/concentration
 values, plus its target statuses/reasons and bound input signature. Target data
 must be a partition of the selected version populations, excluding context.
+
+Step 5 implements these types in `lineage/ancestry.py`. `selected_versions` and
+`targets` follow selected chronology; `selection_signature` retains the upstream
+binding. `TargetLineageSummary` carries the inherited target values, its own
+`LineageScope`, `population_scope` and explicit depth summaries. Shared graph and
+cycle objects retain their original primary scope; all other targets are drawn
+from their common loaded evidence without changing graph or input roles.
+The existing ordinary primary-only API remains unchanged.
+
+`validate_selected_lineage_result(validation, *, selection, result)` validates
+current binding, complete populations and retained parent evidence without
+reexecuting graph/cycle/root analysis. It does not authenticate arbitrary
+caller-created root derivations; public consumers must still revalidate their
+required evidence. Existing malformed parent syntax is rejected by selection.
+Node/edge admission failure remains a typed standalone exception, caught by the
+series coordinator to retain independent snapshot calculations and failed lineage
+rows. Root-stage failure retains shared graph/reference/depth results with every
+target root partition unavailable. All four limits enter the private binding.
 
 Shared graph/cycle/root evidence is validated once and referenced within this
 invocation. Existing CycleAnalysis and LineageAnalysisResult validate/copy
