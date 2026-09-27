@@ -1,7 +1,8 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Step 10 opens only the dev4 version declarations. Historical dispatch, source-body
-migrations and phase registries are recoverable from the accepted Git commit.
+Phase 6A Step 1 is contract-only and opens no product implementation paths.
+Historical dispatch, source-body migrations and phase registries are recoverable
+from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
 """
 from __future__ import annotations
@@ -24,12 +25,9 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "15d50c3d992265e716b0b27e69c43107d947d21d"
+ACCEPTED_COMMIT = "753829a79fb6aa550d58dcd6fced360399c597e9"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/")
-CURRENT_IMPLEMENTATION_PATHS = frozenset({
-    "src/recursive_integrity_toolkit/__init__.py",
-    "pyproject.toml",
-})
+CURRENT_IMPLEMENTATION_PATHS = frozenset()
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",
     "test_PR002_parquet_real_row_limit",
@@ -64,7 +62,7 @@ def _regular_file(root: Path, relative: str) -> Path:
 
 
 def verify_source_scope(root: Path = ROOT) -> dict:
-    """Reject product changes outside the currently authorized lineage owners.
+    """Reject product changes outside the currently authorized step.
 
     Later authorized implementation updates this single current boundary. It does
     not append another historical dispatcher or grant authority through metadata.
@@ -74,7 +72,7 @@ def verify_source_scope(root: Path = ROOT) -> dict:
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
-            raise ValueError(f"Unauthorized product mutation outside Step 10 scope: {name}")
+            raise ValueError(f"Unauthorized product mutation outside the current step scope: {name}")
     for prefix in PROTECTED_PREFIXES:
         paths = list((root / prefix).rglob("*"))
         if (root / prefix).is_symlink() or any(path.is_symlink() for path in paths):
@@ -86,7 +84,7 @@ def verify_source_scope(root: Path = ROOT) -> dict:
                   and not path.relative_to(root).as_posix().startswith(
                       "src/recursive_integrity_toolkit.egg-info/")}
         if actual != {name for name in expected if name.startswith(prefix)}:
-            raise ValueError(f"Unauthorized product file-set mutation during Step 10: {prefix}")
+            raise ValueError(f"Unauthorized product file-set mutation during the current step: {prefix}")
     return {"protected_product_files": len(expected) - len(CURRENT_IMPLEMENTATION_PATHS),
             "authorized_implementation_files": len(CURRENT_IMPLEMENTATION_PATHS),
             "product_file_inventory": "unchanged"}

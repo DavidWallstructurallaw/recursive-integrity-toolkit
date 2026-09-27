@@ -1,0 +1,2892 @@
+{
+  "purpose": "Independent Phase 6A Step 1 acceptance inputs and exact oracles. Current input and explicitly invoked kernels only; series runtime is not claimed.",
+  "fraction_encoding": "Exact rational strings. Null is unavailable, not zero; adjacent reason/status fields identify the cause.",
+  "oracle_basis": "Authored canonical rows, set differences, exact rational Gini-Simpson/source-share arithmetic and explicit root sets. Not generated from product reports.",
+  "tail_rule": {
+    "rule": "singleton_count"
+  },
+  "cases": [
+    {
+      "case_id": "observed_three_version",
+      "selected_versions": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "context_versions": [],
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "content": "Fixture v1 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "content": "Fixture v1 record 2",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r3",
+          "content": "Fixture v1 record 3",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r4",
+          "content": "Fixture v1 record 4",
+          "topic": "C"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "content": "Fixture v2 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "content": "Fixture v2 record 2",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r3",
+          "content": "Fixture v2 record 3",
+          "topic": "D"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r4",
+          "content": "Fixture v2 record 4",
+          "topic": "D"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r1",
+          "content": "Fixture v3 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r2",
+          "content": "Fixture v3 record 2",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r3",
+          "content": "Fixture v3 record 3",
+          "topic": "D"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r3",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r4",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "source_type": "human",
+          "provenance_confidence": "log_derived",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r3",
+          "source_type": "synthetic",
+          "provenance_confidence": "estimated",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r1",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "estimated",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r3",
+          "source_type": "unknown",
+          "provenance_confidence": "unknown",
+          "external_grounding": "unknown",
+          "parent_ids": [],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": {
+        "version_order": [
+          "v1",
+          "v2",
+          "v3"
+        ]
+      },
+      "representations": {
+        "v1": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v3": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [
+          "W_PROVENANCE_MISSING_ROW"
+        ]
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v1",
+          "later": "v2",
+          "kinds": [
+            "adjacent",
+            "baseline_first"
+          ],
+          "distribution": {
+            "record_count_delta": 0,
+            "support_delta": -1,
+            "diversity_delta": "-1/8",
+            "missing_states": [
+              "B",
+              "C"
+            ],
+            "added_states": [
+              "D"
+            ],
+            "retained_states": [
+              "A"
+            ],
+            "support_retention": "1/3",
+            "tail_extinct_states": [
+              "B",
+              "C"
+            ],
+            "status": "available",
+            "reason_codes": []
+          },
+          "provenance": {
+            "coverage_delta": {
+              "row": "-1/4",
+              "required": "-1/4",
+              "grounding": "-1/4"
+            },
+            "source_share_delta": {
+              "human": "-1/2",
+              "synthetic": "1/4",
+              "mixed": "0",
+              "sensor": "0",
+              "unknown": "0"
+            },
+            "missing_provenance_share_delta": "1/4",
+            "direct_bounds_delta": [
+              "1/4",
+              "1/2",
+              "1/4"
+            ]
+          }
+        },
+        {
+          "earlier": "v2",
+          "later": "v3",
+          "kinds": [
+            "adjacent"
+          ],
+          "distribution": {
+            "record_count_delta": -1,
+            "support_delta": 1,
+            "diversity_delta": "1/6",
+            "missing_states": [],
+            "added_states": [
+              "B"
+            ],
+            "retained_states": [
+              "A",
+              "D"
+            ],
+            "support_retention": "1",
+            "tail_extinct_states": [],
+            "status": "available",
+            "reason_codes": []
+          },
+          "provenance": {
+            "coverage_delta": {
+              "row": "1/4",
+              "required": "1/4",
+              "grounding": "-1/12"
+            },
+            "source_share_delta": {
+              "human": "-1/6",
+              "synthetic": "1/12",
+              "mixed": "0",
+              "sensor": "0",
+              "unknown": "1/3"
+            },
+            "missing_provenance_share_delta": "-1/4",
+            "direct_bounds_delta": [
+              "1/12",
+              "1/6",
+              "1/12"
+            ]
+          }
+        },
+        {
+          "earlier": "v1",
+          "later": "v3",
+          "kinds": [
+            "baseline_first"
+          ],
+          "distribution": {
+            "record_count_delta": -1,
+            "support_delta": 0,
+            "diversity_delta": "1/24",
+            "missing_states": [
+              "C"
+            ],
+            "added_states": [
+              "D"
+            ],
+            "retained_states": [
+              "A",
+              "B"
+            ],
+            "support_retention": "2/3",
+            "tail_extinct_states": [
+              "C"
+            ],
+            "status": "available",
+            "reason_codes": []
+          },
+          "provenance": {
+            "coverage_delta": {
+              "row": "0",
+              "required": "0",
+              "grounding": "-1/3"
+            },
+            "source_share_delta": {
+              "human": "-2/3",
+              "synthetic": "1/3",
+              "mixed": "0",
+              "sensor": "0",
+              "unknown": "1/3"
+            },
+            "missing_provenance_share_delta": "0",
+            "direct_bounds_delta": [
+              "1/3",
+              "2/3",
+              "1/3"
+            ]
+          }
+        }
+      ],
+      "expected_snapshots": {
+        "v1": {
+          "record_count": 4,
+          "eligible_count": 4,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 2,
+            "B": 1,
+            "C": 1
+          },
+          "support_size": 3,
+          "diversity": "5/8",
+          "status": "available",
+          "reason_codes": []
+        },
+        "v2": {
+          "record_count": 4,
+          "eligible_count": 4,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 2,
+            "D": 2
+          },
+          "support_size": 2,
+          "diversity": "1/2",
+          "status": "available",
+          "reason_codes": []
+        },
+        "v3": {
+          "record_count": 3,
+          "eligible_count": 3,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1,
+            "B": 1,
+            "D": 1
+          },
+          "support_size": 3,
+          "diversity": "2/3",
+          "status": "available",
+          "reason_codes": []
+        }
+      },
+      "expected_provenance": {
+        "v1": {
+          "record_count": 4,
+          "source_counts": {
+            "human": 4,
+            "synthetic": 0,
+            "mixed": 0,
+            "sensor": 0,
+            "unknown": 0
+          },
+          "missing_provenance_count": 0,
+          "grounding_counts": {
+            "yes": 4,
+            "no": 0,
+            "unresolved": 0
+          },
+          "confidence_counts": {
+            "confirmed": 4,
+            "log_derived": 0,
+            "estimated": 0,
+            "unknown": 0
+          },
+          "source_shares": {
+            "human": "1",
+            "synthetic": "0",
+            "mixed": "0",
+            "sensor": "0",
+            "unknown": "0"
+          },
+          "missing_provenance_share": "0",
+          "coverage": {
+            "row": "1",
+            "required": "1",
+            "grounding": "1"
+          },
+          "direct_bounds": [
+            "0",
+            "0",
+            "0"
+          ]
+        },
+        "v2": {
+          "record_count": 4,
+          "source_counts": {
+            "human": 2,
+            "synthetic": 1,
+            "mixed": 0,
+            "sensor": 0,
+            "unknown": 0
+          },
+          "missing_provenance_count": 1,
+          "grounding_counts": {
+            "yes": 2,
+            "no": 1,
+            "unresolved": 1
+          },
+          "confidence_counts": {
+            "confirmed": 1,
+            "log_derived": 1,
+            "estimated": 1,
+            "unknown": 0
+          },
+          "source_shares": {
+            "human": "1/2",
+            "synthetic": "1/4",
+            "mixed": "0",
+            "sensor": "0",
+            "unknown": "0"
+          },
+          "missing_provenance_share": "1/4",
+          "coverage": {
+            "row": "3/4",
+            "required": "3/4",
+            "grounding": "3/4"
+          },
+          "direct_bounds": [
+            "1/4",
+            "1/2",
+            "1/4"
+          ]
+        },
+        "v3": {
+          "record_count": 3,
+          "source_counts": {
+            "human": 1,
+            "synthetic": 1,
+            "mixed": 0,
+            "sensor": 0,
+            "unknown": 1
+          },
+          "missing_provenance_count": 0,
+          "grounding_counts": {
+            "yes": 1,
+            "no": 1,
+            "unresolved": 1
+          },
+          "confidence_counts": {
+            "confirmed": 1,
+            "log_derived": 0,
+            "estimated": 1,
+            "unknown": 1
+          },
+          "source_shares": {
+            "human": "1/3",
+            "synthetic": "1/3",
+            "mixed": "0",
+            "sensor": "0",
+            "unknown": "1/3"
+          },
+          "missing_provenance_share": "0",
+          "coverage": {
+            "row": "1",
+            "required": "1",
+            "grounding": "2/3"
+          },
+          "direct_bounds": [
+            "1/3",
+            "2/3",
+            "1/3"
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "lineage_complete",
+      "selected_versions": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "context_versions": [
+        "anchors"
+      ],
+      "records": [
+        {
+          "dataset_version": "anchors",
+          "record_id": "a",
+          "content": "Explicit context anchor a",
+          "topic": "context"
+        },
+        {
+          "dataset_version": "anchors",
+          "record_id": "b",
+          "content": "Explicit context anchor b",
+          "topic": "context"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "content": "Fixture v1 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "content": "Fixture v1 record 2",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r3",
+          "content": "Fixture v1 record 3",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r4",
+          "content": "Fixture v1 record 4",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "content": "Fixture v2 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "content": "Fixture v2 record 2",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r3",
+          "content": "Fixture v2 record 3",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r4",
+          "content": "Fixture v2 record 4",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r1",
+          "content": "Fixture v3 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r2",
+          "content": "Fixture v3 record 2",
+          "topic": "B"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "anchors",
+          "record_id": "a",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "anchors",
+          "record_id": "b",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::b"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::b"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::b"
+          ],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": {
+        "version_order": [
+          "anchors",
+          "v1",
+          "v2",
+          "v3"
+        ]
+      },
+      "representations": {
+        "v1": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v3": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": []
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v1",
+          "later": "v2",
+          "lineage": {
+            "distinct_external_root_count_delta": -1,
+            "hhi_delta": "1/2",
+            "effective_root_count_delta": "-1",
+            "unresolved_parent_references_delta": "0",
+            "resolved_reference_coverage_delta": "0",
+            "resolved_lineage_coverage_delta": "0",
+            "external_ancestry_coverage_delta": "0",
+            "lineage_bounds_delta": [
+              "0",
+              "0",
+              "0"
+            ],
+            "root_delta_status": "available",
+            "concentration_delta_status": "available",
+            "concentration_delta_reason_codes": []
+          }
+        },
+        {
+          "earlier": "v2",
+          "later": "v3",
+          "lineage": {
+            "distinct_external_root_count_delta": 1,
+            "hhi_delta": "-1/2",
+            "effective_root_count_delta": "1",
+            "unresolved_parent_references_delta": "0",
+            "resolved_reference_coverage_delta": "0",
+            "resolved_lineage_coverage_delta": "0",
+            "external_ancestry_coverage_delta": "0",
+            "lineage_bounds_delta": [
+              "0",
+              "0",
+              "0"
+            ],
+            "root_delta_status": "available",
+            "concentration_delta_status": "available",
+            "concentration_delta_reason_codes": []
+          }
+        }
+      ],
+      "expected_lineage": {
+        "v1": {
+          "N": 4,
+          "G": 4,
+          "C": 0,
+          "U": 0,
+          "complete_root_sets": {
+            "v1::r1": [
+              "anchors::a"
+            ],
+            "v1::r2": [
+              "anchors::a"
+            ],
+            "v1::r3": [
+              "anchors::b"
+            ],
+            "v1::r4": [
+              "anchors::b"
+            ]
+          },
+          "distinct_external_root_count": 2,
+          "hhi": "1/2",
+          "effective_root_count": "2",
+          "declared_parent_references": 4,
+          "resolved_parent_references": 4,
+          "unresolved_parent_references": 0,
+          "resolved_reference_coverage": "1",
+          "resolved_lineage_coverage": "1",
+          "external_ancestry_coverage": "1",
+          "lineage_bounds": [
+            "0",
+            "0",
+            "0"
+          ],
+          "root_metrics_status": "available",
+          "concentration_status": "available",
+          "concentration_reason_codes": []
+        },
+        "v2": {
+          "N": 4,
+          "G": 4,
+          "C": 0,
+          "U": 0,
+          "complete_root_sets": {
+            "v2::r1": [
+              "anchors::a"
+            ],
+            "v2::r2": [
+              "anchors::a"
+            ],
+            "v2::r3": [
+              "anchors::a"
+            ],
+            "v2::r4": [
+              "anchors::a"
+            ]
+          },
+          "distinct_external_root_count": 1,
+          "hhi": "1",
+          "effective_root_count": "1",
+          "declared_parent_references": 4,
+          "resolved_parent_references": 4,
+          "unresolved_parent_references": 0,
+          "resolved_reference_coverage": "1",
+          "resolved_lineage_coverage": "1",
+          "external_ancestry_coverage": "1",
+          "lineage_bounds": [
+            "0",
+            "0",
+            "0"
+          ],
+          "root_metrics_status": "available",
+          "concentration_status": "available",
+          "concentration_reason_codes": []
+        },
+        "v3": {
+          "N": 2,
+          "G": 2,
+          "C": 0,
+          "U": 0,
+          "complete_root_sets": {
+            "v3::r1": [
+              "anchors::a"
+            ],
+            "v3::r2": [
+              "anchors::b"
+            ]
+          },
+          "distinct_external_root_count": 2,
+          "hhi": "1/2",
+          "effective_root_count": "2",
+          "declared_parent_references": 2,
+          "resolved_parent_references": 2,
+          "unresolved_parent_references": 0,
+          "resolved_reference_coverage": "1",
+          "resolved_lineage_coverage": "1",
+          "external_ancestry_coverage": "1",
+          "lineage_bounds": [
+            "0",
+            "0",
+            "0"
+          ],
+          "root_metrics_status": "available",
+          "concentration_status": "available",
+          "concentration_reason_codes": []
+        }
+      }
+    },
+    {
+      "case_id": "lineage_partial",
+      "selected_versions": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "context_versions": [
+        "anchors"
+      ],
+      "records": [
+        {
+          "dataset_version": "anchors",
+          "record_id": "a",
+          "content": "Explicit context anchor a",
+          "topic": "context"
+        },
+        {
+          "dataset_version": "anchors",
+          "record_id": "b",
+          "content": "Explicit context anchor b",
+          "topic": "context"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "content": "Fixture v1 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "content": "Fixture v1 record 2",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r3",
+          "content": "Fixture v1 record 3",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r4",
+          "content": "Fixture v1 record 4",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "content": "Fixture v2 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "content": "Fixture v2 record 2",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r3",
+          "content": "Fixture v2 record 3",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r4",
+          "content": "Fixture v2 record 4",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r1",
+          "content": "Fixture v3 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r2",
+          "content": "Fixture v3 record 2",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r3",
+          "content": "Fixture v3 record 3",
+          "topic": "C"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "anchors",
+          "record_id": "a",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "anchors",
+          "record_id": "b",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::b"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::b"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::b"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::missing"
+          ],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": {
+        "version_order": [
+          "anchors",
+          "v1",
+          "v2",
+          "v3"
+        ]
+      },
+      "representations": {
+        "v1": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v3": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [
+          "W_PARENT_UNRESOLVED"
+        ]
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v1",
+          "later": "v2",
+          "lineage": {
+            "distinct_external_root_count_delta": -1,
+            "hhi_delta": "1/2",
+            "effective_root_count_delta": "-1",
+            "unresolved_parent_references_delta": "0",
+            "resolved_reference_coverage_delta": "0",
+            "resolved_lineage_coverage_delta": "0",
+            "external_ancestry_coverage_delta": "0",
+            "lineage_bounds_delta": [
+              "0",
+              "0",
+              "0"
+            ],
+            "root_delta_status": "available",
+            "concentration_delta_status": "available",
+            "concentration_delta_reason_codes": []
+          }
+        },
+        {
+          "earlier": "v2",
+          "later": "v3",
+          "lineage": {
+            "distinct_external_root_count_delta": 1,
+            "hhi_delta": "-1/2",
+            "effective_root_count_delta": "1",
+            "unresolved_parent_references_delta": "1",
+            "resolved_reference_coverage_delta": "-1/3",
+            "resolved_lineage_coverage_delta": "-1/3",
+            "external_ancestry_coverage_delta": "-1/3",
+            "lineage_bounds_delta": [
+              "0",
+              "1/3",
+              "1/3"
+            ],
+            "root_delta_status": "partial",
+            "concentration_delta_status": "partial",
+            "concentration_delta_reason_codes": []
+          }
+        }
+      ],
+      "expected_lineage": {
+        "v1": {
+          "N": 4,
+          "G": 4,
+          "C": 0,
+          "U": 0,
+          "complete_root_sets": {
+            "v1::r1": [
+              "anchors::a"
+            ],
+            "v1::r2": [
+              "anchors::a"
+            ],
+            "v1::r3": [
+              "anchors::b"
+            ],
+            "v1::r4": [
+              "anchors::b"
+            ]
+          },
+          "distinct_external_root_count": 2,
+          "hhi": "1/2",
+          "effective_root_count": "2",
+          "declared_parent_references": 4,
+          "resolved_parent_references": 4,
+          "unresolved_parent_references": 0,
+          "resolved_reference_coverage": "1",
+          "resolved_lineage_coverage": "1",
+          "external_ancestry_coverage": "1",
+          "lineage_bounds": [
+            "0",
+            "0",
+            "0"
+          ],
+          "root_metrics_status": "available",
+          "concentration_status": "available",
+          "concentration_reason_codes": []
+        },
+        "v2": {
+          "N": 4,
+          "G": 4,
+          "C": 0,
+          "U": 0,
+          "complete_root_sets": {
+            "v2::r1": [
+              "anchors::a"
+            ],
+            "v2::r2": [
+              "anchors::a"
+            ],
+            "v2::r3": [
+              "anchors::a"
+            ],
+            "v2::r4": [
+              "anchors::a"
+            ]
+          },
+          "distinct_external_root_count": 1,
+          "hhi": "1",
+          "effective_root_count": "1",
+          "declared_parent_references": 4,
+          "resolved_parent_references": 4,
+          "unresolved_parent_references": 0,
+          "resolved_reference_coverage": "1",
+          "resolved_lineage_coverage": "1",
+          "external_ancestry_coverage": "1",
+          "lineage_bounds": [
+            "0",
+            "0",
+            "0"
+          ],
+          "root_metrics_status": "available",
+          "concentration_status": "available",
+          "concentration_reason_codes": []
+        },
+        "v3": {
+          "N": 3,
+          "G": 2,
+          "C": 0,
+          "U": 1,
+          "complete_root_sets": {
+            "v3::r1": [
+              "anchors::a"
+            ],
+            "v3::r2": [
+              "anchors::b"
+            ],
+            "v3::r3": null
+          },
+          "distinct_external_root_count": 2,
+          "hhi": "1/2",
+          "effective_root_count": "2",
+          "declared_parent_references": 3,
+          "resolved_parent_references": 2,
+          "unresolved_parent_references": 1,
+          "resolved_reference_coverage": "2/3",
+          "resolved_lineage_coverage": "2/3",
+          "external_ancestry_coverage": "2/3",
+          "lineage_bounds": [
+            "0",
+            "1/3",
+            "1/3"
+          ],
+          "root_metrics_status": "partial",
+          "concentration_status": "partial",
+          "concentration_reason_codes": []
+        }
+      }
+    },
+    {
+      "case_id": "lineage_zero_grounded",
+      "selected_versions": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "context_versions": [
+        "anchors"
+      ],
+      "records": [
+        {
+          "dataset_version": "anchors",
+          "record_id": "a",
+          "content": "Explicit context anchor a",
+          "topic": "context"
+        },
+        {
+          "dataset_version": "anchors",
+          "record_id": "b",
+          "content": "Explicit context anchor b",
+          "topic": "context"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "content": "Fixture v1 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "content": "Fixture v1 record 2",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r3",
+          "content": "Fixture v1 record 3",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r4",
+          "content": "Fixture v1 record 4",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "content": "Fixture v2 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "content": "Fixture v2 record 2",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r3",
+          "content": "Fixture v2 record 3",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r4",
+          "content": "Fixture v2 record 4",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r1",
+          "content": "Fixture v3 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r2",
+          "content": "Fixture v3 record 2",
+          "topic": "B"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "anchors",
+          "record_id": "a",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "anchors",
+          "record_id": "b",
+          "source_type": "human",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "yes",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::b"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::b"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [
+            "anchors::a"
+          ],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": {
+        "version_order": [
+          "anchors",
+          "v1",
+          "v2",
+          "v3"
+        ]
+      },
+      "representations": {
+        "v1": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v3": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": []
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v1",
+          "later": "v2",
+          "lineage": {
+            "distinct_external_root_count_delta": -1,
+            "hhi_delta": "1/2",
+            "effective_root_count_delta": "-1",
+            "unresolved_parent_references_delta": "0",
+            "resolved_reference_coverage_delta": "0",
+            "resolved_lineage_coverage_delta": "0",
+            "external_ancestry_coverage_delta": "0",
+            "lineage_bounds_delta": [
+              "0",
+              "0",
+              "0"
+            ],
+            "root_delta_status": "available",
+            "concentration_delta_status": "available",
+            "concentration_delta_reason_codes": []
+          }
+        },
+        {
+          "earlier": "v2",
+          "later": "v3",
+          "lineage": {
+            "distinct_external_root_count_delta": -1,
+            "hhi_delta": null,
+            "effective_root_count_delta": null,
+            "unresolved_parent_references_delta": "0",
+            "resolved_reference_coverage_delta": "0",
+            "resolved_lineage_coverage_delta": "0",
+            "external_ancestry_coverage_delta": "-1",
+            "lineage_bounds_delta": [
+              "1",
+              "1",
+              "0"
+            ],
+            "root_delta_status": "available",
+            "concentration_delta_status": "unavailable",
+            "concentration_delta_reason_codes": [
+              "LATER_NO_RESOLVED_EXTERNAL_ROOTS"
+            ]
+          }
+        }
+      ],
+      "expected_lineage": {
+        "v1": {
+          "N": 4,
+          "G": 4,
+          "C": 0,
+          "U": 0,
+          "complete_root_sets": {
+            "v1::r1": [
+              "anchors::a"
+            ],
+            "v1::r2": [
+              "anchors::a"
+            ],
+            "v1::r3": [
+              "anchors::b"
+            ],
+            "v1::r4": [
+              "anchors::b"
+            ]
+          },
+          "distinct_external_root_count": 2,
+          "hhi": "1/2",
+          "effective_root_count": "2",
+          "declared_parent_references": 4,
+          "resolved_parent_references": 4,
+          "unresolved_parent_references": 0,
+          "resolved_reference_coverage": "1",
+          "resolved_lineage_coverage": "1",
+          "external_ancestry_coverage": "1",
+          "lineage_bounds": [
+            "0",
+            "0",
+            "0"
+          ],
+          "root_metrics_status": "available",
+          "concentration_status": "available",
+          "concentration_reason_codes": []
+        },
+        "v2": {
+          "N": 4,
+          "G": 4,
+          "C": 0,
+          "U": 0,
+          "complete_root_sets": {
+            "v2::r1": [
+              "anchors::a"
+            ],
+            "v2::r2": [
+              "anchors::a"
+            ],
+            "v2::r3": [
+              "anchors::a"
+            ],
+            "v2::r4": [
+              "anchors::a"
+            ]
+          },
+          "distinct_external_root_count": 1,
+          "hhi": "1",
+          "effective_root_count": "1",
+          "declared_parent_references": 4,
+          "resolved_parent_references": 4,
+          "unresolved_parent_references": 0,
+          "resolved_reference_coverage": "1",
+          "resolved_lineage_coverage": "1",
+          "external_ancestry_coverage": "1",
+          "lineage_bounds": [
+            "0",
+            "0",
+            "0"
+          ],
+          "root_metrics_status": "available",
+          "concentration_status": "available",
+          "concentration_reason_codes": []
+        },
+        "v3": {
+          "N": 2,
+          "G": 0,
+          "C": 2,
+          "U": 0,
+          "complete_root_sets": {
+            "v3::r1": [],
+            "v3::r2": []
+          },
+          "distinct_external_root_count": 0,
+          "hhi": null,
+          "effective_root_count": null,
+          "declared_parent_references": 0,
+          "resolved_parent_references": 0,
+          "unresolved_parent_references": 0,
+          "resolved_reference_coverage": "1",
+          "resolved_lineage_coverage": "1",
+          "external_ancestry_coverage": "0",
+          "lineage_bounds": [
+            "1",
+            "1",
+            "0"
+          ],
+          "root_metrics_status": "available",
+          "concentration_status": "unavailable",
+          "concentration_reason_codes": [
+            "NO_RESOLVED_EXTERNAL_ROOTS"
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "lexical_order_context_unloaded",
+      "selected_versions": [
+        "v2",
+        "v10"
+      ],
+      "context_versions": [
+        "v0"
+      ],
+      "records": [
+        {
+          "dataset_version": "v0",
+          "record_id": "r1",
+          "content": "Fixture v0 record 1",
+          "topic": "CONTEXT"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "content": "Fixture v2 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "content": "Fixture v2 record 2",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v10",
+          "record_id": "r1",
+          "content": "Fixture v10 record 1",
+          "topic": "A"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v0",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v10",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": {
+        "version_order": [
+          "declared-unloaded-before",
+          "v0",
+          "v2",
+          "v10",
+          "declared-unloaded-after"
+        ]
+      },
+      "representations": {
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v10": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": []
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v2",
+          "later": "v10",
+          "kinds": [
+            "adjacent"
+          ],
+          "distribution": {
+            "record_count_delta": -1,
+            "support_delta": -1,
+            "diversity_delta": "-1/2",
+            "missing_states": [
+              "B"
+            ],
+            "added_states": [],
+            "retained_states": [
+              "A"
+            ],
+            "support_retention": "1/2",
+            "tail_extinct_states": [
+              "B"
+            ],
+            "status": "available",
+            "reason_codes": []
+          }
+        }
+      ],
+      "expected_selected_order": [
+        "v2",
+        "v10"
+      ],
+      "expected_snapshots": {
+        "v2": {
+          "record_count": 2,
+          "eligible_count": 2,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1,
+            "B": 1
+          },
+          "support_size": 2,
+          "diversity": "1/2",
+          "status": "available",
+          "reason_codes": []
+        },
+        "v10": {
+          "record_count": 1,
+          "eligible_count": 1,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1
+          },
+          "support_size": 1,
+          "diversity": "0",
+          "status": "available",
+          "reason_codes": []
+        }
+      }
+    },
+    {
+      "case_id": "missing_order",
+      "selected_versions": [
+        "v2",
+        "v10"
+      ],
+      "context_versions": [],
+      "records": [
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "content": "Fixture v2 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v10",
+          "record_id": "r1",
+          "content": "Fixture v10 record 1",
+          "topic": "B"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v10",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": null,
+      "representations": {
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v10": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": [
+          "W_VERSION_ORDER_MISSING"
+        ]
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v2",
+          "later": "v10",
+          "expected_pair_error": "E_VERSION_ORDER_CONFLICT"
+        }
+      ],
+      "expected_snapshots": {
+        "v2": {
+          "record_count": 1,
+          "eligible_count": 1,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1
+          },
+          "support_size": 1,
+          "diversity": "0",
+          "status": "available",
+          "reason_codes": []
+        },
+        "v10": {
+          "record_count": 1,
+          "eligible_count": 1,
+          "excluded_count": 0,
+          "state_counts": {
+            "B": 1
+          },
+          "support_size": 1,
+          "diversity": "0",
+          "status": "available",
+          "reason_codes": []
+        }
+      }
+    },
+    {
+      "case_id": "incompatible_middle",
+      "selected_versions": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "context_versions": [],
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "content": "Fixture v1 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "content": "Fixture v1 record 2",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "content": "Fixture v2 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "content": "Fixture v2 record 2",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r1",
+          "content": "Fixture v3 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r2",
+          "content": "Fixture v3 record 2",
+          "topic": "B"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v3",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": {
+        "version_order": [
+          "v1",
+          "v2",
+          "v3"
+        ]
+      },
+      "representations": {
+        "v1": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v2",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Different declared v2 categories"
+        },
+        "v3": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": []
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v1",
+          "later": "v2",
+          "expected_pair_error": "E_REPRESENTATION_INCOMPATIBLE"
+        },
+        {
+          "earlier": "v2",
+          "later": "v3",
+          "expected_pair_error": "E_REPRESENTATION_INCOMPATIBLE"
+        },
+        {
+          "earlier": "v1",
+          "later": "v3",
+          "kinds": [
+            "baseline_first"
+          ],
+          "distribution": {
+            "record_count_delta": 0,
+            "support_delta": 0,
+            "diversity_delta": "0",
+            "missing_states": [],
+            "added_states": [],
+            "retained_states": [
+              "A",
+              "B"
+            ],
+            "support_retention": "1",
+            "tail_extinct_states": [],
+            "status": "available",
+            "reason_codes": []
+          }
+        }
+      ],
+      "expected_snapshots": {
+        "v1": {
+          "record_count": 2,
+          "eligible_count": 2,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1,
+            "B": 1
+          },
+          "support_size": 2,
+          "diversity": "1/2",
+          "status": "available",
+          "reason_codes": []
+        },
+        "v2": {
+          "record_count": 2,
+          "eligible_count": 2,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1,
+            "B": 1
+          },
+          "support_size": 2,
+          "diversity": "1/2",
+          "status": "available",
+          "reason_codes": []
+        },
+        "v3": {
+          "record_count": 2,
+          "eligible_count": 2,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1,
+            "B": 1
+          },
+          "support_size": 2,
+          "diversity": "1/2",
+          "status": "available",
+          "reason_codes": []
+        }
+      }
+    },
+    {
+      "case_id": "directed_many_to_one",
+      "selected_versions": [
+        "v1",
+        "v2"
+      ],
+      "context_versions": [],
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "content": "Fixture v1 record 1",
+          "topic": "red"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "content": "Fixture v1 record 2",
+          "topic": "red"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r3",
+          "content": "Fixture v1 record 3",
+          "topic": "green"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r4",
+          "content": "Fixture v1 record 4",
+          "topic": "pear"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "content": "Fixture v2 record 1",
+          "topic": "apple"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "content": "Fixture v2 record 2",
+          "topic": "pear"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r3",
+          "content": "Fixture v2 record 3",
+          "topic": "pear"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r4",
+          "content": "Fixture v2 record 4",
+          "topic": "pear"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r3",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r4",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": {
+        "version_order": [
+          "v1",
+          "v2"
+        ]
+      },
+      "representations": {
+        "v1": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "fine-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Fine fruit categories"
+        },
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "coarse-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Coarse fruit categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": []
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v1",
+          "later": "v2",
+          "kinds": [
+            "adjacent"
+          ],
+          "distribution": {
+            "record_count_delta": 0,
+            "support_delta": 0,
+            "diversity_delta": "0",
+            "missing_states": [],
+            "added_states": [],
+            "retained_states": [
+              "apple",
+              "pear"
+            ],
+            "support_retention": "1",
+            "tail_extinct_states": [],
+            "status": "available",
+            "reason_codes": []
+          },
+          "mapping": {
+            "direction": "earlier_to_later",
+            "state_mapping": {
+              "red": "apple",
+              "green": "apple",
+              "pear": "pear"
+            }
+          },
+          "expected_harmonized": {
+            "earlier_counts": {
+              "apple": 3,
+              "pear": 1
+            },
+            "later_counts": {
+              "apple": 1,
+              "pear": 3
+            },
+            "earlier_diversity": "3/8",
+            "later_diversity": "3/8",
+            "collision_groups": [
+              [
+                "apple",
+                [
+                  "green",
+                  "red"
+                ]
+              ]
+            ]
+          }
+        }
+      ],
+      "expected_snapshots": {
+        "v1": {
+          "record_count": 4,
+          "eligible_count": 4,
+          "excluded_count": 0,
+          "state_counts": {
+            "red": 2,
+            "green": 1,
+            "pear": 1
+          },
+          "support_size": 3,
+          "diversity": "5/8",
+          "status": "available",
+          "reason_codes": []
+        },
+        "v2": {
+          "record_count": 4,
+          "eligible_count": 4,
+          "excluded_count": 0,
+          "state_counts": {
+            "apple": 1,
+            "pear": 3
+          },
+          "support_size": 2,
+          "diversity": "3/8",
+          "status": "available",
+          "reason_codes": []
+        }
+      }
+    },
+    {
+      "case_id": "all_excluded_later",
+      "selected_versions": [
+        "v1",
+        "v2"
+      ],
+      "context_versions": [],
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "content": "Fixture v1 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "content": "Fixture v1 record 2",
+          "topic": "B"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "content": "Fixture v2 record 1",
+          "topic": null
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "content": "Fixture v2 record 2",
+          "topic": null
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v2",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": {
+        "version_order": [
+          "v1",
+          "v2"
+        ]
+      },
+      "representations": {
+        "v1": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": []
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v1",
+          "later": "v2",
+          "kinds": [
+            "adjacent"
+          ],
+          "distribution": {
+            "record_count_delta": 0,
+            "support_delta": null,
+            "diversity_delta": null,
+            "missing_states": null,
+            "added_states": null,
+            "retained_states": null,
+            "support_retention": null,
+            "tail_extinct_states": null,
+            "status": "unavailable",
+            "reason_codes": [
+              "R_CALC_ALL_EXCLUDED"
+            ]
+          }
+        }
+      ],
+      "expected_snapshots": {
+        "v1": {
+          "record_count": 2,
+          "eligible_count": 2,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1,
+            "B": 1
+          },
+          "support_size": 2,
+          "diversity": "1/2",
+          "status": "available",
+          "reason_codes": []
+        },
+        "v2": {
+          "record_count": 2,
+          "eligible_count": 0,
+          "excluded_count": 2,
+          "state_counts": {},
+          "support_size": null,
+          "diversity": null,
+          "status": "unavailable",
+          "reason_codes": [
+            "R_CALC_ALL_EXCLUDED"
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "identified_empty_later",
+      "selected_versions": [
+        "v1",
+        "v2"
+      ],
+      "context_versions": [],
+      "records": [
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "content": "Fixture v1 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "content": "Fixture v1 record 2",
+          "topic": "B"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v1",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v1",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": {
+        "version_order": [
+          "v1",
+          "v2"
+        ]
+      },
+      "representations": {
+        "v1": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": []
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v1",
+          "later": "v2",
+          "kinds": [
+            "adjacent"
+          ],
+          "distribution": {
+            "record_count_delta": -2,
+            "support_delta": null,
+            "diversity_delta": null,
+            "missing_states": null,
+            "added_states": null,
+            "retained_states": null,
+            "support_retention": null,
+            "tail_extinct_states": null,
+            "status": "unavailable",
+            "reason_codes": [
+              "R_CALC_EMPTY_SCOPE"
+            ]
+          }
+        }
+      ],
+      "scope_note": "v2 is an explicitly identified empty Python scope. No empty CLI file or filename-derived version is supplied.",
+      "expected_snapshots": {
+        "v1": {
+          "record_count": 2,
+          "eligible_count": 2,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1,
+            "B": 1
+          },
+          "support_size": 2,
+          "diversity": "1/2",
+          "status": "available",
+          "reason_codes": []
+        },
+        "v2": {
+          "record_count": 0,
+          "eligible_count": 0,
+          "excluded_count": 0,
+          "state_counts": {},
+          "support_size": null,
+          "diversity": null,
+          "status": "unavailable",
+          "reason_codes": [
+            "R_CALC_EMPTY_SCOPE"
+          ]
+        }
+      },
+      "current_pair_kernel_rejects_unloaded_endpoint": true
+    },
+    {
+      "case_id": "tied_timestamps_explicit_order",
+      "selected_versions": [
+        "v2",
+        "v10"
+      ],
+      "context_versions": [],
+      "records": [
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "content": "Fixture v2 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v10",
+          "record_id": "r1",
+          "content": "Fixture v10 record 1",
+          "topic": "A"
+        },
+        {
+          "dataset_version": "v10",
+          "record_id": "r2",
+          "content": "Fixture v10 record 2",
+          "topic": "B"
+        }
+      ],
+      "provenance": [
+        {
+          "dataset_version": "v2",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v10",
+          "record_id": "r1",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        },
+        {
+          "dataset_version": "v10",
+          "record_id": "r2",
+          "source_type": "synthetic",
+          "provenance_confidence": "confirmed",
+          "external_grounding": "no",
+          "parent_ids": [],
+          "transformation": "generate"
+        }
+      ],
+      "order_document": {
+        "version_timestamps": {
+          "v2": "2026-01-01T01:00:00+01:00",
+          "v10": "2026-01-01T00:00:00Z"
+        },
+        "timestamp_tiebreak": [
+          "v2",
+          "v10"
+        ]
+      },
+      "representations": {
+        "v2": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        },
+        "v10": {
+          "name": "topic",
+          "source": "topic_field",
+          "field": "topic",
+          "version": "topics-v1",
+          "missing_value_policy": "exclude",
+          "state_semantics": "Literal fixture topic categories"
+        }
+      },
+      "expected_input": {
+        "error_codes": [],
+        "required_warning_codes": []
+      },
+      "expected_pairs": [
+        {
+          "earlier": "v2",
+          "later": "v10",
+          "kinds": [
+            "adjacent"
+          ],
+          "distribution": {
+            "record_count_delta": 1,
+            "support_delta": 1,
+            "diversity_delta": "1/2",
+            "missing_states": [],
+            "added_states": [
+              "B"
+            ],
+            "retained_states": [
+              "A"
+            ],
+            "support_retention": "1",
+            "tail_extinct_states": [],
+            "status": "available",
+            "reason_codes": []
+          }
+        }
+      ],
+      "expected_selected_order": [
+        "v2",
+        "v10"
+      ],
+      "expected_snapshots": {
+        "v2": {
+          "record_count": 1,
+          "eligible_count": 1,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1
+          },
+          "support_size": 1,
+          "diversity": "0",
+          "status": "available",
+          "reason_codes": []
+        },
+        "v10": {
+          "record_count": 2,
+          "eligible_count": 2,
+          "excluded_count": 0,
+          "state_counts": {
+            "A": 1,
+            "B": 1
+          },
+          "support_size": 2,
+          "diversity": "1/2",
+          "status": "available",
+          "reason_codes": []
+        }
+      }
+    }
+  ]
+}

@@ -17,6 +17,7 @@ REQUIRED = {
     "REPOSITORY_ARCHITECTURE.md", "DEPENDENCY_STRATEGY.md",
     "DATA_AND_PROVENANCE_SPEC.md", "OBSERVABILITY_AND_REPORTING.md",
     "THEORY_TO_CODE_TRACEABILITY.md", "PHASE_5_PLAN.md", "PHASE_5_DECISIONS.md",
+    "PHASE_6A_PLAN.md", "PHASE_6A_DECISIONS.md",
 }
 SCHEMAS = {"report.schema.json", "config.schema.json", "schema_mapping.schema.json",
            "version_order.schema.json", "normalized_manifest.schema.json"}
