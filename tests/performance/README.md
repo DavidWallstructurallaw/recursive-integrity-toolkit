@@ -1,6 +1,9 @@
 # Performance measurements
 
-Current Phase 6B Step 7 adds the bounded simulation observations described below.
+Phase 6B Step 8 completed all 21 candidate performance cases, including actual
+100k datasets and the two bounded simulation profiles. The [candidate record](../../PHASE_6B_COMPLETION.md)
+retains every attempt, source identity, measurement scope and environment limits.
+The Step 7 observations below retain their own earlier source and local environment.
 These measurements retain the existing admission limits and introduce no new
 performance SLA. The Phase 6A Step 9 reference schedule runs the actual 100k longitudinal workload
 once on the designated Ubuntu/Python 3.12 reference profile. The case starts

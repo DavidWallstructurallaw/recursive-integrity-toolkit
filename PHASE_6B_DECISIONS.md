@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Steps 1 through 7 complete; Step 8 verification in progress |
+| Status | Steps 1 through 8 complete; Phase 6B complete |
 | Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, `Phase 6B Step 5 go`, `Phase 6B Step 6继续`, `Phase 6B Step 7`, `Phase 6B Step 8`, 2026-09-30 |
 | Governing decision | Approved UD-017; empirical ingestion remains deferred by UD-031 |
 | Accepted baseline | `b6389c6c50f2fc61d39580274bd24ed39e09ca45` |
