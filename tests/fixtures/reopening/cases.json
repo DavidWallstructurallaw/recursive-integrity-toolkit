@@ -1,0 +1,207 @@
+{
+  "owner_ids": ["T5", "T1", "PR-016"],
+  "formula_ids": ["F-017", "F-015"],
+  "source": "DEFINITIONS_AND_UNITS sections 12-13; THEORY_TO_CODE_TRACEABILITY section 10; VALIDATION_PLAN section 25",
+  "status": "experimental",
+  "evidence_class": "simulation",
+  "expectations_generated_by_implementation": false,
+  "external_input_schedule": "constant_distribution_and_reopening_weight",
+  "one_step_cases": [
+    {
+      "case_id": "lambda_zero_closed_source",
+      "state_order": ["a", "b"],
+      "internal": ["1", "0"],
+      "external": ["0", "1"],
+      "reopening_weight": "0",
+      "resample_size": 2,
+      "expected_mixed": ["1", "0"],
+      "expected_mixed_diversity": "0",
+      "expected_positive_outcomes": [
+        {"counts": [2, 0], "probability": "1"}
+      ],
+      "expected_sample_diversity": "0",
+      "expected_reachable_absent_states": [],
+      "expected_reentry_probability_by_absent_state": {"b": "0"}
+    },
+    {
+      "case_id": "lambda_one_external_source",
+      "state_order": ["a", "b"],
+      "internal": ["1", "0"],
+      "external": ["1/2", "1/2"],
+      "reopening_weight": "1",
+      "resample_size": 2,
+      "expected_mixed": ["1/2", "1/2"],
+      "expected_mixed_diversity": "1/2",
+      "expected_positive_outcomes": [
+        {"counts": [2, 0], "probability": "1/4"},
+        {"counts": [1, 1], "probability": "1/2"},
+        {"counts": [0, 2], "probability": "1/4"}
+      ],
+      "expected_sample_diversity": "1/4",
+      "expected_reachable_absent_states": ["b"],
+      "expected_reentry_probability_by_absent_state": {"b": "3/4"}
+    },
+    {
+      "case_id": "partial_reopening_possible_not_guaranteed",
+      "state_order": ["a", "b"],
+      "internal": ["1", "0"],
+      "external": ["0", "1"],
+      "reopening_weight": "1/4",
+      "resample_size": 2,
+      "expected_mixed": ["3/4", "1/4"],
+      "expected_mixed_diversity": "3/8",
+      "expected_positive_outcomes": [
+        {"counts": [2, 0], "probability": "9/16"},
+        {"counts": [1, 1], "probability": "6/16"},
+        {"counts": [0, 2], "probability": "1/16"}
+      ],
+      "expected_sample_diversity": "3/16",
+      "expected_reachable_absent_states": ["b"],
+      "expected_reentry_probability_by_absent_state": {"b": "7/16"}
+    },
+    {
+      "case_id": "state_absent_from_both_sources",
+      "state_order": ["a", "b", "c"],
+      "internal": ["1", "0", "0"],
+      "external": ["0", "1", "0"],
+      "reopening_weight": "1/4",
+      "resample_size": 2,
+      "expected_mixed": ["3/4", "1/4", "0"],
+      "expected_mixed_diversity": "3/8",
+      "expected_positive_outcomes": [
+        {"counts": [2, 0, 0], "probability": "9/16"},
+        {"counts": [1, 1, 0], "probability": "6/16"},
+        {"counts": [0, 2, 0], "probability": "1/16"}
+      ],
+      "expected_sample_diversity": "3/16",
+      "expected_reachable_absent_states": ["b"],
+      "expected_reentry_probability_by_absent_state": {"b": "7/16", "c": "0"}
+    },
+    {
+      "case_id": "identical_sources_no_strict_diversity_gain",
+      "state_order": ["a", "b"],
+      "internal": ["1/2", "1/2"],
+      "external": ["1/2", "1/2"],
+      "reopening_weight": "3/4",
+      "resample_size": 2,
+      "expected_mixed": ["1/2", "1/2"],
+      "expected_mixed_diversity": "1/2",
+      "expected_positive_outcomes": [
+        {"counts": [2, 0], "probability": "1/4"},
+        {"counts": [1, 1], "probability": "1/2"},
+        {"counts": [0, 2], "probability": "1/4"}
+      ],
+      "expected_sample_diversity": "1/4",
+      "expected_reachable_absent_states": [],
+      "expected_reentry_probability_by_absent_state": {}
+    },
+    {
+      "case_id": "concentrated_external_source_reduces_diversity",
+      "state_order": ["a", "b"],
+      "internal": ["1/2", "1/2"],
+      "external": ["1", "0"],
+      "reopening_weight": "1",
+      "resample_size": 2,
+      "expected_mixed": ["1", "0"],
+      "expected_mixed_diversity": "0",
+      "expected_positive_outcomes": [
+        {"counts": [2, 0], "probability": "1"}
+      ],
+      "expected_sample_diversity": "0",
+      "expected_reachable_absent_states": [],
+      "expected_reentry_probability_by_absent_state": {}
+    },
+    {
+      "case_id": "one_state_source_stays_degenerate",
+      "state_order": ["a"],
+      "internal": ["1"],
+      "external": ["1"],
+      "reopening_weight": "1/2",
+      "resample_size": 3,
+      "expected_mixed": ["1"],
+      "expected_mixed_diversity": "0",
+      "expected_positive_outcomes": [
+        {"counts": [3], "probability": "1"}
+      ],
+      "expected_sample_diversity": "0",
+      "expected_reachable_absent_states": [],
+      "expected_reentry_probability_by_absent_state": {}
+    },
+    {
+      "case_id": "n_one_reentry_with_zero_sample_diversity",
+      "state_order": ["a", "b"],
+      "internal": ["1", "0"],
+      "external": ["0", "1"],
+      "reopening_weight": "1/4",
+      "resample_size": 1,
+      "expected_mixed": ["3/4", "1/4"],
+      "expected_mixed_diversity": "3/8",
+      "expected_positive_outcomes": [
+        {"counts": [1, 0], "probability": "3/4"},
+        {"counts": [0, 1], "probability": "1/4"}
+      ],
+      "expected_sample_diversity": "0",
+      "expected_reachable_absent_states": ["b"],
+      "expected_reentry_probability_by_absent_state": {"b": "1/4"}
+    }
+  ],
+  "prescribed_event_path": {
+    "case_id": "repeated_disappearance_and_reentry",
+    "path_basis": "authored_possible_count_sequence_not_seeded_output",
+    "state_order": ["a", "b"],
+    "initial": ["1", "0"],
+    "external": ["1/2", "1/2"],
+    "reopening_weight": "1",
+    "resample_size": 2,
+    "transitions": [
+      {"step": 1, "internal": ["1", "0"], "mixed": ["1/2", "1/2"], "counts": [1, 1], "probability": "1/2"},
+      {"step": 2, "internal": ["1/2", "1/2"], "mixed": ["1/2", "1/2"], "counts": [2, 0], "probability": "1/4"},
+      {"step": 3, "internal": ["1", "0"], "mixed": ["1/2", "1/2"], "counts": [0, 2], "probability": "1/4"},
+      {"step": 4, "internal": ["0", "1"], "mixed": ["1/2", "1/2"], "counts": [1, 1], "probability": "1/2"}
+    ],
+    "expected_path_probability": "1/64",
+    "expected_reentry_events": [
+      {"step": 1, "state_id": "b"},
+      {"step": 3, "state_id": "b"},
+      {"step": 4, "state_id": "a"}
+    ],
+    "expected_disappearance_events": [
+      {"step": 2, "state_id": "b"},
+      {"step": 3, "state_id": "a"}
+    ],
+    "expected_support": [["a"], ["a", "b"], ["a"], ["b"], ["a", "b"]],
+    "expected_support_sizes": [1, 2, 1, 1, 2],
+    "expected_diversity": ["0", "1/2", "0", "0", "1/2"]
+  },
+  "zero_horizon": {
+    "state_order": ["a", "b"],
+    "initial": ["1", "0"],
+    "external": ["0", "1"],
+    "reopening_weight": "1",
+    "resample_size": 2,
+    "horizon": 0,
+    "expected_initial_counts": null,
+    "expected_distributions": [["1", "0"]],
+    "expected_support": [["a"]],
+    "expected_diversity": ["0"],
+    "expected_transition_count": 0,
+    "expected_reentry_events": []
+  },
+  "two_step_external_endpoint": {
+    "conditional_branch_basis": "second_source_and_b_reentry_conditioned_on_first_counts",
+    "diversity_expectation_basis": "unconditional_over_all_sample_paths_from_initial",
+    "state_order": ["a", "b"],
+    "initial": ["1/2", "1/2"],
+    "external": ["1/2", "1/2"],
+    "reopening_weight": "1",
+    "resample_size": 2,
+    "first_counts": [2, 0],
+    "expected_first_counts_probability": "1/4",
+    "expected_second_source_reopened": ["1/2", "1/2"],
+    "expected_second_source_closed": ["1", "0"],
+    "expected_second_b_reentry_probability_reopened": "3/4",
+    "expected_second_b_reentry_probability_closed": "0",
+    "expected_diversity_by_step_reopened": ["1/2", "1/4", "1/4"],
+    "expected_diversity_by_step_closed": ["1/2", "1/4", "1/8"]
+  }
+}

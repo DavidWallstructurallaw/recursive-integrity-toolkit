@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6A Step 9 freezes runtime behavior and permits the dev5 version update.
+Phase 6B Step 1 freezes the accepted dev5 runtime, schema and package version.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
@@ -25,15 +25,12 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "69e4e05ea19910290d38738d6ec83e3ffcdde091"
+ACCEPTED_COMMIT = "b6389c6c50f2fc61d39580274bd24ed39e09ca45"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/")
 LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
                       "provenance.jsonl", "config.json", "version_order.json",
                       "EXPECTED_OUTPUTS.md"}
-CURRENT_IMPLEMENTATION_PATHS = frozenset({
-    "pyproject.toml",
-    "src/recursive_integrity_toolkit/__init__.py",
-})
+CURRENT_IMPLEMENTATION_PATHS = frozenset()
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",
     "test_PR002_parquet_real_row_limit",
@@ -84,8 +81,6 @@ def verify_source_scope(root: Path = ROOT) -> dict:
                 if name.startswith(PROTECTED_PREFIXES) or name == "pyproject.toml"}
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
-        if name in CURRENT_IMPLEMENTATION_PATHS and current != raw.replace(b'"0.1.0.dev4"', b'"0.1.0.dev5"'):
-            raise ValueError(f"Only the dev5 version update is authorized in: {name}")
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
             raise ValueError(f"Unauthorized product mutation outside the current step scope: {name}")
     # New authorized modules must exist as regular files; deletions stay blocked.
