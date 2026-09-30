@@ -82,7 +82,6 @@ def test_sparse_lineage_bounded_complete_reports(phase4_step10_measure_reports, 
 
 def _api_worker(directory):
     """Linux reference worker; no reports or ordinary metric families executed."""
-    import resource
     import time
     start = time.perf_counter()
     from dataclasses import asdict
@@ -102,6 +101,11 @@ def _api_worker(directory):
     assert [item.expected_generation for item in validation.generation.assessments] == list(reversed(range(size)))
     assert all(record.external_root_keys == frozenset((root,)) for record in result.records)
     assert result.root_contributions[0].incidence_count == size
+    # This executed image's peak avoids the fork-parent high-water floor
+    # retained by getrusage().ru_maxrss after earlier large pytest cases.
+    peak_rss = next(int(line.split()[1]) * 1024
+        for line in Path("/proc/self/status").read_text().splitlines()
+        if line.startswith("VmHWM:"))
     summary = dict(scope={name: getattr(result.scope, name) for name in
         ("target_record_count", "loaded_record_count", "context_record_count", "target_dataset_version")},
         resource_usage=asdict(result.resource_usage), execution_status=result.execution_status.value,
@@ -111,7 +115,7 @@ def _api_worker(directory):
         cycle_count=result.cycles.cycle_count, expected_generation_max=size - 1,
         validation_seconds=validated - start, ancestry_seconds=analyzed - validated,
         worker_elapsed_seconds=time.perf_counter() - start,
-        rss_peak_bytes=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024)
+        rss_peak_bytes=peak_rss)
     (directory / "lineage-api-summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
@@ -150,7 +154,7 @@ def test_sparse_lineage_100k_api(tmp_path, request, subprocess_env):
             logical_cpu_count=os.cpu_count(), versions={name: importlib.metadata.version(name) for name in ("numpy", "pandas", "pytest")}),
         includes="fresh interpreter, imports, JSONL loading, complete validation including generation, graph, cycles, depth, complete roots and concentration, API assertions and summary serialization",
         excludes="synthetic input construction, ordinary metric families and JSON/Markdown audit reports; those use separately labeled CLI measurements",
-        rss_method="Linux getrusage(RUSAGE_SELF).ru_maxrss * 1024; whole fresh process including native allocations",
+        rss_method="Linux /proc/self/status VmHWM * 1024; whole executed process including native allocations",
         tracing=False, best_run_selection=False)
     (tmp_path / "measurement.json").write_text(json.dumps(observation, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     request.node.user_properties.append(("lineage_performance", json.dumps(observation, sort_keys=True)))

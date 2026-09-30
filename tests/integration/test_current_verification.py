@@ -30,7 +30,7 @@ def protected_copy(repo_root, tmp_path):
                                      "new_simulation_resource", "configuration", "cli",
                                      "simulation_resource_pair"])
 def test_current_scope_rejects_unauthorized_product_changes(current_tools, protected_copy, mutation):
-    """Step 7 preserves all accepted product owners and packaged examples."""
+    """Candidate preparation preserves product owners and packaged examples."""
     verify = current_tools["verify_source_scope"]
     generated = protected_copy / "src/recursive_integrity_toolkit.egg-info"
     generated.mkdir(exist_ok=True)
@@ -87,12 +87,18 @@ def test_current_version_module_must_be_a_regular_file(current_tools, protected_
 
 
 @pytest.mark.parametrize("relative", ["pyproject.toml", "src/recursive_integrity_toolkit/__init__.py"])
-def test_current_scope_rejects_version_changes(current_tools, protected_copy, relative):
+@pytest.mark.parametrize("mutation", ["different_version", "unadvanced_version", "extra_bytes"])
+def test_current_scope_allows_only_the_candidate_version_token(
+        current_tools, protected_copy, relative, mutation):
     current_tools["verify_source_scope"](protected_copy)
     target = protected_copy / relative
     source = target.read_bytes()
-    assert b'"0.1.0.dev5"' in source
-    target.write_bytes(source.replace(b'"0.1.0.dev5"', b'"0.1.0.dev6"'))
+    assert b'"0.1.0.dev6"' in source
+    if mutation == "extra_bytes":
+        target.write_bytes(source + b"\n# Unapproved bytes beside the version token.\n")
+    else:
+        replacement = b'"0.1.0.dev7"' if mutation == "different_version" else b'"0.1.0.dev5"'
+        target.write_bytes(source.replace(b'"0.1.0.dev6"', replacement))
     with pytest.raises(ValueError, match="Unauthorized product mutation"):
         current_tools["verify_source_scope"](protected_copy)
 

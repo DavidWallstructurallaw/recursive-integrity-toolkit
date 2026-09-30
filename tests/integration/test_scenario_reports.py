@@ -45,7 +45,7 @@ def _report(tmp_path, *, models=(CLOSED, REOPENED), steps=3, replicates=2,
     path.write_text(json.dumps({"dataset_version": "v1", "record_id": "r1", "content": "synthetic"}) + "\n")
     bundle = validate_bundle(AuditBundle((InputSource(FileRole.RECORDS_PRIMARY, path),)))
     nullable = ("started_at", "completed_at", "duration_seconds", "python_version", "platform", "command", "config_hash")
-    run = {"run_id": "scenario-report", "toolkit_version": "0.1.0.dev5",
+    run = {"run_id": "scenario-report", "toolkit_version": "0.1.0.dev6",
         "report_schema_version": "1.3", **dict.fromkeys(nullable), "random_seed": 29,
         "strict_mode": False, "redacted_mode": False, "network_call_count": 0,
         "deterministic": True, "privacy_mode": "standard", "run_status": "complete",

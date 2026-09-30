@@ -1,8 +1,8 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6B Step 7 strengthens scientific, adversarial and bounded performance
-verification. All accepted product files stay frozen, including configuration,
-numerics, schemas, examples, package metadata and the dev5 version.
+Phase 6B Step 8 verifies the dev6 development candidate. The only admitted
+product change is the exact dev5-to-dev6 version token in both package version
+owners. All other accepted product bytes and resource inventories stay frozen.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
@@ -27,14 +27,16 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "065cafa017881258c6dc139c22815b806b75bce6"
+ACCEPTED_COMMIT = "9af8462bee86c367b6d0f5ae560e97f96cc58409"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/",
                       "examples/simulation/")
 LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
                       "provenance.jsonl", "config.json", "version_order.json",
                       "EXPECTED_OUTPUTS.md"}
 SIMULATION_NAMES = {"config.json", "records.jsonl", "provenance.jsonl", "EXPECTED_OUTPUTS.md"}
-CURRENT_IMPLEMENTATION_PATHS = frozenset()
+CURRENT_IMPLEMENTATION_PATHS = frozenset({
+    "pyproject.toml", "src/recursive_integrity_toolkit/__init__.py",
+})
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",
     "test_PR002_parquet_real_row_limit",
@@ -87,7 +89,11 @@ def verify_source_scope(root: Path = ROOT) -> dict:
                 if name.startswith(PROTECTED_PREFIXES) or name == "pyproject.toml"}
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
-        if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
+        if name in CURRENT_IMPLEMENTATION_PATHS:
+            old_version, new_version = b'"0.1.0.dev5"', b'"0.1.0.dev6"'
+            if raw.count(old_version) != 1 or current != raw.replace(old_version, new_version, 1):
+                raise ValueError(f"Unauthorized product mutation outside the current version token: {name}")
+        elif current != raw:
             raise ValueError(f"Unauthorized product mutation outside the current step scope: {name}")
     # New authorized modules must exist as regular files; deletions stay blocked.
     authorized_inventory = set(expected) | CURRENT_IMPLEMENTATION_PATHS
@@ -1225,7 +1231,7 @@ for dataset,lineage,privacy in (('hero',True,False),('longitudinal',False,True))
  assert main(arguments)==0
  current=json.loads((destination/'reports/report.json').read_bytes())
  jsonschema.Draft202012Validator(json.loads(resources.joinpath('data','report.schema.json').read_bytes())).validate(current)
- assert current['run']['toolkit_version']==package.__version__=='0.1.0.dev5'
+ assert current['run']['toolkit_version']==package.__version__=='0.1.0.dev6'
  assert current['run']['report_schema_version']=='1.3' and current['run']['run_status']=='complete'
  assert current['run']['network_call_count']==0 and current['simulations']=={} and current['errors']==[]
  assert current['capabilities']==current['observability']['capabilities']
@@ -1264,7 +1270,7 @@ for name,privacy in (('simulation',[]),('simulation-replay',[]),('simulation-red
  assert main(['example','--dataset','simulation','--simulate','--out',str(destination),*privacy])==0
  current=json.loads((destination/'reports/report.json').read_bytes())
  jsonschema.Draft202012Validator(json.loads(resources.joinpath('data','report.schema.json').read_bytes())).validate(current)
- assert current['run']['toolkit_version']==package.__version__=='0.1.0.dev5'
+ assert current['run']['toolkit_version']==package.__version__=='0.1.0.dev6'
  assert current['run']['report_schema_version']=='1.3' and current['run']['run_status']=='complete'
  assert current['run']['random_seed']==17 and current['run']['network_call_count']==0
  assert current['capabilities']==current['observability']['capabilities'] and current['errors']==[]

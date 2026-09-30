@@ -1,6 +1,16 @@
 # Theory Traceability
 
-## Current Phase 6B Step 7 verification
+## Current Phase 6B Step 8 verification
+
+The dev6 candidate preserves every accepted T1/T5 numerical implementation and
+schema 1.3 evidence contract. Product edits contain only the package version;
+five golden files change only version metadata. Current verification exercises
+the same independent rational oracles, endpoint/recurrent-event rules,
+model-specific F-015 baseline and disclosure/execution boundaries across the
+supported environments. Actual acceptance belongs to the tested candidate
+identified in [Phase 6B completion](../PHASE_6B_COMPLETION.md).
+
+## Accepted Phase 6B Step 7 verification
 
 T5/F-017 gains a three-state joint count-law check using independently enumerated
 rational multinomial probabilities. With mixed source `(1/2,3/8,1/8)` and `n=3`,

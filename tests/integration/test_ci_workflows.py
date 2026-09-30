@@ -81,7 +81,14 @@ def test_candidate_checks_preserve_behavior_and_package_roles(repo_root):
                  "test_report_assembly_and_rendering_never_execute_series_or_graph_algorithms",
                  "test_redacted_mapping_joins_remain_basis_local_and_keys_never_leak",
                  "test_validate_repeated_comparisons_and_enabled_config_never_execute",
-                 "test_installed_record_loaders_baseline_and_privacy_modes"):
+                 "test_installed_record_loaders_baseline_and_privacy_modes",
+                 "test_scenario_privacy_preserves_state_alignment_in_all_record_modes",
+                 "test_privacy_and_rendering_never_dispatch_numerics_or_rng",
+                 "test_disabled_scenarios_are_inert_during_audit",
+                 "test_validate_scenario_declarations_never_import_sampler_or_numpy",
+                 "test_redacted_scenario_cli_protects_configuration_text_and_all_output_sinks",
+                 "test_cli_budget_refusal_precedes_sampling_and_emits_no_successful_paths",
+                 "test_packaged_simulation_outside_checkout_with_network_blocked"):
         assert name in security
     release = (workflows / "release.yml").read_text(encoding="utf-8")
     for required in ("python -m build", "python -m twine check --strict", "--candidate", "SOURCE_DATE_EPOCH", "assert same_bytes", "assert payload_equal", "actions/download-artifact@v4", "source-commit.txt"):

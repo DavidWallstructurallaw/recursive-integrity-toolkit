@@ -270,6 +270,13 @@ without repeating the expensive reference benchmark.
 The API measurement records command, input sizes/hashes, environment, return
 code, all stdout/stderr, elapsed time, actual process peak RSS, graph/root counts
 and summary size in its ordinary JUnit observation and temporary output.
+Its current Linux worker reads `/proc/self/status` `VmHWM` in KiB and converts
+to bytes, avoiding an inherited fork-parent peak after earlier large tests.
+This is the executed process high-water mark, not incremental allocation.
+The Step 8 readiness check exercised this same worker with 1,000 generated
+records: all graph/root/generation assertions passed, peak RSS was 39,432,192
+bytes, outer wall 0.510382 seconds and worker interval 0.466539 seconds. This
+bounded check leaves the actual 100,000-record candidate measurement pending.
 It uses no allocation tracing. The two CLI workloads reuse the existing report
 measurement fixture. There is no new benchmark service, registry or receipt chain.
 See [Step 9 results](../../PHASE_5_STEP_9.md) for the actual reference baseline.

@@ -352,7 +352,7 @@ for args in ([],['--help'],['--version'],['version'],['audit','--help'],['valida
 '''
     result = subprocess.run([sys.executable, "-c", program], cwd=tmp_path, env=subprocess_env, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert "0.1.0.dev5" in result.stdout and "--records" in result.stdout
+    assert "0.1.0.dev6" in result.stdout and "--records" in result.stdout
     assert not list(tmp_path.iterdir())
 
 

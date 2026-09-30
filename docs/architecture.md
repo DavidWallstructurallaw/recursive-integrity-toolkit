@@ -1,6 +1,16 @@
 # Architecture
 
-## Current Phase 6B Step 7 verification boundary
+## Current Phase 6B Step 8 candidate boundary
+
+The dev6 candidate changes only package-version literals in `pyproject.toml`
+and `__init__.py`. All other product bytes remain fixed at accepted Step 7
+commit `9af8462bee86c367b6d0f5ae560e97f96cc58409`. The existing gate admits those
+two exact replacements and protects the remaining 81 product files. Runtime
+inventory remains 41 modules, with 18 canonical resources and schema 1.3.
+Candidate verification and installed delivery use the existing workflow; their
+actual status is recorded in [Phase 6B completion](../PHASE_6B_COMPLETION.md).
+
+## Accepted Phase 6B Step 7 verification boundary
 
 Step 7 changes tests, measurement support and documentation. All 83 product files
 remain frozen at Step 6 commit `065cafa017881258c6dc139c22815b806b75bce6`, with

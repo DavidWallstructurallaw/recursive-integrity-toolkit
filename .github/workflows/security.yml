@@ -55,6 +55,13 @@ jobs:
             tests/integration/test_longitudinal_cli.py::test_redacted_output_hides_literal_mapping_keys_values_and_paths \
             tests/integration/test_longitudinal_cli.py::test_existing_output_is_preserved_byte_for_byte \
             tests/integration/test_longitudinal_installed.py::test_installed_record_loaders_baseline_and_privacy_modes \
+            tests/integration/test_scenario_reports.py::test_scenario_privacy_preserves_state_alignment_in_all_record_modes \
+            tests/integration/test_scenario_reports.py::test_privacy_and_rendering_never_dispatch_numerics_or_rng \
+            tests/integration/test_scenario_cli.py::test_disabled_scenarios_are_inert_during_audit \
+            tests/integration/test_scenario_cli.py::test_validate_scenario_declarations_never_import_sampler_or_numpy \
+            tests/integration/test_scenario_cli.py::test_redacted_scenario_cli_protects_configuration_text_and_all_output_sinks \
+            tests/integration/test_scenario_adversarial.py::test_cli_budget_refusal_precedes_sampling_and_emits_no_successful_paths \
+            tests/integration/test_simulation_installed.py::test_packaged_simulation_outside_checkout_with_network_blocked \
             tests/unit/test_T1_representation.py \
             tests/unit/test_PR006_duplicates.py \
             tests/unit/test_T1_support.py \

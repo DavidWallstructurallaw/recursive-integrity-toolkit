@@ -2,12 +2,12 @@
 
 | Field | Value |
 |---|---|
-| Status | Steps 1 through 7 complete |
-| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, `Phase 6B Step 5 go`, `Phase 6B Step 6继续`, `Phase 6B Step 7`, 2026-09-30 |
+| Status | Steps 1 through 7 complete; Step 8 verification in progress |
+| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, `Phase 6B Step 5 go`, `Phase 6B Step 6继续`, `Phase 6B Step 7`, `Phase 6B Step 8`, 2026-09-30 |
 | Governing decision | Approved UD-017; empirical ingestion remains deferred by UD-031 |
 | Accepted baseline | `b6389c6c50f2fc61d39580274bd24ed39e09ca45` |
 | Branch | `phase6b-simulation` |
-| Current runtime | `0.1.0.dev5`, report schema `1.3` |
+| Current runtime | `0.1.0.dev6`, report schema `1.3` |
 | Staged target | `0.1.0.dev6`, report schema `1.3` |
 
 The current instruction authorizes starting Phase 6B. It is not represented as
@@ -234,3 +234,25 @@ Actual checks and all measurement results are recorded in `PHASE_6B_STEP_7.md`.
 The package remains dev5 and schema 1.3. The full supported matrix, actual PyArrow
 absence/presence, 100k dataset workload, installation/security gates and dev6
 candidate handoff remain Step 8 work.
+
+## Step 8 authorization and candidate boundary
+
+The Theory Owner requested `Phase 6B Step 8` on 2026-09-30. The accepted
+starting commit is `9af8462bee86c367b6d0f5ae560e97f96cc58409`. This increment
+advances only the two package version declarations from dev5 to dev6. The source
+gate requires exact accepted bytes after that single replacement in each file;
+all other product files remain frozen. Current tests and five report goldens
+receive only the corresponding toolkit-version metadata change. Mathematical,
+evidence-class, scope, privacy and schema assertions remain intact.
+
+Existing candidate jobs perform the complete supported matrix, actual optional
+dependency absence and presence, scientific/Hero, security, complete performance
+and installed delivery checks. Dedicated security selection includes the new
+simulation disclosure and execution boundaries. No new verification registry
+or phase dispatcher is introduced. The current candidate's actual results and
+all material failed attempts are recorded in `PHASE_6B_COMPLETION.md`; previous
+candidate results retain their named source and cannot certify this candidate.
+
+UD-017 supplies the simulation authority; UD-031 keeps empirical intervention
+ingestion deferred. This is the development handoff authorized by the plan.
+Main merge, release tagging and publication retain separate scope.
