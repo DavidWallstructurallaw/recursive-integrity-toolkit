@@ -1,8 +1,8 @@
 # Phase 6B simulation contract
 
-Status: Step 4 implements typed report assembly, schema 1.3, JSON/Markdown and
-privacy, 2026-09-30, alongside the earlier pure kernels and experiment coordinator.
-Configuration and CLI activation remain staged.
+Status: Step 5 implements explicit configuration, audit/example activation and
+input-only validation, 2026-09-30, alongside the earlier pure kernels, experiment
+coordinator, schema 1.3 report assembly and privacy handling.
 The current package version/schema are dev5/1.3. See `PHASE_6B_PLAN.md` for scope,
 owners and implementation order.
 
@@ -241,7 +241,7 @@ results are excluded from the new parent objects' representations.
 Assembly validates that supplied evidence is bound to that request and has
 consistent counts/events/lengths. It never reruns a sampler to establish trust.
 
-## 5. Staged configuration and CLI
+## 5. Configuration and CLI
 
 Extend the existing `simulation` block, preserving `enabled` and `seed`.
 Other fields are inert declarations. Unknown/competing fields are rejected.
@@ -293,6 +293,13 @@ The example command may select a new explicit synthetic simulation example;
 ordinary Hero and longitudinal examples keep their existing behavior. No
 standalone server, remote source retrieval or experiment-scheduling service is
 introduced.
+
+Step 5 additionally permits `example --simulate --config PATH` with a local
+JSON/TOML overlay containing only `simulation`. A complete enabled overlay also
+requests execution without the flag. Preflight validates the overlay before
+workspace creation; its declarations are retained in the extracted config and
+run alongside the selected packaged audit. No declaration is derived from that
+dataset. The standalone packaged synthetic example remains Step 6 work.
 
 ## 6. Canonical report
 

@@ -190,7 +190,7 @@ def test_PR010_enabled_and_seed_alone_never_grant_level_five():
     assert "R_SCENARIO_PARAMETERS_MISSING" in result.limitations
 
 
-@pytest.mark.parametrize("seed", [None, True, 1.5, "2"])
+@pytest.mark.parametrize("seed", [None, True, 1.5, "2", -1, 2 ** 53])
 def test_PR010_scenario_requires_recorded_integer_seed(seed):
     result = classify_observability((_s8_record(),), scenario=ScenarioConfig(True, seed), scenario_parameters=_s8_parameters())
     assert result.maximum_level != 5
@@ -198,13 +198,19 @@ def test_PR010_scenario_requires_recorded_integer_seed(seed):
 
 @pytest.mark.parametrize("field,value", [
     ("resample_size", None), ("resample_size", 0), ("resample_size", True), ("resample_size", 1.5),
+    ("resample_size", 2147483648),
     ("simulation_horizon", None), ("simulation_horizon", -1), ("simulation_horizon", True),
+    ("simulation_horizon", 10001),
     ("simulation_replicates", None), ("simulation_replicates", 0), ("simulation_replicates", False),
+    ("simulation_replicates", 10001),
     ("model_name", "arbitrary_model"), ("state_distribution", None), ("state_distribution", ()),
     ("state_distribution", (("a", 0.3), ("b", 0.6))), ("state_distribution", (("a", 0.5), ("a", 0.5))),
     ("state_distribution", (("a", float("nan")),)), ("state_distribution", (("a", float("inf")),)),
     ("state_distribution", (("a", True),)), ("state_distribution", (("a", -0.1), ("b", 1.1))),
-    ("state_distribution", (("", 1.0),)), ("state_distribution", (("a", 10 ** 1000),)), ("reopening_weight", 0.5),
+    ("state_distribution", (("nul\x00state", 1.0),)),
+    ("state_distribution", (("\ud800", 1.0),)),
+    ("state_distribution", (("a", 0.5), ("b", 0.5 + 1.5e-12))),
+    ("state_distribution", (("a", 10 ** 1000),)), ("reopening_weight", 0.5),
 ])
 def test_PR010_invalid_scenario_parameters_do_not_unlock(field, value):
     result = classify_observability((_s8_record(),), scenario=ScenarioConfig(True, 42),
@@ -242,6 +248,14 @@ def test_PR010_disabled_scenario_does_not_promote_with_valid_parameters():
 def test_PR010_zero_horizon_is_valid_but_does_not_execute():
     assert classify_observability((_s8_record(),), scenario=ScenarioConfig(True, 42),
                                    scenario_parameters=_s8_parameters(simulation_horizon=0)).maximum_level == 5
+
+
+def test_PR010_literal_empty_state_qualifies_without_execution():
+    result = classify_observability(
+        (_s8_record(),), scenario=ScenarioConfig(True, 42),
+        scenario_parameters=_s8_parameters(state_distribution=(("", 1.0),)))
+    assert result.maximum_level == 5
+    assert "R_SCENARIO_EXECUTION_DEFERRED" in result.limitations
 
 
 def test_PR010_unsafe_model_name_rejected_before_equality_callback():

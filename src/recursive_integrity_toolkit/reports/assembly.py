@@ -7,7 +7,7 @@ Outputs: immutable CanonicalReport and explicitly selected SafeReportView.
 Assumptions: supplied typed results are evidence handoffs, not authenticity certificates.
 Limits: no ingestion, classification, metric execution, graph traversal, simulation,
         filesystem access, rendering or CLI orchestration.
-Current phase status: Phase 6B Step 4 explicit scenario evidence and privacy views.
+Current phase status: Phase 6B Step 5 explicit scenario evidence with inert validation imports.
 """
 from __future__ import annotations
 
@@ -33,13 +33,6 @@ from ..lineage.graph import LineageScope, LineageResourceUsage, LineageLimits
 from ..metrics.diversity import DistributionMetrics, StateDistributionResult, SupportComparison, StateFrequency
 from ..metrics.duplicates import ExactDuplicateResult, ExactDuplicateGroup
 from ..metrics.provenance import ProvenanceCompositionResult, DeclaredComposition, WeightedSourceComposition, DirectGroundingBasis, DirectGroundingAssignment
-from ..metrics.resampling import (
-    ExpectedDiversityResult, ResamplingSimulation, ResamplingInput, ResamplingReplicate,
-    SampledGeneration, ReopeningSimulation, ReopeningSource, StateTransitionEvent,
-    ScenarioExperimentRequest, ScenarioExperimentResult, ScenarioComparison,
-    ScenarioComparisonRow, ScenarioInitialReachability,
-    REOPENED_ASSUMPTIONS, REOPENED_LIMITATIONS,
-)
 from ..metrics.tail import TailSelectionResult, ExtinctionProbabilityResult, RarityEntry
 from ..representations.compatibility import RepresentationCompatibility, StateMappingDeclaration
 from ..result import (
@@ -49,6 +42,7 @@ from ..result import (
 
 if TYPE_CHECKING:
     from ..metrics.longitudinal import LongitudinalResult, LongitudinalFailureResult
+    from ..metrics.resampling import ExpectedDiversityResult, ResamplingSimulation, ScenarioExperimentResult
 
 
 class ReportAssemblyError(ReportValidationError):
@@ -249,6 +243,8 @@ def _metadata_text(value):
     pair_names = ("support_delta", "support_loss_count", "support_added_count", "support_retention_ratio",
                   "gini_simpson_diversity_delta", "extinct_states", "added_states", "retained_states")
     if value.evidence_class is CalculationEvidenceClass.SIMULATION and value.owner_id == "T5":
+        from ..metrics.resampling import REOPENED_ASSUMPTIONS, REOPENED_LIMITATIONS
+
         assumptions, limitations = REOPENED_ASSUMPTIONS, REOPENED_LIMITATIONS
     elif value.evidence_class is CalculationEvidenceClass.SIMULATION and value.owner_id == "T1":
         assumptions = ("Fixed finite declared state space and constant positive integer resample size.",
@@ -845,6 +841,8 @@ def _scenario_pairs(value):
 
 
 def _simulation_inputs(value):
+    from ..metrics.resampling import ResamplingInput
+
     _typed(value, ResamplingInput, "resampling input")
     _scope(value.scope, None)
     _require(len(value.scope.dataset_versions) == 1, "scenario inputs require one explicit version label")
@@ -870,6 +868,10 @@ def _simulation_inputs(value):
 
 
 def _closed_simulation(payload, value):
+    from ..metrics.resampling import (
+        ExpectedDiversityResult, ResamplingSimulation, ResamplingReplicate, SampledGeneration,
+    )
+
     _require(type(value) in (ExpectedDiversityResult, ResamplingSimulation), "closed scenario requires its exact accepted type")
     inputs = value.inputs
     normalization = _simulation_inputs(inputs)
@@ -939,6 +941,8 @@ def _closed_simulation(payload, value):
 
 
 def _scenario_events(values):
+    from ..metrics.resampling import StateTransitionEvent
+
     _require(type(values) is tuple and len(values) <= 1000000,
              "scenario events require bounded immutable typed rows")
     rows = []
@@ -951,6 +955,8 @@ def _scenario_events(values):
 
 
 def _scenario_paths(value):
+    from ..metrics.resampling import ResamplingReplicate, SampledGeneration
+
     _require(type(value.sampled_paths) is tuple and
              len(value.sampled_paths) == value.simulation_replicates,
              "scenario paths require the declared immutable replicate tuple")
@@ -975,9 +981,6 @@ def _scenario_paths(value):
 
 
 _SCENARIO_SAFE_TEXT = frozenset(
-    REOPENED_ASSUMPTIONS + REOPENED_LIMITATIONS +
-    ReopeningSimulation.__dataclass_fields__["limitations"].default +
-    ScenarioComparison.__dataclass_fields__["limitations"].default +
     tuple(text for reopened in (False, True) for row in _scenario_assumptions(reopened) for text in row.values()) + (
         "Execution records assembly of explicitly supplied scenario results; the input assessment is unchanged and no scenario ran during assembly.",
         "Conditional simulated scenarios do not establish production causality or an empirical intervention effect.",
@@ -990,7 +993,20 @@ _SCENARIO_SAFE_TEXT = frozenset(
 )
 
 
+def _scenario_owner_safe_text():
+    """Read reviewed owner prose only for explicitly supplied scenario evidence."""
+    from ..metrics.resampling import (
+        ReopeningSimulation, ScenarioComparison, REOPENED_ASSUMPTIONS, REOPENED_LIMITATIONS,
+    )
+
+    return frozenset(REOPENED_ASSUMPTIONS + REOPENED_LIMITATIONS +
+        ReopeningSimulation.__dataclass_fields__["limitations"].default +
+        ScenarioComparison.__dataclass_fields__["limitations"].default)
+
+
 def _reopened_simulation(value):
+    from ..metrics.resampling import ReopeningSimulation, ReopeningSource, ResamplingInput, REOPENED_ASSUMPTIONS
+
     _typed(value, ReopeningSimulation, "reopened scenario")
     inputs, external = value.inputs, value.external_inputs
     normalization, external_normalization = _simulation_inputs(inputs), _simulation_inputs(external)
@@ -1057,6 +1073,8 @@ def _reopened_simulation(value):
 
 
 def _scenario_comparison(value):
+    from ..metrics.resampling import ScenarioComparison, ScenarioComparisonRow, ScenarioInitialReachability
+
     _typed(value, ScenarioComparison, "scenario comparison")
     _require(type(value.rows) is tuple and type(value.initial_reachability) is tuple,
              "scenario comparison requires immutable evidence rows")
@@ -1079,6 +1097,11 @@ def _scenario_comparison(value):
 
 def _scenario_experiment(payload, experiment):
     """Bind supplied immutable evidence without invoking any computational owner."""
+    from ..metrics.resampling import (
+        ExpectedDiversityResult, ResamplingSimulation, ResamplingInput, ReopeningSimulation,
+        ScenarioExperimentRequest, ScenarioExperimentResult, ScenarioComparison,
+    )
+
     _typed(experiment, ScenarioExperimentResult, "scenario experiment")
     request = experiment.request
     _typed(request, ScenarioExperimentRequest, "scenario request")
@@ -3646,9 +3669,10 @@ def _privacy_alias(protection, domain, value):
     return protection.pseudonym(domain, value)
 
 
-def _privacy_text(value, field, *, mode, protection):
+def _privacy_text(value, field, *, mode, protection, scenario_safe_text=frozenset()):
     """Keep reviewed owner prose; treat caller-authored prose as private data."""
-    if value in _PRIVACY_SAFE_TEXT or value in _LONGITUDINAL_SAFE_TEXT or value in _SCENARIO_SAFE_TEXT:
+    if (value in _PRIVACY_SAFE_TEXT or value in _LONGITUDINAL_SAFE_TEXT or
+            value in _SCENARIO_SAFE_TEXT or value in scenario_safe_text):
         return value
     if field == "basis_fields" and any(value == definition.path for definition in FIELD_REGISTRY):
         return value
@@ -3667,7 +3691,7 @@ def _privacy_text(value, field, *, mode, protection):
 
 def _privacy_series(value, contract, schema, *, mode, record_id_mode, protection,
                     path, omissions, basis_id=None, source_basis_id=None,
-                    target_basis_id=None, states=False):
+                    target_basis_id=None, states=False, scenario_safe_text=frozenset()):
     """Protect bounded series identities using their retained meaning basis."""
     contract = _privacy_contract(value, contract, schema)
     field = path[-1]
@@ -3703,7 +3727,7 @@ def _privacy_series(value, contract, schema, *, mode, record_id_mode, protection
             result[name] = _privacy_series(item, properties.get(name, contract.get("additionalProperties", {})), schema,
                 mode=mode, record_id_mode=record_id_mode, protection=protection, path=path + (name,),
                 omissions=omissions, basis_id=selected_basis, source_basis_id=source_basis_id,
-                target_basis_id=target_basis_id, states=selected_states)
+                target_basis_id=target_basis_id, states=selected_states, scenario_safe_text=scenario_safe_text)
         if mode == "redacted" and "state_semantics" in value:
             result["state_semantics"] = None
             result["redaction"] = {"omitted_fields": ["state_semantics"], "reason": "redacted_identity_details"}
@@ -3715,7 +3739,7 @@ def _privacy_series(value, contract, schema, *, mode, record_id_mode, protection
         return [_privacy_series(item, contract.get("items", {}), schema, mode=mode,
             record_id_mode=record_id_mode, protection=protection, path=path, omissions=omissions,
             basis_id=basis_id, source_basis_id=source_basis_id, target_basis_id=target_basis_id,
-            states=states) for item in value]
+            states=states, scenario_safe_text=scenario_safe_text) for item in value]
     if field in ("snapshot_id", "comparison_id", "basis_id", "primary_snapshot_id", "population_scope_id",
                  "representation_scope_id", "scope_id", "earlier_scope_id", "later_scope_id",
                  "earlier_snapshot_id", "later_snapshot_id", "earlier_basis_id", "later_basis_id",
@@ -3735,15 +3759,16 @@ def _privacy_series(value, contract, schema, *, mode, record_id_mode, protection
     if "const" in contract or "enum" in contract:
         return value
     return _privacy_value(value, contract, schema, mode=mode, record_id_mode=record_id_mode,
-        protection=protection, path=path, omissions=omissions)
+        protection=protection, path=path, omissions=omissions, scenario_safe_text=scenario_safe_text)
 
 
-def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection, path=(), omissions=None):
+def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection, path=(), omissions=None,
+                   scenario_safe_text=frozenset()):
     contract = _privacy_contract(value, contract, schema)
     field = path[-1] if path else "report"
     if len(path) == 2 and path[1] == "longitudinal" and path[0] in ("inputs", "observed_facts", "derived_metrics"):
         return _privacy_series(value, contract, schema, mode=mode, record_id_mode=record_id_mode,
-            protection=protection, path=path, omissions=omissions)
+            protection=protection, path=path, omissions=omissions, scenario_safe_text=scenario_safe_text)
     if "const" in contract or "enum" in contract or value is None or type(value) in (int, float, bool):
         return value
     if type(value) is dict:
@@ -3775,7 +3800,8 @@ def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection,
                 if key == "exclusions":
                     for row in item:
                         for reason in row["reason_codes"]:
-                            safe_reason = _privacy_text(reason, "reason_codes", mode=mode, protection=protection)
+                            safe_reason = _privacy_text(reason, "reason_codes", mode=mode, protection=protection,
+                                                        scenario_safe_text=scenario_safe_text)
                             safe_scope = _privacy_alias(protection, "scope_id", value["scope_id"]) if mode == "redacted" else value["scope_id"]
                             omissions.append(("exclusion_reason", safe_scope, safe_reason))
                 continue
@@ -3799,11 +3825,13 @@ def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection,
                 domain = "state_id" if field == "by_state" else "dataset_version"
                 output_key = _privacy_alias(protection, domain, key)
             result[output_key] = _privacy_value(item, properties.get(key, additional), schema,
-                mode=mode, record_id_mode=record_id_mode, protection=protection, path=path + (key,), omissions=omissions)
+                mode=mode, record_id_mode=record_id_mode, protection=protection, path=path + (key,), omissions=omissions,
+                scenario_safe_text=scenario_safe_text)
         return result
     if type(value) is list:
         return [_privacy_value(item, contract.get("items", {}), schema, mode=mode,
-            record_id_mode=record_id_mode, protection=protection, path=path, omissions=omissions) for item in value]
+            record_id_mode=record_id_mode, protection=protection, path=path, omissions=omissions,
+            scenario_safe_text=scenario_safe_text) for item in value]
     version_fields = ("dataset_version", "dataset_versions", "version_order", "earlier_version", "later_version",
                       "target_dataset_version", "loaded_dataset_versions")
     state_fields = ("state_id", "state_ids", "missing_state_id", "state_order", "source_state", "source_states", "target_state",
@@ -3829,7 +3857,7 @@ def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection,
         return value
     if field == "path" and mode == "standard":
         return value
-    return _privacy_text(value, str(field), mode=mode, protection=protection)
+    return _privacy_text(value, str(field), mode=mode, protection=protection, scenario_safe_text=scenario_safe_text)
 
 
 def _privacy_run_fields(run):
@@ -3902,8 +3930,10 @@ def privacy_view(report: CanonicalReport, *, mode="standard", record_id_mode=Non
                 location["file_role"] = safe_role(location["file_role"])
     schema = report_schema()
     omissions = []
+    scenario_safe_text = (_scenario_owner_safe_text() if any(
+        name in payload["simulations"] for name in ("closed_resampling", "external_reopening")) else frozenset())
     protected = _privacy_value(payload, schema, schema, mode=str(mode), record_id_mode=str(record_id_mode),
-                               protection=protection, omissions=omissions)
+                               protection=protection, omissions=omissions, scenario_safe_text=scenario_safe_text)
     run = protected["run"]
     run["privacy_mode"], run["redacted_mode"] = str(mode), mode == "redacted"
     run["network_count_scope"] = "toolkit_managed_outbound_operations"

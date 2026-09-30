@@ -10,10 +10,10 @@ Assumptions:
     Each calculated side uses one version and an explicitly declared representation.
 Limits:
     No formulas, implicit representation, weighting, content-reference resolution,
-    inferred chronology or simulation. Lineage requires explicit opt-in. Help and
+    or inferred chronology. Lineage and simulation require explicit opt-in. Help and
     version import no analytical dependencies or input/report implementation.
 Current phase status:
-    Phase 6A Step 7. Accepted kernels own every numerical result.
+    Phase 6B Step 5. Accepted kernels own every numerical result.
 """
 from __future__ import annotations
 
@@ -51,6 +51,10 @@ def build_parser() -> argparse.ArgumentParser:
     example.add_argument("--redacted", action=_Once, nargs=0, help="Protect paths and identifiers in reports.")
     example.add_argument("--lineage", action=_Once, nargs=0, help="Calculate ancestry for the selected example targets.")
     example.add_argument("--longitudinal", action=_Once, nargs=0, help="Calculate the explicitly ordered example snapshots.")
+    example.add_argument("--simulate", action=_Once, nargs=0,
+        help="Run the complete explicit scenario supplied by --config.")
+    example.add_argument("--config", action=_Once,
+        help="Local JSON or TOML scenario overlay containing only a simulation block; audit records do not define its distribution.")
     example.add_argument("--dataset", action=_Once, choices=("hero", "longitudinal"),
         help="Packaged dataset; default hero. The three-version longitudinal dataset requires --longitudinal.")
     for command, description in (("audit", "Audit one version, one explicit pair or an explicitly ordered series."),
@@ -59,6 +63,8 @@ def build_parser() -> argparse.ArgumentParser:
         child.add_argument("--records", required=True, action=_Once, help="Local records file (CSV, JSONL or Parquet).")
         child.add_argument("--lineage-records", action="append", help="Local ancestor/context records; repeat for multiple files. Audit requires --lineage or config lineage=true.")
         if command == "audit":
+            child.add_argument("--simulate", action=_Once, nargs=0,
+                help="Enable the complete explicit simulation block in --config; audit records do not define its distribution.")
             child.add_argument("--lineage", action=_Once, nargs=0,
                 help="Calculate lineage for the primary or all selected longitudinal snapshots using the loaded records.")
             child.add_argument("--longitudinal", action=_Once, nargs=0,
@@ -423,6 +429,31 @@ def _longitudinal_calculations(bundle, options, *, selection_errors=()):
     return results, _message_exits(source.messages)
 
 
+def _scenario_calculations(options):
+    """Execute one declared experiment while retaining independent audit work."""
+    from .config import config_scenario_parameters, scenario_calculation_scope
+    from .models import CapabilityKey
+    from .reports.assembly import FamilyFailure
+    scenario = options.configuration.simulation
+    if not scenario.enabled:
+        return {}, ()
+    try:
+        # Only this explicit execution path imports the sampler owner. Input-only
+        # validation and disabled declarations cannot initialize its RNG.
+        from .metrics.resampling import ScenarioExperimentRequest, run_scenario_experiment
+        request = ScenarioExperimentRequest(
+            scenarios=config_scenario_parameters(scenario),
+            scope=scenario_calculation_scope(scenario),
+            representation=scenario.representation,
+            state_semantics=scenario.state_semantics,
+            seed=scenario.seed,
+        )
+        return {"scenario_experiment": run_scenario_experiment(request)}, ()
+    except Exception as error:
+        return {"family_errors": (FamilyFailure(CapabilityKey.INTERVENTION_SIMULATION,
+            (_message(error),)),)}, (_error_exit(error),)
+
+
 def _run_metadata(options, operation, started_at, started_clock, *, status="complete"):
     from datetime import datetime, timezone
     import platform
@@ -432,7 +463,8 @@ def _run_metadata(options, operation, started_at, started_clock, *, status="comp
     return build_run_metadata(options=options, run_id=str(uuid.uuid4()), operation=operation,
         started_at=started_at, completed_at=datetime.now(timezone.utc).isoformat(),
         duration_seconds=max(0.0, time.perf_counter() - started_clock),
-        python_version=platform.python_version(), platform=platform.system(), run_status=status)
+        python_version=platform.python_version(), platform=platform.system(), run_status=status,
+        random_seed=options.configuration.simulation.seed if options.configuration.simulation.enabled else None)
 
 
 def _error_report(error, options, operation, started_at, started_clock):
@@ -588,6 +620,12 @@ def _execute(namespace):
                 exits += (1,)
             if not pair and not series and len(_primary_versions(bundle)) > 1:
                 sys.stderr.write("Audit requires one dataset_version; use rit validate to inspect multiple versions.\n")
+            if options.configuration.simulation.enabled:
+                scenario_results, scenario_exits = _scenario_calculations(options)
+                failures = results.get("family_errors", ()) + scenario_results.pop("family_errors", ())
+                results.update(scenario_results)
+                results["family_errors"] = failures
+                exits += scenario_exits
         report = assemble_report(bundle, run=_run_metadata(options, namespace.command, started_at, started_clock), **results)
         if namespace.command == "validate":
             payload = report.to_dict()
@@ -614,6 +652,35 @@ def _execute(namespace):
             emit_diagnostic(error, stream=sys.stderr, mode="redacted", record_id_mode="omit")
             emit_diagnostic(reporting_error, stream=sys.stderr, mode="redacted", record_id_mode="omit")
             return _exit_code((*exits, _error_exit(reporting_error)))
+
+
+def _example_configuration(namespace, packaged):
+    """Validate a scenario-only local overlay before example extraction."""
+    if namespace.config is None and not namespace.simulate:
+        return packaged
+    import json
+    from .config import ResourceLimits, resolve_phase4_options
+    from .errors import ConfigurationError, ErrorCode, ToolkitError
+    from .io.validation import _bundle_control, _bundle_document
+    from .models import FileRole, InputSource
+    from .utils.paths import local_input_path
+    raw = json.loads(packaged)
+    if namespace.config is not None:
+        try:
+            source = InputSource(FileRole.CONFIG, local_input_path(namespace.config))
+            _, text = _bundle_control(source, ResourceLimits())
+            overlay = _bundle_document(text, source, ResourceLimits())
+        except ToolkitError:
+            raise ConfigurationError(ErrorCode.CONFIG_INVALID,
+                "The example scenario configuration cannot be parsed or read") from None
+        if set(overlay) != {"simulation"} or type(overlay["simulation"]) is not dict:
+            raise ConfigurationError(ErrorCode.CONFIG_INVALID,
+                "Example configuration requires only an explicit simulation block")
+        raw["simulation"] = overlay["simulation"]
+    flags = {name: True for name in ("simulate", "lineage", "longitudinal")
+             if getattr(namespace, name, None)}
+    resolve_phase4_options(raw, cli=flags, operation="example")
+    return json.dumps(raw, ensure_ascii=True, allow_nan=False, indent=2).encode("utf-8") + b"\n"
 
 
 def _example(namespace):
@@ -646,6 +713,7 @@ def _example(namespace):
                   "provenance.jsonl", "version_order.json", "EXPECTED_OUTPUTS.md"))
         resource = files("recursive_integrity_toolkit").joinpath("data", dataset)
         payloads = {name: resource.joinpath(name).read_bytes() for name in names}
+        payloads["config.json"] = _example_configuration(namespace, payloads["config.json"])
         _output_recheck(parent_chain)
         workspace.mkdir(mode=0o700)
         root_chain, _ = _output_walk(workspace)
@@ -668,6 +736,7 @@ def _example(namespace):
             "--version-order", str(inputs / "version_order.json"),
             "--out", str(workspace / "reports"), *(["--redacted"] if namespace.redacted else []),
             *(["--longitudinal"] if namespace.longitudinal else []),
+            *(["--simulate"] if namespace.simulate else []),
             *(["--lineage"] if namespace.lineage else [])])
         invocation.command = "example"
     except Exception as error:
@@ -680,11 +749,16 @@ def _example(namespace):
                 workspace.rmdir()
             except Exception:
                 cleaned = False
-        code = error.code if isinstance(error, _OutputFailure) else "E_OUTPUT_EXISTS" if isinstance(error, FileExistsError) else "E_OUTPUT_IO" if isinstance(error, OSError) else "E_INTERNAL"
+        from .errors import ConfigurationError
+        if isinstance(error, ConfigurationError):
+            code, exit_code = "E_CONFIG_INVALID", 2
+        else:
+            code = error.code if isinstance(error, _OutputFailure) else "E_OUTPUT_EXISTS" if isinstance(error, FileExistsError) else "E_OUTPUT_IO" if isinstance(error, OSError) else "E_INTERNAL"
+            exit_code = _OUTPUT_CODES.get(code, 4)
         sys.stderr.write(code + ": The example workspace could not be prepared.\n")
         if not cleaned:
             sys.stderr.write("E_OUTPUT_IO: Incomplete example files remain in the selected workspace; inspect it before retrying.\n")
-        return _exit_code((_OUTPUT_CODES.get(code, 4), 1 if not cleaned else 0))
+        return _exit_code((exit_code, 1 if not cleaned else 0))
     if not namespace.lineage:
         sys.stderr.write("Lineage was not requested. Use rit example --lineage to calculate the Hero ancestry results.\n"
             if dataset == "hero" else "Lineage was not requested. Add --lineage to calculate the example ancestry results.\n")

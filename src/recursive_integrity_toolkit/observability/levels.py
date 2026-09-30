@@ -20,17 +20,19 @@ Limits:
     No state assignment, content hashing, distribution estimation, metric,
     graph traversal, root tracing, simulation, report, or file/network IO.
     Lineage uses only the sufficient all-edges-earlier-version certificate.
-    Scenario parameters are internal declarations, not a new config format.
+    Scenario declarations use the shared input-only configuration validators.
 
 Current phase status:
-    Phase 2 Step 8 observability and capability classification only.
+    Phase 6B Step 5 scenario declaration eligibility; no execution occurs here.
 """
 from __future__ import annotations
 
-import math
 from types import MappingProxyType
 
-from ..config import RepresentationConfig, ScenarioConfig
+from ..config import (
+    RepresentationConfig, ScenarioConfig, scenario_config_reasons,
+    scenario_has_declarations, scenario_parameter_reasons,
+)
 from ..errors import CanonicalValidationError, ErrorCode
 from ..io.validation import (
     _checked_order, _parent_lookup, _resolve_parent_list, join_provenance,
@@ -313,67 +315,21 @@ def _longitudinal_capability(records: tuple[CanonicalRow, ...], order: VersionOr
                 missing=tuple(reasons), notes=("No cross-version metric or state mapping executes here.",))
 
 
-def _distribution(value: object) -> tuple[bool, frozenset[str]]:
-    if type(value) is not tuple or not value:
-        return False, frozenset()
-    names: set[str] = set()
-    masses: list[float] = []
-    for pair in value:
-        if type(pair) is not tuple or len(pair) != 2:
-            return False, frozenset()
-        name, mass = pair
-        if type(name) is not str or not name or name in names or type(mass) not in (int, float):
-            return False, frozenset()
-        try:
-            if not math.isfinite(mass) or not 0 <= mass <= 1:
-                return False, frozenset()
-        except OverflowError:
-            return False, frozenset()
-        names.add(name)
-        masses.append(mass)
-    return math.isclose(math.fsum(masses), 1.0, rel_tol=1e-12, abs_tol=1e-12), frozenset(names)
-
-
 def _scenario_capability(scenario: ScenarioConfig | None, parameters: ScenarioParameters | None) -> Capability:
     if scenario is None:
         scenario = ScenarioConfig()
     if type(scenario) is not ScenarioConfig or type(scenario.enabled) is not bool:
         raise _invalid("scenario activation must use explicit ScenarioConfig")
+    if parameters is not None and scenario_has_declarations(scenario):
+        raise _invalid("scenario config and separate parameters are competing declarations")
     if not scenario.enabled:
         return _cap(CapabilityStatus.UNAVAILABLE, reasons=("R_SCENARIO_NOT_CONFIGURED",), missing=("explicit_scenario_activation",))
-    reasons: list[str] = []
-    if scenario.seed is None or parameters is None:
-        reasons.append("R_SCENARIO_PARAMETERS_MISSING")
-    if scenario.seed is not None and type(scenario.seed) is not int:
-        reasons.append("R_SCENARIO_PARAMETERS_INVALID")
     if parameters is not None:
         if type(parameters) is not ScenarioParameters or type(parameters.model_name) is not str:
             raise _invalid("scenario parameters require ScenarioParameters with a literal model name")
-        if parameters.model_name not in ("closed_resampling", "reopened_resampling"):
-            reasons.append("R_SCENARIO_PARAMETERS_INVALID")
-        for number, minimum in ((parameters.resample_size, 1), (parameters.simulation_horizon, 0), (parameters.simulation_replicates, 1)):
-            if number is None:
-                reasons.append("R_SCENARIO_PARAMETERS_MISSING")
-            elif type(number) is not int or number < minimum:
-                reasons.append("R_SCENARIO_PARAMETERS_INVALID")
-        valid, names = _distribution(parameters.state_distribution)
-        if parameters.state_distribution is None:
-            reasons.append("R_SCENARIO_DISTRIBUTION_MISSING")
-        elif not valid:
-            reasons.append("R_SCENARIO_PARAMETERS_INVALID")
-        if parameters.model_name == "reopened_resampling":
-            external_valid, external_names = _distribution(parameters.external_input_distribution)
-            if parameters.external_input_distribution is None:
-                reasons.append("R_SCENARIO_DISTRIBUTION_MISSING")
-            elif not external_valid or names != external_names:
-                reasons.append("R_SCENARIO_PARAMETERS_INVALID")
-            weight = parameters.reopening_weight
-            if weight is None:
-                reasons.append("R_SCENARIO_PARAMETERS_MISSING")
-            elif type(weight) not in (int, float) or not 0 <= weight <= 1:
-                reasons.append("R_SCENARIO_PARAMETERS_INVALID")
-        elif parameters.external_input_distribution is not None or parameters.reopening_weight is not None:
-            reasons.append("R_SCENARIO_PARAMETERS_INVALID")
+        reasons = scenario_parameter_reasons(parameters, scenario.seed)
+    else:
+        reasons = scenario_config_reasons(scenario)
     if reasons:
         return _cap(CapabilityStatus.UNAVAILABLE, reasons=tuple(reasons), missing=tuple(reasons))
     return _cap(CapabilityStatus.EXPERIMENTAL, reasons=("R_SCENARIO_EXECUTION_DEFERRED",),

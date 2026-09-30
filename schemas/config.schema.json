@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://recursive-integrity-toolkit.example/schemas/config.schema.json",
   "title": "Recursive Integrity Toolkit Configuration",
-  "description": "Structural contract for explicit local configuration, including inert longitudinal declarations. Input-dependent validation remains in the validation and selection layers.",
+  "description": "Structural contract for explicit local configuration, including inert longitudinal and experimental scenario declarations. Input-dependent validation remains in the validation and selection layers.",
   "type": "object",
   "properties": {
     "config_version": {"type": "string", "minLength": 1, "description": "Version of the configuration document format."},
@@ -64,14 +64,118 @@
     "output": {"type": "object", "description": "Reserved local output settings. Phase 2 does not generate analytical reports.", "additionalProperties": true},
     "simulation": {
       "type": "object",
-      "description": "Explicit experimental scenario declaration. Presence never executes a simulation in Phase 2.",
-      "properties": {"enabled": {"type": "boolean", "default": false}, "seed": {"type": "integer"}},
-      "additionalProperties": false
+      "description": "Explicit experimental scenario declarations. Validation is input-only; enabled audit/example execution additionally requires every scientific field. State meaning and scope are supplied rather than inferred from audit records.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "seed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "models": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "closed_resampling",
+              "reopened_resampling"
+            ]
+          }
+        },
+        "state_distribution": {
+          "$ref": "#/$defs/scenarioDistribution"
+        },
+        "external_input_distribution": {
+          "$ref": "#/$defs/scenarioDistribution"
+        },
+        "reopening_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "resample_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "simulation_horizon": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "simulation_replicates": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "representation": {
+          "$ref": "#/$defs/representationDescriptor"
+        },
+        "state_semantics": {
+          "$ref": "#/$defs/scenarioText"
+        },
+        "scope_id": {
+          "$ref": "#/$defs/scenarioText"
+        },
+        "dataset_version": {
+          "$ref": "#/$defs/scenarioText"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "models"
+            ],
+            "properties": {
+              "models": {
+                "not": {
+                  "contains": {
+                    "const": "reopened_resampling"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "external_input_distribution"
+                  ]
+                },
+                {
+                  "required": [
+                    "reopening_weight"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   },
   "additionalProperties": false,
   "allOf": [{"if": {"required": ["longitudinal"], "properties": {"longitudinal": {"required": ["versions"], "properties": {"versions": {"minItems": 1}}}}}, "then": {"not": {"required": ["representation"]}}}],
   "$defs": {
+    "scenarioText": {"type": "string", "minLength": 1, "allOf": [{"pattern": "\\S"}, {"pattern": "^[^\\u0000]*$"}]},
+    "scenarioDistribution": {
+      "type": "object", "minProperties": 1, "maxProperties": 4096,
+      "description": "Literal finite state probabilities, including empty state IDs and exact zeros. The declaration layer checks valid Unicode, absolute mass residual at most 1e-12, equal internal/external state sets, and combined sampled-path admission.",
+      "propertyNames": {"pattern": "^[^\\u0000]*$"},
+      "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
+    },
     "nonblank": {"type": "string", "minLength": 1, "pattern": "\\S"},
     "longitudinalVersion": {
       "type": "object",

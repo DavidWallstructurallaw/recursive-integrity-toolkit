@@ -1,6 +1,27 @@
 # Architecture
 
-## Current Phase 6B Step 4 additions
+## Current Phase 6B Step 5 additions
+
+`config.py` retains complete immutable scenario declarations and validates their
+literal states, absolute probability mass tolerance, scalar bounds and combined
+work admission without importing numerical owners. The same input-only checks
+serve observability. Configuration serialization and normalized hashes retain
+all scenario context; public summaries expose only the requested flag.
+
+The CLI lazily constructs `ScenarioExperimentRequest` from explicit declarations
+and invokes the accepted coordinator only for enabled audit/example work.
+Scenario scope contains no audit record identities. Simulation failures retain
+independent audit results through the existing family-error mechanism. Run and
+result seeds agree. `validate` may assess enabled declarations but never imports
+the sampler or creates an RNG; assembly loads scenario types only when adapting
+supplied scenario evidence. Existing packaged examples remain unchanged;
+an explicit scenario-only local config can accompany an example invocation.
+
+The package remains `0.1.0.dev5`, with schema 1.3, 41 runtime modules and 14
+packaged resource copies. The installed synthetic example and dev6 candidate
+remain later planned work.
+
+## Accepted Phase 6B Step 4 additions
 
 Report schema 1.3 admits explicit experiment evidence through
 `assemble_report(..., scenario_experiment=...)`. The existing assembly owner
@@ -14,7 +35,7 @@ T5 results appear only under `simulations.external_reopening`. Closed results
 retain their existing slot, with an optional separate analytic baseline and
 explicit transition losses. Schema generation updates the canonical file and
 packaged copy together. Default simulations remain empty. The package version
-remains `0.1.0.dev5`; the CLI/config activation and dev6 candidate are later steps.
+remained `0.1.0.dev5`; CLI/config activation was assigned to Step 5.
 
 Privacy views protect every new state-identity path with consistent aliases,
 preserving numerical positions and event relationships across both models.

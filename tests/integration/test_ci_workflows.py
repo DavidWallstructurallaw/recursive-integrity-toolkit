@@ -39,7 +39,8 @@ def test_full_matrix_requires_explicit_candidate_selection(repo_root):
     assert "test_current_verification.py" in focused and "test_lineage_fixture_inputs.py" in focused
     for name in ("tests/unit/test_longitudinal*.py", "test_selected_lineage_handoff.py",
                  "test_longitudinal_cli.py", "test_longitudinal_reports.py", "test_longitudinal_installed.py",
-                 "test_scenario_report_contract.py", "test_scenario_reports.py"):
+                 "test_scenario_report_contract.py", "test_scenario_reports.py",
+                 "test_scenario_config.py", "test_scenario_cli.py"):
         assert name in focused
     assert "--ignore=tests/performance" not in focused and "tests/performance " not in focused
     assert 'os: [ubuntu-latest, windows-latest]' in text

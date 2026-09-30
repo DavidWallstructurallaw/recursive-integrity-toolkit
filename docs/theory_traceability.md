@@ -1,6 +1,24 @@
 # Theory Traceability
 
-## Current Phase 6B Step 4 implementation
+## Current Phase 6B Step 5 implementation
+
+P6B-D07 connects explicit configuration and CLI requests to the accepted
+T1/T5 experiment coordinator. PR-010 declaration eligibility uses input-only
+checks aligned with the executable state, mass, parameter and aggregate limits.
+PR-011 requires explicit distributions, models, scope, representation, meaning
+and seed. Audit records never supply or imply a scenario probability vector.
+PR-016 preserves every declaration through serialization and normalized hashing
+and binds the run seed to sampled evidence. PR-014/PR-015 preserve independent
+audit results and safe diagnostics when a scenario fails.
+
+`validate` never executes a scenario, including when configuration requests one.
+Eligibility remains deferred until separately supplied execution evidence exists.
+Tests in `test_scenario_config.py` and `test_scenario_cli.py` exercise activation,
+input isolation, literal-state boundaries, replay, explicit scope and privacy.
+No formula or numerical owner changes in this step; F-016 and empirical
+intervention effects remain excluded.
+
+## Accepted Phase 6B Step 4 implementation
 
 PR-012/PR-013 report integration exposes the existing T5 simulation owner in
 schema 1.3 under `simulations.external_reopening`. T1/F-015 remains confined to

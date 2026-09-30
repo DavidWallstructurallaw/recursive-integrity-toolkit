@@ -1,7 +1,8 @@
 # Report Schema
 
 Status: Phase 6B Step 4 report contract (`0.1.0.dev5`). Schema version: `1.3`.
-Focused verification is recorded in [Phase 6B Step 4](../PHASE_6B_STEP_4.md).
+Report-contract verification is recorded in [Phase 6B Step 4](../PHASE_6B_STEP_4.md);
+CLI activation and input-only checks are recorded in [Step 5](../PHASE_6B_STEP_5.md).
 Earlier candidate evidence remains in [Phase 6A completion](../PHASE_6A_COMPLETION.md).
 
 The authoritative public shape is `schemas/report.schema.json`, Draft 2020-12. Runtime validation is implemented in `result.py` using the standard library. `report_schema()` returns a detached copy of the same declarative contract. No runtime schema package, filesystem lookup or remote resolver is used. The `$schema` and `$id` identifiers are descriptive; all references are local `$defs` references.
@@ -13,7 +14,8 @@ privacy view. `audit` computes explicitly requested supported families; `validat
 keeps calculations unrequested and retains explicit series metadata; `example`
 runs the packaged explicit Hero pair or an explicitly requested series.
 Default `simulations` is `{}`. Python closed/reopened experiment results may be
-supplied explicitly to assembly; CLI simulation activation remains a later step. Python
+supplied explicitly to assembly. Explicit CLI activation uses the same coordinator
+and typed assembly, while `validate` retains empty simulations. Python
 callers can supply completed lineage, lineage bounds and shared-root proxy
 results explicitly. `audit --lineage` and `example --lineage` compute these
 families explicitly. Input inventories and diagnostic locations accept the

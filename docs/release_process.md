@@ -2,9 +2,9 @@
 
 ## Current Phase 6B implementation boundary
 
-Phase 6B Step 4 integrates explicit experiment reports in schema 1.3 while the
+Phase 6B Step 5 activates explicit configured experiments in schema 1.3 while the
 package remains `0.1.0.dev5`. Current focused evidence is recorded in
-[the Step 4 record](../PHASE_6B_STEP_4.md). The dev6 candidate, supported matrix
+[the Step 5 record](../PHASE_6B_STEP_5.md). The dev6 candidate, supported matrix
 and installed simulation example checks belong to later planned steps.
 
 ## Accepted Phase 6A candidate boundary
@@ -28,10 +28,12 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The existing source check uses accepted Phase 6B Step 3 commit
-`2e0805dba85754d78854750f692ac02ddaf44a8a`. Step 4 permits only `result.py`,
-the report assembly and Markdown owners, and the canonical/packaged report
-schema pair. It protects the numerical kernels and all other product files.
+The existing source check uses accepted Phase 6B Step 4 commit
+`f5d94d9aa250bbb63c7317884966946bc1d44533`. Step 5 permits only `config.py`,
+`cli.py`, `observability/levels.py`, `schemas/config.schema.json` and the report
+assembly owner. Assembly changes defer sampler imports until actual scenario
+evidence is supplied, preserving input-only validation. The numerical kernels,
+report schema, rendering and all other product files remain protected.
 It retains the exact product file inventory and
 rejects unrelated runtime, package-metadata and canonical Hero changes.
 The frozen Phase 0 specification hashes are unchanged. Sixteen frozen

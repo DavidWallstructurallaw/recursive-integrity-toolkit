@@ -1,7 +1,8 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6B Step 4 admits typed scenario reports, schema 1.3 and privacy rendering.
-Other accepted dev5 runtime files and the package version remain frozen.
+Phase 6B Step 5 admits explicit scenario configuration, CLI execution,
+input-only eligibility and lazy scenario report imports. Accepted numerical
+and report schema contracts stay frozen, alongside the dev5 package version.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
@@ -26,17 +27,17 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "2e0805dba85754d78854750f692ac02ddaf44a8a"
+ACCEPTED_COMMIT = "f5d94d9aa250bbb63c7317884966946bc1d44533"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/")
 LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
                       "provenance.jsonl", "config.json", "version_order.json",
                       "EXPECTED_OUTPUTS.md"}
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
-    "src/recursive_integrity_toolkit/result.py",
+    "src/recursive_integrity_toolkit/config.py",
+    "src/recursive_integrity_toolkit/cli.py",
+    "src/recursive_integrity_toolkit/observability/levels.py",
     "src/recursive_integrity_toolkit/reports/assembly.py",
-    "src/recursive_integrity_toolkit/reports/markdown_report.py",
-    "schemas/report.schema.json",
-    "src/recursive_integrity_toolkit/data/report.schema.json",
+    "schemas/config.schema.json",
 })
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",

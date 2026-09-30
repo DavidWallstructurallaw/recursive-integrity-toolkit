@@ -421,14 +421,15 @@ def test_phase4_step5_explicit_pair_direction_and_duplicate_members_survive_both
 def test_phase4_step5_list_permutation_changes_outputs_instead_of_hiding_declared_order():
     import copy
     import json
-    from test_PR012_evidence_classes import phase4_step2_sampled_path_report_fixture
-    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_view
+    from test_PR013_report_schema import phase4_step5_renderers, phase4_step5_rich_payload, phase4_step5_view
 
-    original = phase4_step2_sampled_path_report_fixture()
+    original = phase4_step5_rich_payload()
     changed = copy.deepcopy(original)
-    changed["simulations"]["closed_resampling"]["extinction_events"].reverse()
+    # Conclusion order is author-declared. Scenario event order is separately
+    # fixed by the complete replicate/step/state contract and cannot be permuted.
+    changed["unavailable_conclusions"].reverse()
     for render in phase4_step5_renderers():
         assert render(phase4_step5_view(original)) != render(phase4_step5_view(changed))
     actual = json.loads(phase4_step5_renderers()[0](phase4_step5_view(changed)))
-    assert [item["state_id"] for item in actual["simulations"]["closed_resampling"][
-        "extinction_events"]] == ["b", "a"]
+    assert len(original["unavailable_conclusions"]) == 2
+    assert actual["unavailable_conclusions"] == phase4_step5_view(original).to_dict()["unavailable_conclusions"][::-1]

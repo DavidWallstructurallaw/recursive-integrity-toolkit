@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Steps 1 through 4 complete |
-| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, 2026-09-30 |
+| Status | Steps 1 through 5 complete |
+| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, `Phase 6B Step 5 go`, 2026-09-30 |
 | Governing decision | Approved UD-017; empirical ingestion remains deferred by UD-031 |
 | Accepted baseline | `b6389c6c50f2fc61d39580274bd24ed39e09ca45` |
 | Branch | `phase6b-simulation` |
@@ -139,3 +139,30 @@ their schema-version literals unless a concrete strengthened contract requires
 a matching fixture correction. Later CLI activation retains Step 5 scope.
 Actual final source checks and the unrun installed-case boundary are recorded in
 `PHASE_6B_STEP_4.md`.
+
+## Step 5 authorization and execution boundary
+
+The Theory Owner requested `Phase 6B Step 5 go` on 2026-09-30. Work starts from
+Step 4 commit `f5d94d9aa250bbb63c7317884966946bc1d44533`. P6B-D07 connects the
+complete declaration block to explicit audit/example execution. Partial legacy
+declarations remain inert; an activated audit requires every scientific input.
+An explicitly false enabled value conflicts with `--simulate`. Validation always
+stays input-only, including complete enabled configurations.
+
+The input layer shares literal-state, absolute-mass and admission predicates with
+observability without importing numerical owners. Full context survives config
+serialization and hashing. Scope uses supplied labels with no record membership;
+audit data never implies a distribution. Existing family failures preserve
+independent results, and run metadata binds the selected seed. Report assembly
+defers scenario-owner imports until supplied simulation evidence needs adapting.
+
+The example command accepts a scenario-only local config overlay, validated
+before workspace creation and preserved in the extracted config. Ordinary
+packaged examples and canonical resources remain unchanged. The standalone
+installed synthetic example remains Step 6 work.
+
+The existing source gate advances to Step 4 with five exact product owners:
+config, CLI, observability, config schema and the assembly import adjustment.
+The numerical kernels, report schema/renderers, dependencies and package version
+remain frozen. Focused checks and corrected attempts are recorded in
+`PHASE_6B_STEP_5.md`; no candidate or installed delivery pass is claimed.
