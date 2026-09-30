@@ -1,6 +1,6 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6B Step 2 admits only the pure resampling kernel implementation.
+Phase 6B Step 3 admits the explicit scenario experiment implementation.
 Other accepted dev5 runtime files, schema and package version remain frozen.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
@@ -26,7 +26,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "230e321f0de31953babe0372625a6e20164606f0"
+ACCEPTED_COMMIT = "552df0b80e55780185bcd95a073f2c602f9d5366"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/")
 LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
                       "provenance.jsonl", "config.json", "version_order.json",

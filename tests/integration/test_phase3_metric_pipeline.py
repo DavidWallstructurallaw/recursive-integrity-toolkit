@@ -165,7 +165,7 @@ def test_phase3_validation_never_dispatches_metrics_even_when_enabled(tmp_path,m
         "provenance":("summarize_provenance","classify_direct_grounding"),"bounds":("direct_closure_exposure","closure_exposure_bounds"),
         "duplicates":("detect_exact_duplicates",),"tail":("select_tail","one_step_extinction_probability"),
         "resampling":("expected_diversity_after_steps","simulate_closed_resampling",
-                      "mix_external_input","simulate_reopened_resampling"),
+                      "mix_external_input","simulate_reopened_resampling","run_scenario_experiment"),
     }
     for module,functions in names.items():
         loaded = importlib.import_module("recursive_integrity_toolkit.metrics."+module)

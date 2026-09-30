@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Steps 1 and 2 complete |
-| Authority | Theory Owner instructions `Phase 6B 继续吧` and `Phase 6B step 2 go`, 2026-09-30 |
+| Status | Steps 1 through 3 complete |
+| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, 2026-09-30 |
 | Governing decision | Approved UD-017; empirical ingestion remains deferred by UD-031 |
 | Accepted baseline | `b6389c6c50f2fc61d39580274bd24ed39e09ca45` |
 | Branch | `phase6b-simulation` |
@@ -85,3 +85,27 @@ only `src/recursive_integrity_toolkit/metrics/resampling.py`. The other 74
 protected product files, 16 frozen specifications and 14 canonical resource
 copies remain unchanged. Existing focused CI includes the T1/T5 and rational
 fixture tests. Actual checks are in `PHASE_6B_STEP_2.md`.
+
+## Step 3 authorization and experiment handoff
+
+The Theory Owner requested `Phase 6B Step 3 开始` on 2026-09-30. Work starts from
+Step 2 commit `552df0b80e55780185bcd95a073f2c602f9d5366`. P6B-D04/D05 govern
+the explicit coordinator and comparison; D02/D03 continue to govern its numerical
+and replay behavior. Scope, representation, state meaning and seed occur once
+in `ScenarioExperimentRequest`. Existing per-model `ScenarioParameters` retain
+their vocabulary; their common supplied vector and numerical parameters must
+agree. Immutable probability-pair tuples preserve the original validated request.
+Constructor declaration is inert; execution validates everything collectively.
+
+The closed baseline is computed only when closed is selected and uses exactly
+that sampled result's effective initial vector. Its `baseline_basis` is
+`closed_sampled_effective_distribution`; original correction evidence remains in
+the sampled input. Selected results preserve request order and independently
+reset the seed. Comparison rows and closed loss events derive from actual typed
+paths, without additional sampling. At horizon zero, initial reachable/re-entry
+sets describe declared next-draw possibilities, with no executed mixture/event.
+
+The existing source gate advances to Step 2, still authorizing only
+`metrics/resampling.py`. No report schema, input/config/CLI behavior, dependency
+or package version is changed. Step 4 will validate and serialize this typed
+handoff. Actual checks are recorded in `PHASE_6B_STEP_3.md`.

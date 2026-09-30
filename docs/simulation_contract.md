@@ -1,7 +1,8 @@
 # Phase 6B simulation contract
 
-Status: Step 2 implements the pure mixture and reopened sampler below, 2026-09-30.
-Experiment requests, configuration fields and report schema 1.3 remain staged.
+Status: Step 3 implements explicit experiment requests, execution and comparison,
+2026-09-30, alongside the Step 2 pure mixture and reopened sampler.
+Configuration fields and report schema 1.3 remain staged.
 The current package version/schema are dev5/1.2. See `PHASE_6B_PLAN.md` for scope,
 owners and implementation order.
 
@@ -86,7 +87,7 @@ same admitted transitions/state cells; do not copy unbounded paths into summary
 tables. A resource refusal yields an explicit failure, never a truncated
 successful trajectory. Existing standalone API limits are not relaxed.
 
-## 3. Staged Python interface and owner
+## 3. Implemented Python interface and owner
 
 `metrics/resampling.py` remains the mathematical owner. NumPy stays lazy and
 confined to this module. No new analytical dependency is needed.
@@ -158,6 +159,22 @@ vocabulary. It contains:
 - common `resample_size`, `simulation_horizon`, `simulation_replicates` and seed;
 - `external_input_distribution` and `reopening_weight` exactly when reopening is selected.
 
+The implemented request fields are `scenarios` (an ordered tuple of existing
+`ScenarioParameters`), `scope`, `representation`, `state_semantics` and `seed`.
+Construction is inert. `run_scenario_experiment` validates the entire request
+before execution. Each scenario's probability vectors must use immutable tuples
+of literal `(state_id, probability)` pairs, as declared by `ScenarioParameters`.
+Standalone kernels continue accepting their existing mapping forms. The result
+retains the original validated request, including its supplied pair ordering;
+kernel normalization and canonical ordering are separate evidence.
+
+Scope, representation, meaning and seed are shared once. The per-model parameter
+objects must agree on sample size, horizon, replicates and the canonical supplied
+internal vector. Merely normalizing different supplied vectors to the same
+effective values does not make them a compatible comparison. All declarations,
+combined path cells, initial diversity and predictable mixture underflow are
+checked before any selected sampler or trajectory allocation.
+
 It admits one instance of each model. Both branches of a comparison use exactly
 the same initial distribution, representation/meaning, declared states, sample
 size, horizon, replicates, seed and numerical/sampling methods. The external
@@ -193,13 +210,34 @@ step)` for support size and diversity, with both values and the explicitly
 labeled `reopened_minus_closed` differences. At step zero the two sides agree.
 Include each model's initially reachable states and initially possible re-entry
 states, labeled as pre-first-draw possibilities. Later possibilities are in the
-transition sources. No pooled means, quantiles, confidence intervals, p-values,
+transition sources. At horizon zero these sets describe the declared next-draw
+possibilities from positive mixture coefficients; there is no computed mixture,
+executed transition or realized event. No pooled means, quantiles, confidence intervals, p-values,
 causal effects or variance-reduction claims are produced. Matching replicate
 indices identify reproducible paths; differing distributions may consume RNG
 draws differently. Comparisons do not diagnose which external input is better.
 
 `ScenarioExperimentResult` retains the original validated request, selected
 typed results, optional closed analytic baseline and comparison evidence.
+Its implemented fields are `request`, `selected_results` (in request order),
+`closed_analytic_baseline`, `baseline_basis`, `closed_extinction_events`,
+`comparison` and `scenario_schedule=reset_same_seed_per_model`, plus experimental
+simulation classification. Baseline and basis are `None` when closed is absent;
+closed events are then empty. Extinction events are derived from adjacent closed
+generations using the same positive-to-zero definition, without resampling.
+
+`ScenarioComparison` retains `rows`, `initial_reachability` and
+`difference_direction=reopened_minus_closed`. Each `ScenarioComparisonRow`
+contains `replicate_index`, `step`, both `closed_support_size` and
+`reopened_support_size`, `support_size_difference`, both
+`closed_gini_simpson_diversity` and `reopened_gini_simpson_diversity`, and
+`diversity_difference`. Rows use replicate-major, step-major order including
+step zero. The two `ScenarioInitialReachability` entries are in closed/reopened
+order and retain `model_name`, `reachable_states`, `possible_reentry_states`
+and `timing=before_first_draw`. These are internal typed fields, not schema 1.2
+report additions. Request context, caller text, state identities and nested
+results are excluded from the new parent objects' representations.
+
 Assembly validates that supplied evidence is bound to that request and has
 consistent counts/events/lengths. It never reruns a sampler to establish trust.
 

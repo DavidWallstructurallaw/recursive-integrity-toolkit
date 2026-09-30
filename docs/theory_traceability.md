@@ -1,6 +1,17 @@
 # Theory Traceability
 
-## Current Phase 6B Step 2 implementation
+## Current Phase 6B Step 3 implementation
+
+`run_scenario_experiment` implements P6B-D04/D05 under PR-011/PR-016: explicit
+selection, shared declarations, aggregate admission and independently reset seeds.
+It reuses the accepted T1/F-015 analytic API only for a selected closed model,
+passing that model's sampled effective initial vector and labeling the baseline
+basis. A reopened path never acquires a closed multi-step expectation. Comparison
+rows contain both realized support/diversity values and reopened-minus-closed
+differences; they make no pooled statistical or causal claim. Closed transition
+losses reuse Definitions 12.10, while initial reachability is explicitly a
+pre-first-draw possibility. `test_scenario_experiment.py` verifies this binding,
+selection/replay, correction basis, exact events and refusal before sampling.
 
 T5 / TM-M07 / F-017 is implemented in `metrics/resampling.py` by
 `mix_external_input` and `simulate_reopened_resampling`, under approved UD-017
