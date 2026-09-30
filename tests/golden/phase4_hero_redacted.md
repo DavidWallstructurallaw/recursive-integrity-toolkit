@@ -37,7 +37,7 @@ Quoted code literals represent supplied data, including identifiers and labels. 
 | `["python_version"]` | Unavailable (null): `"private_or_nonstandard_metadata_omitted"` |
 | `["random_seed"]` | Unavailable (null): `"not_recorded"` |
 | `["redacted_mode"]` | true |
-| `["report_schema_version"]` | `"1.2"` |
+| `["report_schema_version"]` | `"1.3"` |
 | `["resolved_options"]["comparison_requested"]` | true |
 | `["resolved_options"]["privacy_mode"]` | `"redacted"` |
 | `["resolved_options"]["record_id_mode"]` | `"hash"` |
@@ -4331,7 +4331,7 @@ No entries supplied. Empty list: `[]`.
 
 **Report footer**
 
-Toolkit version: `"0.1.0.dev5"`; report schema version: `"1.2"`.
+Toolkit version: `"0.1.0.dev5"`; report schema version: `"1.3"`.
 
 Evidence-class legend:
 

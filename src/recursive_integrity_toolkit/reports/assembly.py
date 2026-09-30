@@ -7,7 +7,7 @@ Outputs: immutable CanonicalReport and explicitly selected SafeReportView.
 Assumptions: supplied typed results are evidence handoffs, not authenticity certificates.
 Limits: no ingestion, classification, metric execution, graph traversal, simulation,
         filesystem access, rendering or CLI orchestration.
-Current phase status: Phase 6A Step 6 canonical series evidence and privacy views.
+Current phase status: Phase 6B Step 4 explicit scenario evidence and privacy views.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from ..models import (
     BundleValidationResult, CalculationEvidenceClass, CalculationMetadata,
     CalculationReason, CalculationScope, CalculationStatus, CapabilityKey,
     CanonicalRow, NumericalPolicy, RecordKey, RepresentationDescriptor,
-    ScalarCalculation, ValidationCoverage, ValidationMessage, ValidationSeverity,
+    ScalarCalculation, ScenarioParameters, ValidationCoverage, ValidationMessage, ValidationSeverity,
     WeightingOptions, Capability, CapabilityStatus, ObservabilityAssessment, FileInventoryEntry,
     FileRole, FileFormat, VersionOrderResult, ProvenanceJoinResult, ProvenanceMatch, ProvenanceAssessment,
     ExplicitPairContext, RowMappingEvidence, RowLocation, GenerationValidationResult, RecordStateAssignment, TailSelectionOptions,
@@ -33,10 +33,19 @@ from ..lineage.graph import LineageScope, LineageResourceUsage, LineageLimits
 from ..metrics.diversity import DistributionMetrics, StateDistributionResult, SupportComparison, StateFrequency
 from ..metrics.duplicates import ExactDuplicateResult, ExactDuplicateGroup
 from ..metrics.provenance import ProvenanceCompositionResult, DeclaredComposition, WeightedSourceComposition, DirectGroundingBasis, DirectGroundingAssignment
-from ..metrics.resampling import ExpectedDiversityResult, ResamplingSimulation, ResamplingInput, ResamplingReplicate, SampledGeneration
+from ..metrics.resampling import (
+    ExpectedDiversityResult, ResamplingSimulation, ResamplingInput, ResamplingReplicate,
+    SampledGeneration, ReopeningSimulation, ReopeningSource, StateTransitionEvent,
+    ScenarioExperimentRequest, ScenarioExperimentResult, ScenarioComparison,
+    ScenarioComparisonRow, ScenarioInitialReachability,
+    REOPENED_ASSUMPTIONS, REOPENED_LIMITATIONS,
+)
 from ..metrics.tail import TailSelectionResult, ExtinctionProbabilityResult, RarityEntry
 from ..representations.compatibility import RepresentationCompatibility, StateMappingDeclaration
-from ..result import CanonicalReport, FIELD_REGISTRY, LEVEL_LABELS, SECTION_ORDER, ReportValidationError
+from ..result import (
+    CanonicalReport, FIELD_REGISTRY, LEVEL_LABELS, SECTION_ORDER, ReportValidationError,
+    _scenario_assumption_table as _scenario_assumptions,
+)
 
 if TYPE_CHECKING:
     from ..metrics.longitudinal import LongitudinalResult, LongitudinalFailureResult
@@ -228,6 +237,7 @@ def _metadata_text(value):
         "direct_closure_exposure_interval_width": ("upper_bound - lower_bound = unresolved_grounding_count / total_record_count", "no usable required-provenance row"),
         "one_step_extinction_probability": ("F-014; (1-p_i)^n; analytic one-step closed multinomial",),
         "expected_gini_simpson_diversity": ("analytic_expectation; D0*(1-1/n)**t; t=0..steps; constant n",),
+        "mixed_source_probability": ("analytic_mixture; constant external distribution and weight",),
     }
     if value.evidence_class is CalculationEvidenceClass.SIMULATION and name in ("state_count", "state_frequency", "support_size", "gini_simpson_diversity"):
         allowed = ("sampled_path; sequential_binomial_complement_v1",)
@@ -238,7 +248,9 @@ def _metadata_text(value):
     _require(type(value.limitations) is tuple and value.limitations and all(type(item) is str and item for item in value.limitations), "owner limitations cannot be empty or malformed")
     pair_names = ("support_delta", "support_loss_count", "support_added_count", "support_retention_ratio",
                   "gini_simpson_diversity_delta", "extinct_states", "added_states", "retained_states")
-    if value.evidence_class is CalculationEvidenceClass.SIMULATION and value.owner_id == "T1":
+    if value.evidence_class is CalculationEvidenceClass.SIMULATION and value.owner_id == "T5":
+        assumptions, limitations = REOPENED_ASSUMPTIONS, REOPENED_LIMITATIONS
+    elif value.evidence_class is CalculationEvidenceClass.SIMULATION and value.owner_id == "T1":
         assumptions = ("Fixed finite declared state space and constant positive integer resample size.",
                        "X_t conditional on p_t is Multinomial(n,p_t); p_(t+1)=X_t/n.",
                        "No mutation, migration, independent real data or external corrective input.")
@@ -809,17 +821,46 @@ def _closure(payload, value, bundle, provenance):
     payload["derived_metrics"].setdefault("closure_exposure", {})["direct"] = target
 
 
+def _scenario_text(value, *, nonempty=False):
+    _require(type(value) is str and "\x00" not in value,
+             "scenario labels require literal text without NUL")
+    _require(not nonempty or bool(value.strip()), "scenario meaning must be explicit nonempty text")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        raise ReportAssemblyError("scenario labels require valid UTF-8") from None
+
+
+def _scenario_pairs(value):
+    _require(type(value) is tuple and 1 <= len(value) <= 4096,
+             "scenario distributions require bounded immutable state pairs")
+    for pair in value:
+        _require(type(pair) is tuple and len(pair) == 2,
+                 "scenario distributions require literal immutable state pairs")
+        _scenario_text(pair[0])
+        _number(pair[1], "scenario probability", minimum=0, maximum=1)
+    _require(len({state for state, probability in value}) == len(value),
+             "scenario states must be unique immutable pairs")
+    return tuple(sorted((state, float(probability)) for state, probability in value))
+
+
 def _simulation_inputs(value):
     _typed(value, ResamplingInput, "resampling input")
     _scope(value.scope, None)
+    _require(len(value.scope.dataset_versions) == 1, "scenario inputs require one explicit version label")
+    _typed(value.representation, RepresentationDescriptor, "scenario representation")
     _representation(value.representation)
     _policy(value.numerical_policy)
+    _require(value.numerical_policy == NumericalPolicy(), "scenario numerical policy differs from its computation owner")
     for table in (value.supplied_distribution, value.effective_distribution):
-        _require(type(table) is tuple and all(type(pair) is tuple and len(pair) == 2 and type(pair[0]) is str for pair in table), "scenario distributions require literal immutable state pairs")
-        _require(type(table) is tuple and len({state for state, probability in table}) == len(table), "scenario states must be unique immutable pairs")
-        for state, probability in table:
-            _require(type(state) is str, "scenario state requires literal text")
-            _number(probability, "scenario probability", minimum=0, maximum=1)
+        _require(_scenario_pairs(table) == table, "scenario state pairs must retain canonical ordering")
+    _require(type(value.probability_corrections) is tuple and
+             len(value.probability_corrections) == len(value.supplied_distribution),
+             "scenario correction entries require a complete immutable tuple")
+    for pair in value.probability_corrections:
+        _require(type(pair) is tuple and len(pair) == 2, "scenario correction entries require immutable pairs")
+        _scenario_text(pair[0])
+        _number(pair[1], "scenario probability correction")
     return {"supplied_distribution": [{"state_id": state, "probability": probability} for state, probability in value.supplied_distribution],
             "effective_distribution": [{"state_id": state, "probability": probability} for state, probability in value.effective_distribution],
             "supplied_probability_total": value.supplied_probability_total, "effective_probability_total": value.effective_probability_total,
@@ -837,6 +878,8 @@ def _closed_simulation(payload, value):
     _require(value.method_version == "closed_categorical_v1", "unsupported scenario model version")
     _require(value.assumptions == ("Fixed finite declared state space and constant positive integer resample size.", "X_t conditional on p_t is Multinomial(n,p_t); p_(t+1)=X_t/n.", "No mutation, migration, independent real data or external corrective input."), "scenario assumptions cannot be replaced or removed")
     expected = type(value) is ExpectedDiversityResult
+    _require(value.limitations == (ExpectedDiversityResult if expected else ResamplingSimulation).__dataclass_fields__["limitations"].default,
+             "scenario limitations cannot be replaced or removed")
     _require(value.method == ("analytic_expectation" if expected else "sampled_path"), "scenario result type and method disagree")
     target = _base("simulations.closed_resampling", _scope(inputs.scope, None),
         representation=_representation(inputs.representation), denominator=value.resample_size,
@@ -893,6 +936,259 @@ def _closed_simulation(payload, value):
         target["support_trajectories"] = trajectories
         target["limitations"] = list(dict.fromkeys(target["limitations"] + ["Extinction events are not separately inferred by the assembly adapter; inspect the supplied sampled support paths."]))
     payload["simulations"]["closed_resampling"] = target
+
+
+def _scenario_events(values):
+    _require(type(values) is tuple and len(values) <= 1000000,
+             "scenario events require bounded immutable typed rows")
+    rows = []
+    for value in values:
+        _typed(value, StateTransitionEvent, "scenario transition event")
+        _scenario_text(value.state_id)
+        rows.append({"replicate_index": value.replicate_index, "step": value.step,
+                     "state_id": value.state_id})
+    return rows
+
+
+def _scenario_paths(value):
+    _require(type(value.sampled_paths) is tuple and
+             len(value.sampled_paths) == value.simulation_replicates,
+             "scenario paths require the declared immutable replicate tuple")
+    paths = []
+    for path in value.sampled_paths:
+        _typed(path, ResamplingReplicate, "sampled replicate")
+        _require(type(path.generations) is tuple and
+                 len(path.generations) == value.simulation_horizon + 1,
+                 "scenario generations require the declared immutable step tuple")
+        generations = []
+        for generation in path.generations:
+            _typed(generation, SampledGeneration, "sampled generation")
+            _require(type(generation.state_frequencies) is tuple and type(generation.support) is tuple and
+                     (generation.state_counts is None or type(generation.state_counts) is tuple),
+                     "scenario generation vectors must remain immutable")
+            generations.append({"step": generation.step,
+                "state_counts": None if generation.state_counts is None else list(generation.state_counts),
+                "state_frequencies": list(generation.state_frequencies), "support": list(generation.support),
+                "support_size": generation.support_size, "gini_simpson_diversity": generation.gini_simpson_diversity})
+        paths.append({"replicate_index": path.replicate_index, "generations": generations})
+    return paths
+
+
+_SCENARIO_SAFE_TEXT = frozenset(
+    REOPENED_ASSUMPTIONS + REOPENED_LIMITATIONS +
+    ReopeningSimulation.__dataclass_fields__["limitations"].default +
+    ScenarioComparison.__dataclass_fields__["limitations"].default +
+    tuple(text for reopened in (False, True) for row in _scenario_assumptions(reopened) for text in row.values()) + (
+        "Execution records assembly of explicitly supplied scenario results; the input assessment is unchanged and no scenario ran during assembly.",
+        "Conditional simulated scenarios do not establish production causality or an empirical intervention effect.",
+        "Input eligibility describes the declared scenario; execution status records the supplied results.",
+        "No successful scenario execution was supplied; no empirical intervention effect is established.",
+        "Scenario declarations or failed execution do not provide measured empirical outcomes.",
+        "supplied_explicit_scenario_experiment", "analytic_mixture; constant external distribution and weight",
+        "explicit_scenario_probability_vector",
+    )
+)
+
+
+def _reopened_simulation(value):
+    _typed(value, ReopeningSimulation, "reopened scenario")
+    inputs, external = value.inputs, value.external_inputs
+    normalization, external_normalization = _simulation_inputs(inputs), _simulation_inputs(external)
+    _require(value.model_name == "reopened_resampling" and value.method_version == "reopened_categorical_constant_v1" and
+             value.method == "sampled_path" and value.experimental is True and
+             value.evidence_class is CalculationEvidenceClass.SIMULATION,
+             "reopened model or evidence identity differs from its computation owner")
+    _require(value.assumptions == REOPENED_ASSUMPTIONS and
+             value.limitations == ReopeningSimulation.__dataclass_fields__["limitations"].default,
+             "reopened assumptions and limitations cannot be replaced or removed")
+    _require(external.scope == inputs.scope and external.representation == inputs.representation and
+             external.numerical_policy == inputs.numerical_policy,
+             "external input is detached from its declared scenario context")
+    _require(type(value.trajectory_metadata) is tuple and len(value.trajectory_metadata) == 4,
+             "reopened trajectory metadata is incomplete")
+    _metadata(value.mixture_metadata, name="mixed_source_probability", scope=inputs.scope,
+              representation=inputs.representation, owner="T5", evidence=CalculationEvidenceClass.SIMULATION,
+              unit="ratio", formula="F-017")
+    for metadata, (name, formula, unit) in zip(value.trajectory_metadata,
+            (("state_count", None, "sampled_records"), ("state_frequency", "F-001", "ratio"),
+             ("support_size", "F-002", "states"), ("gini_simpson_diversity", "F-003", "ratio"))):
+        _metadata(metadata, name=name, scope=inputs.scope, representation=inputs.representation,
+                  owner="T5", evidence=CalculationEvidenceClass.SIMULATION, unit=unit, formula=formula)
+    _require(type(value.mixed_sources) is tuple and
+             len(value.mixed_sources) == value.simulation_horizon * value.simulation_replicates,
+             "reopened source rows require complete immutable transition coverage")
+    sources = []
+    for source in value.mixed_sources:
+        _typed(source, ReopeningSource, "reopening source")
+        _typed(source.inputs, ResamplingInput, "reopening source input")
+        _require(source.inputs.scope == inputs.scope and source.inputs.representation == inputs.representation and
+                 source.inputs.numerical_policy == inputs.numerical_policy,
+                 "mixed source is detached from its scenario context")
+        _require(type(source.possible_reentry_states) is tuple,
+                 "possible re-entry states require immutable identities")
+        sources.append({"replicate_index": source.replicate_index, "step": source.step,
+            "input_normalization": _simulation_inputs(source.inputs), "input_basis": source.inputs.input_basis,
+            "possible_reentry_states": list(source.possible_reentry_states)})
+    target = _base("simulations.external_reopening", _scope(inputs.scope, None),
+        representation=_representation(inputs.representation), denominator=value.resample_size,
+        assumptions=value.assumptions, limitations=value.limitations, status="experimental")
+    target.update({"model": value.model_name, "model_version": value.method_version, "method": value.method,
+        "resample_size": value.resample_size, "initial_distribution": normalization["effective_distribution"],
+        "input_normalization": normalization,
+        "external_input_distribution": external_normalization["effective_distribution"],
+        "external_input_normalization": external_normalization,
+        "parameters": {"resample_size": value.resample_size, "simulation_horizon": value.simulation_horizon,
+            "random_seed": value.random_seed, "simulation_replicates": value.simulation_replicates,
+            "rng_name": value.rng_name, "numpy_version": value.numpy_version,
+            "replicate_schedule": value.replicate_schedule, "state_order": list(value.state_order),
+            "input_basis": inputs.input_basis, "reopening_weight": value.reopening_weight,
+            "external_input_distribution": external_normalization["effective_distribution"],
+            "numerical_policy": _policy(inputs.numerical_policy)},
+        "sampled_paths": _scenario_paths(value), "mixed_sources": sources,
+        "state_reentry_events": _scenario_events(value.state_reentry_events),
+        "extinction_events": _scenario_events(value.extinction_events),
+        "support_trajectory": [{"replicate_index": path.replicate_index,
+            "support_sizes": [generation.support_size for generation in path.generations]}
+            for path in value.sampled_paths],
+        "diversity_trajectory": [{"replicate_index": path.replicate_index,
+            "gini_simpson_diversities": [generation.gini_simpson_diversity for generation in path.generations]}
+            for path in value.sampled_paths]})
+    return target
+
+
+def _scenario_comparison(value):
+    _typed(value, ScenarioComparison, "scenario comparison")
+    _require(type(value.rows) is tuple and type(value.initial_reachability) is tuple,
+             "scenario comparison requires immutable evidence rows")
+    _require(value.difference_direction == "reopened_minus_closed" and
+             value.limitations == ScenarioComparison.__dataclass_fields__["limitations"].default,
+             "scenario comparison direction or limitations were altered")
+    rows, reachability = [], []
+    for row in value.rows:
+        _typed(row, ScenarioComparisonRow, "scenario comparison row")
+        rows.append({field.name: getattr(row, field.name) for field in fields(ScenarioComparisonRow)})
+    for item in value.initial_reachability:
+        _typed(item, ScenarioInitialReachability, "initial scenario reachability")
+        _require(type(item.reachable_states) is tuple and type(item.possible_reentry_states) is tuple,
+                 "initial scenario reachability requires immutable state identities")
+        reachability.append({"model_name": item.model_name, "reachable_states": list(item.reachable_states),
+            "possible_reentry_states": list(item.possible_reentry_states), "timing": item.timing})
+    return {"rows": rows, "initial_reachability": reachability,
+            "difference_direction": value.difference_direction, "limitations": list(value.limitations)}
+
+
+def _scenario_experiment(payload, experiment):
+    """Bind supplied immutable evidence without invoking any computational owner."""
+    _typed(experiment, ScenarioExperimentResult, "scenario experiment")
+    request = experiment.request
+    _typed(request, ScenarioExperimentRequest, "scenario request")
+    _require(type(request.scenarios) is tuple and 1 <= len(request.scenarios) <= 2 and
+             type(experiment.selected_results) is tuple and
+             len(experiment.selected_results) == len(request.scenarios),
+             "scenario experiment requires its explicitly selected immutable model results")
+    _require(experiment.experimental is True and experiment.evidence_class is CalculationEvidenceClass.SIMULATION and
+             experiment.scenario_schedule == "reset_same_seed_per_model",
+             "scenario experiment classification or replay schedule was altered")
+    _number(request.seed, "scenario experiment seed", integer=True, minimum=0, maximum=2**53 - 1)
+    _require(type(payload["run"]["random_seed"]) is int and payload["run"]["random_seed"] == request.seed,
+             "run seed differs from the supplied scenario experiment")
+    _scenario_text(request.state_semantics, nonempty=True)
+    _scope(request.scope, None)
+    _typed(request.representation, RepresentationDescriptor, "scenario request representation")
+    _representation(request.representation)
+    _require(len(request.scope.dataset_versions) == 1, "scenario request requires one explicit version label")
+    context = CalculationScope(request.scope.dataset_versions, tuple(sorted(request.scope.included_record_keys)),
+        tuple(sorted(request.scope.excluded_record_keys)), request.scope.denominator_basis, request.scope.scope_id)
+    selected, common, cells, closed = set(), None, 0, None
+    for scenario, result in zip(request.scenarios, experiment.selected_results):
+        _typed(scenario, ScenarioParameters, "scenario parameters")
+        _require(type(scenario.model_name) is str and scenario.model_name in ("closed_resampling", "reopened_resampling") and
+                 scenario.model_name not in selected, "scenario models must be supported and unique")
+        selected.add(scenario.model_name)
+        _typed(result, ResamplingSimulation if scenario.model_name == "closed_resampling" else ReopeningSimulation,
+               "selected scenario result")
+        _number(scenario.resample_size, "scenario resample size", integer=True, minimum=1, maximum=2147483647)
+        _number(scenario.simulation_horizon, "scenario horizon", integer=True, minimum=0, maximum=10000)
+        _number(scenario.simulation_replicates, "scenario replicates", integer=True, minimum=1, maximum=10000)
+        pairs = _scenario_pairs(scenario.state_distribution)
+        basis = (pairs, scenario.resample_size, scenario.simulation_horizon, scenario.simulation_replicates)
+        _require(common is None or common == basis, "selected scenarios disagree on their common declarations")
+        common = basis
+        cells += len(pairs) * (scenario.simulation_horizon + 1) * scenario.simulation_replicates
+        _require(cells <= 1000000, "scenario experiment exceeds its combined evidence bound")
+        _typed(result.inputs, ResamplingInput, "selected scenario input")
+        _require(result.inputs.scope == context and result.inputs.representation == request.representation and
+                 result.inputs.supplied_distribution == pairs and
+                 result.inputs.input_basis == "explicit_supplied_state_probability_vector",
+                 "scenario result is detached from its supplied request input or context")
+        _require((result.resample_size, result.simulation_horizon, result.simulation_replicates, result.random_seed) ==
+                 (scenario.resample_size, scenario.simulation_horizon, scenario.simulation_replicates, request.seed),
+                 "scenario result parameters differ from its explicit request")
+        _require(type(result.state_order) is tuple and result.state_order == tuple(state for state, probability in pairs),
+                 "scenario result state order differs from the supplied request")
+        _require(result.rng_name == "numpy.random.Generator(PCG64)" and
+                 result.sampler_algorithm == "sequential_binomial_complement_v1" and
+                 result.replicate_schedule == "replicate_major_step_major" and
+                 result.state_schedule == "ascending_unicode_state_id_skip_zero",
+                 "scenario replay identity differs from its computation owner")
+        if scenario.model_name == "closed_resampling":
+            _require(scenario.external_input_distribution is None and scenario.reopening_weight is None,
+                     "closed scenario cannot carry external input declarations")
+            _require("closed_resampling" not in payload["simulations"],
+                     "one closed-resampling report slot cannot hold two different method results")
+            _scenario_paths(result)
+            _require(type(result.trajectory_metadata) is tuple, "scenario trajectory metadata must remain immutable")
+            _closed_simulation(payload, result)
+            target = payload["simulations"]["closed_resampling"]
+            target["limitations"] = list(result.limitations)
+            closed = result
+        else:
+            external_pairs = _scenario_pairs(scenario.external_input_distribution)
+            _number(scenario.reopening_weight, "scenario reopening weight", minimum=0, maximum=1)
+            _typed(result.external_inputs, ResamplingInput, "external scenario input")
+            _require(result.external_inputs.supplied_distribution == external_pairs and
+                     result.external_inputs.input_basis == "explicit_supplied_state_probability_vector" and
+                     result.reopening_weight == scenario.reopening_weight,
+                     "reopened source or weight differs from its explicit request")
+            target = _reopened_simulation(result)
+            payload["simulations"]["external_reopening"] = target
+        target["state_semantics"] = request.state_semantics
+        target["assumption_table"] = _scenario_assumptions(scenario.model_name == "reopened_resampling")
+        target["parameters"].update({"sampler_algorithm": result.sampler_algorithm,
+            "state_schedule": result.state_schedule, "scenario_schedule": experiment.scenario_schedule})
+    if closed is None:
+        _require(experiment.closed_analytic_baseline is None and experiment.baseline_basis is None and
+                 type(experiment.closed_extinction_events) is tuple and not experiment.closed_extinction_events,
+                 "an unselected closed model cannot contribute baseline or transition events")
+    else:
+        baseline = experiment.closed_analytic_baseline
+        _typed(baseline, ExpectedDiversityResult, "closed analytic baseline")
+        _typed(baseline.inputs, ResamplingInput, "closed analytic baseline input")
+        _require(experiment.baseline_basis == "closed_sampled_effective_distribution" and
+                 baseline.inputs.scope == closed.inputs.scope and baseline.inputs.representation == closed.inputs.representation and
+                 baseline.inputs.supplied_distribution == closed.inputs.effective_distribution and
+                 baseline.inputs.effective_distribution == closed.inputs.effective_distribution and
+                 baseline.inputs.input_basis == "explicit_supplied_state_probability_vector" and
+                 baseline.resample_size == closed.resample_size and baseline.simulation_horizon == closed.simulation_horizon,
+                 "closed analytic baseline differs from the sampled effective input basis")
+        _require(type(baseline.expected_diversity) is tuple and type(baseline.numerical_underflow_steps) is tuple,
+                 "closed analytic baseline arrays must remain immutable")
+        baseline_payload = {"simulations": {}}
+        _closed_simulation(baseline_payload, baseline)
+        analytic = baseline_payload["simulations"]["closed_resampling"]
+        analytic["baseline_basis"] = experiment.baseline_basis
+        payload["simulations"]["closed_resampling"].update({"analytic_baseline": analytic,
+            "extinction_events": _scenario_events(experiment.closed_extinction_events)})
+    _require((experiment.comparison is not None) == (len(selected) == 2),
+             "scenario comparison must correspond exactly to two selected models")
+    if experiment.comparison is not None:
+        _typed(experiment.comparison, ScenarioComparison, "scenario comparison")
+        _require(type(experiment.comparison.rows) is tuple and
+                 len(experiment.comparison.rows) == common[3] * (common[2] + 1) and
+                 type(experiment.comparison.initial_reachability) is tuple and
+                 len(experiment.comparison.initial_reachability) == 2,
+                 "scenario comparison must retain complete bounded row and model coverage")
+        payload["simulations"]["external_reopening"]["scenario_comparison"] = _scenario_comparison(experiment.comparison)
 
 
 def _extinction(payload, values):
@@ -1136,7 +1432,11 @@ def _capabilities(payload, bundle, operations, failures, lineage=None):
         if key is CapabilityKey.DATASET_LONGITUDINAL and completed:
             entry["notes"].append("Executed only the supplied explicit-pair support/diversity comparison; no adjacent-pair discovery, lineage/provenance trajectory or relative-change calculation.")
         if key is CapabilityKey.INTERVENTION_SIMULATION and completed:
-            entry["notes"].append("Execution records assembly of explicitly supplied closed-model results; the input assessment is unchanged and no scenario ran during assembly.")
+            entry["notes"] = [
+                "Input eligibility describes the declared scenario; execution status records the supplied results."
+                if note == "Experimental scenario eligibility only; no simulation has run." else note
+                for note in entry["notes"]]
+            entry["notes"].append("Execution records assembly of explicitly supplied scenario results; the input assessment is unchanged and no scenario ran during assembly.")
         matrix[key.value] = entry
     payload["capabilities"] = matrix
     payload["observability"] = {"maximum_level": bundle.observability.maximum_level,
@@ -1449,6 +1749,7 @@ def assemble_report(bundle: BundleValidationResult, *, run: dict,
                     shared_ancestry: SharedAncestryDependence | None = None,
                     expected_diversity: ExpectedDiversityResult | None = None,
                     resampling: ResamplingSimulation | None = None,
+                    scenario_experiment: ScenarioExperimentResult | None = None,
                     extinction: tuple[ExtinctionProbabilityResult, ...] = (),
                     family_errors: tuple[FamilyFailure, ...] = (),
                     longitudinal: LongitudinalResult | None = None,
@@ -1534,6 +1835,9 @@ def assemble_report(bundle: BundleValidationResult, *, run: dict,
     if resampling is not None:
         _closed_simulation(payload, resampling)
         operations["intervention_simulation"].append("supplied_sampled_closed_resampling")
+    if scenario_experiment is not None:
+        _scenario_experiment(payload, scenario_experiment)
+        operations["intervention_simulation"].append("supplied_explicit_scenario_experiment")
     if extinction:
         _extinction(payload, extinction)
         operations["intervention_simulation"].append("supplied_one_step_extinction_marginals")
@@ -2124,14 +2428,18 @@ def _disclosures(payload):
                 ["No available explicitly supplied lineage interval covers a nonempty completed target partition."],
                 ["Supply lineage closure bounds from the same explicit lineage result."],
                 "Unavailable intervals are never replaced by a guessed numeric value.")
-    if payload["simulations"]:
+    scenario_capability = payload["capabilities"].get("intervention_simulation", {})
+    if (payload["simulations"] or scenario_capability.get("status") == "experimental" or
+            scenario_capability.get("execution_status") in ("completed", "partial", "failed", "deferred")):
         _disclosure_unavailable(
             payload, "empirical_intervention_effect", "T5", "intervention_simulation",
-            "An empirical intervention effect is unavailable from supplied scenarios.",
+            "An empirical intervention effect is unavailable from supplied scenarios." if payload["simulations"] else
+            "No successful scenario execution was supplied; no empirical intervention effect is established.",
             ["R_CONTROLLED_EMPIRICAL_DESIGN_MISSING"],
-            ["Supplied scenario outputs are conditional mathematical or stochastic results."],
+            ["Supplied scenario outputs are conditional mathematical or stochastic results." if payload["simulations"] else
+             "Scenario declarations or failed execution do not provide measured empirical outcomes."],
             ["A controlled empirical intervention design with measured comparable outcomes."],
-            "A closed-resampling scenario does not establish production causality or an intervention effect.",
+            "Conditional simulated scenarios do not establish production causality or an empirical intervention effect.",
         )
     missing_rows = provenance.get("missing_provenance_count")
     row_coverage = provenance.get("provenance_row_coverage")
@@ -3340,7 +3648,7 @@ def _privacy_alias(protection, domain, value):
 
 def _privacy_text(value, field, *, mode, protection):
     """Keep reviewed owner prose; treat caller-authored prose as private data."""
-    if value in _PRIVACY_SAFE_TEXT or value in _LONGITUDINAL_SAFE_TEXT:
+    if value in _PRIVACY_SAFE_TEXT or value in _LONGITUDINAL_SAFE_TEXT or value in _SCENARIO_SAFE_TEXT:
         return value
     if field == "basis_fields" and any(value == definition.path for definition in FIELD_REGISTRY):
         return value
@@ -3499,9 +3807,10 @@ def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection,
     version_fields = ("dataset_version", "dataset_versions", "version_order", "earlier_version", "later_version",
                       "target_dataset_version", "loaded_dataset_versions")
     state_fields = ("state_id", "state_ids", "missing_state_id", "state_order", "source_state", "source_states", "target_state",
+                    "reachable_states", "possible_reentry_states",
                     "original_earlier_support", "original_later_support", "harmonized_earlier_support", "harmonized_later_support", "support")
     identity_fields = ("run_id", "scope_id", "group_id", "representation_name", "representation_source", "representation_version",
-                       "binning_or_mapping_rule", "field_name", "state_meaning", "earlier_state_semantics", "later_state_semantics",
+                       "binning_or_mapping_rule", "field_name", "state_meaning", "state_semantics", "earlier_state_semantics", "later_state_semantics",
                        "harmonized_state_semantics", "schema_fields", "source_field", "target_field", "fields_affected")
     if field in ("snapshot_id", "comparison_id") and "longitudinal_execution" in path:
         return value
@@ -3510,7 +3819,7 @@ def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection,
     if field in state_fields or (field == "value" and len(path) > 1 and path[-2] in ("extinct_states", "added_states", "retained_states", "tail_states")):
         return _privacy_alias(protection, "state_id", value) if mode == "redacted" else value
     if field in identity_fields:
-        domain = "state_semantics" if field in ("state_meaning", "earlier_state_semantics", "later_state_semantics", "harmonized_state_semantics") else "schema_field" if field in ("field_name", "schema_fields", "source_field", "target_field", "fields_affected") else field
+        domain = "state_semantics" if field in ("state_meaning", "state_semantics", "earlier_state_semantics", "later_state_semantics", "harmonized_state_semantics") else "schema_field" if field in ("field_name", "schema_fields", "source_field", "target_field", "fields_affected") else field
         return _privacy_alias(protection, domain, value) if mode == "redacted" else value
     if field in ("file_hash", "config_hash") or contract.get("pattern") == "^[0-9a-f]{64}$":
         return value
@@ -3638,7 +3947,7 @@ def build_run_metadata(*, options, run_id: str, operation="python_api", started_
     if type(run_id) is not str or not run_id or "\x00" in run_id:
         raise ValueError("run identifier must be nonempty literal text")
     command = None if operation == "python_api" else "rit " + operation + (" --strict" if options.strict_mode else "") + (" --redacted" if options.privacy_mode == "redacted" else "")
-    result = {"run_id": run_id, "toolkit_version": __version__, "report_schema_version": "1.2",
+    result = {"run_id": run_id, "toolkit_version": __version__, "report_schema_version": "1.3",
               "started_at": started_at, "completed_at": completed_at, "duration_seconds": duration_seconds,
               "python_version": python_version, "platform": platform, "command": command,
               "config_hash": phase4_config_hash(options), "random_seed": random_seed,

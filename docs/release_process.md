@@ -1,6 +1,13 @@
 # Development and Release Verification
 
-## Current Phase 6A candidate boundary
+## Current Phase 6B implementation boundary
+
+Phase 6B Step 4 integrates explicit experiment reports in schema 1.3 while the
+package remains `0.1.0.dev5`. Current focused evidence is recorded in
+[the Step 4 record](../PHASE_6B_STEP_4.md). The dev6 candidate, supported matrix
+and installed simulation example checks belong to later planned steps.
+
+## Accepted Phase 6A candidate boundary
 
 Phase 6A Step 9 verifies development version `0.1.0.dev5`, with executable
 report schema 1.2 for every report. Ordered series selection, distribution,
@@ -21,10 +28,10 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The existing source check advances its single reference to accepted Phase 6A
-Step 8 commit `69e4e05ea19910290d38738d6ec83e3ffcdde091`. During Step 9 it permits
-only the exact dev4-to-dev5 version edits in `pyproject.toml` and the package
-root version declaration. It protects 73 other product files.
+The existing source check uses accepted Phase 6B Step 3 commit
+`2e0805dba85754d78854750f692ac02ddaf44a8a`. Step 4 permits only `result.py`,
+the report assembly and Markdown owners, and the canonical/packaged report
+schema pair. It protects the numerical kernels and all other product files.
 It retains the exact product file inventory and
 rejects unrelated runtime, package-metadata and canonical Hero changes.
 The frozen Phase 0 specification hashes are unchanged. Sixteen frozen

@@ -1,9 +1,9 @@
 # Phase 6B simulation contract
 
-Status: Step 3 implements explicit experiment requests, execution and comparison,
-2026-09-30, alongside the Step 2 pure mixture and reopened sampler.
-Configuration fields and report schema 1.3 remain staged.
-The current package version/schema are dev5/1.2. See `PHASE_6B_PLAN.md` for scope,
+Status: Step 4 implements typed report assembly, schema 1.3, JSON/Markdown and
+privacy, 2026-09-30, alongside the earlier pure kernels and experiment coordinator.
+Configuration and CLI activation remain staged.
+The current package version/schema are dev5/1.3. See `PHASE_6B_PLAN.md` for scope,
 owners and implementation order.
 
 ## 1. Mathematical and input boundary
@@ -123,8 +123,8 @@ Implemented result names are `inputs`, `external_inputs`, `mixed_inputs`,
 `mixed_sources`, `state_reentry_events`, `extinction_events`, `mixture_metadata`
 and `trajectory_metadata`. Each `ReopeningSource` has `replicate_index`, `step`,
 `inputs` (its source normalization record) and `possible_reentry_states`.
-`StateTransitionEvent` identifies one replicate/step/state. These internal
-Python types do not activate the staged wire fields in section 6.
+`StateTransitionEvent` identifies one replicate/step/state. Explicit report
+assembly maps these internal Python types to the wire fields in section 6.
 
 Reuse `SampledGeneration` and `ResamplingReplicate` where their meaning is
 unchanged. Step zero retains the supplied effective initial frequencies and
@@ -234,8 +234,8 @@ contains `replicate_index`, `step`, both `closed_support_size` and
 `diversity_difference`. Rows use replicate-major, step-major order including
 step zero. The two `ScenarioInitialReachability` entries are in closed/reopened
 order and retain `model_name`, `reachable_states`, `possible_reentry_states`
-and `timing=before_first_draw`. These are internal typed fields, not schema 1.2
-report additions. Request context, caller text, state identities and nested
+and `timing=before_first_draw`. Section 6 defines their schema 1.3 report mapping.
+Request context, caller text, state identities and nested
 results are excluded from the new parent objects' representations.
 
 Assembly validates that supplied evidence is bound to that request and has
@@ -294,11 +294,11 @@ ordinary Hero and longitudinal examples keep their existing behavior. No
 standalone server, remote source retrieval or experiment-scheduling service is
 introduced.
 
-## 6. Staged canonical report
+## 6. Canonical report
 
-`result.py` remains the schema and field-registry owner. Generate schema 1.3 and
-its packaged copy together in Step 4. Default `simulations` remains `{}`. Extend
-`assemble_report` with an explicit optional `scenario_experiment` argument. It
+`result.py` remains the schema and field-registry owner. Schema 1.3 and
+its packaged copy are generated together. Default `simulations` remains `{}`.
+`assemble_report` accepts an explicit optional `scenario_experiment` argument. It
 conflicts with legacy `expected_diversity`/`resampling` arguments if they would
 occupy the same closed slot; reject rather than overwrite. Legacy calls retain
 their existing result shape. Tail extinction remains a separately supplied
@@ -326,6 +326,25 @@ T2 analytic result, without automatic tail selection.
 | `...scenario_comparison` | Only when both models were requested: identities, initial reachability and per-replicate/step comparison rows |
 | `...assumption_table` | Fixed rule rows describing declarations and their unverified external-quality limitation |
 
+The implemented nested row fields are:
+
+| Collection | Row fields |
+|---|---|
+| `mixed_sources` | `replicate_index`, `step`, `input_normalization`, `input_basis`, `possible_reentry_states` |
+| `support_trajectory` | `replicate_index`, `support_sizes` |
+| `diversity_trajectory` | `replicate_index`, `gini_simpson_diversities` |
+| `state_reentry_events`, `extinction_events` | `replicate_index`, `step`, `state_id` |
+| `assumption_table` | `assumption`, `declaration`, `limitation` |
+
+`scenario_comparison` retains `difference_direction`, `initial_reachability`,
+`rows` and `limitations`, using the typed comparison field names in section 4.
+Its reachability entries retain `timing=before_first_draw`. Sampled experiment
+parameters also retain `sampler_algorithm`, `state_schedule` and
+`scenario_schedule`. The closed experiment adds `state_semantics`,
+`assumption_table`, `extinction_events` and `analytic_baseline` to its existing
+sampled shape. The baseline is a separate closed analytic envelope with
+`baseline_basis=closed_sampled_effective_distribution` and its own input record.
+
 Here `...` means `simulations.external_reopening`. Required top-level envelope
 metadata includes scope, representation, assumptions, limitations, trace T5,
 evidence class `simulation` and status `experimental`. Do not create new report
@@ -340,7 +359,7 @@ does not acquire lambda/r parameters. Each model remains valid without the
 other. Standalone reopened output omits `scenario_comparison`; it does not
 silently execute a control scenario.
 
-Use T5-specific structural/semantic validation while keeping the current closed
+T5-specific structural/semantic validation retains the current closed
 and T2 prohibitions on external inputs. Check count/frequency/support consistency,
 transition source arithmetic, event conditions, complete event coverage,
 replicate/step coverage and comparison binding. These are bounded checks of

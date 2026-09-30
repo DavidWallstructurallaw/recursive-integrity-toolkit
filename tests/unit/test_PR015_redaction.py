@@ -39,7 +39,7 @@ def phase4_step4_private_report(tmp_path, *, scenario=False, duplicates=False, p
     distribution = calculate_state_distribution(selected)
     distributions = (distribution,)
     nullable = ('started_at', 'completed_at', 'duration_seconds', 'python_version', 'platform', 'command', 'config_hash', 'random_seed')
-    run = {'run_id': 'RUN_SENTINEL', 'toolkit_version': '0.1.0.dev2', 'report_schema_version': '1.2', **dict.fromkeys(nullable), 'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0, 'deterministic': True, 'privacy_mode': 'standard', 'run_status': 'complete', 'null_reasons': {key: 'Test supplies no execution metadata.' for key in nullable}}
+    run = {'run_id': 'RUN_SENTINEL', 'toolkit_version': '0.1.0.dev2', 'report_schema_version': '1.3', **dict.fromkeys(nullable), 'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0, 'deterministic': True, 'privacy_mode': 'standard', 'run_status': 'complete', 'null_reasons': {key: 'Test supplies no execution metadata.' for key in nullable}}
     kwargs = {}
     if pair:
         from recursive_integrity_toolkit.metrics.diversity import compare_support
@@ -49,6 +49,8 @@ def phase4_step4_private_report(tmp_path, *, scenario=False, duplicates=False, p
         a, b = (distribution.unweighted, later.unweighted)
         kwargs['comparison'] = compare_support(a, b, context=ExplicitPairContext(a.scope, b.scope, a.representation, b.representation, bundle.version_order), earlier_state_semantics='SEMANTICS_SENTINEL', later_state_semantics='SEMANTICS_SENTINEL')
     if scenario:
+        run['random_seed'] = 17
+        del run['null_reasons']['random_seed']
         from recursive_integrity_toolkit.metrics.resampling import simulate_closed_resampling
         kwargs['resampling'] = simulate_closed_resampling({labels[0]: 1 / 2, labels[2]: 1 / 4, labels[3]: 1 / 4}, resample_size=4, steps=2, seed=17, replicates=2, scope=distribution.unweighted.scope, representation=distribution.unweighted.representation)
     if duplicates:

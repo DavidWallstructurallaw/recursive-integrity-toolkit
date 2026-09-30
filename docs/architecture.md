@@ -1,6 +1,29 @@
 # Architecture
 
-## Current Phase 6B Step 3 additions
+## Current Phase 6B Step 4 additions
+
+Report schema 1.3 admits explicit experiment evidence through
+`assemble_report(..., scenario_experiment=...)`. The existing assembly owner
+checks the typed request/result binding and adapts selected closed/reopened
+results. `result.py` owns the schema and bounded cross-field validation, including
+source arithmetic, count/frequency/support identities, complete transition
+events, analytic baseline basis and comparison binding. These layers validate
+supplied evidence without invoking a sampler or rerunning an experiment.
+
+T5 results appear only under `simulations.external_reopening`. Closed results
+retain their existing slot, with an optional separate analytic baseline and
+explicit transition losses. Schema generation updates the canonical file and
+packaged copy together. Default simulations remain empty. The package version
+remains `0.1.0.dev5`; the CLI/config activation and dev6 candidate are later steps.
+
+Privacy views protect every new state-identity path with consistent aliases,
+preserving numerical positions and event relationships across both models.
+Record-identity omission does not remove semantic states. Markdown uses bounded
+scenario tables with omission counts and compact support/diversity trajectories;
+JSON retains the full admitted evidence. Both expose experimental simulation
+status, assumptions and the unavailable empirical intervention conclusion.
+
+## Accepted Phase 6B Step 3 additions
 
 `run_scenario_experiment` composes explicitly selected closed/reopened kernels
 in the existing `metrics/resampling.py` owner. Its inert immutable request uses

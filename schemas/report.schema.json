@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://recursive-integrity-toolkit.example/schemas/report.schema.json",
-  "title": "Recursive Integrity Toolkit canonical report 1.2",
-  "description": "Phase 6A public contract with referenced longitudinal and bounded lineage evidence. Product metadata and five analytical evidence classes remain separate.",
+  "title": "Recursive Integrity Toolkit canonical report 1.3",
+  "description": "Phase 6B public contract with explicit experimental scenarios, referenced longitudinal and bounded lineage evidence. Product metadata and five analytical evidence classes remain separate.",
   "type": "object",
   "properties": {
     "run": {
@@ -19,7 +19,7 @@
           "pattern": "^[^\\u0000]*$"
         },
         "report_schema_version": {
-          "const": "1.2"
+          "const": "1.3"
         },
         "started_at": {
           "anyOf": [
@@ -50078,7 +50078,15 @@
               ]
             },
             "parameters": {
-              "$ref": "#/$defs/simulation_parameters"
+              "$ref": "#/$defs/simulation_parameters",
+              "properties": {
+                "reopening_weight": {
+                  "type": "null"
+                },
+                "external_input_distribution": {
+                  "maxItems": 0
+                }
+              }
             },
             "initial_distribution": {
               "type": "array",
@@ -50212,6 +50220,17 @@
             },
             "input_normalization": {
               "$ref": "#/$defs/input_normalization"
+            },
+            "state_semantics": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[^\\u0000]*$"
+            },
+            "analytic_baseline": {
+              "$ref": "#/$defs/closed_analytic_baseline"
+            },
+            "assumption_table": {
+              "$ref": "#/$defs/scenario_assumption_table"
             }
           },
           "required": [
@@ -50441,7 +50460,15 @@
               "const": "analytic_extinction"
             },
             "parameters": {
-              "$ref": "#/$defs/simulation_parameters"
+              "$ref": "#/$defs/simulation_parameters",
+              "properties": {
+                "reopening_weight": {
+                  "type": "null"
+                },
+                "external_input_distribution": {
+                  "maxItems": 0
+                }
+              }
             },
             "initial_distribution": {
               "type": "array",
@@ -50533,7 +50560,522 @@
           ],
           "additionalProperties": false
         },
-        "external_reopening": false
+        "external_reopening": {
+          "type": "object",
+          "properties": {
+            "unit": {
+              "const": "scenario"
+            },
+            "evidence_class": {
+              "const": "simulation"
+            },
+            "status": {
+              "const": "experimental"
+            },
+            "method_id": {
+              "const": "T5.external_reopening"
+            },
+            "owner_ids": {
+              "const": [
+                "T5"
+              ]
+            },
+            "theory_map_ids": {
+              "const": []
+            },
+            "trace_ids": {
+              "const": [
+                "T5"
+              ]
+            },
+            "scope": {
+              "$ref": "#/$defs/scope"
+            },
+            "representation": {
+              "$ref": "#/$defs/representation"
+            },
+            "coverage": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "oneOf": [
+                    {
+                      "minimum": 0
+                    },
+                    {
+                      "exclusiveMaximum": 0
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "coverage_reason": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[^\\u0000]*$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "denominator": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1.7976931348623157e+308,
+                  "oneOf": [
+                    {
+                      "minimum": 0
+                    },
+                    {
+                      "exclusiveMaximum": 0
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "denominator_reason": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[^\\u0000]*$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "assumptions": {
+              "const": [
+                "Fixed finite declared state space and constant positive integer resample size.",
+                "The internal and external vectors have the same explicitly declared state meaning.",
+                "External input distribution r and reopening weight lambda are constant across steps.",
+                "s_t=(1-lambda)*p_t+lambda*r; X_t conditional on s_t is Multinomial(n,s_t).",
+                "p_(t+1)=X_t/n; no other source of state restoration is modeled."
+              ]
+            },
+            "limitations": {
+              "const": [
+                "Experimental conditional simulation; no empirical intervention effect is established.",
+                "Positive mixed probability permits re-entry without guaranteeing a positive sample count.",
+                "External independence, reliability and relevance are supplied assumptions, not verified facts.",
+                "Reopening weight is not an integrity or Presence score; greater weight need not improve fidelity.",
+                "Closed multi-step expected contraction is not an expectation for a reopened trajectory.",
+                "Simulated steps are not record generations, training epochs or dataset releases.",
+                "The reopened kernel alone performs no comparison, external-reference loss, report or audit dispatch.",
+                "Floating-point and pseudorandom sampling are numerical realizations of the declared model.",
+                "Replay requires the same method, NumPy build/environment, seed and parameters.",
+                "Bit-identical paths across dependency versions or platforms are not promised.",
+                "Accepted input round-off is corrected only by division by its validated total.",
+                "Lambda endpoints reuse the already effective source; lambda zero retains integer count sampling."
+              ]
+            },
+            "reason_codes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[^\\u0000]*$"
+              },
+              "minItems": 0,
+              "uniqueItems": true
+            },
+            "required_evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[^\\u0000]*$"
+              },
+              "minItems": 0,
+              "uniqueItems": true
+            },
+            "model": {
+              "const": "reopened_resampling"
+            },
+            "model_version": {
+              "const": "reopened_categorical_constant_v1"
+            },
+            "method": {
+              "const": "sampled_path"
+            },
+            "parameters": {
+              "$ref": "#/$defs/simulation_parameters"
+            },
+            "resample_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1.7976931348623157e+308
+            },
+            "initial_distribution": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/state_probability"
+              },
+              "minItems": 1
+            },
+            "input_normalization": {
+              "$ref": "#/$defs/input_normalization"
+            },
+            "state_semantics": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[^\\u0000]*$"
+            },
+            "external_input_distribution": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/state_probability"
+              },
+              "minItems": 1
+            },
+            "external_input_normalization": {
+              "$ref": "#/$defs/input_normalization"
+            },
+            "sampled_paths": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/sampled_path"
+              },
+              "minItems": 1
+            },
+            "mixed_sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "replicate_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1.7976931348623157e+308
+                  },
+                  "step": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1.7976931348623157e+308
+                  },
+                  "input_normalization": {
+                    "$ref": "#/$defs/input_normalization"
+                  },
+                  "input_basis": {
+                    "type": "string",
+                    "enum": [
+                      "effective_internal_distribution",
+                      "effective_external_distribution",
+                      "computed_external_mixture",
+                      "sampled_integer_counts_over_resample_size"
+                    ]
+                  },
+                  "possible_reentry_states": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 0,
+                      "pattern": "^[^\\u0000]*$"
+                    },
+                    "minItems": 0,
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "replicate_index",
+                  "step",
+                  "input_normalization",
+                  "input_basis",
+                  "possible_reentry_states"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0
+            },
+            "state_reentry_events": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/state_transition_event"
+              },
+              "minItems": 0
+            },
+            "extinction_events": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/state_transition_event"
+              },
+              "minItems": 0
+            },
+            "support_trajectory": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "replicate_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1.7976931348623157e+308
+                  },
+                  "support_sizes": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1.7976931348623157e+308
+                    },
+                    "minItems": 0
+                  }
+                },
+                "required": [
+                  "replicate_index",
+                  "support_sizes"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0
+            },
+            "diversity_trajectory": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "replicate_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1.7976931348623157e+308
+                  },
+                  "gini_simpson_diversities": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "oneOf": [
+                        {
+                          "minimum": 0
+                        },
+                        {
+                          "exclusiveMaximum": 0
+                        }
+                      ]
+                    },
+                    "minItems": 0
+                  }
+                },
+                "required": [
+                  "replicate_index",
+                  "gini_simpson_diversities"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0
+            },
+            "assumption_table": {
+              "$ref": "#/$defs/scenario_assumption_table"
+            },
+            "scenario_comparison": {
+              "type": "object",
+              "properties": {
+                "difference_direction": {
+                  "const": "reopened_minus_closed"
+                },
+                "initial_reachability": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "model_name": {
+                        "type": "string",
+                        "enum": [
+                          "closed_resampling",
+                          "reopened_resampling"
+                        ]
+                      },
+                      "reachable_states": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 0,
+                          "pattern": "^[^\\u0000]*$"
+                        },
+                        "minItems": 0,
+                        "uniqueItems": true
+                      },
+                      "possible_reentry_states": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 0,
+                          "pattern": "^[^\\u0000]*$"
+                        },
+                        "minItems": 0,
+                        "uniqueItems": true
+                      },
+                      "timing": {
+                        "const": "before_first_draw"
+                      }
+                    },
+                    "required": [
+                      "model_name",
+                      "reachable_states",
+                      "possible_reentry_states",
+                      "timing"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 2
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "replicate_index": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1.7976931348623157e+308
+                      },
+                      "step": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1.7976931348623157e+308
+                      },
+                      "closed_support_size": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1.7976931348623157e+308
+                      },
+                      "reopened_support_size": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1.7976931348623157e+308
+                      },
+                      "support_size_difference": {
+                        "type": "integer",
+                        "minimum": -4096,
+                        "maximum": 1.7976931348623157e+308
+                      },
+                      "closed_gini_simpson_diversity": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1,
+                        "oneOf": [
+                          {
+                            "minimum": 0
+                          },
+                          {
+                            "exclusiveMaximum": 0
+                          }
+                        ]
+                      },
+                      "reopened_gini_simpson_diversity": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1,
+                        "oneOf": [
+                          {
+                            "minimum": 0
+                          },
+                          {
+                            "exclusiveMaximum": 0
+                          }
+                        ]
+                      },
+                      "diversity_difference": {
+                        "type": "number",
+                        "minimum": -1,
+                        "maximum": 1,
+                        "oneOf": [
+                          {
+                            "minimum": 0
+                          },
+                          {
+                            "exclusiveMaximum": 0
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "replicate_index",
+                      "step",
+                      "closed_support_size",
+                      "reopened_support_size",
+                      "support_size_difference",
+                      "closed_gini_simpson_diversity",
+                      "reopened_gini_simpson_diversity",
+                      "diversity_difference"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 0
+                },
+                "limitations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "difference_direction",
+                "initial_reachability",
+                "rows",
+                "limitations"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "unit",
+            "evidence_class",
+            "status",
+            "method_id",
+            "owner_ids",
+            "theory_map_ids",
+            "trace_ids",
+            "scope",
+            "representation",
+            "coverage",
+            "coverage_reason",
+            "denominator",
+            "denominator_reason",
+            "assumptions",
+            "limitations",
+            "reason_codes",
+            "required_evidence",
+            "model",
+            "model_version",
+            "method",
+            "parameters",
+            "resample_size",
+            "initial_distribution",
+            "input_normalization",
+            "state_semantics",
+            "external_input_distribution",
+            "external_input_normalization",
+            "sampled_paths",
+            "mixed_sources",
+            "state_reentry_events",
+            "extinction_events",
+            "support_trajectory",
+            "diversity_trajectory",
+            "assumption_table"
+          ],
+          "additionalProperties": false
+        }
       },
       "required": [],
       "additionalProperties": false
@@ -55933,6 +56475,424 @@
       ],
       "additionalProperties": false
     },
+    "closed_analytic_baseline": {
+      "type": "object",
+      "properties": {
+        "unit": {
+          "const": "scenario"
+        },
+        "evidence_class": {
+          "const": "simulation"
+        },
+        "status": {
+          "const": "experimental"
+        },
+        "method_id": {
+          "const": "T1.closed_resampling"
+        },
+        "owner_ids": {
+          "const": [
+            "T1"
+          ]
+        },
+        "theory_map_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "TM-M01",
+              "TM-M02",
+              "TM-M03",
+              "TM-M04",
+              "TM-M05",
+              "TM-M06",
+              "TM-M07",
+              "TM-C01",
+              "TM-C02",
+              "TM-C03",
+              "TM-C04",
+              "TM-C05",
+              "TM-C06",
+              "TM-C07",
+              "TM-C08",
+              "TM-P01",
+              "TM-P02",
+              "TM-P03",
+              "TM-P04",
+              "TM-P05",
+              "TM-S01",
+              "TM-S02",
+              "TM-S03",
+              "TM-E01",
+              "TM-E02",
+              "TM-E03",
+              "TM-E04",
+              "TM-E05",
+              "TM-A01",
+              "TM-A02",
+              "TM-A03",
+              "TM-A04"
+            ]
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "trace_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "T1",
+              "T2",
+              "T3",
+              "T4",
+              "T5",
+              "T6"
+            ]
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "representation": {
+          "$ref": "#/$defs/representation"
+        },
+        "coverage": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "oneOf": [
+                {
+                  "minimum": 0
+                },
+                {
+                  "exclusiveMaximum": 0
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "coverage_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[^\\u0000]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "denominator": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1.7976931348623157e+308,
+              "oneOf": [
+                {
+                  "minimum": 0
+                },
+                {
+                  "exclusiveMaximum": 0
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "denominator_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[^\\u0000]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000]*$"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000]*$"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000]*$"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "required_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000]*$"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "model": {
+          "const": "closed_resampling"
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000]*$"
+        },
+        "method": {
+          "const": "analytic_expectation"
+        },
+        "parameters": {
+          "$ref": "#/$defs/simulation_parameters",
+          "properties": {
+            "reopening_weight": {
+              "type": "null"
+            },
+            "external_input_distribution": {
+              "maxItems": 0
+            }
+          }
+        },
+        "initial_distribution": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/state_probability"
+          },
+          "minItems": 0
+        },
+        "resample_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1.7976931348623157e+308
+        },
+        "initial_gini_simpson_diversity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "oneOf": [
+            {
+              "minimum": 0
+            },
+            {
+              "exclusiveMaximum": 0
+            }
+          ]
+        },
+        "contraction_factor": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "oneOf": [
+            {
+              "minimum": 0
+            },
+            {
+              "exclusiveMaximum": 0
+            }
+          ]
+        },
+        "expected_diversity": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "oneOf": [
+              {
+                "minimum": 0
+              },
+              {
+                "exclusiveMaximum": 0
+              }
+            ]
+          },
+          "minItems": 0
+        },
+        "numerical_underflow_steps": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1.7976931348623157e+308
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "input_normalization": {
+          "$ref": "#/$defs/input_normalization"
+        },
+        "baseline_basis": {
+          "const": "closed_sampled_effective_distribution"
+        }
+      },
+      "required": [
+        "unit",
+        "evidence_class",
+        "status",
+        "method_id",
+        "owner_ids",
+        "theory_map_ids",
+        "trace_ids",
+        "scope",
+        "representation",
+        "coverage",
+        "coverage_reason",
+        "denominator",
+        "denominator_reason",
+        "assumptions",
+        "limitations",
+        "reason_codes",
+        "required_evidence",
+        "model",
+        "model_version",
+        "method",
+        "parameters",
+        "initial_distribution",
+        "resample_size",
+        "initial_gini_simpson_diversity",
+        "contraction_factor",
+        "expected_diversity",
+        "numerical_underflow_steps",
+        "input_normalization",
+        "baseline_basis"
+      ],
+      "additionalProperties": false
+    },
+    "state_transition_event": {
+      "type": "object",
+      "properties": {
+        "replicate_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "step": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1.7976931348623157e+308
+        },
+        "state_id": {
+          "type": "string",
+          "minLength": 0,
+          "pattern": "^[^\\u0000]*$"
+        }
+      },
+      "required": [
+        "replicate_index",
+        "step",
+        "state_id"
+      ],
+      "additionalProperties": false
+    },
+    "scenario_assumption_table": {
+      "oneOf": [
+        {
+          "const": [
+            {
+              "assumption": "Fixed state space",
+              "declaration": "One declared representation and shared state meaning.",
+              "limitation": "Declared state meaning is supplied by the caller."
+            },
+            {
+              "assumption": "Multinomial transition",
+              "declaration": "Each sampled step contains the constant declared resample size.",
+              "limitation": "Simulation steps are distinct from observed dataset generations."
+            },
+            {
+              "assumption": "Input basis",
+              "declaration": "Explicit supplied probability vectors with retained numerical corrections.",
+              "limitation": "The initial distribution is not inferred from audit records."
+            },
+            {
+              "assumption": "Replay schedule",
+              "declaration": "The same seed is reset independently for each selected model.",
+              "limitation": "Matching replicate indices do not establish common-random-number precision."
+            },
+            {
+              "assumption": "Numerical corrections",
+              "declaration": "Supplied and effective vectors, totals and correction entries are retained.",
+              "limitation": "Replay requires the recorded sampler and compatible NumPy environment."
+            },
+            {
+              "assumption": "Closed source",
+              "declaration": "Every transition resamples its preceding internal state.",
+              "limitation": "No mutation, migration or external corrective input is modeled."
+            }
+          ]
+        },
+        {
+          "const": [
+            {
+              "assumption": "Fixed state space",
+              "declaration": "One declared representation and shared state meaning.",
+              "limitation": "Declared state meaning is supplied by the caller."
+            },
+            {
+              "assumption": "Multinomial transition",
+              "declaration": "Each sampled step contains the constant declared resample size.",
+              "limitation": "Simulation steps are distinct from observed dataset generations."
+            },
+            {
+              "assumption": "Input basis",
+              "declaration": "Explicit supplied probability vectors with retained numerical corrections.",
+              "limitation": "The initial distribution is not inferred from audit records."
+            },
+            {
+              "assumption": "Replay schedule",
+              "declaration": "The same seed is reset independently for each selected model.",
+              "limitation": "Matching replicate indices do not establish common-random-number precision."
+            },
+            {
+              "assumption": "Numerical corrections",
+              "declaration": "Supplied and effective vectors, totals and correction entries are retained.",
+              "limitation": "Replay requires the recorded sampler and compatible NumPy environment."
+            },
+            {
+              "assumption": "Constant external input",
+              "declaration": "The declared external distribution and reopening weight remain constant.",
+              "limitation": "Positive source probability permits re-entry without guaranteeing a sampled count."
+            },
+            {
+              "assumption": "External quality",
+              "declaration": "External independence, reliability and relevance remain supplied assumptions.",
+              "limitation": "No empirical intervention effect or integrity score is established."
+            }
+          ]
+        }
+      ]
+    },
     "simulation_parameters": {
       "type": "object",
       "properties": {
@@ -56046,6 +57006,15 @@
         },
         "numerical_policy": {
           "$ref": "#/$defs/numerical_policy"
+        },
+        "sampler_algorithm": {
+          "const": "sequential_binomial_complement_v1"
+        },
+        "state_schedule": {
+          "const": "ascending_unicode_state_id_skip_zero"
+        },
+        "scenario_schedule": {
+          "const": "reset_same_seed_per_model"
         }
       },
       "required": [

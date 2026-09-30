@@ -2,12 +2,12 @@
 
 | Field | Value |
 |---|---|
-| Status | Steps 1 through 3 complete |
-| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, 2026-09-30 |
+| Status | Steps 1 through 4 complete |
+| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, 2026-09-30 |
 | Governing decision | Approved UD-017; empirical ingestion remains deferred by UD-031 |
 | Accepted baseline | `b6389c6c50f2fc61d39580274bd24ed39e09ca45` |
 | Branch | `phase6b-simulation` |
-| Current runtime | `0.1.0.dev5`, report schema `1.2` |
+| Current runtime | `0.1.0.dev5`, report schema `1.3` |
 | Staged target | `0.1.0.dev6`, report schema `1.3` |
 
 The current instruction authorizes starting Phase 6B. It is not represented as
@@ -109,3 +109,33 @@ The existing source gate advances to Step 2, still authorizing only
 `metrics/resampling.py`. No report schema, input/config/CLI behavior, dependency
 or package version is changed. Step 4 will validate and serialize this typed
 handoff. Actual checks are recorded in `PHASE_6B_STEP_3.md`.
+
+## Step 4 authorization and report boundary
+
+The Theory Owner requested `Phase 6B Step 4 继续` on 2026-09-30. Work starts from
+Step 3 commit `2e0805dba85754d78854750f692ac02ddaf44a8a`. P6B-D06 implements the
+approved T5 evidence placement and existing PR-012 through PR-016 reporting,
+privacy and reproducibility boundaries. Schema 1.3 is integrated once, in the
+existing schema/field-registry owner, with its packaged copy kept identical.
+
+The typed experiment is supplied explicitly to assembly. Request/result binding,
+source arithmetic, complete events and comparison checks never execute a kernel
+or RNG. Closed/T2 restrictions remain model-specific. A separately supplied
+legacy closed result may coexist with a reopened-only experiment without
+manufacturing a comparison. The analytic baseline retains its own closed
+envelope and effective-start basis.
+
+State pseudonyms preserve cross-model alignment and numerical array positions;
+record-identity omission does not remove semantic states. Markdown limits
+detail tables while JSON retains full admitted evidence. Input eligibility stays
+separate from actually supplied execution evidence, and the empirical intervention
+conclusion remains unavailable for simulation results.
+
+The source gate advances to Step 3 and authorizes only `result.py`, report
+assembly, Markdown and the canonical/packaged report schema pair. Numerical
+kernels, CLI/configuration, dependencies, package version and frozen root
+specifications remain protected. Existing current report fixtures move only
+their schema-version literals unless a concrete strengthened contract requires
+a matching fixture correction. Later CLI activation retains Step 5 scope.
+Actual final source checks and the unrun installed-case boundary are recorded in
+`PHASE_6B_STEP_4.md`.

@@ -38,7 +38,7 @@ def _run():
     nullable = ("started_at", "completed_at", "duration_seconds", "python_version",
                 "platform", "command", "config_hash", "random_seed")
     return {"run_id": "longitudinal-integration", "toolkit_version": "0.1.0.dev5",
-            "report_schema_version": "1.2", **dict.fromkeys(nullable),
+            "report_schema_version": "1.3", **dict.fromkeys(nullable),
             "strict_mode": False, "redacted_mode": False, "network_call_count": 0,
             "deterministic": True, "privacy_mode": "standard", "run_status": "complete",
             "null_reasons": {name: "not_recorded" for name in nullable}}
@@ -108,7 +108,7 @@ def _checked(report):
     Draft202012Validator(SCHEMA).validate(payload)
     validate_report(payload)
     assert tuple(payload) == SECTION_ORDER
-    assert payload["run"]["report_schema_version"] == "1.2"
+    assert payload["run"]["report_schema_version"] == "1.3"
     assert payload["capabilities"] == payload["observability"]["capabilities"]
     assert "input_signature" not in json.dumps(payload)
     assert "selection_signature" not in json.dumps(payload)

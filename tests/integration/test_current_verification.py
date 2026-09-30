@@ -25,10 +25,10 @@ def protected_copy(repo_root, tmp_path):
     return tmp_path
 
 
-@pytest.mark.parametrize("mutation", ["formula", "new_module", "deleted_module",
+@pytest.mark.parametrize("mutation", ["formula", "resampling_kernel", "new_module", "deleted_module",
                                      "nested_metadata", "similar_metadata", "new_example"])
 def test_current_scope_rejects_unauthorized_product_changes(current_tools, protected_copy, mutation):
-    """Step 2 preserves other mathematical owners and the accepted inventory."""
+    """Step 4 preserves numerical owners and the accepted inventory."""
     verify = current_tools["verify_source_scope"]
     generated = protected_copy / "src/recursive_integrity_toolkit.egg-info"
     generated.mkdir(exist_ok=True)
@@ -39,6 +39,9 @@ def test_current_scope_rejects_unauthorized_product_changes(current_tools, prote
         source = target.read_text(encoding="utf-8")
         assert "1.0 -" in source
         target.write_text(source.replace("1.0 -", "1.0 +", 1), encoding="utf-8")
+    elif mutation == "resampling_kernel":
+        target = target.with_name("resampling.py")
+        target.write_bytes(target.read_bytes() + b"\n# Unauthorized sampling change.\n")
     elif mutation == "new_module":
         target.with_name("unauthorized_metric.py").write_text("def score(): return 1\n", encoding="utf-8")
     elif mutation == "deleted_module":

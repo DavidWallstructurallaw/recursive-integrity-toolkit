@@ -21,7 +21,7 @@ def phase4_step2_report_fixture():
         "run": {
             "run_id": "independent-empty-case",
             "toolkit_version": "0.1.0.dev2",
-            "report_schema_version": "1.2",
+            "report_schema_version": "1.3",
             "started_at": "2026-09-19T00:00:00+00:00",
             "completed_at": "2026-09-19T00:00:00.500000+00:00",
             "duration_seconds": 0.5,
@@ -529,6 +529,7 @@ def phase4_step5_rich_payload():
     from test_PR012_evidence_classes import (
         phase4_step2_additional_evidence_fixture, phase4_step2_interval_report_fixture,
         phase4_step2_metric_fixture, phase4_step2_sampled_path_report_fixture,
+        phase6b_empirical_intervention_unavailable_fixture,
     )
 
     payload = phase4_step2_capability_report_fixture()
@@ -544,8 +545,11 @@ def phase4_step5_rich_payload():
     payload["derived_metrics"]["diversity"] = {"by_version": {"v1": {
         "gini_simpson_diversity": metric}}}
     payload["simulations"] = phase4_step2_sampled_path_report_fixture()["simulations"]
+    payload["run"]["random_seed"] = 1
+    del payload["run"]["null_reasons"]["random_seed"]
     payload["unavailable_conclusions"] = [
-        phase4_step2_additional_evidence_fixture("unavailable_conclusion")]
+        phase4_step2_additional_evidence_fixture("unavailable_conclusion"),
+        phase6b_empirical_intervention_unavailable_fixture()]
     return payload
 
 

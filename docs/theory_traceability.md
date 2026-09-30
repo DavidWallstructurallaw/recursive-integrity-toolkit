@@ -1,6 +1,22 @@
 # Theory Traceability
 
-## Current Phase 6B Step 3 implementation
+## Current Phase 6B Step 4 implementation
+
+PR-012/PR-013 report integration exposes the existing T5 simulation owner in
+schema 1.3 under `simulations.external_reopening`. T1/F-015 remains confined to
+the distinct closed analytic baseline. Report assembly and canonical validation
+bind supplied requests, parameters, probability corrections, sampled paths,
+transition sources, events and comparisons. Composite event identities retain
+recurrence; reachable states remain possibilities until a positive sample count
+is supplied. No report layer executes a mathematical kernel or random generator.
+
+PR-014 retains unavailable empirical intervention effects even when simulation
+execution completes. PR-015 protects new state, scope and caller-text paths
+without changing numerical evidence or alignment. JSON preserves complete
+bounded evidence; Markdown summarizes trajectories and limits detail tables
+with truthful omission counts. External-reference loss F-016 remains unregistered.
+
+## Accepted Phase 6B Step 3 implementation
 
 `run_scenario_experiment` implements P6B-D04/D05 under PR-011/PR-016: explicit
 selection, shared declarations, aggregate admission and independently reset seeds.

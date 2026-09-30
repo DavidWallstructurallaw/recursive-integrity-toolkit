@@ -18,12 +18,13 @@ Limits:
     A valid safe view does not certify the truth of supplied evidence.
 
 Current phase status:
-    Phase 6A Step 6: ordinary and ordered-series rendering only. Import-safe.
+    Phase 6B Step 4: bounded scenario presentation alongside ordinary reports.
 """
 from __future__ import annotations
 
 import json
 import unicodedata
+from itertools import islice
 
 from ..result import CAPABILITY_KEYS, SECTION_ORDER, SafeReportView, validate_report
 
@@ -133,7 +134,7 @@ def _table(lines: list[str], rows: list[tuple[str, str]]) -> None:
     lines.append("")
 
 
-def _details(lines: list[str], value: object) -> None:
+def _details(lines: list[str], value: object, *, detail_limit: int | None = None) -> None:
     """Render every field, with narrative arrays displayed as readable lists."""
     rows: list[tuple[str, str]] = []
     lists: list[tuple[tuple[str | int, ...], list]] = []
@@ -165,7 +166,10 @@ def _details(lines: list[str], value: object) -> None:
             rows.append((_field(path), _value(node, key=key, owner=owner)))
 
     visit(value, (), {})
-    _table(lines, rows)
+    _table(lines, rows[:detail_limit])
+    if detail_limit is not None and len(rows) > detail_limit:
+        lines.extend((f"Displayed {detail_limit} of {len(rows)} rows; omitted {len(rows) - detail_limit} rows. "
+                      "Full evidence is retained in JSON.", ""))
     for path, items in lists:
         lines.extend((f"**{_field(path)}**", ""))
         lines.extend("- " + _value(item) for item in items)
@@ -174,12 +178,18 @@ def _details(lines: list[str], value: object) -> None:
         lines.extend((f"**{_field(path)}**", ""))
         lines.append("| " + " | ".join(_code(key) for key in keys) + " |")
         lines.append("|" + "---|" * len(keys))
-        for item in items:
+        for item in items[:detail_limit]:
             lines.append("| " + " | ".join(_value(item[key], key=key, owner=item) for key in keys) + " |")
         lines.append("")
+        if detail_limit is not None and len(items) > detail_limit:
+            lines.extend((f"Displayed {detail_limit} of {len(items)} rows; omitted {len(items) - detail_limit} rows. "
+                          "Full evidence is retained in JSON.", ""))
 
 
 def _envelope(lines: list[str], node: dict, path: tuple[str | int, ...]) -> None:
+    if "assumption_table" in node or node.get("model") == "reopened_resampling":
+        _scenario(lines, node, path)
+        return
     lines.extend(("### Analytical result", "", _field(path), ""))
     lines.append(
         "Status: " + _code(node["status"]) +
@@ -196,6 +206,128 @@ def _envelope(lines: list[str], node: dict, path: tuple[str | int, ...]) -> None
         "",
     ))
     _details(lines, node)
+
+
+def _scenario_table(lines: list[str], title: str, columns: tuple[str, ...],
+                    rows, total: int) -> None:
+    """Bound displayed rows, retaining the full supplied evidence in JSON."""
+    lines.extend(("**" + title + "**", ""))
+    returned = min(total, 100)
+    lines.extend((f"Displayed {returned} of {total} rows; omitted {total - returned} rows. "
+                  "Full evidence is retained in JSON.", ""))
+    if not total:
+        return
+    lines.append("| " + " | ".join(columns) + " |")
+    lines.append("|" + "---|" * len(columns))
+    for row in islice(rows, 100):
+        lines.append("| " + " | ".join(_value(cell) for cell in row) + " |")
+    lines.append("")
+
+
+def _scenario_normalization(lines: list[str], title: str, normalization: dict) -> None:
+    scalar = {key: item for key, item in normalization.items()
+              if key not in ("supplied_distribution", "effective_distribution", "probability_corrections")}
+    lines.extend(("**" + title + " correction evidence**", ""))
+    _details(lines, scalar, detail_limit=100)
+    supplied = normalization["supplied_distribution"]
+    effective = normalization["effective_distribution"]
+    corrections = normalization["probability_corrections"]
+    rows = ((before["state_id"], before["probability"], after["probability"], correction["correction"])
+            for before, after, correction in zip(supplied, effective, corrections, strict=True))
+    _scenario_table(lines, title + " probabilities", ("State", "Supplied probability",
+        "Effective probability", "Correction"), rows, len(supplied))
+
+
+def _scenario(lines: list[str], node: dict, path: tuple[str | int, ...]) -> None:
+    """Present supplied scenario rows without expanding vectors into each row."""
+    lines.extend(("### Experimental simulation", "", _field(path), "",
+        "Status: " + _code(node["status"]) + "; evidence class: " + _code(node["evidence_class"]) +
+        "; method: " + _code(node["method"]) + ".", "",
+        "Simulation step counts transitions within this declared scenario. Dataset version remains a scope label. "
+        "Pre-draw source probabilities and realized sample counts are separate evidence.", ""))
+    bulk = {"parameters", "assumption_table", "initial_distribution", "input_normalization",
+        "external_input_distribution", "external_input_normalization", "sampled_paths",
+        "support_trajectories", "support_trajectory", "diversity_trajectory", "mixed_sources",
+        "state_reentry_events", "extinction_events", "scenario_comparison", "analytic_baseline",
+        "expected_diversity", "numerical_underflow_steps"}
+    _details(lines, {key: item for key, item in node.items() if key not in bulk}, detail_limit=100)
+    parameters = node["parameters"]
+    lines.extend(("**Scenario parameters and replay**", ""))
+    _details(lines, {key: item for key, item in parameters.items()
+                    if key not in ("state_order", "external_input_distribution")}, detail_limit=100)
+    _scenario_table(lines, "Declared state order", ("State position", "State"),
+        enumerate(parameters["state_order"]), len(parameters["state_order"]))
+    assumptions = node.get("assumption_table", [])
+    if assumptions:
+        _scenario_table(lines, "Scenario assumptions", ("Assumption", "Declaration", "Limitation"),
+            ((row["assumption"], row["declaration"], row["limitation"]) for row in assumptions), len(assumptions))
+    for key, title in (("input_normalization", "Internal initial distribution"),
+                       ("external_input_normalization", "Constant external input distribution")):
+        if key in node:
+            _scenario_normalization(lines, title, node[key])
+    paths = node.get("sampled_paths", [])
+    if paths:
+        total = sum(len(replica["generations"]) for replica in paths)
+        _scenario_table(lines, "Sampled trajectory", ("Replicate", "Simulation step", "Support size",
+            "Gini-Simpson diversity", "Counts available"),
+            ((replica["replicate_index"], row["step"], row["support_size"],
+              row["gini_simpson_diversity"], row["state_counts"] is not None)
+             for replica in paths for row in replica["generations"]), total)
+        lines.extend(("Step zero retains the explicit initial vector and has no realized sample counts. "
+            "Support and diversity trajectory arrays describe these same supplied rows.", ""))
+        order = parameters["state_order"]
+        _scenario_table(lines, "Realized sample detail", ("Replicate", "Simulation step", "State",
+            "Realized count", "State frequency"),
+            ((replica["replicate_index"], row["step"], state,
+              None if row["state_counts"] is None else row["state_counts"][index], row["state_frequencies"][index])
+             for replica in paths for row in replica["generations"] for index, state in enumerate(order)), total * len(order))
+    sources = node.get("mixed_sources", [])
+    if "mixed_sources" in node:
+        _scenario_table(lines, "Pre-draw source correction evidence", ("Replicate", "Simulation step", "Input basis",
+            "Supplied mass", "Effective mass", "Mass residual", "Correction applied", "Correction method", "Normalization divisor"),
+            ((row["replicate_index"], row["step"], row["input_basis"],
+              row["input_normalization"]["supplied_probability_total"], row["input_normalization"]["effective_probability_total"],
+              row["input_normalization"]["probability_residual"], row["input_normalization"]["correction_applied"],
+              row["input_normalization"]["correction_method"], row["input_normalization"]["normalization_divisor"])
+             for row in sources), len(sources))
+        _scenario_table(lines, "Pre-draw source probabilities", ("Replicate", "Simulation step", "State",
+            "Supplied source probability", "Effective source probability", "Correction"),
+            ((row["replicate_index"], row["step"], before["state_id"], before["probability"], after["probability"], correction["correction"])
+             for row in sources for before, after, correction in zip(
+                 row["input_normalization"]["supplied_distribution"], row["input_normalization"]["effective_distribution"],
+                 row["input_normalization"]["probability_corrections"], strict=True)),
+            sum(len(row["input_normalization"]["effective_distribution"]) for row in sources))
+        _scenario_table(lines, "Possible re-entry before each draw", ("Replicate", "Simulation step", "State"),
+            ((row["replicate_index"], row["step"], state) for row in sources for state in row["possible_reentry_states"]),
+            sum(len(row["possible_reentry_states"]) for row in sources))
+    for key, title in (("state_reentry_events", "Realized state re-entry events"), ("extinction_events", "Local extinction events")):
+        if key in node:
+            events = node[key]
+            _scenario_table(lines, title, ("Replicate", "Simulation step", "State"),
+                ((row["replicate_index"], row["step"], row["state_id"]) for row in events), len(events))
+    if "expected_diversity" in node:
+        _scenario_table(lines, "Closed analytic expected diversity", ("Simulation step", "Expected Gini-Simpson diversity"),
+            enumerate(node["expected_diversity"]), len(node["expected_diversity"]))
+        _scenario_table(lines, "Numerical underflow disclosure", ("Simulation step",),
+            ((step,) for step in node["numerical_underflow_steps"]), len(node["numerical_underflow_steps"]))
+    if "scenario_comparison" in node:
+        comparison = node["scenario_comparison"]
+        lines.extend(("**Scenario comparison**", "", "Differences: " + _code(comparison["difference_direction"]) + ".", ""))
+        _details(lines, {"limitations": comparison["limitations"]}, detail_limit=100)
+        rows = comparison["rows"]
+        _scenario_table(lines, "Per-path comparison", ("Replicate", "Simulation step", "Closed support", "Reopened support",
+            "Support difference (reopened_minus_closed)", "Closed diversity", "Reopened diversity", "Diversity difference (reopened_minus_closed)"),
+            ((row["replicate_index"], row["step"], row["closed_support_size"], row["reopened_support_size"],
+              row["support_size_difference"], row["closed_gini_simpson_diversity"], row["reopened_gini_simpson_diversity"],
+              row["diversity_difference"]) for row in rows), len(rows))
+        reachability = comparison["initial_reachability"]
+        for key, title in (("reachable_states", "Initially reachable states"), ("possible_reentry_states", "Initially possible re-entry states")):
+            _scenario_table(lines, title, ("Model", "Timing", "State"),
+                ((row["model_name"], row["timing"], state) for row in reachability for state in row[key]),
+                sum(len(row[key]) for row in reachability))
+    if "analytic_baseline" in node:
+        lines.extend(("**Distinct closed analytic baseline**", ""))
+        _scenario(lines, node["analytic_baseline"], (*path, "analytic_baseline"))
 
 
 def _analytical(lines: list[str], node: object, path: tuple[str | int, ...]) -> None:
@@ -405,9 +537,9 @@ def render_markdown(report: SafeReportView) -> str:
 
     Registered section order is fixed. Nested map keys use Unicode lexical order
     and arrays retain their supplied order, including trajectories and paired
-    lists. Analytical summaries precede complete field tables. No field is
-    dropped except the exactly equal capability compatibility mirror, which
-    points to the single canonical matrix.
+    lists. Analytical summaries precede field tables. Scenario details use
+    bounded 100-row tables with exact omission counts and complete JSON evidence.
+    The equal capability compatibility mirror points to one canonical matrix.
     """
     if type(report) is not SafeReportView:
         raise TypeError("render_markdown requires an exact SafeReportView from privacy_view")
