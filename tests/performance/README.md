@@ -1,6 +1,8 @@
 # Performance measurements
 
-Current scheduling: Phase 6A Step 9 runs the actual 100k longitudinal workload
+Current Phase 6B Step 7 adds the bounded simulation observations described below.
+These measurements retain the existing admission limits and introduce no new
+performance SLA. The Phase 6A Step 9 reference schedule runs the actual 100k longitudinal workload
 once on the designated Ubuntu/Python 3.12 reference profile. The case starts
 in its own pytest process before a second invocation executes the remaining
 performance cases once. Both invocations retain JUnit, complete reports and
@@ -13,6 +15,87 @@ Phase 4 Step 10 extends the retained Phase 3 calculation observations with publi
 CLI audit measurements ending only after both `report.json` and `report.md` have
 been published. The original Phase 3 test functions and measurement fixture remain
 available alongside the current lineage observations.
+
+## Phase 6B bounded simulation reports
+
+`test_simulation_complete_reports` executes two declared closed/reopened workloads
+through the public audit command, including ordinary audit calculations, scenario
+admission and sampling, report assembly, validation, JSON and Markdown publication.
+Each attempt starts a fresh interpreter. The exact inputs and environment, every
+outer wall time, complete output sizes, and process peak RSS are retained in the
+existing measurement JSON and JUnit properties. No fastest-attempt selection occurs.
+
+| Profile | States | Transitions | Replicates | Sample size | Models | Admitted state cells | Attempts |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Packaged small example | 2 | 6 | 3 | 2 | 2 | 84 | 3 |
+| Representative bounded | 32 | 64 | 8 | 64 | 2 | 33,280 | 1 |
+
+Both use seed 17 and reopening weight 1/4. The small case retains the packaged
+initial vector `(1, 0)` and external vector `(0, 1)`. The representative case uses
+32 literal states, with initial mass uniform over the first 16 and exact zero in
+the rest; external mass is uniform over the last 16 and zero in the first half.
+Both load exactly two independent audit records from the packaged example.
+Scenario state cells are recorded separately from that actual record count.
+Input construction and post-run assertions are excluded from the measured interval.
+
+The optional timing wrapper measures the actual `run_scenario_experiment` call
+inside the audit, including admission, sampling, the closed analytic baseline and
+comparison. It is nested within the complete CLI interval and excludes report
+assembly/publication. The outer subprocess wall includes interpreter startup,
+imports and measurement bookkeeping. These intervals have different scopes; the
+scenario-only interval does not represent product response time.
+
+These runs disable `tracemalloc` to observe ordinary process cost. Linux peak RSS
+uses `/proc/self/status` `VmHWM` for the executed image, avoiding the fork-parent
+high-water floor retained by `getrusage().ru_maxrss` across exec. Before/after values
+are process high-water marks, never incremental allocation estimates. Windows
+retains `PeakWorkingSetSize`, macOS retains its byte-valued `ru_maxrss`. Native and
+interpreter memory are included. The 180-second timeout only bounds runaway tests;
+it is not a latency target. Full million-cell capacity, laptop performance and a
+cross-platform performance envelope remain unmeasured by these bounded cases.
+
+Independent assertions check all realized counts and frequencies, support,
+diversity, exact extinction/re-entry identities, supplied mixing probabilities,
+closed analytic expectation, zero-record scenario scope, experimental evidence and
+retained ordinary audit results. JSON retains every admitted path and state vector.
+Markdown's 100-row limits must disclose the exact omitted rows. Same-environment
+replay equality is checked across all three small runs, without asserting trajectory
+equality across differing NumPy versions or operating systems.
+
+Step 7 measured all four scenario attempts successfully on Linux 6.18.44 x86_64,
+glibc 2.39, Python 3.12.14, NumPy 2.3.5, pandas 2.2.3, PyArrow 25.0.1 and
+pytest 9.1.1. The runtime reported AMD EPYC 9V74 80-Core Processor and nine
+logical CPUs. Runs were serialized with other heavy tests paused. No failed or
+timed-out performance attempt occurred. Every value below is retained, rounded
+only here for display; observation JSON keeps the original precision.
+
+| Attempt | Outer wall (s) | CLI interval (s) | Actual experiment (s) | RSS before (bytes) | RSS peak after (bytes) | JSON bytes | Markdown bytes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Small 1 | 0.365786 | 0.312016 | 0.044696 | 10,665,984 | 38,694,912 | 163,582 | 139,535 |
+| Small 2 | 0.369446 | 0.319516 | 0.044991 | 10,661,888 | 38,690,816 | 163,581 | 139,534 |
+| Small 3 | 0.360281 | 0.310766 | 0.045303 | 10,661,888 | 38,694,912 | 163,581 | 139,534 |
+| Representative 1 | 4.673421 | 4.606455 | 0.088043 | 10,665,984 | 152,576,000 | 8,229,291 | 194,568 |
+
+The complete two-test invocation passed in 6.14 seconds, including parent-side
+report assertions. JUnit is retained at
+`/workspace/scratch/954124762a46/phase6b_step7_performance.xml`; per-attempt
+observations and both report formats are under the adjacent
+`phase6b_step7_performance/` directory. These local observations support bounded
+execution and complete publication for the declared inputs. They establish no
+million-cell extrapolation or replacement for Step 8 candidate performance gates.
+
+The existing `test_phase4_step10_hero_complete_report_runtime` separately exercised
+the shared fixture's default no-profile path: one test passed in 3.50 seconds.
+Its three untraced outer wall times were 0.365172, 0.353295 and 0.347950 seconds;
+CLI intervals were 0.312867, 0.306678 and 0.299047 seconds. Peak RSS values were
+28,188,672, 28,311,552 and 28,188,672 bytes. The separate traced attempt took
+2.304133 seconds outer wall and 2.235637 seconds CLI, with peak RSS 44,830,720
+bytes and traced Python peak 15,088,536 bytes. All simulation timing fields were
+null, and all Hero assertions passed with no requested simulation. These four
+compatibility attempts are separate from the four scenario attempts above.
+Complete observations/reports and JUnit are retained under
+`/workspace/scratch/954124762a46/phase6b_step7_performance_hero/` and the adjacent
+`phase6b_step7_performance_hero.xml`. No attempt failed or timed out.
 
 ## Complete Hero audit
 
@@ -103,8 +186,8 @@ counts, graph work and the separately timed input construction. There is no
 allocation tracing for these workloads, no fastest-run selection and no new
 benchmark service or registry.
 
-Fresh interpreters can still report an inherited pre-CLI RSS high-water floor
-on systems where that counter survives fork/exec. Both before/after values are
+The historical Phase 6A measurements used a counter that can report an inherited
+pre-CLI RSS high-water floor across fork/exec. Both before/after values are
 retained. A report that finishes below that floor cannot establish the smaller
 workload's own peak; disclose the floor and do not subtract it. This occurred
 for the final compact and Hero measurements after parent-side parsing of the
@@ -253,7 +336,8 @@ interval and untracked native allocations. Its runtime divided by the first
 untraced runtime is a descriptive tracing-overhead observation; scheduling and
 filesystem cache state can also affect that ratio.
 
-RSS is the peak resident process size from `getrusage(RUSAGE_SELF)` on Unix or
+RSS now uses `/proc/self/status` `VmHWM` on Linux,
+`getrusage(RUSAGE_SELF).ru_maxrss` on macOS and other Unix systems, or
 `GetProcessMemoryInfo.PeakWorkingSetSize` on Windows. It covers the fresh process,
 including interpreter/native allocations, and is reported separately from Python
 allocation peak. The before/after RSS high-water marks are not subtracted or

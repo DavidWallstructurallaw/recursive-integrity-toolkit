@@ -173,6 +173,24 @@ def test_lambda_zero_comparison_has_identical_paths_and_zero_differences():
         for row in result.comparison.rows)
 
 
+def test_concentrated_external_source_can_destroy_diversity():
+    # Explicit external input need not maintain diversity. At lambda one this
+    # concentrated source gives an exact zero-diversity path at every draw,
+    # while the closed analytic expectation remains positive at finite steps.
+    result = run(scenarios=(parameters(), parameters(REOPENED,
+        external_input_distribution=(('a', 1.), ('b', 0.)), reopening_weight=1.)))
+    reopened = by_model(result)[REOPENED]
+    assert all(value > 0 for value in result.closed_analytic_baseline.expected_diversity)
+    for path in reopened.sampled_paths:
+        assert path.generations[0].gini_simpson_diversity == .5
+        assert all(generation.state_counts == (4, 0)
+            and generation.gini_simpson_diversity == 0.
+            for generation in path.generations[1:])
+    assert event_ids(reopened.extinction_events) == ((0, 1, 'b'), (1, 1, 'b'))
+    assert reopened.state_reentry_events == ()
+    assert all(row.diversity_difference <= 0 for row in result.comparison.rows)
+
+
 def test_initial_reachability_uses_pre_first_draw_model_sources():
     p = (('c', 0.), ('b', .5), ('', 0.), ('a', .5))
     r = (('a', 0.), ('', 0.), ('b', 0.), ('c', 1.))

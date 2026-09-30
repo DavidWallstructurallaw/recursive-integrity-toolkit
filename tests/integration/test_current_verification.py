@@ -27,9 +27,10 @@ def protected_copy(repo_root, tmp_path):
 
 @pytest.mark.parametrize("mutation", ["formula", "resampling_kernel", "new_module", "deleted_module",
                                      "nested_metadata", "similar_metadata", "new_example",
-                                     "new_simulation_resource", "configuration"])
+                                     "new_simulation_resource", "configuration", "cli",
+                                     "simulation_resource_pair"])
 def test_current_scope_rejects_unauthorized_product_changes(current_tools, protected_copy, mutation):
-    """Step 6 preserves accepted configuration, numerical owners and inventory."""
+    """Step 7 preserves all accepted product owners and packaged examples."""
     verify = current_tools["verify_source_scope"]
     generated = protected_copy / "src/recursive_integrity_toolkit.egg-info"
     generated.mkdir(exist_ok=True)
@@ -54,6 +55,15 @@ def test_current_scope_rejects_unauthorized_product_changes(current_tools, prote
     elif mutation == "configuration":
         target = protected_copy / "src/recursive_integrity_toolkit/config.py"
         target.write_bytes(target.read_bytes() + b"\n# Unauthorized configuration change.\n")
+    elif mutation == "cli":
+        target = protected_copy / "src/recursive_integrity_toolkit/cli.py"
+        target.write_bytes(target.read_bytes() + b"\n# Unauthorized CLI change.\n")
+    elif mutation == "simulation_resource_pair":
+        for relative in ("examples/simulation/config.json",
+                         "src/recursive_integrity_toolkit/data/simulation/config.json"):
+            target = protected_copy / relative
+            target.write_bytes(target.read_bytes() + b"\n")
+        current_tools["verify_resources"](protected_copy)
     else:
         relative = ("src/recursive_integrity_toolkit/recursive_integrity_toolkit.egg-info"
                     if mutation == "nested_metadata" else
@@ -93,7 +103,7 @@ def test_current_scope_rejects_version_changes(current_tools, protected_copy, re
     ('"data/hero/*"', '"data/hero/**"'),
     ('requires-python = ">=3.11"', 'requires-python = ">=3.12"'),
 ])
-def test_current_package_data_exception_cannot_change_other_metadata(
+def test_current_scope_rejects_package_data_and_metadata_changes(
         current_tools, protected_copy, before, after):
     current_tools["verify_source_scope"](protected_copy)
     path = protected_copy / "pyproject.toml"

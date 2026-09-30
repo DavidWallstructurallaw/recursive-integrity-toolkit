@@ -2,11 +2,13 @@
 
 ## Current Phase 6B implementation boundary
 
-Phase 6B Step 6 supplies a small installed synthetic example in schema 1.3 while the
-package remains `0.1.0.dev5`. Current focused evidence is recorded in
-[the Step 6 record](../PHASE_6B_STEP_6.md). Local wheel and sdist-derived wheel
-installation checks cover the example outside the checkout. The dev6 candidate,
-supported environment matrix and performance remain later planned work.
+Phase 6B Step 7 completes bounded scientific/adversarial checks and actual
+simulation performance measurements in schema 1.3 while the package remains
+`0.1.0.dev5`. Current evidence is recorded in
+[the Step 7 record](../PHASE_6B_STEP_7.md). The unchanged product's local wheel
+and sdist-derived wheel example checks remain [Step 6 evidence](../PHASE_6B_STEP_6.md).
+The dev6 candidate, supported environment matrix and actual 100k dataset
+performance remain Step 8 work.
 
 ## Accepted Phase 6A candidate boundary
 
@@ -29,12 +31,11 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The existing source check uses accepted Phase 6B Step 5 commit
-`33ae8af1aaeb99ac118368148a80d563804eeff9`. Step 6 permits only `cli.py`, the
-`pyproject.toml` package-data addition, and the four new canonical simulation
-resources with their four packaged copies. Package metadata is checked against
-the accepted declaration after removing that one resource pattern. Numerical
-kernels, configuration, report owners and schemas remain protected.
+The existing source check uses accepted Phase 6B Step 6 commit
+`065cafa017881258c6dc139c22815b806b75bce6`. Step 7 has an empty product
+implementation allowlist. All 83 product files, including package metadata,
+numerical kernels, configuration, report owners, schemas and example resources,
+remain byte-for-byte protected.
 It retains the exact product file inventory and
 rejects unrelated runtime, package-metadata and canonical Hero changes.
 The frozen Phase 0 specification hashes are unchanged. Sixteen frozen

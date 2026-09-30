@@ -3,9 +3,10 @@
 Scripted draws isolate transition/event semantics. Real RNG checks separately
 protect the accepted closed endpoint, frequency lattice and repeatability.
 """
+from collections import Counter
 from dataclasses import FrozenInstanceError
 from fractions import Fraction
-from math import fsum
+from math import factorial, fsum, sqrt
 from types import MappingProxyType
 import json
 
@@ -214,6 +215,40 @@ def test_T5_sampled_marginals_agree_with_authored_one_step_case(cases):
         for p in result.sampled_paths) / result.simulation_replicates
     assert abs(reentry_fraction - float(Fraction(case['expected_reentry_probability_by_absent_state']['b']))) < .025
     assert abs(mean_diversity - float(Fraction(case['expected_sample_diversity']))) < .025
+
+
+def test_T5_three_state_joint_counts_match_exact_multinomial_enumeration():
+    # The second conditional draw has probability 3/4. This exercises the
+    # complement branch as well as dependence between three category counts;
+    # two-state re-entry or diversity averages alone cannot establish that law.
+    source = (Fraction(1, 2), Fraction(3, 8), Fraction(1, 8))
+    n = 3
+    outcomes = {}
+    for a in range(n + 1):
+        for b in range(n - a + 1):
+            counts = (a, b, n - a - b)
+            probability = Fraction(factorial(n))
+            for count, mass in zip(counts, source):
+                probability *= mass ** count / factorial(count)
+            outcomes[counts] = probability
+    assert len(outcomes) == 10 and sum(outcomes.values()) == 1
+    assert sum(probability for counts, probability in outcomes.items()
+        if counts[2] > 0) == Fraction(169, 512)
+    assert sum(probability * (1 - sum(Fraction(count, n) ** 2 for count in counts))
+        for counts, probability in outcomes.items()) == Fraction(19, 48)
+
+    replicates = 10000
+    result = sample({'a': .75, 'b': .25, 'c': 0.},
+        {'a': .25, 'b': .5, 'c': .25}, reopening_weight=.5,
+        resample_size=n, steps=1, replicates=replicates, seed=937)
+    observed = Counter(path.generations[1].state_counts for path in result.sampled_paths)
+    assert set(observed) <= set(outcomes)
+    # Six binomial standard deviations per joint outcome gives a broad numerical
+    # sanity bound without pinning paths across supported NumPy environments.
+    for counts, exact_probability in outcomes.items():
+        probability = float(exact_probability)
+        tolerance = 6 * sqrt(probability * (1 - probability) / replicates) + 1 / replicates
+        assert abs(observed[counts] / replicates - probability) < tolerance
 
 
 def test_T5_fixed_seed_order_invariance_and_immutable_detached_results():

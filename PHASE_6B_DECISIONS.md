@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Steps 1 through 6 complete |
-| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, `Phase 6B Step 5 go`, `Phase 6B Step 6继续`, 2026-09-30 |
+| Status | Steps 1 through 7 complete |
+| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, `Phase 6B Step 5 go`, `Phase 6B Step 6继续`, `Phase 6B Step 7`, 2026-09-30 |
 | Governing decision | Approved UD-017; empirical ingestion remains deferred by UD-031 |
 | Accepted baseline | `b6389c6c50f2fc61d39580274bd24ed39e09ca45` |
 | Branch | `phase6b-simulation` |
@@ -200,3 +200,37 @@ Actual local wheel and sdist-derived wheel installations are recorded in
 `PHASE_6B_STEP_6.md`. This is bounded example delivery evidence; the supported
 candidate matrix, actual optional-dependency absence, performance preparation,
 dev6 version change and any release action retain their later scope.
+
+## Step 7 authorization and bounded verification
+
+The Theory Owner requested `Phase 6B Step 7` on 2026-09-30. Work starts from
+Step 6 commit `065cafa017881258c6dc139c22815b806b75bce6`. All 83 product files
+are frozen at that commit; the existing source gate has an empty implementation
+allowlist. No runtime, schema, package, example or numerical limit changes are
+needed for this increment.
+
+Scientific checks add an independent three-state joint multinomial enumeration
+and a concentrated external-source counterexample to guaranteed diversity gain.
+The ten concrete faults already named in the plan are tested separately in
+disposable source copies against existing direct assertions. Their outcomes are
+recorded in the step record, without adding a mutation framework or registry.
+
+Real one-million-cell admission and immediate over-budget refusal are exercised
+across configuration, eligibility and kernel preflight. Accepted boundary probes
+stop at the first generation, so they establish admission without claiming
+full-capacity report performance. Both model orders also exercise failure after
+the first model completes: all scenario evidence is discarded and independent
+audit results remain available.
+
+The existing report measurement fixture now records Linux process peak RSS via
+`/proc/self/status` `VmHWM`, avoiding the inherited parent peak in `ru_maxrss`.
+Optional timing wraps the actual experiment coordinator; complete CLI publication
+remains separately timed. Four fresh untraced observations cover 84 and 33,280
+combined state/step/replicate cells, each with two loaded fictional audit records. Every
+attempt is retained, including input hashes and JSON/Markdown sizes. No new
+performance SLA or capacity guarantee follows from these bounded observations.
+
+Actual checks and all measurement results are recorded in `PHASE_6B_STEP_7.md`.
+The package remains dev5 and schema 1.3. The full supported matrix, actual PyArrow
+absence/presence, 100k dataset workload, installation/security gates and dev6
+candidate handoff remain Step 8 work.

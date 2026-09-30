@@ -1,6 +1,28 @@
 # Theory Traceability
 
-## Current Phase 6B Step 6 implementation
+## Current Phase 6B Step 7 verification
+
+T5/F-017 gains a three-state joint count-law check using independently enumerated
+rational multinomial probabilities. With mixed source `(1/2,3/8,1/8)` and `n=3`,
+the ten count vectors sum to probability one, the initially absent third state
+has re-entry probability `169/512`, and expected sampled diversity is `19/48`.
+Broad per-outcome sampling bounds avoid cross-environment path promises.
+
+A lambda-one source concentrated on one state, with initial `p=(1/2,1/2)` and
+sample size 4, produces exact zero diversity after every transition while the
+closed F-015 expectation stays positive at finite horizons. This preserves the
+external-input quality limitation and prevents an assumed diversity benefit.
+No reopened multi-step F-015 identity
+is introduced.
+
+The plan's ten scientific, execution and privacy faults are each detected by
+existing direct tests in disposable source copies. PR-010/PR-011 aggregate
+admission is exercised at its actual limit; PR-014/PR-015 failure handling retains
+independent audit evidence while discarding an incomplete experiment. The
+[Step 7 record](../PHASE_6B_STEP_7.md) identifies each detector and the complete
+bounded performance observations. Product and theory definitions are unchanged.
+
+## Accepted Phase 6B Step 6 implementation
 
 The installed synthetic example exposes the accepted T1/T5 comparison with
 explicit `p=(1,0)`, `r=(0,1)`, lambda `1/4` and sample size 2. Its packaged

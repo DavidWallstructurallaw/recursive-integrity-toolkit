@@ -1,6 +1,21 @@
 # Architecture
 
-## Current Phase 6B Step 6 additions
+## Current Phase 6B Step 7 verification boundary
+
+Step 7 changes tests, measurement support and documentation. All 83 product files
+remain frozen at Step 6 commit `065cafa017881258c6dc139c22815b806b75bce6`, with
+an empty implementation allowlist. The inventory remains 41 runtime modules,
+18 canonical packaged resources, package `0.1.0.dev5` and report schema 1.3.
+
+Cross-layer probes exercise the actual aggregate admission limit before any
+trajectory allocation. A failure after the first selected model completes
+discards the whole experiment while retaining independent audit results. Bounded
+performance checks reuse the complete CLI report fixture, separately time the
+actual coordinator, and measure Linux peak RSS through the executed process's
+`VmHWM`. See [Step 7 evidence](../PHASE_6B_STEP_7.md) for all observations and
+their workload boundaries.
+
+## Accepted Phase 6B Step 6 additions
 
 The packaged `simulation` example adds four canonical resources and an explicit
 `example --dataset simulation --simulate` entry point. Its two fictional audit

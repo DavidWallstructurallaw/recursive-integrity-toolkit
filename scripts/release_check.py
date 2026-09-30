@@ -1,8 +1,8 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6B Step 6 admits the explicit synthetic simulation example, its packaged
-resources and the CLI example selector. Accepted configuration, numerical and
-report schema contracts stay frozen, alongside the dev5 package version.
+Phase 6B Step 7 strengthens scientific, adversarial and bounded performance
+verification. All accepted product files stay frozen, including configuration,
+numerics, schemas, examples, package metadata and the dev5 version.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
@@ -27,20 +27,14 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "33ae8af1aaeb99ac118368148a80d563804eeff9"
+ACCEPTED_COMMIT = "065cafa017881258c6dc139c22815b806b75bce6"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/",
                       "examples/simulation/")
 LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
                       "provenance.jsonl", "config.json", "version_order.json",
                       "EXPECTED_OUTPUTS.md"}
 SIMULATION_NAMES = {"config.json", "records.jsonl", "provenance.jsonl", "EXPECTED_OUTPUTS.md"}
-CURRENT_IMPLEMENTATION_PATHS = frozenset({
-    "src/recursive_integrity_toolkit/cli.py",
-    "pyproject.toml",
-    *(f"{directory}/{name}" for directory in (
-        "examples/simulation", "src/recursive_integrity_toolkit/data/simulation")
-      for name in SIMULATION_NAMES),
-})
+CURRENT_IMPLEMENTATION_PATHS = frozenset()
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",
     "test_PR002_parquet_real_row_limit",
@@ -95,16 +89,6 @@ def verify_source_scope(root: Path = ROOT) -> dict:
         current = _regular_file(root, name).read_bytes()
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
             raise ValueError(f"Unauthorized product mutation outside the current step scope: {name}")
-    accepted_project = tomllib.loads(expected["pyproject.toml"].decode("utf-8"))
-    current_project = tomllib.loads(_regular_file(root, "pyproject.toml").read_text(encoding="utf-8"))
-    accepted_data = accepted_project["tool"]["setuptools"]["package-data"]["recursive_integrity_toolkit"]
-    current_data = current_project["tool"]["setuptools"]["package-data"]["recursive_integrity_toolkit"]
-    if (current_data.count("data/simulation/*") != 1
-            or [item for item in current_data if item != "data/simulation/*"] != accepted_data):
-        raise ValueError("Unauthorized product mutation outside the current package-data addition")
-    current_project["tool"]["setuptools"]["package-data"]["recursive_integrity_toolkit"] = accepted_data
-    if current_project != accepted_project:
-        raise ValueError("Unauthorized product mutation outside the current package-data addition")
     # New authorized modules must exist as regular files; deletions stay blocked.
     authorized_inventory = set(expected) | CURRENT_IMPLEMENTATION_PATHS
     for name in CURRENT_IMPLEMENTATION_PATHS - set(expected):
