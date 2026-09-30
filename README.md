@@ -2,11 +2,11 @@
 
 A local-first research toolkit for examining recursive closure exposure in synthetic-data and recursive-data pipelines under explicit representations and assumptions.
 
-## Current milestone: Phase 6B explicit scenario execution
+## Current milestone: Phase 6B installed scenario example
 
 Development version `0.1.0.dev5` provides local input validation, JSON and Markdown audit reports, privacy controls, explicit pair and multi-version comparison, and packaged local examples. The mathematical core includes literal topic/label and exact record-form representations, exact duplicates, support/diversity, provenance composition, direct closure-exposure bounds, tail ranking and explicitly invoked closed and constant-source reopened scenarios.
 
-`audit --longitudinal` compares ordered selected snapshots through adjacent pairs and an optional first-snapshot baseline. It reports observed distribution changes, provenance coverage/source changes and direct closure changes. Adding `--lineage` calculates every selected target from one shared supplied graph, including cycles, depth, external roots, concentration and lineage closure changes. JSON and Markdown use report schema **1.3**. `audit --simulate --config PATH` explicitly runs declared closed/reopened experiments, including a distinct closed expectation, transition events and per-path comparisons. A complete configuration with `simulation.enabled: true` also requests execution. `validate` checks the declarations without sampling. See the [simulation contract](docs/simulation_contract.md), [CLI options](docs/cli.md) and [Step 5 record](PHASE_6B_STEP_5.md). HTML output is deferred.
+`audit --longitudinal` compares ordered selected snapshots through adjacent pairs and an optional first-snapshot baseline. It reports observed distribution changes, provenance coverage/source changes and direct closure changes. Adding `--lineage` calculates every selected target from one shared supplied graph, including cycles, depth, external roots, concentration and lineage closure changes. JSON and Markdown use report schema **1.3**. `audit --simulate --config PATH` explicitly runs declared closed/reopened experiments, including a distinct closed expectation, transition events and per-path comparisons. A complete configuration with `simulation.enabled: true` also requests execution. `validate` checks the declarations without sampling. Step 6 adds an installed synthetic example and a [walkthrough of its assumptions and outputs](docs/simulation_example.md). See the [simulation contract](docs/simulation_contract.md) and [CLI options](docs/cli.md) for the complete interface. HTML output is deferred.
 
 The [longitudinal contract](docs/longitudinal_contract.md) describes the accepted series behavior. The [Phase 6A candidate record](PHASE_6A_COMPLETION.md) identifies its supported matrix, installed delivery and actual 100,000-record series measurement; those results apply to their named source and workloads. Phase 6B remains in progress, with package version `0.1.0.dev5` until its planned dev6 candidate. No stable release, main merge or registry publication is implied by this development milestone.
 
@@ -29,13 +29,16 @@ rit example --out ./hero-workspace
 rit example --lineage --out ./hero-lineage-workspace
 rit example --longitudinal --lineage --out ./hero-series-workspace
 rit example --dataset longitudinal --longitudinal --out ./three-version-workspace
+rit example --dataset simulation --simulate --out ./simulation-workspace
 ```
 
-Hero invocations copy six unchanged packaged files into the workspace's `inputs/`; the separate three-version example copies seven files. Each writes `reports/report.json` and `report.md` and downloads nothing. Each packaged `EXPECTED_OUTPUTS.md` contains the independent expectations. Add `--redacted` to protect identifiers and paths in the reports.
+Hero invocations copy six unchanged packaged files into the workspace's `inputs/`; the separate three-version example copies seven files, and the simulation example copies four. Each writes `reports/report.json` and `report.md` and downloads nothing. Each packaged `EXPECTED_OUTPUTS.md` contains the independent expectations. Add `--redacted` to protect identifiers and paths in the reports. Extracted inputs retain their original declarations.
 
 The ordinary Hero reports compare v1 with v2: support **8 to 5**, retention **5/8**, diversity **7/8 to 3/4**, and missing topic states `battery`, `lizard`, `turtle`. Later-version human and synthetic shares are each **1/2**, and direct closure exposure is **[1/2, 1/2]**. Input observability is Level 4 and simulations are empty. Plain `example` keeps lineage `not_requested`. With `--lineage`, all eight v2 targets have resolved external ancestry, with **5** roots, ancestry HHI **1/4**, effective roots **4**, lineage exposure **[0, 0]**, and shared-ancestry evidence `present`.
 
 Hero series mode retains those values in explicit snapshot/pair rows. With lineage requested, supporting roots change **8 to 5**, HHI **1/8 to 1/4** and effective roots **8 to 4**. The separate three-version example shows support **3 to 2 to 3**, including state `B` disappearing and reappearing. Series fields preserve the intermediate change. Neither example selects a tail rule or first baseline by default.
+
+The simulation example compares closed and reopened sampling from declared fictional states `A` and `B`. Its initial distribution is `(1, 0)`, external input `(0, 1)`, reopening weight `1/4` and sample size `2`, with six transitions, three replicates and seed `17`. The first reopened source is `(3/4, 1/4)`; state `B` has a `7/16` chance of appearing in that next sample. Re-entry remains stochastic. Two separate audit records use states `X` and `Y`; they do not supply the scenario probabilities. This example requires `--simulate` and rejects `--lineage`, `--longitudinal` and a custom `--config`. Ordinary examples retain their existing behavior. The [simulation guide](docs/simulation_example.md) explains report fields, validation and explicit reruns with an edited local config.
 
 Use the extracted files for these independent commands, each with a fresh output destination:
 

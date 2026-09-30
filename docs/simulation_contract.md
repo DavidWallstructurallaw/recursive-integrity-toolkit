@@ -1,8 +1,9 @@
 # Phase 6B simulation contract
 
-Status: Step 5 implements explicit configuration, audit/example activation and
-input-only validation, 2026-09-30, alongside the earlier pure kernels, experiment
-coordinator, schema 1.3 report assembly and privacy handling.
+Status: Step 6 adds user documentation and an installed synthetic example,
+2026-09-30, alongside explicit configuration, audit/example activation,
+input-only validation, pure kernels, the experiment coordinator, schema 1.3
+report assembly and privacy handling.
 The current package version/schema are dev5/1.3. See `PHASE_6B_PLAN.md` for scope,
 owners and implementation order.
 
@@ -286,20 +287,28 @@ text. The run seed and all stochastic result seeds must agree.
 Align existing eligibility predicates with the literal-state, absolute mass,
 range and executable-admission contracts above. Keep this validation in an
 input-only/shared declaration layer; do not import `metrics/resampling.py` into
-`observability/levels.py` merely to reuse private helpers. Its current
-`math.isclose` predicate is not a different approved probability-repair policy.
+`observability/levels.py` merely to reuse private helpers. Step 5 replaced the
+former `math.isclose` predicate with the shared absolute-tolerance declaration
+check; there is no separate probability-repair policy for eligibility.
 
-The example command may select a new explicit synthetic simulation example;
-ordinary Hero and longitudinal examples keep their existing behavior. No
-standalone server, remote source retrieval or experiment-scheduling service is
-introduced.
+`example --dataset simulation --simulate --out DIR` selects the small packaged
+synthetic scenario. Its four resources are `config.json`, `records.jsonl`,
+`provenance.jsonl` and `EXPECTED_OUTPUTS.md`. It requires `--simulate`, rejects
+`--lineage`, `--longitudinal` and a custom `--config`, and uses the existing
+exclusive-workspace and protected-report behavior. The packaged config omits
+`simulation.enabled`; the explicit flag activates execution without modifying
+the canonical extracted declaration. Ordinary Hero and longitudinal examples
+keep their existing behavior. No standalone server, remote source retrieval or
+experiment-scheduling service is introduced.
 
 Step 5 additionally permits `example --simulate --config PATH` with a local
 JSON/TOML overlay containing only `simulation`. A complete enabled overlay also
 requests execution without the flag. Preflight validates the overlay before
 workspace creation; its declarations are retained in the extracted config and
-run alongside the selected packaged audit. No declaration is derived from that
-dataset. The standalone packaged synthetic example remains Step 6 work.
+run alongside the selected Hero or longitudinal audit. No declaration is derived
+from that dataset. This overlay interface does not apply to the fixed simulation
+example. Its extracted config can instead be copied, edited, validated and
+explicitly run through `audit`. See the [simulation example guide](simulation_example.md).
 
 ## 6. Canonical report
 

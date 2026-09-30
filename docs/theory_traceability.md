@@ -1,6 +1,24 @@
 # Theory Traceability
 
-## Current Phase 6B Step 5 implementation
+## Current Phase 6B Step 6 implementation
+
+The installed synthetic example exposes the accepted T1/T5 comparison with
+explicit `p=(1,0)`, `r=(0,1)`, lambda `1/4` and sample size 2. Its packaged
+mathematical expectations reuse the Step 1 rational case: first source
+`(3/4,1/4)`, count-vector probabilities `9/16,6/16,1/16`, re-entry probability
+`7/16` and one-step expected sampled diversity `3/16`. These arithmetic targets
+are independent of generated sample paths. The closed path remains absorbed
+at A, with its own zero-diversity F-015 baseline.
+
+PR-011/PR-016 govern explicit activation and same-environment replay. PR-012
+keeps all scenario paths under simulation evidence; PR-014 retains unavailable
+empirical intervention conclusions. PR-015 protects reports while the copied
+public input declarations remain intact. The separate X/Y audit population is
+deliberately distinct from the scenario scope and cannot establish its inputs.
+The example documentation states the constant-source assumptions and the
+difference between a possible re-entry and an actual positive sampled count.
+
+## Accepted Phase 6B Step 5 implementation
 
 P6B-D07 connects explicit configuration and CLI requests to the accepted
 T1/T5 experiment coordinator. PR-010 declaration eligibility uses input-only

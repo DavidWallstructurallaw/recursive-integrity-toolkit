@@ -2,10 +2,11 @@
 
 ## Current Phase 6B implementation boundary
 
-Phase 6B Step 5 activates explicit configured experiments in schema 1.3 while the
+Phase 6B Step 6 supplies a small installed synthetic example in schema 1.3 while the
 package remains `0.1.0.dev5`. Current focused evidence is recorded in
-[the Step 5 record](../PHASE_6B_STEP_5.md). The dev6 candidate, supported matrix
-and installed simulation example checks belong to later planned steps.
+[the Step 6 record](../PHASE_6B_STEP_6.md). Local wheel and sdist-derived wheel
+installation checks cover the example outside the checkout. The dev6 candidate,
+supported environment matrix and performance remain later planned work.
 
 ## Accepted Phase 6A candidate boundary
 
@@ -28,16 +29,16 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The existing source check uses accepted Phase 6B Step 4 commit
-`f5d94d9aa250bbb63c7317884966946bc1d44533`. Step 5 permits only `config.py`,
-`cli.py`, `observability/levels.py`, `schemas/config.schema.json` and the report
-assembly owner. Assembly changes defer sampler imports until actual scenario
-evidence is supplied, preserving input-only validation. The numerical kernels,
-report schema, rendering and all other product files remain protected.
+The existing source check uses accepted Phase 6B Step 5 commit
+`33ae8af1aaeb99ac118368148a80d563804eeff9`. Step 6 permits only `cli.py`, the
+`pyproject.toml` package-data addition, and the four new canonical simulation
+resources with their four packaged copies. Package metadata is checked against
+the accepted declaration after removing that one resource pattern. Numerical
+kernels, configuration, report owners and schemas remain protected.
 It retains the exact product file inventory and
 rejects unrelated runtime, package-metadata and canonical Hero changes.
 The frozen Phase 0 specification hashes are unchanged. Sixteen frozen
-specifications, 41 package modules and fourteen packaged resource copies remain
+specifications, 41 package modules and eighteen packaged resource copies remain
 protected. The source
 inventory excludes only the generated `src/recursive_integrity_toolkit.egg-info/`
 metadata directory; similarly named or nested paths are not excluded, and

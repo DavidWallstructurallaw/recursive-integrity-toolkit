@@ -1,6 +1,6 @@
 # CLI
 
-Development version `0.1.0.dev5`, with Phase 6B Step 5 additions, supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. Reports use schema `1.3`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
+Development version `0.1.0.dev5`, with Phase 6B Step 6 additions, supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. Reports use schema `1.3`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
 
 ## Packaged local example
 
@@ -24,6 +24,21 @@ rit example --dataset longitudinal --longitudinal --out ./three-version-workspac
 ```
 
 The default dataset is `hero`. Its series mode requests the same two selected snapshots, with separate distribution/provenance/direct summaries and changes. Adding `--lineage` requests both lineage snapshots: supporting roots 8 to 5, HHI 1/8 to 1/4 and effective roots 8 to 4. The `longitudinal` dataset is a separate seven-file JSONL example with support 3 to 2 to 3 and a disappearing/reappearing state. `--dataset longitudinal` requires `--longitudinal`. Neither example enables first-baseline or tail analysis by default. All example destinations follow the same exclusive-workspace rule.
+
+The explicitly selected simulation example is available after installation:
+
+```bash
+rit example --dataset simulation --simulate --out ./simulation-workspace
+```
+
+It extracts four files: `config.json`, `records.jsonl`, `provenance.jsonl` and
+`EXPECTED_OUTPUTS.md`. It runs closed and reopened scenarios alongside a separate
+two-record audit. `--dataset simulation` requires `--simulate` and rejects
+`--lineage`, `--longitudinal` and a custom `--config` before creating a workspace.
+The packaged config leaves `simulation.enabled` undeclared, so an extracted
+config alone does not activate sampling in a later audit. Use the
+[simulation walkthrough](simulation_example.md) for the assumptions, exact
+first-transition probabilities and commands to validate or rerun the inputs.
 
 Successful stdout names both report files. In redacted mode the fixed names are relative to the example's `reports/` directory. An audit failure may leave extracted inputs and an error report. Extraction failures clean only files owned by that attempt; incomplete cleanup is disclosed on stderr. Inspect a failed destination and choose a fresh one for retry.
 
@@ -112,6 +127,7 @@ It retains empty simulations and deferred eligible execution. It does not accept
 `--simulate`. Complete declarations survive normalized configuration hashing;
 safe configuration summaries expose no distribution keys or caller text.
 
+For the Hero or longitudinal dataset,
 `example --simulate --config scenario.json --out scenario-workspace` accepts a
 local JSON/TOML overlay containing only the top-level `simulation` block. It
 validates that overlay before creating the new workspace, combines it with the
@@ -119,8 +135,10 @@ selected packaged example's config and runs the explicit experiment alongside
 the ordinary audit. A complete enabled overlay also activates without the flag.
 Other overlay fields are rejected. The original packaged resources remain
 unchanged. Extracted config contains the supplied declarations; `--redacted`
-protects reports and diagnostics, not extracted input files. A separate packaged
-synthetic scenario example is planned for Step 6.
+protects reports and diagnostics, not extracted input files. The separate
+`--dataset simulation --simulate` example supplies its own complete declaration
+and does not accept an overlay. To change it, edit a copy of its extracted config
+and use `audit` with an explicit activation and a fresh report destination.
 
 ## Explicit lineage and context
 

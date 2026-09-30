@@ -40,7 +40,7 @@ def test_full_matrix_requires_explicit_candidate_selection(repo_root):
     for name in ("tests/unit/test_longitudinal*.py", "test_selected_lineage_handoff.py",
                  "test_longitudinal_cli.py", "test_longitudinal_reports.py", "test_longitudinal_installed.py",
                  "test_scenario_report_contract.py", "test_scenario_reports.py",
-                 "test_scenario_config.py", "test_scenario_cli.py"):
+                 "test_scenario_config.py", "test_scenario_cli.py", "test_simulation_example.py"):
         assert name in focused
     assert "--ignore=tests/performance" not in focused and "tests/performance " not in focused
     assert 'os: [ubuntu-latest, windows-latest]' in text
@@ -70,7 +70,7 @@ def test_candidate_checks_preserve_behavior_and_package_roles(repo_root):
     golden = (workflows / "golden.yml").read_text(encoding="utf-8")
     assert "test_phase3_math.py" in golden and "test_phase4_reports.py" in golden
     for name in ("test_frozen_snapshot_and_pair_oracles", "test_hero_series_matches_frozen_pair_oracle",
-                 "test_packaged_examples_outside_checkout_with_network_blocked"):
+                 "test_packaged_examples_outside_checkout_with_network_blocked", "test_simulation_installed.py"):
         assert name in golden
     assert "build_golden.py" not in golden
     security = (workflows / "security.yml").read_text(encoding="utf-8")

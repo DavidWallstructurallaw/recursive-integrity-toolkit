@@ -1,0 +1,32 @@
+{
+  "representation": {
+    "name": "topic",
+    "source": "topic_field",
+    "field": "topic",
+    "version": "simulation-audit-topics-v1",
+    "missing_value_policy": "error"
+  },
+  "simulation": {
+    "seed": 17,
+    "models": ["closed_resampling", "reopened_resampling"],
+    "state_distribution": {"A": 1, "B": 0},
+    "external_input_distribution": {"A": 0, "B": 1},
+    "reopening_weight": 0.25,
+    "resample_size": 2,
+    "simulation_horizon": 6,
+    "simulation_replicates": 3,
+    "representation": {
+      "representation_name": "explicit_scenario_states",
+      "representation_source": "declared_probability_vector",
+      "representation_version": "simulation-example-v1",
+      "binning_or_mapping_rule": "literal_state_id",
+      "field_name": null,
+      "missing_value_policy": "error",
+      "missing_state_id": null,
+      "normalization_profile": null
+    },
+    "state_semantics": "A and B are fictional scenario states with fixed literal identities.",
+    "scope_id": "simulation-example-scenario",
+    "dataset_version": "scenario-v1"
+  }
+}

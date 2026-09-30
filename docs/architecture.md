@@ -1,6 +1,25 @@
 # Architecture
 
-## Current Phase 6B Step 5 additions
+## Current Phase 6B Step 6 additions
+
+The packaged `simulation` example adds four canonical resources and an explicit
+`example --dataset simulation --simulate` entry point. Its two fictional audit
+records remain separate from the declared A/B probability vectors. The example
+uses the existing scenario configuration, experiment coordinator and report
+pipeline; no numerical implementation or schema changes are introduced.
+
+Extraction requires a fresh workspace, explicit simulation activation and no
+competing example mode or custom overlay. The config and mathematical expectations
+are copied byte-for-byte from packaged resources. Installed checks exercise the
+example outside the checkout with runtime network access blocked and compare
+same-environment replay, privacy views and input-only validation.
+
+The runtime inventory remains 41 modules. The four new resource copies bring
+the canonical packaged inventory to 18. Package version remains `0.1.0.dev5`
+and report schema remains 1.3. See the [user walkthrough](simulation_example.md)
+and [Step 6 evidence](../PHASE_6B_STEP_6.md).
+
+## Accepted Phase 6B Step 5 additions
 
 `config.py` retains complete immutable scenario declarations and validates their
 literal states, absolute probability mass tolerance, scalar bounds and combined

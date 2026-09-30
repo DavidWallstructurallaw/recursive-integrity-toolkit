@@ -7,8 +7,8 @@
 | Project | Recursive Integrity Toolkit |
 | Phase | Phase 6B: optional experimental simulation |
 | Version / date | 1.0 / 2026-09-30 |
-| Status | Steps 1 through 5 complete; Steps 6 through 8 pending |
-| Authority | Theory Owner instructions: `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, `Phase 6B Step 5 go` |
+| Status | Steps 1 through 6 complete; Steps 7 through 8 pending |
+| Authority | Theory Owner instructions: `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, `Phase 6B Step 5 go`, `Phase 6B Step 6继续` |
 | Accepted starting commit | `b6389c6c50f2fc61d39580274bd24ed39e09ca45` |
 | Accepted source tree | `b1c10344854f6af6176899f72b2d05344d5f8243` |
 | Baseline branch / package / schema | `phase6a-longitudinal` / `0.1.0.dev5` / `1.2` |
@@ -27,7 +27,9 @@ see [PHASE_6B_STEP_3.md](PHASE_6B_STEP_3.md). The Step 4 request on the same
 date authorizes typed report integration, schema 1.3 and protected presentation;
 see [PHASE_6B_STEP_4.md](PHASE_6B_STEP_4.md). The Step 5 request on the same
 date authorizes explicit configuration, CLI execution and input-only validation;
-see [PHASE_6B_STEP_5.md](PHASE_6B_STEP_5.md). Later step records will identify
+see [PHASE_6B_STEP_5.md](PHASE_6B_STEP_5.md). The Step 6 request on the same
+date authorizes user documentation and the installed synthetic example;
+see [PHASE_6B_STEP_6.md](PHASE_6B_STEP_6.md). Later step records will identify
 their actual execution and results. Existing project synchronization permission
 continues.
 

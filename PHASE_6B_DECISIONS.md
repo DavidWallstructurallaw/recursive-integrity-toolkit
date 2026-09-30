@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Status | Steps 1 through 5 complete |
-| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, `Phase 6B Step 5 go`, 2026-09-30 |
+| Status | Steps 1 through 6 complete |
+| Authority | Theory Owner instructions `Phase 6B 继续吧`, `Phase 6B step 2 go`, `Phase 6B Step 3 开始`, `Phase 6B Step 4 继续`, `Phase 6B Step 5 go`, `Phase 6B Step 6继续`, 2026-09-30 |
 | Governing decision | Approved UD-017; empirical ingestion remains deferred by UD-031 |
 | Accepted baseline | `b6389c6c50f2fc61d39580274bd24ed39e09ca45` |
 | Branch | `phase6b-simulation` |
@@ -166,3 +166,37 @@ config, CLI, observability, config schema and the assembly import adjustment.
 The numerical kernels, report schema/renderers, dependencies and package version
 remain frozen. Focused checks and corrected attempts are recorded in
 `PHASE_6B_STEP_5.md`; no candidate or installed delivery pass is claimed.
+
+## Step 6 authorization and installed example
+
+The Theory Owner requested `Phase 6B Step 6继续` on 2026-09-30. Work starts from
+Step 5 commit `33ae8af1aaeb99ac118368148a80d563804eeff9`. The increment adds a
+small packaged `simulation` dataset, explicit CLI selection and a user walkthrough
+under the existing P6B-D01 through D07 contracts.
+
+The teaching case uses the independent rational Step 1 example: `p=(1,0)`,
+`r=(0,1)`, lambda `1/4` and sample size 2. Six transitions and three replicates
+with seed 17 make a bounded replayable report. Separate fictional audit records
+use X/Y topics; they never establish A/B probabilities or scenario membership.
+The packaged expectations enumerate first-step possibilities without pinning
+cross-environment random paths or guaranteeing realized re-entry.
+
+`example --dataset simulation --simulate` requires explicit activation and
+rejects custom overlays, lineage and longitudinal example modes before workspace
+creation. It copies all four resources unchanged. A user may edit a separate
+config and rerun `audit --simulate`; the existing overlay interface on other
+examples is unchanged. Documentation explains assumptions, closed-baseline scope,
+source/sample distinction, possible/realized re-entry, privacy and input-only
+validation.
+
+The existing source gate advances to Step 5, authorizing only the CLI owner,
+one package-data addition and eight canonical/packaged resource paths. Every
+other parsed package-metadata value remains protected. The 41 runtime modules,
+16 frozen specifications and report schema 1.3 are unchanged; packaged resources
+increase from 14 to 18. The existing installed-example and workflow checks are
+extended rather than adding a separate delivery registry.
+
+Actual local wheel and sdist-derived wheel installations are recorded in
+`PHASE_6B_STEP_6.md`. This is bounded example delivery evidence; the supported
+candidate matrix, actual optional-dependency absence, performance preparation,
+dev6 version change and any release action retain their later scope.

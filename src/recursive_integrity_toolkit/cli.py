@@ -13,7 +13,7 @@ Limits:
     or inferred chronology. Lineage and simulation require explicit opt-in. Help and
     version import no analytical dependencies or input/report implementation.
 Current phase status:
-    Phase 6B Step 5. Accepted kernels own every numerical result.
+    Phase 6B Step 6. Accepted kernels own every numerical result.
 """
 from __future__ import annotations
 
@@ -52,11 +52,11 @@ def build_parser() -> argparse.ArgumentParser:
     example.add_argument("--lineage", action=_Once, nargs=0, help="Calculate ancestry for the selected example targets.")
     example.add_argument("--longitudinal", action=_Once, nargs=0, help="Calculate the explicitly ordered example snapshots.")
     example.add_argument("--simulate", action=_Once, nargs=0,
-        help="Run the complete explicit scenario supplied by --config.")
+        help="Run the packaged simulation example or the complete explicit scenario supplied by --config.")
     example.add_argument("--config", action=_Once,
         help="Local JSON or TOML scenario overlay containing only a simulation block; audit records do not define its distribution.")
-    example.add_argument("--dataset", action=_Once, choices=("hero", "longitudinal"),
-        help="Packaged dataset; default hero. The three-version longitudinal dataset requires --longitudinal.")
+    example.add_argument("--dataset", action=_Once, choices=("hero", "longitudinal", "simulation"),
+        help="Packaged dataset; default hero. Longitudinal requires --longitudinal; simulation requires --simulate.")
     for command, description in (("audit", "Audit one version, one explicit pair or an explicitly ordered series."),
                                  ("validate", "Validate inputs without running calculations.")):
         child = commands.add_parser(command, help=description, description=description, allow_abbrev=False)
@@ -699,6 +699,10 @@ def _example(namespace):
     if dataset == "longitudinal" and not namespace.longitudinal:
         sys.stderr.write("E_CONFIG_INVALID: The longitudinal example requires --longitudinal.\n")
         return 2
+    if dataset == "simulation" and (not namespace.simulate or namespace.longitudinal
+            or namespace.lineage or namespace.config is not None):
+        sys.stderr.write("E_CONFIG_INVALID: The simulation example requires --simulate and does not accept --config, --lineage or --longitudinal.\n")
+        return 2
     workspace, root_chain, input_chain, owned = None, None, None, {}
     try:
         workspace = _output_local(namespace.out)
@@ -707,13 +711,21 @@ def _example(namespace):
             raise _OutputFailure("E_OUTPUT_UNSAFE")
         if _output_info(workspace) is not None:
             raise _OutputFailure("E_OUTPUT_EXISTS")
-        names = (("config.json", "records_v1.csv", "records_v2.csv", "provenance.csv",
-                 "version_order.json", "EXPECTED_OUTPUTS.md") if dataset == "hero" else
-                 ("config.json", "records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
-                  "provenance.jsonl", "version_order.json", "EXPECTED_OUTPUTS.md"))
+        names = {
+            "hero": ("config.json", "records_v1.csv", "records_v2.csv", "provenance.csv",
+                     "version_order.json", "EXPECTED_OUTPUTS.md"),
+            "longitudinal": ("config.json", "records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
+                             "provenance.jsonl", "version_order.json", "EXPECTED_OUTPUTS.md"),
+            "simulation": ("config.json", "records.jsonl", "provenance.jsonl", "EXPECTED_OUTPUTS.md"),
+        }[dataset]
         resource = files("recursive_integrity_toolkit").joinpath("data", dataset)
         payloads = {name: resource.joinpath(name).read_bytes() for name in names}
-        payloads["config.json"] = _example_configuration(namespace, payloads["config.json"])
+        if dataset == "simulation":
+            # Preflight the complete declaration while preserving canonical
+            # packaged bytes. The required CLI flag supplies activation.
+            _example_configuration(namespace, payloads["config.json"])
+        else:
+            payloads["config.json"] = _example_configuration(namespace, payloads["config.json"])
         _output_recheck(parent_chain)
         workspace.mkdir(mode=0o700)
         root_chain, _ = _output_walk(workspace)
@@ -725,15 +737,20 @@ def _example(namespace):
             _output_recheck(input_chain)
             _output_write(inputs / name, payload, owned)
         _output_recheck(input_chain)
-        selected_inputs = (["--records", str(inputs / "records_v2.csv"),
-            "--compare", str(inputs / "records_v1.csv"),
-            "--state-semantics", "Hero topic labels retain their literal meaning across v1 and v2."]
-            if dataset == "hero" else ["--records", str(inputs / "records_v3.jsonl"),
-                "--compare", str(inputs / "records_v1.jsonl"), "--compare", str(inputs / "records_v2.jsonl")])
+        selected_inputs = {
+            "hero": ["--records", str(inputs / "records_v2.csv"),
+                     "--compare", str(inputs / "records_v1.csv"),
+                     "--state-semantics", "Hero topic labels retain their literal meaning across v1 and v2."],
+            "longitudinal": ["--records", str(inputs / "records_v3.jsonl"),
+                             "--compare", str(inputs / "records_v1.jsonl"),
+                             "--compare", str(inputs / "records_v2.jsonl")],
+            "simulation": ["--records", str(inputs / "records.jsonl")],
+        }[dataset]
+        if dataset != "simulation":
+            selected_inputs.extend(["--version-order", str(inputs / "version_order.json")])
         invocation = build_parser().parse_args(["audit", *selected_inputs,
             "--config", str(inputs / "config.json"),
             "--provenance", str(inputs / ("provenance.csv" if dataset == "hero" else "provenance.jsonl")),
-            "--version-order", str(inputs / "version_order.json"),
             "--out", str(workspace / "reports"), *(["--redacted"] if namespace.redacted else []),
             *(["--longitudinal"] if namespace.longitudinal else []),
             *(["--simulate"] if namespace.simulate else []),
@@ -759,7 +776,7 @@ def _example(namespace):
         if not cleaned:
             sys.stderr.write("E_OUTPUT_IO: Incomplete example files remain in the selected workspace; inspect it before retrying.\n")
         return _exit_code((exit_code, 1 if not cleaned else 0))
-    if not namespace.lineage:
+    if not namespace.lineage and dataset != "simulation":
         sys.stderr.write("Lineage was not requested. Use rit example --lineage to calculate the Hero ancestry results.\n"
             if dataset == "hero" else "Lineage was not requested. Add --lineage to calculate the example ancestry results.\n")
     return _execute(invocation)
