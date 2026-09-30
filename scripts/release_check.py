@@ -1,6 +1,7 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6B Step 1 freezes the accepted dev5 runtime, schema and package version.
+Phase 6B Step 2 admits only the pure resampling kernel implementation.
+Other accepted dev5 runtime files, schema and package version remain frozen.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
@@ -25,12 +26,14 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "b6389c6c50f2fc61d39580274bd24ed39e09ca45"
+ACCEPTED_COMMIT = "230e321f0de31953babe0372625a6e20164606f0"
 PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/")
 LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
                       "provenance.jsonl", "config.json", "version_order.json",
                       "EXPECTED_OUTPUTS.md"}
-CURRENT_IMPLEMENTATION_PATHS = frozenset()
+CURRENT_IMPLEMENTATION_PATHS = frozenset({
+    "src/recursive_integrity_toolkit/metrics/resampling.py",
+})
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",
     "test_PR002_parquet_real_row_limit",

@@ -1,8 +1,9 @@
 # Phase 6B simulation contract
 
-Status: staged implementation contract, 2026-09-30. Step 1 does not activate these
-APIs, configuration fields or report schema 1.3. The current running package is
-dev5/schema 1.2. See `PHASE_6B_PLAN.md` for scope, owners and implementation order.
+Status: Step 2 implements the pure mixture and reopened sampler below, 2026-09-30.
+Experiment requests, configuration fields and report schema 1.3 remain staged.
+The current package version/schema are dev5/1.2. See `PHASE_6B_PLAN.md` for scope,
+owners and implementation order.
 
 ## 1. Mathematical and input boundary
 
@@ -52,6 +53,20 @@ Lambda zero uses the existing closed transition route, retaining integer counts
 as masses after the first draw. This protects exact equality to the accepted
 closed sampler. Lambda one uses the effective external vector before every
 draw. It is not equivalent to a multi-step closed process initialized with `r`.
+Endpoint source records therefore retain the already effective vector with no
+second correction. They disclose its actual total and an input basis of
+`effective_internal_distribution`, `sampled_integer_counts_over_resample_size`
+or `effective_external_distribution`. Original corrections remain in the
+separate internal/external input records. For partial mixtures, later internal
+frequencies remain the prior generation's actual `count/n` values; only the
+computed mixture receives a disclosed correction when required.
+
+For a positive horizon, validate initial mixed-source reachability before
+creating the RNG. For horizons of at least two, additionally reject a positive
+external weighted term that rounds to zero even if positive internal mass masks
+it initially: the internal state may disappear later. Horizon zero validates
+the declarations but has no source transition to calculate. Later positive
+internal `count/n` contributions cannot underflow within the accepted bounds.
 
 | Bound | Contract |
 |---|---|
@@ -99,6 +114,16 @@ inputs, lambda, transition sources and events. Its model is
 `reopened_resampling`, method `sampled_path`, method version
 `reopened_categorical_constant_v1`, primary owner T5, evidence `simulation`,
 and experimental flag true. Field values must be detached immutable data.
+
+Implemented result names are `inputs`, `external_inputs`, `mixed_inputs`,
+`state_order`, `reachable_states`, `possible_reentry_states` and
+`mixture_metadata` for the pure mixture. The sampled result retains `inputs`,
+`external_inputs`, `reopening_weight`, the existing path/replay fields,
+`mixed_sources`, `state_reentry_events`, `extinction_events`, `mixture_metadata`
+and `trajectory_metadata`. Each `ReopeningSource` has `replicate_index`, `step`,
+`inputs` (its source normalization record) and `possible_reentry_states`.
+`StateTransitionEvent` identifies one replicate/step/state. These internal
+Python types do not activate the staged wire fields in section 6.
 
 Reuse `SampledGeneration` and `ResamplingReplicate` where their meaning is
 unchanged. Step zero retains the supplied effective initial frequencies and

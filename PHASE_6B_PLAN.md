@@ -7,8 +7,8 @@
 | Project | Recursive Integrity Toolkit |
 | Phase | Phase 6B: optional experimental simulation |
 | Version / date | 1.0 / 2026-09-30 |
-| Status | Phase authorized; Step 1 complete; Steps 2 through 8 pending |
-| Authority | Theory Owner instruction: `Phase 6B 继续吧` |
+| Status | Steps 1 and 2 complete; Steps 3 through 8 pending |
+| Authority | Theory Owner instructions: `Phase 6B 继续吧`, then `Phase 6B step 2 go` |
 | Accepted starting commit | `b6389c6c50f2fc61d39580274bd24ed39e09ca45` |
 | Accepted source tree | `b1c10344854f6af6176899f72b2d05344d5f8243` |
 | Baseline branch / package / schema | `phase6a-longitudinal` / `0.1.0.dev5` / `1.2` |
@@ -16,12 +16,14 @@
 | Eventual development candidate | `0.1.0.dev6`; report schema `1.3` |
 | Merge, tag or publication authorization | None |
 
-The current instruction separately authorizes Phase 6B under approved UD-017.
+The initial instruction separately authorizes Phase 6B under approved UD-017.
 This plan is newly prepared under that instruction; it was not part of the
-earlier Phase 6A approval. Following the established stepwise workflow, this
-work item completes Step 1; see [PHASE_6B_STEP_1.md](PHASE_6B_STEP_1.md).
-Later step records will identify their actual
-execution and results. Existing project synchronization permission continues.
+earlier Phase 6A approval. Step 1 is recorded in
+[PHASE_6B_STEP_1.md](PHASE_6B_STEP_1.md). The subsequent explicit Step 2 request
+on 2026-09-30 authorizes the pure T5 kernel implementation under this plan;
+see [PHASE_6B_STEP_2.md](PHASE_6B_STEP_2.md). Later step records will identify
+their actual execution and results. Existing project synchronization permission
+continues.
 
 ## 1. Starting point and authority
 

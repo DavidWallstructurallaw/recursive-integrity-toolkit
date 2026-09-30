@@ -28,7 +28,7 @@ def protected_copy(repo_root, tmp_path):
 @pytest.mark.parametrize("mutation", ["formula", "new_module", "deleted_module",
                                      "nested_metadata", "similar_metadata", "new_example"])
 def test_current_scope_rejects_unauthorized_product_changes(current_tools, protected_copy, mutation):
-    """Step 1 preserves the accepted product bytes and file inventory."""
+    """Step 2 preserves other mathematical owners and the accepted inventory."""
     verify = current_tools["verify_source_scope"]
     generated = protected_copy / "src/recursive_integrity_toolkit.egg-info"
     generated.mkdir(exist_ok=True)

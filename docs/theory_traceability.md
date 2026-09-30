@@ -1,6 +1,30 @@
 # Theory Traceability
 
-## Current Phase 6A implementation
+## Current Phase 6B Step 2 implementation
+
+T5 / TM-M07 / F-017 is implemented in `metrics/resampling.py` by
+`mix_external_input` and `simulate_reopened_resampling`, under approved UD-017
+and P6B-D01/D02/D03/D05. The external vector and weight remain constant and
+explicit; identical declared state spaces may have different positive supports.
+Re-entry follows Definitions 13.6 exactly, while local extinction events follow
+Definitions 12.10. Recurrent events retain replicate, step and state identity.
+
+All new results and metadata retain experimental simulation evidence. Mixture
+metadata identifies F-017; sampled frequencies/support/diversity reuse
+F-001/F-002/F-003 under T5. The reopened result has no F-015 multi-step expectation.
+PR-016 governs canonical state order, named PCG64, explicit schedules and same-
+environment replay. Disclosed bounded normalization preserves supplied/effective
+vectors; underflow cannot silently erase positive source reachability.
+
+`test_T5_reopening.py` connects the independent rational fixtures to actual
+mixtures, scripted possible transitions and real RNG path invariants. It also
+protects integer-mass lambda-zero replay, per-step external refresh, event
+recurrence, numerical/refusal boundaries and input isolation. The existing
+T1 and schema/eligibility neighbors remain active. F-016 external-reference loss,
+empirical intervention effects and T5 public report fields remain outside this
+step. Frozen root specifications are unchanged.
+
+## Accepted Phase 6A implementation
 
 Development version `0.1.0.dev5` implements the approved
 [longitudinal contract](longitudinal_contract.md) while preserving the existing
@@ -42,7 +66,7 @@ coverage. Bounded resource/detail cases verify admission before calculation,
 No new theory equation, formula identifier, universal score or empirical causal
 inference is introduced. Model-performance decline, causal ancestor effect and
 permanent extinction remain unsupported. New series orchestration executes no
-simulation; Phase 6B remains separately gated. Actual candidate environments,
+simulation; Phase 6B uses its separately authorized pure APIs above. Actual candidate environments,
 installed evidence and scale measurements are identified in
 [Phase 6A completion](../PHASE_6A_COMPLETION.md).
 

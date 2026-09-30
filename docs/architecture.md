@@ -1,6 +1,25 @@
 # Architecture
 
-## Current Phase 6A architecture
+## Current Phase 6B Step 2 additions
+
+`metrics/resampling.py` now exposes `mix_external_input` and
+`simulate_reopened_resampling` alongside the accepted closed APIs. The pure
+mixture validates and detaches both declared vectors, preserves their separate
+normalization records and returns F-017 source evidence without importing NumPy.
+The explicit sampler uses constant external input and weight, existing PCG64 and
+bounded sampling, and immutable per-transition source/re-entry/extinction data.
+It performs no input ingestion or experiment scheduling.
+
+Lambda zero preserves the exact closed integer-count route. Lambda one refreshes
+the source at every step. Partial mixtures use the prior generation's count/n
+frequencies; source correction is disclosed. Initial and predictable future
+reachability underflow are rejected before RNG creation. See
+[the simulation contract](simulation_contract.md) for endpoint and horizon-zero
+details. The runtime module count remains 41. Configuration, CLI, observability,
+canonical report schema 1.2 and package version `0.1.0.dev5` remain unchanged;
+T5 report evidence and experiment orchestration belong to later planned steps.
+
+## Accepted Phase 6A architecture
 
 Development version `0.1.0.dev5` implements the approved
 [lineage contract](lineage_contract.md) and

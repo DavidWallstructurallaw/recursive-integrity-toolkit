@@ -155,7 +155,8 @@ def test_phase3_hero_explicit_scenarios_remain_separate_from_observed_pair(phase
 
 
 @pytest.mark.parametrize("enabled",[False,True])
-def test_phase3_validation_never_dispatches_metrics_even_when_enabled(tmp_path,monkeypatch,enabled):
+@pytest.mark.parametrize("model_name", ["closed_resampling", "reopened_resampling"])
+def test_phase3_validation_never_dispatches_metrics_even_when_enabled(tmp_path,monkeypatch,enabled,model_name):
     sources = _case(tmp_path)
     def blocked(*args,**kwargs):
         raise AssertionError("validation invoked a metric or scenario")
@@ -163,7 +164,8 @@ def test_phase3_validation_never_dispatches_metrics_even_when_enabled(tmp_path,m
         "diversity":("calculate_state_distribution","distribution_from_counts","distribution_from_probabilities","compare_support"),
         "provenance":("summarize_provenance","classify_direct_grounding"),"bounds":("direct_closure_exposure","closure_exposure_bounds"),
         "duplicates":("detect_exact_duplicates",),"tail":("select_tail","one_step_extinction_probability"),
-        "resampling":("expected_diversity_after_steps","simulate_closed_resampling"),
+        "resampling":("expected_diversity_after_steps","simulate_closed_resampling",
+                      "mix_external_input","simulate_reopened_resampling"),
     }
     for module,functions in names.items():
         loaded = importlib.import_module("recursive_integrity_toolkit.metrics."+module)
@@ -171,8 +173,10 @@ def test_phase3_validation_never_dispatches_metrics_even_when_enabled(tmp_path,m
             monkeypatch.setattr(loaded,name,blocked)
     config = {"simulation":{"enabled":enabled,"seed":19},
               "representation":{"name":"topic","source":"topic_field","field":"topic","version":"mapped-v1","missing_value_policy":"exclude"}}
-    params = ScenarioParameters("closed_resampling",resample_size=4,simulation_horizon=1,simulation_replicates=2,
-                               state_distribution=(("a",.5),("b",.5)))
+    external = ({"external_input_distribution": (("a", 0.), ("b", 1.)),
+                 "reopening_weight": .25} if model_name == "reopened_resampling" else {})
+    params = ScenarioParameters(model_name,resample_size=4,simulation_horizon=1,simulation_replicates=2,
+                               state_distribution=(("a",.5),("b",.5)), **external)
     bundle = validate_bundle(sources,configuration=config,scenario_parameters=params)
     assert len(bundle.records) == 4
     assert not hasattr(bundle,"simulation_results")
