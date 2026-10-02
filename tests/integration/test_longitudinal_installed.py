@@ -63,8 +63,8 @@ def _report(directory):
     from recursive_integrity_toolkit.result import validate_report
     payload = json.loads((directory / "report.json").read_text())
     validate_report(payload)
-    assert payload["run"]["report_schema_version"] == "1.2"
-    assert payload["run"]["toolkit_version"] == "0.1.0.dev5"
+    assert payload["run"]["report_schema_version"] == "1.3"
+    assert payload["run"]["toolkit_version"] == "0.1.0.dev6"
     assert payload["run"]["network_call_count"] == 0
     assert payload["simulations"] == {}
     assert payload["capabilities"] == payload["observability"]["capabilities"]

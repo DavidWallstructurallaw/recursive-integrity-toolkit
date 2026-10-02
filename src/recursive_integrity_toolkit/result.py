@@ -14,7 +14,7 @@ Limits:
     No ingestion, classifier, metric, simulation, adapter, renderer or CLI runs.
     A valid contract does not certify the truth of supplied evidence.
 Current phase status:
-    Phase 6A Step 6 adds referenced longitudinal evidence under schema 1.2.
+    Phase 6B Step 4 adds explicit scenario evidence under schema 1.3.
 """
 from __future__ import annotations
 
@@ -167,6 +167,33 @@ def _lineage_details(item: dict) -> dict:
                                    "omission_reasons": {"const": ["diagnostic_limit"]}}}},
     ]
     return result
+
+
+def _scenario_assumption_table(reopened: bool) -> list[dict]:
+    rows = [
+        ("Fixed state space", "One declared representation and shared state meaning.",
+         "Declared state meaning is supplied by the caller."),
+        ("Multinomial transition", "Each sampled step contains the constant declared resample size.",
+         "Simulation steps are distinct from observed dataset generations."),
+        ("Input basis", "Explicit supplied probability vectors with retained numerical corrections.",
+         "The initial distribution is not inferred from audit records."),
+        ("Replay schedule", "The same seed is reset independently for each selected model.",
+         "Matching replicate indices do not establish common-random-number precision."),
+        ("Numerical corrections", "Supplied and effective vectors, totals and correction entries are retained.",
+         "Replay requires the recorded sampler and compatible NumPy environment."),
+    ]
+    if reopened:
+        rows.extend((
+            ("Constant external input", "The declared external distribution and reopening weight remain constant.",
+             "Positive source probability permits re-entry without guaranteeing a sampled count."),
+            ("External quality", "External independence, reliability and relevance remain supplied assumptions.",
+             "No empirical intervention effect or integrity score is established."),
+        ))
+    else:
+        rows.append(("Closed source", "Every transition resamples its preceding internal state.",
+                     "No mutation, migration or external corrective input is modeled."))
+    return [{"assumption": rule, "declaration": declaration, "limitation": limitation}
+            for rule, declaration, limitation in rows]
 
 
 def _base_envelope(evidence: str, unit: str, owner: str, method: str) -> dict:
@@ -457,7 +484,7 @@ def _build_contract() -> dict:
     }, ("status", "reason_codes", "coverage", "coverage_reason", "requirements_met",
         "requirements_missing", "notes", "execution_status", "execution_scope", "execution_reason_codes"))
     run = _object({
-        "run_id": _text(), "toolkit_version": _text(), "report_schema_version": {"const": "1.2"},
+        "run_id": _text(), "toolkit_version": _text(), "report_schema_version": {"const": "1.3"},
         "started_at": _nullable(_text()), "completed_at": _nullable(_text()),
         "duration_seconds": _nullable(_number(minimum=0)), "python_version": _nullable(_text()),
         "platform": _nullable(_text()), "command": _nullable(_text()),
@@ -723,7 +750,7 @@ def _build_contract() -> dict:
         props = _base_envelope("simulation", "scenario", owner, owner + "." + name)
         props.update({"status": {"const": "experimental"}, "model": {"const": "closed_resampling"},
                       "model_version": _text(), "method": _enum("analytic_expectation", "analytic_extinction", "sampled_path"),
-                      "parameters": _ref("simulation_parameters"), "initial_distribution": _array(_ref("state_probability")),
+                      "parameters": {**_ref("simulation_parameters"), "properties": {"reopening_weight": {"type": "null"}, "external_input_distribution": {"maxItems": 0}}}, "initial_distribution": _array(_ref("state_probability")),
                       "resample_size": _integer(minimum=1)})
         props["assumptions"] = _strings(minimum=1)
         props["limitations"] = _strings(minimum=1)
@@ -752,8 +779,78 @@ def _build_contract() -> dict:
             })
         simulations[name] = _object(props, required)
         _field_entries.append(FieldDefinition("simulations." + name, owner, "simulation", "scenario", owner + "." + name, level, "scenario", True))
-    simulations["external_reopening"] = False
-    _field_entries.append(FieldDefinition("simulations.external_reopening", "T5", "simulation", "scenario", "T5.external_reopening", 5, "reserved", True, "registered_future"))
+    closed = simulations["closed_resampling"]["properties"]
+    baseline_properties = {key: value for key, value in closed.items() if key not in
+        ("sampled_paths", "support_trajectories", "extinction_events")}
+    baseline_properties["method"] = {"const": "analytic_expectation"}
+    baseline_properties["baseline_basis"] = {"const": "closed_sampled_effective_distribution"}
+    baseline = _object(baseline_properties)
+    closed.update({"state_semantics": _text(), "analytic_baseline": _ref("closed_analytic_baseline"),
+                   "assumption_table": _ref("scenario_assumption_table")})
+    reopened = _base_envelope("simulation", "scenario", "T5", "T5.external_reopening")
+    reopened.update({
+        "status": {"const": "experimental"}, "model": {"const": "reopened_resampling"},
+        "model_version": {"const": "reopened_categorical_constant_v1"}, "method": {"const": "sampled_path"},
+        "parameters": _ref("simulation_parameters"), "resample_size": _integer(minimum=1),
+        "initial_distribution": _array(_ref("state_probability"), minimum=1),
+        "input_normalization": _ref("input_normalization"), "state_semantics": _text(),
+        "external_input_distribution": _array(_ref("state_probability"), minimum=1),
+        "external_input_normalization": _ref("input_normalization"),
+        "sampled_paths": _array(_ref("sampled_path"), minimum=1),
+        "mixed_sources": _array(_object({"replicate_index": _integer(), "step": _integer(minimum=1),
+            "input_normalization": _ref("input_normalization"),
+            "input_basis": _enum("effective_internal_distribution", "effective_external_distribution",
+                "computed_external_mixture", "sampled_integer_counts_over_resample_size"),
+            "possible_reentry_states": _array(_text(empty=True), unique=True)})),
+        "state_reentry_events": _array(_ref("state_transition_event")),
+        "extinction_events": _array(_ref("state_transition_event")),
+        "support_trajectory": _array(_object({"replicate_index": _integer(), "support_sizes": _array(_integer())})),
+        "diversity_trajectory": _array(_object({"replicate_index": _integer(),
+            "gini_simpson_diversities": _array(_number(minimum=0, maximum=1))})),
+        "assumption_table": _ref("scenario_assumption_table"),
+    })
+    reopened["representation"] = _ref("representation")
+    reopened["trace_ids"] = {"const": ["T5"]}
+    reopened["theory_map_ids"] = {"const": []}
+    reopened["assumptions"] = {"const": [
+        "Fixed finite declared state space and constant positive integer resample size.",
+        "The internal and external vectors have the same explicitly declared state meaning.",
+        "External input distribution r and reopening weight lambda are constant across steps.",
+        "s_t=(1-lambda)*p_t+lambda*r; X_t conditional on s_t is Multinomial(n,s_t).",
+        "p_(t+1)=X_t/n; no other source of state restoration is modeled.",
+    ]}
+    reopened["limitations"] = {"const": [
+        "Experimental conditional simulation; no empirical intervention effect is established.",
+        "Positive mixed probability permits re-entry without guaranteeing a positive sample count.",
+        "External independence, reliability and relevance are supplied assumptions, not verified facts.",
+        "Reopening weight is not an integrity or Presence score; greater weight need not improve fidelity.",
+        "Closed multi-step expected contraction is not an expectation for a reopened trajectory.",
+        "Simulated steps are not record generations, training epochs or dataset releases.",
+        "The reopened kernel alone performs no comparison, external-reference loss, report or audit dispatch.",
+        "Floating-point and pseudorandom sampling are numerical realizations of the declared model.",
+        "Replay requires the same method, NumPy build/environment, seed and parameters.",
+        "Bit-identical paths across dependency versions or platforms are not promised.",
+        "Accepted input round-off is corrected only by division by its validated total.",
+        "Lambda endpoints reuse the already effective source; lambda zero retains integer count sampling.",
+    ]}
+    reopened_required = tuple(reopened)
+    reopened["scenario_comparison"] = _object({
+        "difference_direction": {"const": "reopened_minus_closed"},
+        "initial_reachability": _array(_object({
+            "model_name": _enum("closed_resampling", "reopened_resampling"),
+            "reachable_states": _array(_text(empty=True), unique=True),
+            "possible_reentry_states": _array(_text(empty=True), unique=True),
+            "timing": {"const": "before_first_draw"}}), minimum=2),
+        "rows": _array(_object({"replicate_index": _integer(), "step": _integer(),
+            "closed_support_size": _integer(), "reopened_support_size": _integer(),
+            "support_size_difference": _integer(minimum=-4096),
+            "closed_gini_simpson_diversity": _number(minimum=0, maximum=1),
+            "reopened_gini_simpson_diversity": _number(minimum=0, maximum=1),
+            "diversity_difference": _number(minimum=-1, maximum=1)})),
+        "limitations": _strings(minimum=1),
+    })
+    simulations["external_reopening"] = _object(reopened, reopened_required)
+    _field_entries.append(FieldDefinition("simulations.external_reopening", "T5", "simulation", "scenario", "T5.external_reopening", 5, "scenario", True))
     unavailable_owners = {
         "model_performance_decline": "PR-014", "causal_ancestor_effect": "T4",
         "correlated_semantic_error": "T4", "production_failure": "T1",
@@ -802,6 +899,9 @@ def _build_contract() -> dict:
             "comparison_requested": {"type": "boolean"}, "scenario_requested": {"type": "boolean"},
             "lineage_requested": {"type": "boolean"}}, ()),
         "state_probability": _object({"state_id": _text(empty=True), "probability": _number(minimum=0, maximum=1)}),
+        "closed_analytic_baseline": baseline,
+        "state_transition_event": _object({"replicate_index": _integer(), "step": _integer(minimum=1), "state_id": _text(empty=True)}),
+        "scenario_assumption_table": {"oneOf": [{"const": _scenario_assumption_table(False)}, {"const": _scenario_assumption_table(True)}]},
         "simulation_parameters": _object({
             "resample_size": _integer(minimum=1), "simulation_horizon": _integer(),
             "random_seed": _nullable(_integer()), "simulation_replicates": _nullable(_integer(minimum=1)),
@@ -811,7 +911,11 @@ def _build_contract() -> dict:
             "reopening_weight": _nullable(_number(minimum=0, maximum=1)),
             "external_input_distribution": _array(_ref("state_probability")),
             "numerical_policy": _ref("numerical_policy"),
-        }),
+            "sampler_algorithm": {"const": "sequential_binomial_complement_v1"},
+            "state_schedule": {"const": "ascending_unicode_state_id_skip_zero"},
+            "scenario_schedule": {"const": "reset_same_seed_per_model"},
+        }, ("resample_size", "simulation_horizon", "random_seed", "simulation_replicates", "rng_name", "numpy_version",
+            "replicate_schedule", "state_order", "input_basis", "reopening_weight", "external_input_distribution", "numerical_policy")),
         "numerical_policy": _object({"absolute_tolerance": {"const": 1e-12}, "relative_tolerance": {"const": 1e-12}, "probability_mass_tolerance": {"const": 1e-12}}),
         "sampled_path": _object({"replicate_index": _integer(), "generations": _array(_object({
             "step": _integer(), "state_counts": _nullable(_array(_integer())),
@@ -841,8 +945,8 @@ def _build_contract() -> dict:
         "warnings": _array(warning), "errors": _array(error)})
     return {"$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": "https://recursive-integrity-toolkit.example/schemas/report.schema.json",
-            "title": "Recursive Integrity Toolkit canonical report 1.2",
-            "description": "Phase 6A public contract with referenced longitudinal and bounded lineage evidence. Product metadata and five analytical evidence classes remain separate.",
+            "title": "Recursive Integrity Toolkit canonical report 1.3",
+            "description": "Phase 6B public contract with explicit experimental scenarios, referenced longitudinal and bounded lineage evidence. Product metadata and five analytical evidence classes remain separate.",
             **schema, "$defs": defs}
 
 
@@ -1739,6 +1843,287 @@ def _longitudinal_semantic_checks(payload: dict) -> None:
                 _fail(path, "shared unique edge count must agree with admitted graph evidence")
 
 
+def _scenario_distribution(rows: list, state_order: list, path: str) -> list:
+    if [row["state_id"] for row in rows] != state_order:
+        _fail(path, "probability vector identities must agree with the declared state order")
+    return [row["probability"] for row in rows]
+
+
+def _scenario_normalization(record: dict, state_order: list, *, sampled: bool, path: str) -> list:
+    """Validate supplied normalization evidence without importing a metric owner."""
+    supplied = _scenario_distribution(record["supplied_distribution"], state_order, path)
+    effective = _scenario_distribution(record["effective_distribution"], state_order, path)
+    total = math.fsum(supplied)
+    corrected = sampled and total != 1.0
+    if total <= 0 or abs(total - 1.0) > 1e-12:
+        _fail(path, "probability mass exceeds the declared absolute tolerance")
+    expected = [value / total for value in supplied] if corrected else supplied
+    corrections = [value - original for value, original in zip(expected, supplied)]
+    if (effective != expected or any(original > 0 and value == 0 for original, value in zip(supplied, effective))
+            or any(abs(value) > 1e-12 for value in corrections)):
+        _fail(path, "effective probabilities disagree with the bounded normalization policy")
+    if (record["supplied_probability_total"] != total
+            or record["effective_probability_total"] != math.fsum(effective)
+            or record["probability_residual"] != total - 1.0
+            or record["correction_applied"] is not corrected
+            or record["correction_method"] != ("divide_by_validated_total" if corrected else "none")
+            or record["normalization_divisor"] != (total if corrected else 1.0)
+            or [row["state_id"] for row in record["probability_corrections"]] != state_order
+            or [row["correction"] for row in record["probability_corrections"]] != corrections):
+        _fail(path, "normalization disclosure disagrees with its supplied and effective vectors")
+    return effective
+
+
+def _scenario_integer(value, lower: int, upper: int, path: str) -> None:
+    if type(value) is not int or not lower <= value <= upper:
+        _fail(path, "scenario integer is outside its explicit admission range")
+
+
+def _scenario_paths(scenario: dict, path: str) -> tuple[list, list]:
+    parameters = scenario["parameters"]
+    states, n = parameters["state_order"], parameters["resample_size"]
+    initial = [row["probability"] for row in scenario["initial_distribution"]]
+    horizon, replicates = parameters["simulation_horizon"], parameters["simulation_replicates"]
+    paths = scenario["sampled_paths"]
+    if [row["replicate_index"] for row in paths] != list(range(replicates)):
+        _fail(path, "sampled paths must cover every replicate in the declared schedule")
+    losses, returns = [], []
+    reopened = scenario["model"] == "reopened_resampling"
+    sources = scenario.get("mixed_sources", [])
+    expected_source_keys = [(replicate, step) for replicate in range(replicates) for step in range(1, horizon + 1)]
+    if reopened and [(row["replicate_index"], row["step"]) for row in sources] != expected_source_keys:
+        _fail(path, "mixed sources must cover every transition in the declared schedule")
+    external = [row["probability"] for row in scenario.get("external_input_distribution", [])]
+    weight = parameters["reopening_weight"]
+    source_index = 0
+    for replicate, sampled in enumerate(paths):
+        generations = sampled["generations"]
+        if [row["step"] for row in generations] != list(range(horizon + 1)):
+            _fail(path, "sampled generations must cover step zero through the horizon")
+        previous = None
+        for step, generation in enumerate(generations):
+            frequencies, counts = generation["state_frequencies"], generation["state_counts"]
+            if len(frequencies) != len(states):
+                _fail(path, "sampled frequency vector must preserve the declared states")
+            if step == 0:
+                if counts is not None or frequencies != initial:
+                    _fail(path, "step zero must preserve the effective start without invented counts")
+            elif (counts is None or len(counts) != len(states)
+                    or any(type(count) is not int for count in counts) or sum(counts) != n
+                    or frequencies != [count / n for count in counts]):
+                _fail(path, "sampled counts and frequencies must agree with the resample size")
+            support = [state for state, frequency in zip(states, frequencies) if frequency > 0]
+            diversity = 1.0 - math.fsum(frequency * frequency for frequency in frequencies)
+            if (generation["support"] != support or generation["support_size"] != len(support)
+                    or generation["gini_simpson_diversity"] != diversity or not 0 <= diversity < 1):
+                _fail(path, "support and diversity must agree with the supplied frequencies")
+            if step:
+                effective_source = previous
+                if reopened:
+                    source = sources[source_index]
+                    source_index += 1
+                    if weight == 0:
+                        raw_source = previous
+                        input_basis = "effective_internal_distribution" if step == 1 else "sampled_integer_counts_over_resample_size"
+                    elif weight == 1:
+                        raw_source = external
+                        input_basis = "effective_external_distribution"
+                    else:
+                        raw_source = [math.fsum(((1.0 - weight) * p, weight * r)) for p, r in zip(previous, external)]
+                        if any((p > 0 or r > 0) and mass == 0 for p, r, mass in zip(previous, external, raw_source)):
+                            _fail(path, "mixture arithmetic cannot erase a positive source")
+                        input_basis = "computed_external_mixture"
+                    record = source["input_normalization"]
+                    if ([row["probability"] for row in record["supplied_distribution"]] != raw_source
+                            or source["input_basis"] != input_basis):
+                        _fail(path, "transition source must be the declared constant-source mixture")
+                    effective_source = _scenario_normalization(record, states, sampled=0 < weight < 1, path=path)
+                    possible = [state for state, p, mass, r in zip(states, previous, effective_source, external)
+                                if p == 0 and mass > 0 and weight > 0 and r > 0]
+                    if source["possible_reentry_states"] != possible:
+                        _fail(path, "possible reentry identities disagree with the transition source")
+                if any(count > 0 and mass <= 0 for count, mass in zip(counts, effective_source)):
+                    _fail(path, "positive sampled counts require positive transition source probability")
+                for state, before, after in zip(states, previous, counts):
+                    event = {"replicate_index": replicate, "step": step, "state_id": state}
+                    if before > 0 and after == 0:
+                        losses.append(event)
+                    if reopened and before == 0 and after > 0:
+                        returns.append(event)
+            previous = frequencies
+    for field, value_field, source_field in (
+        ("support_trajectories", "support_sizes", "support_size"),
+        ("support_trajectory", "support_sizes", "support_size"),
+        ("diversity_trajectory", "gini_simpson_diversities", "gini_simpson_diversity"),
+    ):
+        if field in scenario:
+            expected = [{"replicate_index": index, value_field: [row[source_field] for row in sampled["generations"]]}
+                        for index, sampled in enumerate(paths)]
+            if scenario[field] != expected:
+                _fail(path, "trajectory summaries must agree with every sampled generation")
+    if "extinction_events" in scenario and scenario["extinction_events"] != losses:
+        _fail(path, "extinction events must cover exactly the positive-to-zero transitions")
+    if reopened and scenario["state_reentry_events"] != returns:
+        _fail(path, "reentry events must cover exactly the realized absent-to-positive transitions")
+    return losses, returns
+
+
+def _scenario_analytic(scenario: dict, path: str) -> None:
+    parameters = scenario["parameters"]
+    n, horizon = parameters["resample_size"], parameters["simulation_horizon"]
+    initial = 1.0 - math.fsum(row["probability"] * row["probability"] for row in scenario["initial_distribution"])
+    expected, underflow = [initial], []
+    for step in range(1, horizon + 1):
+        value = 0.0 if n == 1 or initial == 0 else initial * math.exp(step * math.log1p(-1.0 / n))
+        expected.append(value)
+        if initial > 0 and n > 1 and value == 0:
+            underflow.append(step)
+    if (scenario["initial_gini_simpson_diversity"] != initial
+            or scenario["contraction_factor"] != 1.0 - 1.0 / n
+            or scenario["expected_diversity"] != expected
+            or scenario["numerical_underflow_steps"] != underflow):
+        _fail(path, "closed analytic expectation and underflow disclosure disagree with the supplied basis")
+
+
+def _scenario_envelope(scenario: dict, *, name: str, run_seed, path: str) -> None:
+    parameters, method = scenario["parameters"], scenario["method"]
+    reopened = name == "external_reopening"
+    experiment = reopened or "scenario_schedule" in parameters
+    if (name == "tail_extinction") != (method == "analytic_extinction"):
+        _fail(path, "scenario family and method disagree")
+    if (scenario["resample_size"] != parameters["resample_size"]
+            or scenario["denominator"] != parameters["resample_size"] or scenario["denominator_reason"] is not None):
+        _fail(path, "scenario resample size and denominator declarations must agree")
+    stochastic = ("random_seed", "simulation_replicates", "rng_name", "numpy_version", "replicate_schedule")
+    replay = ("sampler_algorithm", "state_schedule", "scenario_schedule")
+    if method == "sampled_path":
+        if any(parameters[key] is None for key in stochastic) or parameters["random_seed"] != run_seed:
+            _fail(path, "sampled paths require replay metadata and the common run seed")
+    elif any(parameters[key] is not None for key in stochastic) or any(key in parameters for key in replay):
+        _fail(path, "analytic evidence cannot claim a random realization or sampling schedule")
+    if not reopened and (parameters["reopening_weight"] is not None or parameters["external_input_distribution"]):
+        _fail(path, "closed and tail models cannot contain external reopening inputs")
+    if reopened and (parameters["reopening_weight"] is None or not parameters["external_input_distribution"]):
+        _fail(path, "reopened evidence requires its explicit external distribution and weight")
+    required_results = {"analytic_extinction": ("by_state",),
+        "analytic_expectation": ("initial_gini_simpson_diversity", "contraction_factor", "expected_diversity", "numerical_underflow_steps"),
+        "sampled_path": ("sampled_paths",)}[method]
+    if any(key not in scenario for key in required_results):
+        _fail(path, "selected method requires its typed result fields")
+    if method == "analytic_extinction":
+        if parameters["simulation_horizon"] != 1:
+            _fail(path, "one-step extinction requires horizon one")
+        return
+    if len(scenario["scope"]["dataset_versions"]) != 1:
+        _fail(path, "scenario scope must declare exactly one supplied version")
+    if (experiment or "baseline_basis" in scenario) and not reopened and scenario["model_version"] != "closed_categorical_v1":
+        _fail(path, "closed experiment and baseline require their declared method version")
+    states = parameters["state_order"]
+    if not 1 <= len(states) <= 4096:
+        _fail(path, "declared state count exceeds scenario admission bounds")
+    _scenario_integer(parameters["resample_size"], 1, 2147483647, path)
+    _scenario_integer(parameters["simulation_horizon"], 0, 10000, path)
+    if method == "sampled_path":
+        _scenario_integer(parameters["simulation_replicates"], 1, 10000, path)
+        if len(states) * (parameters["simulation_horizon"] + 1) * parameters["simulation_replicates"] > 1000000:
+            _fail(path, "sampled path evidence exceeds the admitted work bound")
+    initial = _scenario_distribution(scenario["initial_distribution"], states, path)
+    if "input_normalization" in scenario:
+        normalized = _scenario_normalization(scenario["input_normalization"], states, sampled=method == "sampled_path", path=path)
+        if initial != normalized:
+            _fail(path, "initial distribution differs from the effective input")
+    elif experiment:
+        _fail(path, "experiment must retain its input normalization evidence")
+    elif abs(math.fsum(initial) - 1.0) > 1e-12:
+        _fail(path, "legacy initial probability vector exceeds the absolute mass tolerance")
+    if parameters["input_basis"] != "explicit_supplied_state_probability_vector":
+        _fail(path, "scenario input basis must retain its explicit supplied declaration")
+    if experiment:
+        _scenario_integer(parameters["random_seed"], 0, 2**53 - 1, path)
+        if any(key not in parameters for key in replay) or "state_semantics" not in scenario or "assumption_table" not in scenario:
+            _fail(path, "experiment evidence requires shared meaning, assumptions and all replay identities")
+        if scenario["assumption_table"] != _scenario_assumption_table(reopened):
+            _fail(path, "experiment assumption table must retain its model-specific fixed declarations")
+        if not reopened and any(key not in scenario for key in ("analytic_baseline", "extinction_events")):
+            _fail(path, "closed experiment must retain its separate baseline and complete event evidence")
+    elif any(key in scenario for key in ("state_semantics", "analytic_baseline", "assumption_table")):
+        _fail(path, "experiment-only fields require the explicit experiment replay schedule")
+    if reopened:
+        external = _scenario_normalization(scenario["external_input_normalization"], states, sampled=True, path=path)
+        if (_scenario_distribution(scenario["external_input_distribution"], states, path) != external
+                or parameters["external_input_distribution"] != scenario["external_input_distribution"]):
+            _fail(path, "external parameter declaration and effective distribution disagree")
+        if parameters["simulation_horizon"] >= 2 and parameters["reopening_weight"] > 0 and any(
+                r > 0 and parameters["reopening_weight"] * r == 0 for r in external):
+            _fail(path, "external mixture would erase future positive reachability")
+    if method == "sampled_path":
+        if any(key in scenario for key in ("expected_diversity", "contraction_factor", "initial_gini_simpson_diversity", "numerical_underflow_steps")):
+            _fail(path, "sampled paths cannot also claim the distinct analytic expectation fields")
+        _scenario_paths(scenario, path)
+    else:
+        if any(key in scenario for key in ("sampled_paths", "support_trajectories", "extinction_events")):
+            _fail(path, "analytic expectation cannot contain realized sampled evidence")
+        _scenario_analytic(scenario, path)
+    if "analytic_baseline" in scenario:
+        analytic = scenario["analytic_baseline"]
+        _scenario_envelope(analytic, name="closed_resampling", run_seed=run_seed, path=path + ".analytic_baseline")
+        if any(analytic[key] != scenario[key] for key in ("scope", "representation", "resample_size", "initial_distribution")):
+            _fail(path, "analytic baseline must share the sampled closed basis")
+        if (analytic["parameters"]["simulation_horizon"] != parameters["simulation_horizon"]
+                or analytic["parameters"]["state_order"] != states
+                or analytic["input_normalization"]["supplied_distribution"] != scenario["initial_distribution"]
+                or analytic["baseline_basis"] != "closed_sampled_effective_distribution"):
+            _fail(path, "analytic baseline must use the actual effective sampled start")
+
+
+def _scenario_comparison(scenarios: dict) -> None:
+    reopened, closed = scenarios.get("external_reopening"), scenarios.get("closed_resampling")
+    if reopened is None:
+        return
+    comparison = reopened.get("scenario_comparison")
+    both = closed is not None and "scenario_schedule" in closed["parameters"]
+    if (comparison is not None) != both:
+        _fail("$.simulations", "comparison evidence must occur exactly when both experiment models are supplied")
+    if not both:
+        return
+    path = "$.simulations.external_reopening.scenario_comparison"
+    for key in ("scope", "representation", "initial_distribution", "input_normalization", "state_semantics"):
+        if closed[key] != reopened[key]:
+            _fail(path, "compared scenarios must share the same declared starting basis")
+    common = ("resample_size", "simulation_horizon", "random_seed", "simulation_replicates", "rng_name", "numpy_version",
+              "replicate_schedule", "state_order", "input_basis", "numerical_policy", "sampler_algorithm", "state_schedule", "scenario_schedule")
+    if any(closed["parameters"][key] != reopened["parameters"][key] for key in common):
+        _fail(path, "compared scenarios must share all common parameters and sampling identities")
+    parameters = closed["parameters"]
+    if 2 * len(parameters["state_order"]) * (parameters["simulation_horizon"] + 1) * parameters["simulation_replicates"] > 1000000:
+        _fail(path, "combined sampled evidence exceeds the aggregate work bound")
+    rows = []
+    for left, right in zip(closed["sampled_paths"], reopened["sampled_paths"]):
+        for a, b in zip(left["generations"], right["generations"]):
+            rows.append({"replicate_index": left["replicate_index"], "step": a["step"],
+                "closed_support_size": a["support_size"], "reopened_support_size": b["support_size"],
+                "support_size_difference": b["support_size"] - a["support_size"],
+                "closed_gini_simpson_diversity": a["gini_simpson_diversity"],
+                "reopened_gini_simpson_diversity": b["gini_simpson_diversity"],
+                "diversity_difference": b["gini_simpson_diversity"] - a["gini_simpson_diversity"]})
+    if comparison["rows"] != rows:
+        _fail(path, "comparison rows must bind both supplied paths and labeled differences")
+    states = parameters["state_order"]
+    initial = [row["probability"] for row in closed["initial_distribution"]]
+    external = [row["probability"] for row in reopened["external_input_distribution"]]
+    weight = reopened["parameters"]["reopening_weight"]
+    reachability = [
+        {"model_name": "closed_resampling", "reachable_states": [s for s, p in zip(states, initial) if p > 0],
+         "possible_reentry_states": [], "timing": "before_first_draw"},
+        {"model_name": "reopened_resampling", "reachable_states": [s for s, p, r in zip(states, initial, external)
+            if (weight < 1 and p > 0) or (weight > 0 and r > 0)],
+         "possible_reentry_states": [s for s, p, r in zip(states, initial, external) if p == 0 and weight > 0 and r > 0],
+         "timing": "before_first_draw"},
+    ]
+    if comparison["initial_reachability"] != reachability:
+        _fail(path, "initial reachability must describe coefficient-positive possibilities before the first draw")
+
+
 def _semantic_checks(payload: dict) -> None:
     run = payload["run"]
     null_fields = {key for key in RUN_NULLABLE_FIELDS if run[key] is None}
@@ -1767,10 +2152,14 @@ def _semantic_checks(payload: dict) -> None:
         _fail("$.derived_metrics.tail", "tail rule declarations disagree")
     for path, item, contract in _walk(payload):
         if type(item) is list and item and all(type(row) is dict for row in item):
-            if path == ("simulations", "closed_resampling", "extinction_events"):
+            if path[:1] == ("simulations",) and path[-1] in ("extinction_events", "state_reentry_events"):
                 event_ids = [(row["replicate_index"], row["step"], row["state_id"]) for row in item]
                 if len(event_ids) != len(set(event_ids)):
                     _fail("$.table", "event composite identity must be unique")
+            elif path[:1] == ("simulations",) and path[-1] in ("mixed_sources", "rows"):
+                row_ids = [(row["replicate_index"], row["step"]) for row in item]
+                if len(row_ids) != len(set(row_ids)):
+                    _fail("$.table", "transition composite identity must be unique")
             else:
                 for identity in ("state_id", "source_state", "replicate_index"):
                     if all(identity in row for row in item):
@@ -1873,35 +2262,14 @@ def _semantic_checks(payload: dict) -> None:
             if not math.isclose(interval["interval_width"]["value"], upper - lower, rel_tol=1e-12, abs_tol=1e-12):
                 _fail("$.derived_metrics.closure_exposure", "interval width disagrees with endpoints")
     for name, scenario in payload["simulations"].items():
-        parameters = scenario["parameters"]
-        method = scenario["method"]
-        if (name == "tail_extinction") != (method == "analytic_extinction"):
-            _fail("$.simulations", "scenario family and method disagree")
-        if scenario["resample_size"] != parameters["resample_size"]:
-            _fail("$.simulations", "resample size declarations disagree")
-        random_fields = ("random_seed", "simulation_replicates", "rng_name", "numpy_version", "replicate_schedule")
-        if method == "sampled_path" and any(parameters[key] is None for key in random_fields):
-            _fail("$.simulations", "sampled paths require seed and replay metadata")
-        if method in ("analytic_extinction", "analytic_expectation") and any(parameters[key] is not None for key in random_fields):
-            _fail("$.simulations", "analytic scenario cannot claim a random realization")
-        results = scenario
-        expected = {"analytic_extinction": ("by_state",),
-                    "analytic_expectation": ("initial_gini_simpson_diversity", "contraction_factor", "expected_diversity", "numerical_underflow_steps"),
-                    "sampled_path": ("sampled_paths",)}[method]
-        if any(key not in results for key in expected):
-            _fail("$.simulations.results", "selected method requires its typed result fields")
-        if method == "analytic_extinction" and parameters["simulation_horizon"] != 1:
-            _fail("$.simulations", "one-step extinction requires horizon one")
-        if method == "analytic_expectation" and len(results["expected_diversity"]) != parameters["simulation_horizon"] + 1:
-            _fail("$.simulations", "expectation trajectory length disagrees with horizon")
-        if method == "sampled_path":
-            if len(results["sampled_paths"]) != parameters["simulation_replicates"]:
-                _fail("$.simulations", "path count disagrees with replicate count")
-            if any(len(path_result["generations"]) != parameters["simulation_horizon"] + 1
-                   for path_result in results["sampled_paths"]):
-                _fail("$.simulations", "sampled trajectory length disagrees with horizon")
-        if parameters["reopening_weight"] is not None or parameters["external_input_distribution"]:
-            _fail("$.simulations", "closed model cannot contain external reopening parameters")
+        _scenario_envelope(scenario, name=name, run_seed=payload["run"]["random_seed"], path="$.simulations." + name)
+    _scenario_comparison(payload["simulations"])
+    capability = payload["capabilities"].get("intervention_simulation")
+    if capability is not None and capability["execution_status"] in ("completed", "partial") and not payload["simulations"]:
+        _fail("$.capabilities.intervention_simulation", "executed simulation capability requires actually supplied results")
+    if payload["simulations"] and not any(row["conclusion"] == "empirical_intervention_effect"
+                                        for row in payload["unavailable_conclusions"]):
+        _fail("$.unavailable_conclusions", "simulation evidence must retain the unavailable empirical intervention effect")
 
 
 def validate_report(payload: dict) -> None:

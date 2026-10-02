@@ -19,6 +19,6 @@ Current phase status:
     Phase 5 development package; root import exposes the version only.
 """
 
-__version__ = "0.1.0.dev5"
+__version__ = "0.1.0.dev6"
 
 __all__ = ["__version__"]

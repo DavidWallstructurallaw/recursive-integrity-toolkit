@@ -1,6 +1,6 @@
 # CLI
 
-Development version `0.1.0.dev5`, the Phase 6A candidate, supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. Reports use schema `1.2`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
+Development version `0.1.0.dev5`, with Phase 6B Step 6 additions, supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. Reports use schema `1.3`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
 
 ## Packaged local example
 
@@ -13,7 +13,7 @@ Run after installation from a trusted local directory. The workspace must be new
 
 Both commands retain support 8 and 5, delta -3, retention 5/8, diversity 7/8 and 3/4, delta -1/8, and missing states `battery`, `lizard`, `turtle`. Later human/synthetic shares are each 1/2 and direct exposure is [1/2, 1/2]. Input observability is Level 4 and default simulations are empty.
 
-With `--lineage`, v2 is the eight-record target and v1 supplies eight ancestor records. All eight targets have resolved external ancestry, supported by five distinct roots. Ancestry HHI is 1/4, effective root count is 4, lineage exposure is [0, 0], and the shared-ancestry proxy is `present`. The report retains the distinction between declared topology and causal evidence. Plain `example` leaves lineage `not_requested`. Both modes use schema 1.2 and preserve the scientific values in the unchanged packaged `inputs/EXPECTED_OUTPUTS.md` oracle.
+With `--lineage`, v2 is the eight-record target and v1 supplies eight ancestor records. All eight targets have resolved external ancestry, supported by five distinct roots. Ancestry HHI is 1/4, effective root count is 4, lineage exposure is [0, 0], and the shared-ancestry proxy is `present`. The report retains the distinction between declared topology and causal evidence. Plain `example` leaves lineage `not_requested`. Both modes use schema 1.3 and preserve the scientific values in the unchanged packaged `inputs/EXPECTED_OUTPUTS.md` oracle.
 
 Explicit series examples are also available:
 
@@ -24,6 +24,21 @@ rit example --dataset longitudinal --longitudinal --out ./three-version-workspac
 ```
 
 The default dataset is `hero`. Its series mode requests the same two selected snapshots, with separate distribution/provenance/direct summaries and changes. Adding `--lineage` requests both lineage snapshots: supporting roots 8 to 5, HHI 1/8 to 1/4 and effective roots 8 to 4. The `longitudinal` dataset is a separate seven-file JSONL example with support 3 to 2 to 3 and a disappearing/reappearing state. `--dataset longitudinal` requires `--longitudinal`. Neither example enables first-baseline or tail analysis by default. All example destinations follow the same exclusive-workspace rule.
+
+The explicitly selected simulation example is available after installation:
+
+```bash
+rit example --dataset simulation --simulate --out ./simulation-workspace
+```
+
+It extracts four files: `config.json`, `records.jsonl`, `provenance.jsonl` and
+`EXPECTED_OUTPUTS.md`. It runs closed and reopened scenarios alongside a separate
+two-record audit. `--dataset simulation` requires `--simulate` and rejects
+`--lineage`, `--longitudinal` and a custom `--config` before creating a workspace.
+The packaged config leaves `simulation.enabled` undeclared, so an extracted
+config alone does not activate sampling in a later audit. Use the
+[simulation walkthrough](simulation_example.md) for the assumptions, exact
+first-transition probabilities and commands to validate or rerun the inputs.
 
 Successful stdout names both report files. In redacted mode the fixed names are relative to the example's `reports/` directory. An audit failure may leave extracted inputs and an error report. Extraction failures clean only files owned by that attempt; incomplete cleanup is disclosed on stderr. Inspect a failed destination and choose a fresh one for retry.
 
@@ -74,10 +89,56 @@ Without a representation, audit retains input/provenance evidence and explains u
 | `--baseline none\|first` | Audit only; requires longitudinal enablement; default `none` |
 | `--lineage` | Audit/example only; explicitly execute the validated parent graph and ancestry families |
 | `--lineage-records PATH` | Repeatable audit/validate context input; audit requires lineage opt-in |
+| `--simulate` | Audit/example only; explicitly activate complete scenario declarations from config |
 
-Repeated singleton flags and competing CLI/config singleton declarations fail even if values match. `--lineage-records` is repeatable. Config output allows only `directory`, `record_id_mode` and `id_salt_file`. The CLI performs unweighted calculations even when weights are present and applies no implicit representation, tail threshold or simulation. Debug output, simulation requests and state-list tail selection are unsupported. Directed series maps use the complete declarative contract below.
+Repeated singleton flags and competing CLI/config singleton declarations fail even if values match. The simulation flag permits an already true `simulation.enabled`, but conflicts with an explicitly false value. `--lineage-records` is repeatable. Config output allows only `directory`, `record_id_mode` and `id_salt_file`. The CLI performs unweighted calculations even when weights are present and applies no implicit representation, tail threshold or simulation. Debug output and state-list tail selection are unsupported. Directed series maps use the complete declarative contract below.
 
 An ordinary audit requires one primary dataset version. Multiple versions in a calculated side cause an input error without pooling or choosing one. Validate can inspect multiple versions through `--records`, repeated `--compare` and repeated `--lineage-records`; it rejects explicit lineage, longitudinal, state-semantics and tail execution requests. Inert `longitudinal` config is accepted, including `enabled: true`, without analytical execution. Its `derived_metrics` contains only the schema's unrequested series metadata; `proxy_signals` and `simulations` stay empty. Empty/malformed input can produce an error-only report. Missing provenance never becomes supplied unknown or fabricated source evidence.
+
+## Explicit experimental scenarios
+
+`audit --simulate --config scenario.json --records records.csv --out scenario-report`
+activates the config's `simulation` block. A complete block with `enabled: true`
+also requests execution without the flag. With activation absent, declarations
+remain inert. An explicitly false enabled value conflicts with `--simulate`.
+
+Supply `models`, `seed`, `state_distribution`, `resample_size`,
+`simulation_horizon`, `simulation_replicates`, full `representation`,
+`state_semantics`, `scope_id` and `dataset_version`. The selected models are
+`closed_resampling` and/or `reopened_resampling`, each at most once. Reopened
+selection additionally requires `external_input_distribution` and
+`reopening_weight`; closed-only declarations reject those fields. See the
+[field and numerical contract](simulation_contract.md#5-configuration-and-cli)
+for the complete shape and bounds. No scientific parameter receives an implicit
+default. Both probability objects use the same explicitly declared literal state
+set, including zero-mass states and valid empty-string identities.
+
+The scenario scope uses the supplied labels, empty included/excluded record
+identities and `explicit_scenario_probability_vector` as its denominator basis.
+Neither the distributions nor scope membership come from the audit records.
+Every selected model resets the same explicit seed. Reports distinguish the
+closed analytic expectation from sampled experimental paths and keep empirical
+intervention effects unavailable. A sampling failure retains independently
+completed audit results and returns the applicable failure exit code.
+
+`validate --config scenario.json --records records.csv --out declaration-check`
+checks enabled declarations without importing the sampler or creating an RNG.
+It retains empty simulations and deferred eligible execution. It does not accept
+`--simulate`. Complete declarations survive normalized configuration hashing;
+safe configuration summaries expose no distribution keys or caller text.
+
+For the Hero or longitudinal dataset,
+`example --simulate --config scenario.json --out scenario-workspace` accepts a
+local JSON/TOML overlay containing only the top-level `simulation` block. It
+validates that overlay before creating the new workspace, combines it with the
+selected packaged example's config and runs the explicit experiment alongside
+the ordinary audit. A complete enabled overlay also activates without the flag.
+Other overlay fields are rejected. The original packaged resources remain
+unchanged. Extracted config contains the supplied declarations; `--redacted`
+protects reports and diagnostics, not extracted input files. The separate
+`--dataset simulation --simulate` example supplies its own complete declaration
+and does not accept an overlay. To change it, edit a copy of its extracted config
+and use `audit` with an explicit activation and a fresh report destination.
 
 ## Explicit lineage and context
 

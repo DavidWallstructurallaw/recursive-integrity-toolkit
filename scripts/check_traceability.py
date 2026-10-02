@@ -18,7 +18,7 @@ FORBIDDEN_IMPORTS = {"socket", "urllib", "http", "ftplib", "requests", "httpx",
                      "tensorflow", "transformers"}
 FORBIDDEN_FILES = {"collapse_score.py", "integrity_score.py", "universal_score.py"}
 DYNAMIC_CALLS = {"eval", "exec", "compile", "__import__"}
-INPUT_ONLY = {"io/validation.py", "io/normalization.py", "io/schema_mapping.py", "io/loaders.py",
+INPUT_ONLY = {"config.py", "io/validation.py", "io/normalization.py", "io/schema_mapping.py", "io/loaders.py",
               "observability/levels.py"}
 RENDERERS = {"reports/json_report.py", "reports/markdown_report.py"}
 

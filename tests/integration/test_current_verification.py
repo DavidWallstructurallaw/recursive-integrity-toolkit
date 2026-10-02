@@ -18,17 +18,19 @@ def current_tools(repo_root):
 
 @pytest.fixture
 def protected_copy(repo_root, tmp_path):
-    for relative in ("src", "schemas", "examples/hero", "examples/longitudinal"):
+    for relative in ("src", "schemas", "examples/hero", "examples/longitudinal", "examples/simulation"):
         shutil.copytree(repo_root / relative, tmp_path / relative,
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     shutil.copy2(repo_root / "pyproject.toml", tmp_path / "pyproject.toml")
     return tmp_path
 
 
-@pytest.mark.parametrize("mutation", ["formula", "new_module", "deleted_module",
-                                     "nested_metadata", "similar_metadata", "new_example"])
+@pytest.mark.parametrize("mutation", ["formula", "resampling_kernel", "new_module", "deleted_module",
+                                     "nested_metadata", "similar_metadata", "new_example",
+                                     "new_simulation_resource", "configuration", "cli",
+                                     "simulation_resource_pair"])
 def test_current_scope_rejects_unauthorized_product_changes(current_tools, protected_copy, mutation):
-    """Candidate version metadata does not authorize unrelated product changes."""
+    """Candidate preparation preserves product owners and packaged examples."""
     verify = current_tools["verify_source_scope"]
     generated = protected_copy / "src/recursive_integrity_toolkit.egg-info"
     generated.mkdir(exist_ok=True)
@@ -39,12 +41,29 @@ def test_current_scope_rejects_unauthorized_product_changes(current_tools, prote
         source = target.read_text(encoding="utf-8")
         assert "1.0 -" in source
         target.write_text(source.replace("1.0 -", "1.0 +", 1), encoding="utf-8")
+    elif mutation == "resampling_kernel":
+        target = target.with_name("resampling.py")
+        target.write_bytes(target.read_bytes() + b"\n# Unauthorized sampling change.\n")
     elif mutation == "new_module":
         target.with_name("unauthorized_metric.py").write_text("def score(): return 1\n", encoding="utf-8")
     elif mutation == "deleted_module":
         target.unlink()
     elif mutation == "new_example":
         (protected_copy / "examples/longitudinal/unlisted.json").write_text("{}", encoding="utf-8")
+    elif mutation == "new_simulation_resource":
+        (protected_copy / "examples/simulation/unlisted.json").write_text("{}", encoding="utf-8")
+    elif mutation == "configuration":
+        target = protected_copy / "src/recursive_integrity_toolkit/config.py"
+        target.write_bytes(target.read_bytes() + b"\n# Unauthorized configuration change.\n")
+    elif mutation == "cli":
+        target = protected_copy / "src/recursive_integrity_toolkit/cli.py"
+        target.write_bytes(target.read_bytes() + b"\n# Unauthorized CLI change.\n")
+    elif mutation == "simulation_resource_pair":
+        for relative in ("examples/simulation/config.json",
+                         "src/recursive_integrity_toolkit/data/simulation/config.json"):
+            target = protected_copy / relative
+            target.write_bytes(target.read_bytes() + b"\n")
+        current_tools["verify_resources"](protected_copy)
     else:
         relative = ("src/recursive_integrity_toolkit/recursive_integrity_toolkit.egg-info"
                     if mutation == "nested_metadata" else
@@ -57,7 +76,7 @@ def test_current_scope_rejects_unauthorized_product_changes(current_tools, prote
 
 
 @pytest.mark.parametrize("mutation", ["missing", "symlink"])
-def test_current_authorized_version_module_must_be_a_regular_file(current_tools, protected_copy, mutation):
+def test_current_version_module_must_be_a_regular_file(current_tools, protected_copy, mutation):
     current_tools["verify_source_scope"](protected_copy)
     target = protected_copy / "src/recursive_integrity_toolkit/__init__.py"
     target.unlink()
@@ -68,11 +87,36 @@ def test_current_authorized_version_module_must_be_a_regular_file(current_tools,
 
 
 @pytest.mark.parametrize("relative", ["pyproject.toml", "src/recursive_integrity_toolkit/__init__.py"])
-def test_current_version_allowance_rejects_other_edits(current_tools, protected_copy, relative):
+@pytest.mark.parametrize("mutation", ["different_version", "unadvanced_version", "extra_bytes"])
+def test_current_scope_allows_only_the_candidate_version_token(
+        current_tools, protected_copy, relative, mutation):
     current_tools["verify_source_scope"](protected_copy)
     target = protected_copy / relative
-    target.write_bytes(target.read_bytes() + b"\n# Unrelated candidate change.\n")
-    with pytest.raises(ValueError, match="Only the dev5 version update"):
+    source = target.read_bytes()
+    assert b'"0.1.0.dev6"' in source
+    if mutation == "extra_bytes":
+        target.write_bytes(source + b"\n# Unapproved bytes beside the version token.\n")
+    else:
+        replacement = b'"0.1.0.dev7"' if mutation == "different_version" else b'"0.1.0.dev5"'
+        target.write_bytes(source.replace(b'"0.1.0.dev6"', replacement))
+    with pytest.raises(ValueError, match="Unauthorized product mutation"):
+        current_tools["verify_source_scope"](protected_copy)
+
+
+@pytest.mark.parametrize("before,after", [
+    ('"numpy>=2.0"', '"numpy>=2.1"'),
+    ('"data/simulation/*"', '"data/simulation/**"'),
+    ('"data/hero/*"', '"data/hero/**"'),
+    ('requires-python = ">=3.11"', 'requires-python = ">=3.12"'),
+])
+def test_current_scope_rejects_package_data_and_metadata_changes(
+        current_tools, protected_copy, before, after):
+    current_tools["verify_source_scope"](protected_copy)
+    path = protected_copy / "pyproject.toml"
+    text = path.read_text(encoding="utf-8")
+    assert before in text
+    path.write_text(text.replace(before, after, 1), encoding="utf-8")
+    with pytest.raises(ValueError, match="Unauthorized product mutation"):
         current_tools["verify_source_scope"](protected_copy)
 
 
@@ -94,6 +138,8 @@ def test_specification_changes_cannot_self_authorize(current_tools, repo_root, t
     "src/recursive_integrity_toolkit/data/hero/config.json",
     "src/recursive_integrity_toolkit/data/longitudinal/config.json",
     "src/recursive_integrity_toolkit/data/longitudinal/records_v3.jsonl",
+    "src/recursive_integrity_toolkit/data/simulation/config.json",
+    "src/recursive_integrity_toolkit/data/simulation/records.jsonl",
     "src/recursive_integrity_toolkit/data/report.schema.json",
 ])
 def test_packaged_resource_corruption_is_rejected(current_tools, protected_copy, relative):
@@ -131,7 +177,7 @@ def _write_test_archives(directory, wheel_entries, sdist_entries):
 
 @pytest.mark.parametrize("kind", ["wheel", "sdist"])
 @pytest.mark.parametrize("mutation", ["code", "resource", "longitudinal_resource",
-                                     "missing_resource", "duplicate_member"])
+                                     "simulation_resource", "missing_resource", "duplicate_member"])
 def test_distribution_integrity_rejects_changed_payloads(current_tools, repo_root, tmp_path, kind, mutation):
     runtime = {path.relative_to(repo_root / "src").as_posix(): path.read_bytes()
                for path in (repo_root / "src/recursive_integrity_toolkit").rglob("*.py")}
@@ -150,6 +196,7 @@ def test_distribution_integrity_rejects_changed_payloads(current_tools, repo_roo
     entries = wheel_entries if kind == "wheel" else sdist_entries
     target = ("recursive_integrity_toolkit/metrics/diversity.py" if mutation == "code" else
               "recursive_integrity_toolkit/data/longitudinal/records_v3.jsonl" if mutation == "longitudinal_resource" else
+              "recursive_integrity_toolkit/data/simulation/config.json" if mutation == "simulation_resource" else
               "recursive_integrity_toolkit/data/report.schema.json")
     if kind == "sdist":
         target = "src/" + target

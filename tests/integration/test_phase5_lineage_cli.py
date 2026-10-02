@@ -72,7 +72,7 @@ def _invoke(args, out, capsys, *, command="audit"):
     if report is not None:
         from recursive_integrity_toolkit.result import validate_report
         validate_report(report)
-        assert report["run"]["report_schema_version"] == "1.2"
+        assert report["run"]["report_schema_version"] == "1.3"
         assert report["capabilities"] == report["observability"].get("capabilities", {})
         assert report["run"]["network_call_count"] == 0
         assert markdown.startswith("# Recursive Integrity Audit Report\n")

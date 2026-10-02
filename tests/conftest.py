@@ -163,20 +163,39 @@ def peak_rss():
         if not psapi.GetProcessMemoryInfo(kernel.GetCurrentProcess(), ctypes.byref(counters), counters.cb):
             raise ctypes.WinError(ctypes.get_last_error())
         return counters.PeakWorkingSetSize, "GetProcessMemoryInfo.PeakWorkingSetSize; whole fresh process"
+    if sys.platform.startswith("linux"):
+        # Unlike ru_maxrss, this executed image's high-water mark does not
+        # retain a larger fork-parent peak across exec.
+        for line in Path("/proc/self/status").read_text().splitlines():
+            if line.startswith("VmHWM:"):
+                return int(line.split()[1]) * 1024, "/proc/self/status VmHWM; whole executed process"
+        raise RuntimeError("Linux process high-water mark unavailable")
     import resource
     raw = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return int(raw if sys.platform == "darwin" else raw * 1024), "getrusage(RUSAGE_SELF).ru_maxrss; whole fresh process"
 
 traced = sys.argv[1] == "traced"
 observation_path = Path(sys.argv[2])
+profile_simulation = sys.argv[3] == "profile-simulation"
+simulation_intervals = []
 before, rss_method = peak_rss()
 if traced:
     tracemalloc.start(1)
 start = time.perf_counter()
 code = None
 try:
+    if profile_simulation:
+        from recursive_integrity_toolkit.metrics import resampling
+        original_experiment = resampling.run_scenario_experiment
+        def timed_experiment(*args, **kwargs):
+            simulation_start = time.perf_counter()
+            try:
+                return original_experiment(*args, **kwargs)
+            finally:
+                simulation_intervals.append(time.perf_counter() - simulation_start)
+        resampling.run_scenario_experiment = timed_experiment
     from recursive_integrity_toolkit.cli import main
-    code = main(sys.argv[3:])
+    code = main(sys.argv[4:])
 finally:
     elapsed = time.perf_counter() - start
     current, peak = tracemalloc.get_traced_memory() if traced else (None, None)
@@ -186,6 +205,8 @@ finally:
     observation_path.write_text(json.dumps(dict(cli_elapsed_seconds=elapsed,
         tracing=traced, traced_current_bytes=current, traced_peak_bytes=peak,
         rss_peak_before_cli_bytes=before, rss_peak_after_cli_bytes=after,
+        simulation_elapsed_seconds=simulation_intervals if profile_simulation else None,
+        simulation_timing_scope="actual run_scenario_experiment call; includes request admission, sampling, baseline and comparison; excludes report assembly/publication" if profile_simulation else None,
         rss_method=rss_method, cli_exit_code=code), sort_keys=True) + "\n", encoding="utf-8")
 sys.exit(code)
 '''
@@ -205,7 +226,8 @@ sys.exit(code)
         logical_cpu_count=os.cpu_count(), versions=versions)
 
     def measure(name, arguments, input_paths, *, record_count, untraced_attempts=1,
-                timeout_seconds=60, trace_allocations=True):
+                timeout_seconds=60, trace_allocations=True, profile_simulation=False,
+                workload_details=None):
         root = tmp_path / name
         root.mkdir()
         inputs = {str(path): dict(bytes=path.stat().st_size,
@@ -218,6 +240,7 @@ sys.exit(code)
             destination = root / f"attempt-{index:02d}-{mode}"
             measurement = root / f"attempt-{index:02d}-{mode}.json"
             command = [sys.executable, "-c", program, mode, str(measurement),
+                       "profile-simulation" if profile_simulation else "no-profile",
                        "audit", *arguments, "--out", str(destination)]
             start = time.perf_counter()
             timed_out = False
@@ -236,9 +259,10 @@ sys.exit(code)
                 timed_out=timed_out, timeout_seconds=timeout_seconds,
                 process_exit_code=completed.returncode, stdout=completed.stdout, stderr=completed.stderr,
                 inputs=inputs, environment=environment,
+                workload_details=workload_details,
                 assembly_source_path=str(assembly), assembly_source_sha256=assembly_sha256,
                 allocation_omission_reason=None if trace_allocations else
-                    "Full-scale Python allocation tracing was omitted to bound diagnostic runtime and memory; separately labeled bounded observations measure tracing overhead. Actual full-process peak RSS is recorded.",
+                    "Python allocation tracing was omitted to bound diagnostic runtime and memory. Actual full-process peak RSS is recorded; no traced-allocation claim is made for this workload.",
                 includes="fresh interpreter startup, CLI import, loading, validation, metrics, JSON and Markdown publication; outer wall also includes measurement bookkeeping",
                 excludes="synthetic input construction, parent-side report assertions and environment discovery",
                 allocation_scope="tracemalloc(1), Python allocations during CLI import and audit; excludes untracked native allocations",

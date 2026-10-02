@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.1.0.dev6: Phase 6B experimental simulation candidate
+
+Added explicitly supplied constant-source external reopening alongside the
+closed finite-resampling model. Requests declare one or both models, common
+states and numerical inputs, fixed PCG64 seed and bounded combined work.
+Results retain every sampled path, source mixture, repeated loss/re-entry event,
+selected closed analytic baseline and per-replicate reopened-minus-closed
+comparison. Positive reachability and realized re-entry remain distinct.
+
+Schema 1.3 exposes experimental simulation evidence with explicit assumptions,
+scopes and privacy-protected identities. `audit --simulate --config PATH` and
+complete explicitly enabled configuration activate execution; `validate` remains
+input-only. Added the installed `example --dataset simulation --simulate` and
+its independent rational expectations and walkthrough. Empirical intervention
+effects, external-source quality claims and guaranteed diversity gains remain
+unavailable.
+
+Step 7 exercises actual resource boundaries, detects ten concrete semantic and
+privacy faults and measures complete bounded reports. The 33,280-cell local
+observation took 4.67 seconds and 152,576,000 bytes peak RSS, with its scope and
+all attempts in `PHASE_6B_STEP_7.md`. Step 8 candidate verification and actual
+delivery status are recorded in `PHASE_6B_COMPLETION.md`.
+
 ## 0.1.0.dev5: Phase 6A longitudinal candidate
 
 Added explicitly ordered multi-version comparison with adjacent pairs and an

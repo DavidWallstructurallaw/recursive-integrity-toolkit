@@ -19,7 +19,7 @@ Limits:
     inference, metric, lineage, simulation, report assembly or remote access.
 
 Current phase status:
-    Phase 6A Step 7 explicit longitudinal configuration and repeatable comparisons.
+    Phase 6B Step 5 explicit scenario configuration and input-only eligibility.
 """
 
 from __future__ import annotations
@@ -34,7 +34,8 @@ from types import MappingProxyType
 from typing import Any, Mapping
 
 from .errors import ConfigurationError, ErrorCode
-from .models import FileFormat, FileRole, InputSource, PrivacyMode, RecordKey, RepresentationDescriptor
+from .models import (CalculationScope, FileFormat, FileRole, InputSource, PrivacyMode,
+                     RecordKey, RepresentationDescriptor, ScenarioParameters)
 from .utils.hashing import sha256_canonical
 from .utils.paths import local_input_path
 
@@ -189,8 +190,21 @@ class ResourceLimits:
 
 @dataclass(frozen=True, slots=True)
 class ScenarioConfig:
+    """Detached experimental declarations; resolving them never runs a model."""
+
     enabled: bool = False
     seed: int | None = None
+    models: tuple[str, ...] = ()
+    state_distribution: tuple[tuple[str, float], ...] | None = field(default=None, repr=False)
+    external_input_distribution: tuple[tuple[str, float], ...] | None = field(default=None, repr=False)
+    reopening_weight: int | float | None = None
+    resample_size: int | None = None
+    simulation_horizon: int | None = None
+    simulation_replicates: int | None = None
+    representation: RepresentationDescriptor | None = field(default=None, repr=False)
+    state_semantics: str | None = field(default=None, repr=False)
+    scope_id: str | None = field(default=None, repr=False)
+    dataset_version: str | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,6 +225,16 @@ class ResolvedConfig:
     longitudinal: LongitudinalOptions = LongitudinalOptions()
 
 
+def _unique_config_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Reject competing JSON declarations without printing caller field names."""
+    result: dict[str, Any] = {}
+    for name, value in pairs:
+        if name in result:
+            _invalid("configuration objects cannot repeat fields")
+        result[name] = value
+    return result
+
+
 def load_config(path: str | Path) -> ResolvedConfig:
     """Load one explicit local JSON or TOML configuration file."""
     config_path = Path(path)
@@ -222,7 +246,7 @@ def load_config(path: str | Path) -> ResolvedConfig:
 
     try:
         if suffix == ".json":
-            data = json.loads(raw.decode("utf-8"))
+            data = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_config_object)
         elif suffix == ".toml":
             data = tomllib.loads(raw.decode("utf-8"))
         else:
@@ -504,19 +528,235 @@ def _parse_resource_limits(value: Any) -> ResourceLimits:
     return ResourceLimits(**kwargs)
 
 
+# These are declaration admission bounds, kept independent of analytical imports.
+# The sampler independently checks the same approved contract before creating RNGs.
+_SCENARIO_MODELS = ("closed_resampling", "reopened_resampling")
+_SCENARIO_INTEGER_BOUNDS = {
+    "seed": (0, 2**53 - 1),
+    "resample_size": (1, 2147483647),
+    "simulation_horizon": (0, 10000),
+    "simulation_replicates": (1, 10000),
+}
+_SCENARIO_MAX_STATES = 4096
+_SCENARIO_MAX_PATH_CELLS = 1000000
+
+
+def _scenario_literal(value: object, *, empty: bool = False) -> str:
+    if type(value) is not str or (not value.strip() and not empty) or "\x00" in value:
+        _invalid("scenario declarations require literal text with explicit meaning")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        _invalid("scenario declarations require valid Unicode")
+    return value
+
+
+def _scenario_distribution(value: object) -> tuple[bool, frozenset[str]]:
+    """Check supplied mass only, without normalizing or evaluating a mixture."""
+    if type(value) is not tuple or not 1 <= len(value) <= _SCENARIO_MAX_STATES:
+        return False, frozenset()
+    names: set[str] = set()
+    masses: list[int | float] = []
+    for pair in value:
+        if type(pair) is not tuple or len(pair) != 2:
+            return False, frozenset()
+        name, mass = pair
+        try:
+            _scenario_literal(name, empty=True)
+        except ConfigurationError:
+            return False, frozenset()
+        if name in names or type(mass) not in (int, float) or not 0 <= mass <= 1 or not math.isfinite(mass):
+            return False, frozenset()
+        names.add(name)
+        masses.append(mass)
+    return abs(math.fsum(masses) - 1.0) <= 1e-12, frozenset(names)
+
+
 def _parse_simulation(value: Any) -> ScenarioConfig:
     if value is None:
         return ScenarioConfig()
-    if not isinstance(value, Mapping):
-        _invalid("simulation must be an object")
-    unknown = sorted(set(value) - {"enabled", "seed"})
-    if unknown:
-        _invalid(f"simulation has unknown fields: {', '.join(unknown)}")
-    enabled = _bool_value(value.get("enabled", False), "simulation.enabled")
-    seed = value.get("seed")
-    if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
-        _invalid("simulation.seed must be an integer")
-    return ScenarioConfig(enabled=enabled, seed=seed)
+    allowed = {item.name for item in fields(ScenarioConfig)}
+    if type(value) not in (dict, MappingProxyType) or any(type(key) is not str or key not in allowed for key in value):
+        _invalid("simulation has invalid or unknown fields")
+    declared: dict[str, Any] = {"enabled": _bool_value(value.get("enabled", False), "simulation.enabled")}
+    for name, (minimum, maximum) in _SCENARIO_INTEGER_BOUNDS.items():
+        if name not in value:
+            continue
+        number = value[name]
+        # Legacy resolved configurations serialize an absent seed as null.
+        if name == "seed" and number is None:
+            declared[name] = None
+        elif type(number) is not int or not minimum <= number <= maximum:
+            _invalid("simulation integer declaration exceeds its accepted bounds")
+        else:
+            declared[name] = number
+    if "models" in value:
+        models = value["models"]
+        if (type(models) is not list or not 1 <= len(models) <= 2
+                or any(type(model) is not str or model not in _SCENARIO_MODELS for model in models)
+                or len(set(models)) != len(models)):
+            _invalid("simulation requires one or two distinct supported model names")
+        declared["models"] = tuple(models)
+    for name in ("state_distribution", "external_input_distribution"):
+        if name not in value:
+            continue
+        distribution = value[name]
+        if type(distribution) not in (dict, MappingProxyType):
+            _invalid("simulation distributions require literal probability objects")
+        pairs = tuple(distribution.items())
+        valid, _ = _scenario_distribution(pairs)
+        if not valid:
+            _invalid("simulation distribution violates the literal-state or absolute probability-mass contract")
+        declared[name] = tuple(sorted(pairs))
+    if "reopening_weight" in value:
+        weight = value["reopening_weight"]
+        if type(weight) not in (int, float) or not 0 <= weight <= 1 or not math.isfinite(weight):
+            _invalid("simulation reopening weight must be a finite unit-interval number")
+        declared["reopening_weight"] = weight
+    if "representation" in value:
+        representation = value["representation"]
+        names = {item.name for item in fields(RepresentationDescriptor)}
+        if type(representation) not in (dict, MappingProxyType) or set(representation) != names:
+            _invalid("simulation representation requires every descriptor field")
+        for item in representation.values():
+            if item is not None:
+                _scenario_literal(item)
+        try:
+            declared["representation"] = RepresentationDescriptor(**representation)
+        except (TypeError, ValueError):
+            _invalid("simulation representation violates its explicit descriptor contract")
+    for name in ("state_semantics", "scope_id", "dataset_version"):
+        if name in value:
+            declared[name] = _scenario_literal(value[name])
+    if "dataset_version" in declared:
+        try:
+            RecordKey(declared["dataset_version"], "scenario-scope-check")
+        except (TypeError, ValueError):
+            _invalid("simulation dataset version must be a canonical identity")
+    models = declared.get("models", ())
+    if models and "reopened_resampling" not in models and any(
+            name in declared for name in ("external_input_distribution", "reopening_weight")):
+        _invalid("closed simulation declarations cannot include reopening inputs")
+    internal, external = declared.get("state_distribution"), declared.get("external_input_distribution")
+    if internal is not None and external is not None and {pair[0] for pair in internal} != {pair[0] for pair in external}:
+        _invalid("simulation distributions must declare the same literal state space")
+    horizon, replicates = declared.get("simulation_horizon"), declared.get("simulation_replicates")
+    if (models and internal is not None and horizon is not None and replicates is not None
+            and len(models) * len(internal) * (horizon + 1) * replicates > _SCENARIO_MAX_PATH_CELLS):
+        _invalid("simulation declarations exceed the combined sampled-path cell limit")
+    return ScenarioConfig(**declared)
+
+
+def _simulation_data(config: ScenarioConfig) -> dict[str, Any]:
+    """Detach all supplied scenario declarations without adding scientific defaults."""
+    if type(config) is not ScenarioConfig or type(config.models) is not tuple:
+        _invalid("simulation requires the immutable declaration contract")
+    data: dict[str, Any] = {"enabled": config.enabled, "seed": config.seed}
+    if config.models:
+        data["models"] = list(config.models)
+    for name in ("state_distribution", "external_input_distribution"):
+        value = getattr(config, name)
+        if value is not None:
+            if not _scenario_distribution(value)[0]:
+                _invalid("simulation distribution violates its immutable probability contract")
+            data[name] = dict(value)
+    if config.representation is not None:
+        if type(config.representation) is not RepresentationDescriptor:
+            _invalid("simulation requires an explicit representation descriptor")
+        data["representation"] = {item.name: getattr(config.representation, item.name)
+                                  for item in fields(RepresentationDescriptor)}
+    for name in ("reopening_weight", "resample_size", "simulation_horizon", "simulation_replicates",
+                 "state_semantics", "scope_id", "dataset_version"):
+        value = getattr(config, name)
+        if value is not None:
+            data[name] = value
+    _parse_simulation(data)
+    return data
+
+
+def scenario_has_declarations(config: ScenarioConfig) -> bool:
+    """Identify scientific declarations separately from legacy activation and seed."""
+    if type(config) is not ScenarioConfig:
+        _invalid("simulation requires an explicit scenario declaration")
+    return type(config.models) is not tuple or bool(config.models) or any(getattr(config, item.name) is not None
+        for item in fields(ScenarioConfig) if item.name not in ("enabled", "seed", "models"))
+
+
+def config_scenario_parameters(config: ScenarioConfig) -> tuple[ScenarioParameters, ...]:
+    """Construct inert, ordered existing parameter objects, without loading a sampler."""
+    _simulation_data(config)
+    return tuple(ScenarioParameters(
+        model_name=model, resample_size=config.resample_size,
+        simulation_horizon=config.simulation_horizon, simulation_replicates=config.simulation_replicates,
+        state_distribution=config.state_distribution,
+        external_input_distribution=config.external_input_distribution if model == "reopened_resampling" else None,
+        reopening_weight=config.reopening_weight if model == "reopened_resampling" else None,
+    ) for model in config.models)
+
+
+def scenario_parameter_reasons(parameters: ScenarioParameters, seed: int | None) -> tuple[str, ...]:
+    """Input-only eligibility for the existing standalone parameter declaration."""
+    missing, invalid = "R_SCENARIO_PARAMETERS_MISSING", "R_SCENARIO_PARAMETERS_INVALID"
+    reasons: list[str] = []
+    if type(parameters) is not ScenarioParameters or type(parameters.model_name) is not str:
+        return (invalid,)
+    if parameters.model_name not in _SCENARIO_MODELS:
+        reasons.append(invalid)
+    for name, (minimum, maximum) in _SCENARIO_INTEGER_BOUNDS.items():
+        value = seed if name == "seed" else getattr(parameters, name)
+        if value is None:
+            reasons.append(missing)
+        elif type(value) is not int or not minimum <= value <= maximum:
+            reasons.append(invalid)
+    valid, names = _scenario_distribution(parameters.state_distribution)
+    if parameters.state_distribution is None:
+        reasons.append("R_SCENARIO_DISTRIBUTION_MISSING")
+    elif not valid:
+        reasons.append(invalid)
+    if parameters.model_name == "reopened_resampling":
+        external_valid, external_names = _scenario_distribution(parameters.external_input_distribution)
+        if parameters.external_input_distribution is None:
+            reasons.append("R_SCENARIO_DISTRIBUTION_MISSING")
+        elif not external_valid or names != external_names:
+            reasons.append(invalid)
+        weight = parameters.reopening_weight
+        if weight is None:
+            reasons.append(missing)
+        elif type(weight) not in (int, float) or not 0 <= weight <= 1 or not math.isfinite(weight):
+            reasons.append(invalid)
+    elif parameters.external_input_distribution is not None or parameters.reopening_weight is not None:
+        reasons.append(invalid)
+    if (valid and type(parameters.simulation_horizon) is int and parameters.simulation_horizon >= 0
+            and type(parameters.simulation_replicates) is int and parameters.simulation_replicates >= 1
+            and len(names) * (parameters.simulation_horizon + 1) * parameters.simulation_replicates > _SCENARIO_MAX_PATH_CELLS):
+        reasons.append(invalid)
+    return tuple(dict.fromkeys(reasons))
+
+
+def scenario_config_reasons(config: ScenarioConfig) -> tuple[str, ...]:
+    """Check full experiment eligibility, preserving execution as a later action."""
+    try:
+        parameters = config_scenario_parameters(config)
+    except (ConfigurationError, TypeError, ValueError):
+        return ("R_SCENARIO_PARAMETERS_INVALID",)
+    reasons: list[str] = []
+    if not parameters or any(getattr(config, name) is None for name in
+            ("representation", "state_semantics", "scope_id", "dataset_version", "seed")):
+        reasons.append("R_SCENARIO_PARAMETERS_MISSING")
+    if not parameters and config.state_distribution is None:
+        reasons.append("R_SCENARIO_DISTRIBUTION_MISSING")
+    for parameter in parameters:
+        reasons.extend(scenario_parameter_reasons(parameter, config.seed))
+    return tuple(dict.fromkeys(reasons))
+
+
+def scenario_calculation_scope(config: ScenarioConfig) -> CalculationScope:
+    """Bind declared scenario labels, never empirical rows or invented sample IDs."""
+    _simulation_data(config)
+    if config.dataset_version is None or config.scope_id is None:
+        _invalid("simulation scope requires its explicit version and scope identity")
+    return CalculationScope(dataset_versions=(config.dataset_version,), included_record_keys=(),
+        excluded_record_keys=(), denominator_basis="explicit_scenario_probability_vector", scope_id=config.scope_id)
 
 
 def _optional_string(value: Any, name: str) -> str | None:
@@ -628,6 +868,7 @@ class Phase4Options:
                 or self.missing_state_id is not None and type(self.missing_state_id) is not str):
             _invalid("Phase 4 options have invalid structural fields")
         _longitudinal_data(self.longitudinal)
+        _simulation_data(self.configuration.simulation)
         if (self.tail_rule is not None and (type(self.tail_rule) is not str
                 or self.tail_rule not in {"singleton_count", "count_at_or_below", "frequency_at_or_below"})
                 or self.tail_rule in (None, "singleton_count") and self.tail_threshold is not None
@@ -696,7 +937,7 @@ def _phase4_config_data(config: ResolvedConfig) -> dict[str, Any]:
             "max_longitudinal_versions": config.resource_limits.max_longitudinal_versions,
         },
         "output": dict(config.output),
-        "simulation": {"enabled": config.simulation.enabled, "seed": config.simulation.seed},
+        "simulation": _simulation_data(config.simulation),
     }
 
 
@@ -736,7 +977,7 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
     allowed_cli = {"records", "provenance", "compare", "schema_mapping", "version_order",
                    "state_semantics", "missing_state_id", "out", "redacted", "record_ids",
                    "id_salt_file", "strict", "tail_rule", "tail_threshold", "lineage", "lineage_records",
-                   "longitudinal", "baseline"}
+                   "longitudinal", "baseline", "simulate"}
     if operation not in ("audit", "validate", "example"):
         _invalid("unsupported invocation operation")
     if cli is None:
@@ -761,8 +1002,21 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
         raise ConfigurationError(ErrorCode.CONFIG_INVALID, "Phase 4 configuration is invalid") from None
     if resolved.privacy_mode not in (PrivacyMode.STANDARD, PrivacyMode.REDACTED):
         _invalid("Phase 4 supports only standard or redacted output")
-    if resolved.simulation.enabled or resolved.state_mapping or resolved.representation_compatibility:
-        _invalid("Phase 4 options do not activate simulations or arbitrary state mappings")
+    if resolved.state_mapping or resolved.representation_compatibility:
+        _invalid("Phase 4 options do not activate arbitrary state mappings")
+    simulation = resolved.simulation
+    if "simulate" in options:
+        if operation == "validate":
+            _invalid("input-only validation cannot request calculations")
+        if type(options["simulate"]) is not bool:
+            _invalid("simulation selection must be boolean")
+        simulation_declared = raw.get("simulation") or {}
+        if "enabled" in simulation_declared and simulation_declared["enabled"] != options["simulate"]:
+            _invalid("simulation activation declarations compete")
+        simulation = replace(simulation, enabled=options["simulate"])
+    if operation != "validate" and simulation.enabled and scenario_config_reasons(simulation):
+        _invalid("simulation activation requires complete valid scientific declarations")
+    resolved = replace(resolved, simulation=simulation)
     output = dict(resolved.output)
     if any(type(key) is not str or key not in {"directory", "record_id_mode", "id_salt_file"} for key in output):
         _invalid("unsupported Phase 4 output field")
@@ -903,7 +1157,7 @@ def phase4_config_summary(options: Phase4Options) -> dict[str, Any]:
     return {"strict_mode": options.strict_mode, "privacy_mode": options.privacy_mode,
             "record_id_mode": options.record_id_mode, "tail_selection": tail, "weighted": False,
             "comparison_requested": any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs),
-            "scenario_requested": False, **({"lineage_requested": True} if options.lineage else {})}
+            "scenario_requested": options.configuration.simulation.enabled, **({"lineage_requested": True} if options.lineage else {})}
 
 
 def phase4_config_hash(options: Phase4Options) -> str:

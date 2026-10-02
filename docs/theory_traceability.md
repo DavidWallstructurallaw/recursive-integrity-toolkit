@@ -1,6 +1,125 @@
 # Theory Traceability
 
-## Current Phase 6A implementation
+## Current Phase 6B Step 8 verification
+
+The dev6 candidate preserves every accepted T1/T5 numerical implementation and
+schema 1.3 evidence contract. Product edits contain only the package version;
+five golden files change only version metadata. Current verification exercises
+the same independent rational oracles, endpoint/recurrent-event rules,
+model-specific F-015 baseline and disclosure/execution boundaries across the
+supported environments. Actual acceptance belongs to the tested candidate
+identified in [Phase 6B completion](../PHASE_6B_COMPLETION.md).
+
+## Accepted Phase 6B Step 7 verification
+
+T5/F-017 gains a three-state joint count-law check using independently enumerated
+rational multinomial probabilities. With mixed source `(1/2,3/8,1/8)` and `n=3`,
+the ten count vectors sum to probability one, the initially absent third state
+has re-entry probability `169/512`, and expected sampled diversity is `19/48`.
+Broad per-outcome sampling bounds avoid cross-environment path promises.
+
+A lambda-one source concentrated on one state, with initial `p=(1/2,1/2)` and
+sample size 4, produces exact zero diversity after every transition while the
+closed F-015 expectation stays positive at finite horizons. This preserves the
+external-input quality limitation and prevents an assumed diversity benefit.
+No reopened multi-step F-015 identity
+is introduced.
+
+The plan's ten scientific, execution and privacy faults are each detected by
+existing direct tests in disposable source copies. PR-010/PR-011 aggregate
+admission is exercised at its actual limit; PR-014/PR-015 failure handling retains
+independent audit evidence while discarding an incomplete experiment. The
+[Step 7 record](../PHASE_6B_STEP_7.md) identifies each detector and the complete
+bounded performance observations. Product and theory definitions are unchanged.
+
+## Accepted Phase 6B Step 6 implementation
+
+The installed synthetic example exposes the accepted T1/T5 comparison with
+explicit `p=(1,0)`, `r=(0,1)`, lambda `1/4` and sample size 2. Its packaged
+mathematical expectations reuse the Step 1 rational case: first source
+`(3/4,1/4)`, count-vector probabilities `9/16,6/16,1/16`, re-entry probability
+`7/16` and one-step expected sampled diversity `3/16`. These arithmetic targets
+are independent of generated sample paths. The closed path remains absorbed
+at A, with its own zero-diversity F-015 baseline.
+
+PR-011/PR-016 govern explicit activation and same-environment replay. PR-012
+keeps all scenario paths under simulation evidence; PR-014 retains unavailable
+empirical intervention conclusions. PR-015 protects reports while the copied
+public input declarations remain intact. The separate X/Y audit population is
+deliberately distinct from the scenario scope and cannot establish its inputs.
+The example documentation states the constant-source assumptions and the
+difference between a possible re-entry and an actual positive sampled count.
+
+## Accepted Phase 6B Step 5 implementation
+
+P6B-D07 connects explicit configuration and CLI requests to the accepted
+T1/T5 experiment coordinator. PR-010 declaration eligibility uses input-only
+checks aligned with the executable state, mass, parameter and aggregate limits.
+PR-011 requires explicit distributions, models, scope, representation, meaning
+and seed. Audit records never supply or imply a scenario probability vector.
+PR-016 preserves every declaration through serialization and normalized hashing
+and binds the run seed to sampled evidence. PR-014/PR-015 preserve independent
+audit results and safe diagnostics when a scenario fails.
+
+`validate` never executes a scenario, including when configuration requests one.
+Eligibility remains deferred until separately supplied execution evidence exists.
+Tests in `test_scenario_config.py` and `test_scenario_cli.py` exercise activation,
+input isolation, literal-state boundaries, replay, explicit scope and privacy.
+No formula or numerical owner changes in this step; F-016 and empirical
+intervention effects remain excluded.
+
+## Accepted Phase 6B Step 4 implementation
+
+PR-012/PR-013 report integration exposes the existing T5 simulation owner in
+schema 1.3 under `simulations.external_reopening`. T1/F-015 remains confined to
+the distinct closed analytic baseline. Report assembly and canonical validation
+bind supplied requests, parameters, probability corrections, sampled paths,
+transition sources, events and comparisons. Composite event identities retain
+recurrence; reachable states remain possibilities until a positive sample count
+is supplied. No report layer executes a mathematical kernel or random generator.
+
+PR-014 retains unavailable empirical intervention effects even when simulation
+execution completes. PR-015 protects new state, scope and caller-text paths
+without changing numerical evidence or alignment. JSON preserves complete
+bounded evidence; Markdown summarizes trajectories and limits detail tables
+with truthful omission counts. External-reference loss F-016 remains unregistered.
+
+## Accepted Phase 6B Step 3 implementation
+
+`run_scenario_experiment` implements P6B-D04/D05 under PR-011/PR-016: explicit
+selection, shared declarations, aggregate admission and independently reset seeds.
+It reuses the accepted T1/F-015 analytic API only for a selected closed model,
+passing that model's sampled effective initial vector and labeling the baseline
+basis. A reopened path never acquires a closed multi-step expectation. Comparison
+rows contain both realized support/diversity values and reopened-minus-closed
+differences; they make no pooled statistical or causal claim. Closed transition
+losses reuse Definitions 12.10, while initial reachability is explicitly a
+pre-first-draw possibility. `test_scenario_experiment.py` verifies this binding,
+selection/replay, correction basis, exact events and refusal before sampling.
+
+T5 / TM-M07 / F-017 is implemented in `metrics/resampling.py` by
+`mix_external_input` and `simulate_reopened_resampling`, under approved UD-017
+and P6B-D01/D02/D03/D05. The external vector and weight remain constant and
+explicit; identical declared state spaces may have different positive supports.
+Re-entry follows Definitions 13.6 exactly, while local extinction events follow
+Definitions 12.10. Recurrent events retain replicate, step and state identity.
+
+All new results and metadata retain experimental simulation evidence. Mixture
+metadata identifies F-017; sampled frequencies/support/diversity reuse
+F-001/F-002/F-003 under T5. The reopened result has no F-015 multi-step expectation.
+PR-016 governs canonical state order, named PCG64, explicit schedules and same-
+environment replay. Disclosed bounded normalization preserves supplied/effective
+vectors; underflow cannot silently erase positive source reachability.
+
+`test_T5_reopening.py` connects the independent rational fixtures to actual
+mixtures, scripted possible transitions and real RNG path invariants. It also
+protects integer-mass lambda-zero replay, per-step external refresh, event
+recurrence, numerical/refusal boundaries and input isolation. The existing
+T1 and schema/eligibility neighbors remain active. F-016 external-reference loss,
+empirical intervention effects and T5 public report fields remain outside this
+step. Frozen root specifications are unchanged.
+
+## Accepted Phase 6A implementation
 
 Development version `0.1.0.dev5` implements the approved
 [longitudinal contract](longitudinal_contract.md) while preserving the existing
@@ -42,7 +161,7 @@ coverage. Bounded resource/detail cases verify admission before calculation,
 No new theory equation, formula identifier, universal score or empirical causal
 inference is introduced. Model-performance decline, causal ancestor effect and
 permanent extinction remain unsupported. New series orchestration executes no
-simulation; Phase 6B remains separately gated. Actual candidate environments,
+simulation; Phase 6B uses its separately authorized pure APIs above. Actual candidate environments,
 installed evidence and scale measurements are identified in
 [Phase 6A completion](../PHASE_6A_COMPLETION.md).
 

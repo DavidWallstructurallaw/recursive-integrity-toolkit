@@ -1,6 +1,15 @@
 # Development and Release Verification
 
-## Current Phase 6A candidate boundary
+## Current Phase 6B implementation boundary
+
+Phase 6B Step 8 verifies the `0.1.0.dev6` development candidate with schema 1.3.
+Actual acceptance, supported environment results, measurements and artifacts are
+recorded in [Phase 6B completion](../PHASE_6B_COMPLETION.md). Earlier bounded
+scientific/adversarial and simulation measurements remain
+[Step 7 evidence](../PHASE_6B_STEP_7.md). Step 6's installed checks retain their
+original source and environment; candidate installation is verified separately.
+
+## Accepted Phase 6A candidate boundary
 
 Phase 6A Step 9 verifies development version `0.1.0.dev5`, with executable
 report schema 1.2 for every report. Ordered series selection, distribution,
@@ -21,14 +30,15 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The existing source check advances its single reference to accepted Phase 6A
-Step 8 commit `69e4e05ea19910290d38738d6ec83e3ffcdde091`. During Step 9 it permits
-only the exact dev4-to-dev5 version edits in `pyproject.toml` and the package
-root version declaration. It protects 73 other product files.
+The existing source check uses accepted Phase 6B Step 7 commit
+`9af8462bee86c367b6d0f5ae560e97f96cc58409`. Step 8 admits exactly the dev5-to-dev6
+version token in `pyproject.toml` and `__init__.py`. All remaining bytes in those
+two files and all other 81 product files, including numerical kernels,
+configuration, report owners, schemas and example resources, remain protected.
 It retains the exact product file inventory and
 rejects unrelated runtime, package-metadata and canonical Hero changes.
 The frozen Phase 0 specification hashes are unchanged. Sixteen frozen
-specifications, 41 package modules and fourteen packaged resource copies remain
+specifications, 41 package modules and eighteen packaged resource copies remain
 protected. The source
 inventory excludes only the generated `src/recursive_integrity_toolkit.egg-info/`
 metadata directory; similarly named or nested paths are not excluded, and

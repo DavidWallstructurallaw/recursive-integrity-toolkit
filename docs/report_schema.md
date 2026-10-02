@@ -1,6 +1,9 @@
 # Report Schema
 
-Status: Phase 6A dev5 candidate report contract (`0.1.0.dev5`). Schema version: `1.2`. Candidate verification is recorded in [Phase 6A completion](../PHASE_6A_COMPLETION.md).
+Status: Phase 6B Step 4 report contract (`0.1.0.dev5`). Schema version: `1.3`.
+Report-contract verification is recorded in [Phase 6B Step 4](../PHASE_6B_STEP_4.md);
+CLI activation and input-only checks are recorded in [Step 5](../PHASE_6B_STEP_5.md).
+Earlier candidate evidence remains in [Phase 6A completion](../PHASE_6A_COMPLETION.md).
 
 The authoritative public shape is `schemas/report.schema.json`, Draft 2020-12. Runtime validation is implemented in `result.py` using the standard library. `report_schema()` returns a detached copy of the same declarative contract. No runtime schema package, filesystem lookup or remote resolver is used. The `$schema` and `$id` identifiers are descriptive; all references are local `$defs` references.
 
@@ -10,8 +13,9 @@ The installed CLI publishes `report.json` and `report.md` from the same validate
 privacy view. `audit` computes explicitly requested supported families; `validate`
 keeps calculations unrequested and retains explicit series metadata; `example`
 runs the packaged explicit Hero pair or an explicitly requested series.
-Default `simulations` is `{}`. Existing Python scenario results may be supplied
-explicitly to assembly, but CLI simulation execution is unsupported. Python
+Default `simulations` is `{}`. Python closed/reopened experiment results may be
+supplied explicitly to assembly. Explicit CLI activation uses the same coordinator
+and typed assembly, while `validate` retains empty simulations. Python
 callers can supply completed lineage, lineage bounds and shared-root proxy
 results explicitly. `audit --lineage` and `example --lineage` compute these
 families explicitly. Input inventories and diagnostic locations accept the
@@ -226,7 +230,7 @@ parent reference entries remain distinct from deduplicated graph edges.
 | `proxy_signals.provenance_uncertainty` | proxy | `signal` | `proxy_signal` | `T3` | `T3.provenance_uncertainty` | 2 | No scalar value; typed class fields |
 | `simulations.closed_resampling` | scenario | `scenario` | `simulation` | `T1` | `T1.closed_resampling` | 5 | No scalar value; typed class fields |
 | `simulations.tail_extinction` | scenario | `scenario` | `simulation` | `T2` | `T2.tail_extinction` | 1 | No scalar value; typed class fields |
-| `simulations.external_reopening` | reserved | `scenario` | `simulation` | `T5` | `T5.external_reopening` | 5 | Absent: registered future |
+| `simulations.external_reopening` | scenario | `scenario` | `simulation` | `T5` | `T5.external_reopening` | 5 | Explicit supplied reopened experiment result |
 | `unavailable_conclusions[].model_performance_decline` | unavailable | `conclusion` | `unavailable_conclusion` | `PR-014` | `PR-014.unavailable_conclusion` | 0 | No scalar value; typed class fields |
 | `unavailable_conclusions[].causal_ancestor_effect` | unavailable | `conclusion` | `unavailable_conclusion` | `T4` | `T4.unavailable_conclusion` | 0 | No scalar value; typed class fields |
 | `unavailable_conclusions[].correlated_semantic_error` | unavailable | `conclusion` | `unavailable_conclusion` | `T4` | `T4.unavailable_conclusion` | 0 | No scalar value; typed class fields |
@@ -258,7 +262,7 @@ The following tables enumerate non-envelope public fields and containers. A `$de
 | `run` | object | required | PR-016 | Not nullable |
 | `run.run_id` | string | required | PR-016 | Not nullable |
 | `run.toolkit_version` | string | required | PR-016 | Not nullable |
-| `run.report_schema_version` | constant "1.2" | required | PR-013 | Not nullable |
+| `run.report_schema_version` | constant "1.3" | required | PR-013 | Not nullable |
 | `run.started_at` | string or null | required | PR-016 | Explicitly not applicable/unavailable as described above |
 | `run.completed_at` | string or null | required | PR-016 | Explicitly not applicable/unavailable as described above |
 | `run.duration_seconds` | number or null | required | PR-016 | Explicitly not applicable/unavailable as described above |
@@ -492,7 +496,33 @@ The following tables enumerate non-envelope public fields and containers. A `$de
 | `simulations` | object | required | Enclosing registered owner | Not nullable |
 | `simulations.closed_resampling` | object | optional | Enclosing registered owner | Not nullable |
 | `simulations.tail_extinction` | object | optional | Enclosing registered owner | Not nullable |
-| `simulations.external_reopening` | forbidden in the current schema | optional | Enclosing registered owner | Not nullable |
+| `simulations.external_reopening` | object | optional | T5 | Not nullable |
+
+Schema 1.3 adds the following fields; the full concrete nested types are defined
+in the canonical schema and [simulation contract](simulation_contract.md).
+
+| Path within scenario envelope | Type | Availability / meaning |
+|---|---|---|
+| Closed `state_semantics`, `assumption_table` | string, assumption rows | Supplied experiment context |
+| Closed `analytic_baseline` | closed analytic envelope | Effective sampled starting vector, explicit `baseline_basis`, no RNG identity |
+| Closed `extinction_events` | event rows | Complete supplied positive-to-zero transitions for an experiment |
+| Reopened `model`, `model_version`, `method` | fixed identities | `reopened_resampling`, `reopened_categorical_constant_v1`, `sampled_path` |
+| Reopened `parameters` | reopened parameters | Explicit lambda/r, n, horizon, replicates, seed, policy and replay identities |
+| Reopened `initial_distribution`, `input_normalization` | probability rows, normalization record | Effective internal start and original supplied/corrected evidence |
+| Reopened `external_input_distribution`, `external_input_normalization` | probability rows, normalization record | Constant effective r and its independently supplied/corrected evidence |
+| Reopened `state_semantics`, `assumption_table` | string, assumption rows | Shared caller meaning and fixed rule disclosures |
+| Reopened `sampled_paths` | sampled path rows | Initial step plus complete sampled transitions for each replicate |
+| Reopened `mixed_sources` | source rows | Replicate/step, normalization, input basis and possible re-entry |
+| Reopened `state_reentry_events`, `extinction_events` | event rows | Composite replicate/step/state identities, retaining recurrence |
+| Reopened `support_trajectory`, `diversity_trajectory` | replicate-indexed arrays | Bound to the supplied sampled paths |
+| Reopened `scenario_comparison` | comparison object | Only an explicitly selected common-basis pair, with both values and reopened-minus-closed differences |
+
+Assumption rows contain `assumption`, `declaration`, `limitation`. Mixed-source
+rows contain `replicate_index`, `step`, `input_normalization`, `input_basis`,
+`possible_reentry_states`. The comparison retains `difference_direction`,
+`initial_reachability`, `rows`, `limitations`; initial possibilities have
+`timing=before_first_draw`. Sampled experiment parameters add `sampler_algorithm`,
+`state_schedule` and `scenario_schedule=reset_same_seed_per_model`.
 
 ### `unavailable_conclusions`
 
@@ -1055,7 +1085,7 @@ Schema validation is separate from evidence assembly, privacy selection, renderi
 
 ## Explicit evidence assembly
 
-`recursive_integrity_toolkit.reports.assembly` emits report schema version `1.2`, retaining the twelve sections, their order and registered field ownership. Strict schema-1.1 readers must explicitly adopt 1.2; no migration loader is supplied. `weighted_source_type_masses` is a category-to-mass object (`category_mass_map`).
+`recursive_integrity_toolkit.reports.assembly` emits report schema version `1.3`, retaining the twelve sections, their order and registered field ownership. Strict older-schema readers must explicitly adopt 1.3; no migration loader is supplied. `weighted_source_type_masses` is a category-to-mass object (`category_mass_map`).
 
 ### Public Python interface
 
@@ -1075,6 +1105,7 @@ def assemble_report(
     shared_ancestry: SharedAncestryDependence | None = None,
     expected_diversity: ExpectedDiversityResult | None = None,
     resampling: ResamplingSimulation | None = None,
+    scenario_experiment: ScenarioExperimentResult | None = None,
     extinction: tuple[ExtinctionProbabilityResult, ...] = (),
     family_errors: tuple[FamilyFailure, ...] = (),
     longitudinal: LongitudinalResult | None = None,
@@ -1204,7 +1235,26 @@ The ordinary schema fields have one scalar/table slot per version and weighting 
 
 Scenario model/version, assumptions, supplied/effective distributions, normalization disclosure, numerical policy, horizon, sample size, seed, RNG identity, replicate schedule, paths and underflow disclosures remain attached to the applicable result. Analytic expectations, sampled paths and analytic one-step probabilities retain their distinct method labels. Mathematical scopes may differ from the bundle's empirical scope without upgrading its observability assessment.
 
-No scenario runs during assembly. Omitted scenario arguments leave `simulations` empty. A supplied extinction marginal alone does not select a tail or create a tail-fragility signal. External reopening remains rejected by the current schema, and external-reference loss remains unregistered. Supplied scenarios cannot establish an empirical intervention effect or a calibrated production-failure forecast.
+`scenario_experiment` accepts the exact immutable Step 3 result. Assembly checks
+that selected results, original supplied vectors, shared parameters, scope,
+representation and seed bind to its request. A selected closed model occupies
+the same closed slot and conflicts with legacy `expected_diversity`/`resampling`
+arguments. A reopened-only experiment can accompany a separately supplied legacy
+closed result without silently creating comparison evidence. Tail extinction
+retains its independent slot.
+
+Canonical semantic validation checks probability normalization, count/frequency/
+support/diversity consistency, source arithmetic, complete event coverage,
+replicate/step coverage and comparisons. Positive sampled counts require positive
+source mass. Events use composite identities and may recur at later steps.
+The closed analytic baseline binds to the sampled effective start and remains
+seedless. Reopened paths never claim the F-015 multi-step closed expectation.
+
+No scenario runs during assembly. Omitted scenario arguments leave `simulations`
+empty. A supplied extinction marginal alone does not select a tail or create a
+tail-fragility signal. External-reference loss remains unregistered. Supplied
+scenarios retain experimental simulation evidence and the unavailable empirical
+intervention conclusion.
 
 ### Input eligibility, execution and failures
 
@@ -1218,7 +1268,7 @@ The seven capability input statuses, original reason codes, requirements and inp
 | `lineage` | Defaults to `not_requested`; an explicit source result retains its `completed`, `partial` or `failed` execution. A bound family failure before an analytical result reports `failed`. Immediate-parent validation alone never claims graph execution. |
 | `dataset_longitudinal` | An explicit series supplies its exact completed/partial/failed execution and per-family statuses. An ordinary pair retains limited support/diversity `partial` execution with series `not_requested`. Without requested pair/series work it is `not_requested`; an explicitly bound failure remains failed. |
 | `model_longitudinal` | `deferred`, with the missing implementation/evidence boundary retained. |
-| `intervention_simulation` | Names supplied analytic expectation, sampled path or extinction-marginal operations; no supplied scenario means `not_requested`. Explicitly bound failures remain failed/partial execution. |
+| `intervention_simulation` | Names supplied analytic expectation, sampled closed/reopened paths or extinction-marginal operations; no supplied scenario means `not_requested`. Explicitly bound failures remain failed/partial execution. |
 
 Every noncompleted execution status has reasons. Completed/partial execution has a nonempty operation scope. A capability marked partial because other future change families are deferred does not itself make the run partial. Deferred and unrequested work alone does not create a run error.
 
@@ -1396,6 +1446,13 @@ bullet lists; warnings, errors and recommended metadata retain their individual
 entries and detail fields. Empty required sections remain visible.
 Partial, deferred and experimental labels stay explicit wherever supplied.
 Scenarios remain in the simulation section, with their model and assumptions.
+
+Experimental scenario rendering uses dedicated detail tables limited to 100 rows,
+with total/omitted counts. Per-step trajectory rows contain support size and
+diversity without embedding full state vectors. Source probabilities and realized
+counts remain distinguishable. Comparisons show both values and the labeled
+reopened-minus-closed differences. JSON retains all admitted evidence, including
+rows omitted from the compact human-readable view.
 
 The footer names the supplied toolkit version, report schema version, all five
 evidence classes and the traceability reference. It explains that unavailable

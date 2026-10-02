@@ -648,14 +648,14 @@ import recursive_integrity_toolkit as package
 installed = Path(package.__file__).resolve().parent
 assert not installed.is_relative_to(repository), installed
 distribution = importlib.metadata.distribution('recursive-integrity-toolkit')
-assert distribution.version == package.__version__ == '0.1.0.dev5'
+assert distribution.version == package.__version__ == '0.1.0.dev6'
 members = {str(p).replace('\\', '/') for p in distribution.files or ()}
 modules = sorted(p for p in installed.rglob('*.py'))
 assert len(modules) == 41
 hashes = {p.relative_to(installed).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in modules}
 assert all('recursive_integrity_toolkit/' + p in members for p in hashes), 'Package must be installed from a wheel'
 resources = sorted(p for p in (installed / 'data').rglob('*') if p.is_file())
-assert len(resources) == 14
+assert len(resources) == 18
 resource_hashes = {p.relative_to(installed).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in resources}
 from recursive_integrity_toolkit.cli import main
 exit_code = main(['example', '--out', str(target)])

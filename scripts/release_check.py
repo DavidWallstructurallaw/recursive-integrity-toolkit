@@ -1,6 +1,8 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Phase 6A Step 9 freezes runtime behavior and permits the dev5 version update.
+Phase 6B Step 8 verifies the dev6 development candidate. The only admitted
+product change is the exact dev5-to-dev6 version token in both package version
+owners. All other accepted product bytes and resource inventories stay frozen.
 Historical dispatch, source-body migrations and phase registries are recoverable
 from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
@@ -25,14 +27,15 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "69e4e05ea19910290d38738d6ec83e3ffcdde091"
-PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/")
+ACCEPTED_COMMIT = "9af8462bee86c367b6d0f5ae560e97f96cc58409"
+PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/",
+                      "examples/simulation/")
 LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
                       "provenance.jsonl", "config.json", "version_order.json",
                       "EXPECTED_OUTPUTS.md"}
+SIMULATION_NAMES = {"config.json", "records.jsonl", "provenance.jsonl", "EXPECTED_OUTPUTS.md"}
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
-    "pyproject.toml",
-    "src/recursive_integrity_toolkit/__init__.py",
+    "pyproject.toml", "src/recursive_integrity_toolkit/__init__.py",
 })
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",
@@ -51,6 +54,8 @@ RESOURCES = {f"src/recursive_integrity_toolkit/data/hero/{name}": f"examples/her
 RESOURCES["src/recursive_integrity_toolkit/data/report.schema.json"] = "schemas/report.schema.json"
 RESOURCES.update({f"src/recursive_integrity_toolkit/data/longitudinal/{name}":
                   f"examples/longitudinal/{name}" for name in LONGITUDINAL_NAMES})
+RESOURCES.update({f"src/recursive_integrity_toolkit/data/simulation/{name}":
+                  f"examples/simulation/{name}" for name in SIMULATION_NAMES})
 
 
 def git(*arguments: str) -> bytes:
@@ -84,9 +89,11 @@ def verify_source_scope(root: Path = ROOT) -> dict:
                 if name.startswith(PROTECTED_PREFIXES) or name == "pyproject.toml"}
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
-        if name in CURRENT_IMPLEMENTATION_PATHS and current != raw.replace(b'"0.1.0.dev4"', b'"0.1.0.dev5"'):
-            raise ValueError(f"Only the dev5 version update is authorized in: {name}")
-        if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
+        if name in CURRENT_IMPLEMENTATION_PATHS:
+            old_version, new_version = b'"0.1.0.dev5"', b'"0.1.0.dev6"'
+            if raw.count(old_version) != 1 or current != raw.replace(old_version, new_version, 1):
+                raise ValueError(f"Unauthorized product mutation outside the current version token: {name}")
+        elif current != raw:
             raise ValueError(f"Unauthorized product mutation outside the current step scope: {name}")
     # New authorized modules must exist as regular files; deletions stay blocked.
     authorized_inventory = set(expected) | CURRENT_IMPLEMENTATION_PATHS
@@ -423,7 +430,7 @@ sections = ('run', 'inputs', 'observability', 'capabilities', 'observed_facts',
 payload = {
     'run': {
         'run_id': 'installed-empty-case', 'toolkit_version': '0.1.0.dev2',
-        'report_schema_version': '1.2', 'started_at': '2026-09-19T00:00:00+00:00',
+        'report_schema_version': '1.3', 'started_at': '2026-09-19T00:00:00+00:00',
         'completed_at': '2026-09-19T00:00:00+00:00', 'duration_seconds': 0,
         'python_version': '3.12', 'platform': 'isolated-installed-smoke',
         'command': 'rit validate', 'config_hash': '0123456789abcdef' * 4,
@@ -598,7 +605,7 @@ bundle = BundleValidationResult(
 )
 run = {
     'run_id': 'installed-typed-empty-case', 'toolkit_version': '0.1.0.dev2',
-    'report_schema_version': '1.2', 'started_at': None, 'completed_at': None,
+    'report_schema_version': '1.3', 'started_at': None, 'completed_at': None,
     'duration_seconds': None, 'python_version': None, 'platform': None,
     'command': None, 'config_hash': None, 'random_seed': None,
     'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0,
@@ -784,7 +791,7 @@ bundle = BundleValidationResult(
 )
 run = {
     'run_id': 'installed-typed-empty-case', 'toolkit_version': '0.1.0.dev2',
-    'report_schema_version': '1.2', 'started_at': None, 'completed_at': None,
+    'report_schema_version': '1.3', 'started_at': None, 'completed_at': None,
     'duration_seconds': None, 'python_version': None, 'platform': None,
     'command': None, 'config_hash': None, 'random_seed': None,
     'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0,
@@ -1110,7 +1117,7 @@ def smoke_installed_publication(wheel: Path) -> None:
         bindir = work / "venv" / ("Scripts" if os.name == "nt" else "bin")
         python = bindir / ("python.exe" if os.name == "nt" else "python")
         subprocess.run([str(python), "-m", "pip", "install", "--no-index", "--no-deps", str(wheel.resolve())], cwd=work, check=True)
-        program = 'import importlib.abc, json, os, socket, sys\nfrom pathlib import Path\nclass BlockOptional(importlib.abc.MetaPathFinder):\n    def find_spec(self, fullname, path=None, target=None):\n        if fullname.split(".")[0] in ("numpy", "pandas", "pyarrow"):\n            raise AssertionError("optional or analytical dependency imported")\nsys.meta_path.insert(0, BlockOptional())\ndef phase4_step6_view(mode="standard", label="publication-case"):\n    from recursive_integrity_toolkit.reports.assembly import privacy_view\n    from recursive_integrity_toolkit.result import CanonicalReport\n    from recursive_integrity_toolkit.utils.hashing import IdentifierProtection\n\n    payload = {\n        "run": {\n            "run_id": label, "toolkit_version": "0.1.0.dev2", "report_schema_version": "1.2",\n            "started_at": "2026-09-20T00:00:00+00:00", "completed_at": "2026-09-20T00:00:00.500000+00:00",\n            "duration_seconds": 0.5, "python_version": "3.12.14", "platform": "independent-test-platform",\n            "command": "rit validate", "config_hash": "0123456789abcdef" * 4,\n            "random_seed": None, "strict_mode": False, "redacted_mode": False,\n            "network_call_count": 0, "deterministic": True, "privacy_mode": "standard",\n            "run_status": "complete", "null_reasons": {"random_seed": "No stochastic scenario was requested."},\n        },\n        "inputs": {}, "observability": {}, "capabilities": {}, "observed_facts": {},\n        "derived_metrics": {}, "proxy_signals": {}, "simulations": {},\n        "unavailable_conclusions": [], "recommended_next_metadata": [], "warnings": [], "errors": [],\n    }\n    return privacy_view(CanonicalReport.from_dict(payload), mode=mode,\n                        protection=IdentifierProtection.create(secret=b"publication-test-only-key-32byte!"))\nfrom recursive_integrity_toolkit.utils.paths import publish_reports, PublicationResult\nfrom recursive_integrity_toolkit.utils.logging import format_publication_diagnostic\nfrom recursive_integrity_toolkit.utils import paths\nfrom recursive_integrity_toolkit.reports.json_report import render_json\nfrom recursive_integrity_toolkit.reports.markdown_report import render_markdown\nimport recursive_integrity_toolkit as package\nassert not Path(package.__file__).resolve().is_relative_to(Path(sys.argv[2]).resolve())\nwork=Path(sys.argv[1]); source=work/\'input.txt\'; source.write_bytes(b\'PRIVATE_INSTALLED_SOURCE\')\nview=phase4_step6_view(\'redacted\')\nexpected={\'report.json\':render_json(view).encode(), \'report.md\':render_markdown(view).encode()}\ndef deny(*args, **kwargs):\n    raise AssertionError(\'network forbidden\')\nsocket.socket=deny; socket.getaddrinfo=deny\nactual_open=os.open\ndef no_input(path,*args,**kwargs):\n    assert Path(path)!=source\n    return actual_open(path,*args,**kwargs)\nos.open=no_input\ndef no_analysis(frame,event,arg):\n    if event==\'call\':\n        name=frame.f_globals.get(\'__name__\',\'\')\n        assert not name.startswith((\'recursive_integrity_toolkit.io.\',\'recursive_integrity_toolkit.metrics.\',\'recursive_integrity_toolkit.representations.\'))\nsys.setprofile(no_analysis)\ntry:\n    result=publish_reports(view,work/\'out\',input_paths=(source,))\n    assert result==PublicationResult(\'complete\',None,0,(\'report.json\',\'report.md\'))\n    assert publish_reports(view,work/\'out\',input_paths=(source,)).code==\'E_OUTPUT_EXISTS\'\n    actual_publish=paths._output_publish_one\n    def fail_second(src,dst):\n        if dst.name==\'report.md\':raise OSError(\'PRIVATE_INSTALLED_FAILURE\')\n        return actual_publish(src,dst)\n    paths._output_publish_one=fail_second\n    failed=publish_reports(view,work/\'failure\',input_paths=(source,))\n    assert failed.status==\'failed\' and failed.code==\'E_OUTPUT_IO\' and failed.temporary_cleanup_complete\n    assert \'PRIVATE_\' not in format_publication_diagnostic(failed)\nfinally:\n    sys.setprofile(None)\nassert {p.name:p.read_bytes() for p in (work/\'out\').iterdir()}==expected\nassert list((work/\'failure\').iterdir())==[]\nassert source.read_bytes()==b\'PRIVATE_INSTALLED_SOURCE\'\nprint(\'installed Step 6: exact safe JSON/Markdown bytes, no-overwrite, partial failure cleanup, safe diagnostics, unchanged input, blocked network/analysis: PASS\')\n'
+        program = 'import importlib.abc, json, os, socket, sys\nfrom pathlib import Path\nclass BlockOptional(importlib.abc.MetaPathFinder):\n    def find_spec(self, fullname, path=None, target=None):\n        if fullname.split(".")[0] in ("numpy", "pandas", "pyarrow"):\n            raise AssertionError("optional or analytical dependency imported")\nsys.meta_path.insert(0, BlockOptional())\ndef phase4_step6_view(mode="standard", label="publication-case"):\n    from recursive_integrity_toolkit.reports.assembly import privacy_view\n    from recursive_integrity_toolkit.result import CanonicalReport\n    from recursive_integrity_toolkit.utils.hashing import IdentifierProtection\n\n    payload = {\n        "run": {\n            "run_id": label, "toolkit_version": "0.1.0.dev2", "report_schema_version": "1.3",\n            "started_at": "2026-09-20T00:00:00+00:00", "completed_at": "2026-09-20T00:00:00.500000+00:00",\n            "duration_seconds": 0.5, "python_version": "3.12.14", "platform": "independent-test-platform",\n            "command": "rit validate", "config_hash": "0123456789abcdef" * 4,\n            "random_seed": None, "strict_mode": False, "redacted_mode": False,\n            "network_call_count": 0, "deterministic": True, "privacy_mode": "standard",\n            "run_status": "complete", "null_reasons": {"random_seed": "No stochastic scenario was requested."},\n        },\n        "inputs": {}, "observability": {}, "capabilities": {}, "observed_facts": {},\n        "derived_metrics": {}, "proxy_signals": {}, "simulations": {},\n        "unavailable_conclusions": [], "recommended_next_metadata": [], "warnings": [], "errors": [],\n    }\n    return privacy_view(CanonicalReport.from_dict(payload), mode=mode,\n                        protection=IdentifierProtection.create(secret=b"publication-test-only-key-32byte!"))\nfrom recursive_integrity_toolkit.utils.paths import publish_reports, PublicationResult\nfrom recursive_integrity_toolkit.utils.logging import format_publication_diagnostic\nfrom recursive_integrity_toolkit.utils import paths\nfrom recursive_integrity_toolkit.reports.json_report import render_json\nfrom recursive_integrity_toolkit.reports.markdown_report import render_markdown\nimport recursive_integrity_toolkit as package\nassert not Path(package.__file__).resolve().is_relative_to(Path(sys.argv[2]).resolve())\nwork=Path(sys.argv[1]); source=work/\'input.txt\'; source.write_bytes(b\'PRIVATE_INSTALLED_SOURCE\')\nview=phase4_step6_view(\'redacted\')\nexpected={\'report.json\':render_json(view).encode(), \'report.md\':render_markdown(view).encode()}\ndef deny(*args, **kwargs):\n    raise AssertionError(\'network forbidden\')\nsocket.socket=deny; socket.getaddrinfo=deny\nactual_open=os.open\ndef no_input(path,*args,**kwargs):\n    assert Path(path)!=source\n    return actual_open(path,*args,**kwargs)\nos.open=no_input\ndef no_analysis(frame,event,arg):\n    if event==\'call\':\n        name=frame.f_globals.get(\'__name__\',\'\')\n        assert not name.startswith((\'recursive_integrity_toolkit.io.\',\'recursive_integrity_toolkit.metrics.\',\'recursive_integrity_toolkit.representations.\'))\nsys.setprofile(no_analysis)\ntry:\n    result=publish_reports(view,work/\'out\',input_paths=(source,))\n    assert result==PublicationResult(\'complete\',None,0,(\'report.json\',\'report.md\'))\n    assert publish_reports(view,work/\'out\',input_paths=(source,)).code==\'E_OUTPUT_EXISTS\'\n    actual_publish=paths._output_publish_one\n    def fail_second(src,dst):\n        if dst.name==\'report.md\':raise OSError(\'PRIVATE_INSTALLED_FAILURE\')\n        return actual_publish(src,dst)\n    paths._output_publish_one=fail_second\n    failed=publish_reports(view,work/\'failure\',input_paths=(source,))\n    assert failed.status==\'failed\' and failed.code==\'E_OUTPUT_IO\' and failed.temporary_cleanup_complete\n    assert \'PRIVATE_\' not in format_publication_diagnostic(failed)\nfinally:\n    sys.setprofile(None)\nassert {p.name:p.read_bytes() for p in (work/\'out\').iterdir()}==expected\nassert list((work/\'failure\').iterdir())==[]\nassert source.read_bytes()==b\'PRIVATE_INSTALLED_SOURCE\'\nprint(\'installed Step 6: exact safe JSON/Markdown bytes, no-overwrite, partial failure cleanup, safe diagnostics, unchanged input, blocked network/analysis: PASS\')\n'
         subprocess.run([str(python), "-I", "-c", program, str(work), str(ROOT)], cwd=work, check=True)
 
 
@@ -1125,7 +1132,7 @@ def smoke_installed_cli(wheel: Path) -> None:
 
 
 def installed_example_program() -> str:
-    """Independent installed Hero and three-version example acceptance."""
+    """Installed audit examples and explicit synthetic scenario acceptance."""
     return r'''import hashlib, importlib.abc, json, math, socket, sys, urllib.request
 from pathlib import Path
 sys.path.insert(0,sys.argv[1])
@@ -1182,7 +1189,7 @@ for name,privacy in (('lineage',[]),('lineage-redacted',['--redacted'])):
  assert main(['example','--lineage','--out',str(destination),*privacy])==0
  current=json.loads((destination/'reports/report.json').read_bytes())
  jsonschema.Draft202012Validator(json.loads(resources.joinpath('data','report.schema.json').read_bytes())).validate(current)
- assert current['run']['report_schema_version']=='1.2' and current['run']['run_status']=='complete'
+ assert current['run']['report_schema_version']=='1.3' and current['run']['run_status']=='complete'
  assert current['capabilities']['lineage']['execution_status']=='completed'
  assert current['capabilities']==current['observability']['capabilities']
  assert current['simulations']=={} and current['errors']==[]
@@ -1224,8 +1231,8 @@ for dataset,lineage,privacy in (('hero',True,False),('longitudinal',False,True))
  assert main(arguments)==0
  current=json.loads((destination/'reports/report.json').read_bytes())
  jsonschema.Draft202012Validator(json.loads(resources.joinpath('data','report.schema.json').read_bytes())).validate(current)
- assert current['run']['toolkit_version']==package.__version__=='0.1.0.dev5'
- assert current['run']['report_schema_version']=='1.2' and current['run']['run_status']=='complete'
+ assert current['run']['toolkit_version']==package.__version__=='0.1.0.dev6'
+ assert current['run']['report_schema_version']=='1.3' and current['run']['run_status']=='complete'
  assert current['run']['network_call_count']==0 and current['simulations']=={} and current['errors']==[]
  assert current['capabilities']==current['observability']['capabilities']
  assert current['capabilities']['dataset_longitudinal']['longitudinal_execution']['status']=='completed'
@@ -1252,11 +1259,98 @@ for dataset,lineage,privacy in (('hero',True,False),('longitudinal',False,True))
   assert str(work) not in json.dumps(current)+markdown
  for p in (destination/'inputs').iterdir():
   assert p.read_bytes()==resources.joinpath('data',dataset,p.name).read_bytes()
+def numeric_fields(value,path=()):
+ if type(value) in (int,float):return {path:value}
+ if type(value) is dict:return {key:number for name,item in value.items() for key,number in numeric_fields(item,(*path,name)).items()}
+ if type(value) is list:return {key:number for index,item in enumerate(value) for key,number in numeric_fields(item,(*path,index)).items()}
+ return {}
+scenario_reference=None
+for name,privacy in (('simulation',[]),('simulation-replay',[]),('simulation-redacted',['--redacted'])):
+ destination=work/name
+ assert main(['example','--dataset','simulation','--simulate','--out',str(destination),*privacy])==0
+ current=json.loads((destination/'reports/report.json').read_bytes())
+ jsonschema.Draft202012Validator(json.loads(resources.joinpath('data','report.schema.json').read_bytes())).validate(current)
+ assert current['run']['toolkit_version']==package.__version__=='0.1.0.dev6'
+ assert current['run']['report_schema_version']=='1.3' and current['run']['run_status']=='complete'
+ assert current['run']['random_seed']==17 and current['run']['network_call_count']==0
+ assert current['capabilities']==current['observability']['capabilities'] and current['errors']==[]
+ assert current['capabilities']['intervention_simulation']['execution_status']=='completed'
+ assert current['capabilities']['intervention_simulation']['status']=='experimental'
+ assert 'empirical_intervention_effect' in {row['conclusion'] for row in current['unavailable_conclusions']}
+ assert set(current['simulations'])=={'closed_resampling','external_reopening'}
+ closed=current['simulations']['closed_resampling'];reopened=current['simulations']['external_reopening']
+ order=closed['parameters']['state_order']
+ for node in (closed,reopened):
+  assert node['status']=='experimental' and node['evidence_class']=='simulation'
+  assert node['denominator']==node['parameters']['resample_size']==2
+  assert node['parameters']['random_seed']==17 and node['parameters']['numpy_version']==numpy.__version__
+  assert node['parameters']['simulation_horizon']==6 and node['parameters']['simulation_replicates']==3
+  assert node['parameters']['scenario_schedule']=='reset_same_seed_per_model'
+  assert node['parameters']['state_order']==order
+  assert node['scope']['record_count']==0 and node['scope']['included_record_keys']==node['scope']['excluded_record_keys']==[]
+  assert node['scope']['denominator_basis']=='explicit_scenario_probability_vector'
+  assert [row['probability'] for row in node['initial_distribution']]==[1,0]
+  assert len(node['sampled_paths'])==3 and node['assumptions'] and node['assumption_table']
+  assert any(row['assumption']=='Replay schedule' for row in node['assumption_table'])
+  expected_extinction=[];expected_reentry=[]
+  for path in node['sampled_paths']:
+   generations=path['generations'];assert len(generations)==7
+   assert generations[0]['state_counts'] is None and generations[0]['state_frequencies']==[1,0]
+   for previous,row in zip(generations,generations[1:]):
+    counts=row['state_counts'];frequencies=row['state_frequencies']
+    assert sum(counts)==2 and all(type(count) is int and count>=0 for count in counts)
+    assert frequencies==[count/2 for count in counts]
+    assert row['gini_simpson_diversity']==1-sum(value*value for value in frequencies)
+    assert row['support_size']==sum(count>0 for count in counts)
+    for index,state in enumerate(order):
+     event={'replicate_index':path['replicate_index'],'step':row['step'],'state_id':state}
+     if previous['state_frequencies'][index]>0 and frequencies[index]==0:expected_extinction.append(event)
+     if previous['state_frequencies'][index]==0 and frequencies[index]>0:expected_reentry.append(event)
+  assert node['extinction_events']==expected_extinction
+  if node is reopened:assert node['state_reentry_events']==expected_reentry
+ assert closed['analytic_baseline']['expected_diversity']==[0]*7 and closed['extinction_events']==[]
+ assert closed['analytic_baseline']['contraction_factor']==.5
+ assert all(row['gini_simpson_diversity']==0 and row['support_size']==1 for path in closed['sampled_paths'] for row in path['generations'])
+ assert reopened['parameters']['reopening_weight']==.25
+ assert [row['probability'] for row in reopened['external_input_distribution']]==[0,1]
+ assert len(reopened['mixed_sources'])==18
+ for source in reopened['mixed_sources']:
+  previous=reopened['sampled_paths'][source['replicate_index']]['generations'][source['step']-1]['state_frequencies']
+  masses=[row['probability'] for row in source['input_normalization']['effective_distribution']]
+  assert masses==[.75*previous[0],.75*previous[1]+.25]
+  if source['step']==1:assert masses==[.75,.25] and source['possible_reentry_states']==[order[1]]
+ comparison=reopened['scenario_comparison']
+ assert comparison['difference_direction']=='reopened_minus_closed' and len(comparison['rows'])==21
+ assert comparison['initial_reachability'][0]['reachable_states']==order[:1]
+ assert comparison['initial_reachability'][1]['possible_reentry_states']==order[1:]
+ assert [row['support_size']['value'] for row in current['derived_metrics']['support']['by_version'].values()]==[2]
+ assert [row['gini_simpson_diversity']['value'] for row in current['derived_metrics']['diversity']['by_version'].values()]==[.5]
+ assert current['derived_metrics']['provenance']['source_type_shares']['value']['synthetic']==1
+ assert [current['derived_metrics']['closure_exposure']['direct'][key]['value'] for key in ('lower_bound','upper_bound')]==[1,1]
+ markdown=(destination/'reports/report.md').read_text(encoding='utf-8')
+ assert 'Distinct closed analytic baseline' in markdown and 'Pre-draw source probabilities' in markdown
+ assert 'Scenario assumptions' in markdown and 'Per-path comparison' in markdown
+ for p in (destination/'inputs').iterdir():
+  assert p.read_bytes()==resources.joinpath('data','simulation',p.name).read_bytes()
+ snapshot={p:p.read_bytes() for p in destination.rglob('*') if p.is_file()}
+ assert main(['example','--dataset','simulation','--simulate','--out',str(destination),*privacy])==1
+ assert all(p.read_bytes()==raw for p,raw in snapshot.items())
+ text=json.dumps(current)+markdown
+ assert 'Fictional audit record' not in text
+ if privacy:
+  assert current['run']['privacy_mode']=='redacted' and not set(order)&{'A','B'}
+  assert str(work) not in text and 'simulation-example-scenario' not in text and 'scenario-v1' not in text
+  assert numeric_fields(current['simulations'])==numeric_fields(scenario_reference)
+ else:
+  assert order==['A','B'] and closed['scope']['dataset_versions']==['scenario-v1']
+  assert closed['scope']['scope_id']=='simulation-example-scenario'
+  if scenario_reference is None:scenario_reference=current['simulations']
+  else:assert current['simulations']==scenario_reference
 for relative,digest in expected.items():
  assert hashlib.sha256(resources.joinpath(*relative.split('/')).read_bytes()).hexdigest()==digest
 for p in (target/'inputs').iterdir():
  assert p.read_bytes()==resources.joinpath('data','hero',p.name).read_bytes()
-print('installed examples: ordinary Hero, explicit lineage, longitudinal Hero and three-version adjacency; frozen numerical oracles, local schema, exact resources, core-only, standard/redacted, no overwrite, blocked network: PASS')
+print('installed examples: Hero, lineage, longitudinal adjacency and explicit synthetic simulation; independent arithmetic, source/sample separation, event completeness, matched replay, local schema, exact resources, standard/redacted, no overwrite, blocked network: PASS')
 '''
 
 

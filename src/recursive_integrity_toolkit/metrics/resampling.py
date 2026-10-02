@@ -1,10 +1,10 @@
-"""Explicit finite closed resampling and its F-015 expectation.
+"""Explicit closed and constant-source reopened finite resampling.
 
 Owner IDs:
     T1: finite multinomial transition and F-015, Definitions 12.1-12.5.
     PR-016: P3-D07 explicit PCG64 seed, canonical order and bounded numerics.
     T2: one-step extinction remains in tail.py; no duplicate implementation.
-    T5: reserved; external-reference loss and reopening remain unimplemented.
+    T5: F-017 external mixture, sampled reopening and transition events.
 
 Inputs:
     Explicit state/probability pairs, representation, scope, positive resample
@@ -16,15 +16,17 @@ Outputs:
 
 Assumptions:
     Finite fixed state space; each generation is a multinomial resample of its
-    predecessor. No mutation, migration, independent data or external correction.
+    predecessor or an explicitly declared constant external mixture. No implicit
+    mutation, migration, data acquisition or external-quality verification.
 
 Limits:
-    No I/O, global RNG, implicit parameters, reopening, external loss, graph,
+    No I/O, global RNG, implicit parameters, external-reference loss, graph,
     report or automatic dispatch. Expected contraction does not require every
     realized diversity path to decrease. Simulation time is not a training epoch.
 
 Current phase status:
-    Phase 3 Step 8 only. NumPy is lazy and used only for explicitly sampled paths.
+    Phase 6B Step 3 explicit experiment orchestration. No CLI or report dispatch.
+    NumPy is lazy and used only for explicitly sampled paths.
 """
 from __future__ import annotations
 
@@ -35,7 +37,7 @@ from types import MappingProxyType
 from ..errors import CanonicalValidationError, ErrorCode
 from ..models import (
     CalculationEvidenceClass, CalculationMetadata, CalculationScope,
-    NumericalPolicy, RepresentationDescriptor, WeightingOptions,
+    NumericalPolicy, RepresentationDescriptor, ScenarioParameters, WeightingOptions,
 )
 from .diversity import _context
 
@@ -46,6 +48,7 @@ MAX_REPLICATES = 10000
 MAX_PATH_CELLS = 1000000
 MAX_RESAMPLE_SIZE = 2147483647
 MAX_SEED_BITS = 4096
+MAX_EXPERIMENT_SEED = 2**53 - 1
 METHOD_VERSION = "closed_categorical_v1"
 SAMPLER_ALGORITHM = "sequential_binomial_complement_v1"
 ASSUMPTIONS = (
@@ -58,6 +61,24 @@ LIMITATIONS = (
     "Diversity contraction holds in expectation, not monotonically on every sampled path.",
     "Simulated steps are not record generations, training epochs or dataset releases.",
     "No external-reference loss, reopening, lineage, risk score or audit workflow is implemented.",
+    "Floating-point and pseudorandom sampling are numerical realizations of the declared model.",
+)
+REOPENED_METHOD_VERSION = "reopened_categorical_constant_v1"
+REOPENED_ASSUMPTIONS = (
+    "Fixed finite declared state space and constant positive integer resample size.",
+    "The internal and external vectors have the same explicitly declared state meaning.",
+    "External input distribution r and reopening weight lambda are constant across steps.",
+    "s_t=(1-lambda)*p_t+lambda*r; X_t conditional on s_t is Multinomial(n,s_t).",
+    "p_(t+1)=X_t/n; no other source of state restoration is modeled.",
+)
+REOPENED_LIMITATIONS = (
+    "Experimental conditional simulation; no empirical intervention effect is established.",
+    "Positive mixed probability permits re-entry without guaranteeing a positive sample count.",
+    "External independence, reliability and relevance are supplied assumptions, not verified facts.",
+    "Reopening weight is not an integrity or Presence score; greater weight need not improve fidelity.",
+    "Closed multi-step expected contraction is not an expectation for a reopened trajectory.",
+    "Simulated steps are not record generations, training epochs or dataset releases.",
+    "The reopened kernel alone performs no comparison, external-reference loss, report or audit dispatch.",
     "Floating-point and pseudorandom sampling are numerical realizations of the declared model.",
 )
 
@@ -155,6 +176,152 @@ class ResamplingSimulation:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class ExternalMixtureResult:
+    """F-017 source mixture, with original and effective inputs kept separate."""
+
+    inputs: ResamplingInput = field(repr=False)
+    external_inputs: ResamplingInput = field(repr=False)
+    mixed_inputs: ResamplingInput = field(repr=False)
+    reopening_weight: float
+    state_order: tuple[str, ...] = field(repr=False)
+    reachable_states: tuple[str, ...] = field(repr=False)
+    possible_reentry_states: tuple[str, ...] = field(repr=False)
+    mixture_metadata: CalculationMetadata = field(repr=False)
+    model_name: str = "reopened_resampling"
+    method: str = "analytic_mixture"
+    method_version: str = REOPENED_METHOD_VERSION
+    experimental: bool = True
+    evidence_class: CalculationEvidenceClass = CalculationEvidenceClass.SIMULATION
+    random_seed: None = None
+    rng_name: None = None
+    assumptions: tuple[str, ...] = REOPENED_ASSUMPTIONS
+    limitations: tuple[str, ...] = REOPENED_LIMITATIONS
+
+
+@dataclass(frozen=True, slots=True)
+class ReopeningSource:
+    """Pre-draw source at a transition, including its numerical realization."""
+
+    replicate_index: int
+    step: int
+    inputs: ResamplingInput = field(repr=False)
+    possible_reentry_states: tuple[str, ...] = field(repr=False)
+
+
+@dataclass(frozen=True, slots=True)
+class StateTransitionEvent:
+    """One realized transition; a state may occur again at a later step."""
+
+    replicate_index: int
+    step: int
+    state_id: str = field(repr=False)
+
+
+@dataclass(frozen=True, slots=True)
+class ReopeningSimulation:
+    """Constant external source with explicit per-replicate paths and events."""
+
+    inputs: ResamplingInput = field(repr=False)
+    external_inputs: ResamplingInput = field(repr=False)
+    reopening_weight: float
+    resample_size: int
+    simulation_horizon: int
+    simulation_replicates: int
+    random_seed: int
+    numpy_version: str
+    state_order: tuple[str, ...] = field(repr=False)
+    sampled_paths: tuple[ResamplingReplicate, ...]
+    mixed_sources: tuple[ReopeningSource, ...]
+    state_reentry_events: tuple[StateTransitionEvent, ...]
+    extinction_events: tuple[StateTransitionEvent, ...]
+    mixture_metadata: CalculationMetadata = field(repr=False)
+    trajectory_metadata: tuple[CalculationMetadata, ...] = field(repr=False)
+    method: str = "sampled_path"
+    method_version: str = REOPENED_METHOD_VERSION
+    sampler_algorithm: str = SAMPLER_ALGORITHM
+    rng_name: str = "numpy.random.Generator(PCG64)"
+    replicate_schedule: str = "replicate_major_step_major"
+    state_schedule: str = "ascending_unicode_state_id_skip_zero"
+    model_name: str = "reopened_resampling"
+    experimental: bool = True
+    evidence_class: CalculationEvidenceClass = CalculationEvidenceClass.SIMULATION
+    assumptions: tuple[str, ...] = REOPENED_ASSUMPTIONS
+    limitations: tuple[str, ...] = REOPENED_LIMITATIONS + (
+        "Replay requires the same method, NumPy build/environment, seed and parameters.",
+        "Bit-identical paths across dependency versions or platforms are not promised.",
+        "Accepted input round-off is corrected only by division by its validated total.",
+        "Lambda endpoints reuse the already effective source; lambda zero retains integer count sampling.",
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioExperimentRequest:
+    """Inert explicit declarations, validated together only when run is called.
+
+    Each scenario uses immutable probability-pair tuples. Shared context and seed
+    occur once; common model parameters must agree after canonical state ordering.
+    """
+
+    scenarios: tuple[ScenarioParameters, ...] = field(repr=False)
+    scope: CalculationScope = field(repr=False)
+    representation: RepresentationDescriptor = field(repr=False)
+    state_semantics: str = field(repr=False)
+    seed: int
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioInitialReachability:
+    """Declared next-draw possibilities, including when no draw was requested."""
+
+    model_name: str
+    reachable_states: tuple[str, ...] = field(repr=False)
+    possible_reentry_states: tuple[str, ...] = field(repr=False)
+    timing: str = "before_first_draw"
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioComparisonRow:
+    replicate_index: int
+    step: int
+    closed_support_size: int
+    reopened_support_size: int
+    support_size_difference: int
+    closed_gini_simpson_diversity: float
+    reopened_gini_simpson_diversity: float
+    diversity_difference: float
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioComparison:
+    """Aligned realized paths, without a pooled or causal interpretation."""
+
+    rows: tuple[ScenarioComparisonRow, ...]
+    initial_reachability: tuple[ScenarioInitialReachability, ...]
+    difference_direction: str = "reopened_minus_closed"
+    limitations: tuple[str, ...] = (
+        "Matching replicate indices identify reproducible paths, not common-random-number precision.",
+        "Different source distributions may consume different numbers of RNG draws.",
+        "Initial reachability describes pre-first-draw possibilities, not realized events.",
+        "No pooled summary, significance, causal benefit or external-quality ranking is established.",
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioExperimentResult:
+    """Typed handoff for later inert assembly; no report activation is implied."""
+
+    request: ScenarioExperimentRequest = field(repr=False)
+    selected_results: tuple[ResamplingSimulation | ReopeningSimulation, ...] = field(repr=False)
+    closed_analytic_baseline: ExpectedDiversityResult | None = field(repr=False)
+    closed_extinction_events: tuple[StateTransitionEvent, ...]
+    comparison: ScenarioComparison | None
+    baseline_basis: str | None
+    scenario_schedule: str = "reset_same_seed_per_model"
+    experimental: bool = True
+    evidence_class: CalculationEvidenceClass = CalculationEvidenceClass.SIMULATION
+
+
 def _invalid(message: str, *, resource: bool = False) -> CanonicalValidationError:
     return CanonicalValidationError(ErrorCode.CONFIG_INVALID if resource else ErrorCode.SCHEMA_TYPE,
                                     message, field="closed_resampling")
@@ -172,7 +339,7 @@ def _resources(n: object, steps: object, states: int, replicates: object = 1) ->
     _integer(replicates, positive=True)
     if (n > MAX_RESAMPLE_SIZE or steps > MAX_STEPS or states > MAX_STATES
             or replicates > MAX_REPLICATES or states * (steps + 1) * replicates > MAX_PATH_CELLS):
-        raise _invalid("closed scenario exceeds the documented bounded work or memory limits", resource=True)
+        raise _invalid("scenario exceeds the documented bounded work or memory limits", resource=True)
 
 
 def _state(value: object) -> str:
@@ -211,6 +378,15 @@ def _inputs(value: object, scope: CalculationScope, representation: Representati
             raise _invalid("scenario probabilities must be finite and in the unit interval")
         checked[state] = float(probability)
     supplied = tuple(sorted(checked.items()))
+    return _probability_record(supplied, scope, representation, sampled=sampled)
+
+
+def _probability_record(supplied: tuple[tuple[str, float], ...],
+                        scope: CalculationScope, representation: RepresentationDescriptor,
+                        *, sampled: bool,
+                        input_basis: str = "explicit_supplied_state_probability_vector",
+                        ) -> ResamplingInput:
+    """Shared bounded normalization for validated inputs and computed mixtures."""
     total = fsum(p for _, p in supplied)
     tolerance = NumericalPolicy().probability_mass_tolerance
     if total <= 0 or abs(total - 1.0) > tolerance:
@@ -225,7 +401,7 @@ def _inputs(value: object, scope: CalculationScope, representation: Representati
     return ResamplingInput(scope, representation, supplied, effective, total,
                            fsum(p for _, p in effective), total - 1.0, corrected,
                            "divide_by_validated_total" if corrected else "none",
-                           total if corrected else 1.0, changes)
+                           total if corrected else 1.0, changes, input_basis=input_basis)
 
 
 def _metadata(name: str, formula: str | None, unit: str, inputs: ResamplingInput,
@@ -343,3 +519,304 @@ def simulate_closed_resampling(
                          ("gini_simpson_diversity", "F-003", "ratio")))
     return ResamplingSimulation(inputs, resample_size, steps, replicates, seed, np.__version__,
                                 state_order, tuple(paths), metadata)
+
+
+def _reopening_error(error: CanonicalValidationError) -> CanonicalValidationError:
+    """Keep shared safe validation codes while identifying the requested model."""
+    return CanonicalValidationError(error.code, error.safe_message, field="reopened_resampling")
+
+
+def _reopening_inputs(internal: object, external: object, weight: object,
+                      scope: CalculationScope, representation: RepresentationDescriptor,
+                      ) -> tuple[ResamplingInput, ResamplingInput, float]:
+    if type(weight) not in (int, float):
+        raise _invalid("reopening weight must be an explicit finite built-in number")
+    try:
+        valid = isfinite(weight) and 0 <= weight <= 1
+    except OverflowError:
+        valid = False
+    if not valid:
+        raise _invalid("reopening weight must be finite and in the unit interval")
+    inputs = _inputs(internal, scope, representation, sampled=True)
+    external_inputs = _inputs(external, scope, representation, sampled=True)
+    if tuple(s for s, _ in inputs.effective_distribution) != tuple(
+            s for s, _ in external_inputs.effective_distribution):
+        raise _invalid("reopening requires exactly the same declared state space")
+    return inputs, external_inputs, float(weight)
+
+
+def _reopening_metadata(name: str, formula: str | None, unit: str,
+                        inputs: ResamplingInput, method: str) -> CalculationMetadata:
+    return CalculationMetadata(name, "T5", formula, CalculationEvidenceClass.SIMULATION,
+        unit, method, inputs.scope, inputs.representation, WeightingOptions(),
+        REOPENED_ASSUMPTIONS, REOPENED_LIMITATIONS)
+
+
+def _mixed_source(probabilities: tuple[float, ...], inputs: ResamplingInput,
+                  external_inputs: ResamplingInput, weight: float, *,
+                  internal_basis: str) -> ResamplingInput:
+    """Mix the actual current p, with no second correction at lambda endpoints.
+
+    Later p is count/n exactly as retained in the sampled generation. At lambda
+    zero, counts remain the sampler's masses; this record discloses their float
+    representation without claiming a second normalization affected the draw.
+    """
+    states = tuple(s for s, _ in inputs.effective_distribution)
+    if weight == 0.0:
+        supplied = tuple(zip(states, probabilities))
+        basis, correct = internal_basis, False
+    elif weight == 1.0:
+        supplied = external_inputs.effective_distribution
+        basis, correct = "effective_external_distribution", False
+    else:
+        mixed = []
+        for state, p, (_, r) in zip(states, probabilities,
+                                     external_inputs.effective_distribution, strict=True):
+            mass = fsum(((1.0 - weight) * p, weight * r))
+            positive_source = p > 0 or r > 0  # Both coefficients are positive here.
+            if positive_source and mass == 0:
+                raise _invalid("floating-point mixture would erase positive source reachability")
+            if not isfinite(mass) or not 0 <= mass <= 1:
+                raise _invalid("computed mixture exceeds its probability domain")
+            mixed.append((state, mass))
+        supplied = tuple(mixed)
+        basis, correct = "computed_external_mixture", True
+    return _probability_record(supplied, inputs.scope, inputs.representation,
+                               sampled=correct, input_basis=basis)
+
+
+def _possible_reentry(probabilities: tuple[float, ...], source: ResamplingInput,
+                      external_inputs: ResamplingInput, weight: float) -> tuple[str, ...]:
+    return tuple(state for p, (state, mass), (_, r) in zip(
+        probabilities, source.effective_distribution,
+        external_inputs.effective_distribution, strict=True)
+        if p == 0 and mass > 0 and weight > 0 and r > 0)
+
+
+def _initial_reopening_source(inputs: ResamplingInput, external_inputs: ResamplingInput,
+                              weight: float, steps: int) -> ResamplingInput | None:
+    """Shared pure admission for standalone and combined execution."""
+    source = None
+    if steps:
+        source = _mixed_source(tuple(p for _, p in inputs.effective_distribution),
+            inputs, external_inputs, weight, internal_basis="effective_internal_distribution")
+    # Initial internal mass may mask a vanished external term, until a later loss.
+    # Positive count/n terms cannot underflow within the accepted n/lambda bounds.
+    if steps >= 2 and weight > 0 and any(
+            r > 0 and weight * r == 0 for _, r in external_inputs.effective_distribution):
+        raise _invalid("floating-point external input could erase future positive reachability")
+    return source
+
+
+def mix_external_input(
+    internal: object, external: object, *, reopening_weight: float,
+    scope: CalculationScope, representation: RepresentationDescriptor,
+) -> ExternalMixtureResult:
+    """F-017 with explicit constant-source declarations and numerical disclosure.
+
+    No RNG, NumPy import or realized re-entry is produced. Both vectors remain
+    required and validated even at lambda zero or one. Inputs are detached.
+    """
+    try:
+        inputs, external_inputs, weight = _reopening_inputs(
+            internal, external, reopening_weight, scope, representation)
+        probabilities = tuple(p for _, p in inputs.effective_distribution)
+        source = _mixed_source(probabilities, inputs, external_inputs, weight,
+                               internal_basis="effective_internal_distribution")
+        return ExternalMixtureResult(inputs, external_inputs, source, weight,
+            tuple(s for s, _ in source.effective_distribution),
+            tuple(s for s, p in source.effective_distribution if p > 0),
+            _possible_reentry(probabilities, source, external_inputs, weight),
+            _reopening_metadata("mixed_source_probability", "F-017", "ratio", inputs,
+                                 "analytic_mixture; constant external distribution and weight"))
+    except CanonicalValidationError as error:
+        raise _reopening_error(error) from None
+
+
+def simulate_reopened_resampling(
+    internal: object, external: object, *, reopening_weight: float,
+    resample_size: int, steps: int, seed: int, replicates: int,
+    scope: CalculationScope, representation: RepresentationDescriptor,
+) -> ReopeningSimulation:
+    """Explicit PCG64 paths with a constant external mixture at each transition.
+
+    Validate bounds, inputs and predictable reachability underflow before RNG
+    creation. Lambda zero uses the identical masses and RNG schedule as closed
+    resampling. Horizon zero returns only the initial generation per replicate.
+    """
+    try:
+        _resources(resample_size, steps, 1, replicates)
+        _integer(seed)
+        if seed.bit_length() > MAX_SEED_BITS:
+            raise _invalid("seed exceeds the documented input-resource limit", resource=True)
+        inputs, external_inputs, weight = _reopening_inputs(
+            internal, external, reopening_weight, scope, representation)
+        states = tuple(s for s, _ in inputs.effective_distribution)
+        _resources(resample_size, steps, len(states), replicates)
+        initial_probabilities = tuple(p for _, p in inputs.effective_distribution)
+        first_source = _initial_reopening_source(inputs, external_inputs, weight, steps)
+        initial = _generation(0, None, initial_probabilities, states)
+        try:
+            import numpy as np
+        except ModuleNotFoundError:
+            raise _invalid("sampled reopened resampling requires installed NumPy; no automatic installation",
+                           resource=True) from None
+        rng = np.random.Generator(np.random.PCG64(seed))
+        paths, sources, reentries, extinctions = [], [], [], []
+        for replicate in range(replicates):
+            probabilities, masses = initial_probabilities, initial_probabilities
+            generations = [initial]
+            for step in range(1, steps + 1):
+                source = first_source if step == 1 else _mixed_source(
+                    probabilities, inputs, external_inputs, weight,
+                    internal_basis="sampled_integer_counts_over_resample_size")
+                possible = _possible_reentry(probabilities, source, external_inputs, weight)
+                sources.append(ReopeningSource(replicate, step, source, possible))
+                draw_masses = masses if weight == 0 else tuple(
+                    p for _, p in source.effective_distribution)
+                counts = _sample_counts(rng, draw_masses, resample_size)
+                possible_set = set(possible)
+                for state, before, count in zip(states, probabilities, counts, strict=True):
+                    if state in possible_set and count > 0:
+                        reentries.append(StateTransitionEvent(replicate, step, state))
+                    if before > 0 and count == 0:
+                        extinctions.append(StateTransitionEvent(replicate, step, state))
+                probabilities = tuple(count / resample_size for count in counts)
+                generations.append(_generation(step, counts, probabilities, states))
+                masses = counts
+            paths.append(ResamplingReplicate(replicate, tuple(generations)))
+        metadata = tuple(_reopening_metadata(name, formula, unit, inputs,
+                         "sampled_path; " + SAMPLER_ALGORITHM)
+                         for name, formula, unit in (
+                             ("state_count", None, "sampled_records"),
+                             ("state_frequency", "F-001", "ratio"),
+                             ("support_size", "F-002", "states"),
+                             ("gini_simpson_diversity", "F-003", "ratio")))
+        return ReopeningSimulation(inputs, external_inputs, weight, resample_size,
+            steps, replicates, seed, np.__version__, states, tuple(paths), tuple(sources),
+            tuple(reentries), tuple(extinctions),
+            _reopening_metadata("mixed_source_probability", "F-017", "ratio", inputs,
+                                 "analytic_mixture; constant external distribution and weight"),
+            metadata)
+    except CanonicalValidationError as error:
+        raise _reopening_error(error) from None
+
+
+def _experiment_preflight(request: ScenarioExperimentRequest) -> None:
+    """Validate every selected declaration before any trajectory or RNG exists."""
+    if type(request) is not ScenarioExperimentRequest:
+        raise _invalid("experiment requires an explicit typed request")
+    if type(request.scenarios) is not tuple or not 1 <= len(request.scenarios) <= 2:
+        raise _invalid("experiment requires one or two immutable scenario declarations")
+    _integer(request.seed)
+    if request.seed > MAX_EXPERIMENT_SEED:
+        raise _invalid("experiment seed exceeds the exact JSON integer bound", resource=True)
+    if not _state(request.state_semantics).strip():
+        raise _invalid("experiment requires explicit nonempty state meaning")
+    _context(request.scope, request.representation)
+    selected, prepared, common, cells = set(), [], None, 0
+    for scenario in request.scenarios:
+        if type(scenario) is not ScenarioParameters:
+            raise _invalid("experiment requires typed scenario parameters")
+        model = scenario.model_name
+        if (type(model) is not str or model not in ("closed_resampling", "reopened_resampling")
+                or model in selected):
+            raise _invalid("experiment model names must be supported and unique")
+        selected.add(model)
+        n, steps, replicates = (scenario.resample_size, scenario.simulation_horizon,
+                                scenario.simulation_replicates)
+        _resources(n, steps, 1, replicates)
+        # ScenarioParameters already declares tuples. Reject mutable containers
+        # here so the retained original request cannot change after execution.
+        if type(scenario.state_distribution) is not tuple:
+            raise _invalid("experiment distributions require immutable probability-pair tuples")
+        external_inputs, weight = None, None
+        if model == "reopened_resampling":
+            if type(scenario.external_input_distribution) is not tuple:
+                raise _invalid("reopened experiment requires an immutable external distribution")
+            inputs, external_inputs, weight = _reopening_inputs(
+                scenario.state_distribution, scenario.external_input_distribution,
+                scenario.reopening_weight, request.scope, request.representation)
+        else:
+            if scenario.external_input_distribution is not None or scenario.reopening_weight is not None:
+                raise _invalid("closed experiment cannot declare external input or reopening weight")
+            inputs = _inputs(scenario.state_distribution, request.scope,
+                             request.representation, sampled=True)
+        states = len(inputs.effective_distribution)
+        _resources(n, steps, states, replicates)
+        current = (inputs.supplied_distribution, n, steps, replicates)
+        if common is not None and current != common:
+            raise _invalid("compared scenarios require identical supplied internal distribution and parameters")
+        common = current
+        cells += states * (steps + 1) * replicates
+        prepared.append((inputs, external_inputs, weight, steps))
+    if cells > MAX_PATH_CELLS:
+        raise _invalid("combined experiment exceeds the documented sampled-path cell limit", resource=True)
+    for inputs, external_inputs, weight, steps in prepared:
+        _diversity(tuple(p for _, p in inputs.effective_distribution))
+        if external_inputs is not None:
+            _initial_reopening_source(inputs, external_inputs, weight, steps)
+
+
+def _compare_scenarios(closed: ResamplingSimulation,
+                       reopened: ReopeningSimulation) -> ScenarioComparison:
+    rows = []
+    for closed_path, reopened_path in zip(closed.sampled_paths, reopened.sampled_paths, strict=True):
+        for left, right in zip(closed_path.generations, reopened_path.generations, strict=True):
+            rows.append(ScenarioComparisonRow(closed_path.replicate_index, left.step,
+                left.support_size, right.support_size, right.support_size - left.support_size,
+                left.gini_simpson_diversity, right.gini_simpson_diversity,
+                right.gini_simpson_diversity - left.gini_simpson_diversity))
+    closed_reachable = tuple(s for s, p in closed.inputs.effective_distribution if p > 0)
+    weight = reopened.reopening_weight
+    # Coefficient support is also meaningful for horizon zero: a declared
+    # next-draw possibility, with no unrequested mixture or transition computed.
+    reopened_reachable = tuple(s for (s, p), (_, r) in zip(
+        reopened.inputs.effective_distribution, reopened.external_inputs.effective_distribution, strict=True)
+        if (weight < 1 and p > 0) or (weight > 0 and r > 0))
+    possible = tuple(s for (s, p), (_, r) in zip(
+        reopened.inputs.effective_distribution, reopened.external_inputs.effective_distribution, strict=True)
+        if p == 0 and weight > 0 and r > 0)
+    return ScenarioComparison(tuple(rows), (
+        ScenarioInitialReachability("closed_resampling", closed_reachable, ()),
+        ScenarioInitialReachability("reopened_resampling", reopened_reachable, possible)))
+
+
+def run_scenario_experiment(request: ScenarioExperimentRequest) -> ScenarioExperimentResult:
+    """Run only selected models after collective admission, resetting each seed.
+
+    Explicit supplied distributions remain declarations, never observed-record
+    conversions. Closed expectation is a separate calculation on its sampled
+    effective start. Comparison contains realized values, not Monte Carlo summaries.
+    """
+    try:
+        _experiment_preflight(request)
+        results, closed, reopened, baseline = [], None, None, None
+        for scenario in request.scenarios:
+            arguments = dict(resample_size=scenario.resample_size,
+                steps=scenario.simulation_horizon, replicates=scenario.simulation_replicates,
+                seed=request.seed, scope=request.scope, representation=request.representation)
+            if scenario.model_name == "closed_resampling":
+                closed = simulate_closed_resampling(scenario.state_distribution, **arguments)
+                results.append(closed)
+                baseline = expected_diversity_after_steps(closed.inputs.effective_distribution,
+                    resample_size=closed.resample_size, steps=closed.simulation_horizon,
+                    scope=request.scope, representation=request.representation)
+            else:
+                reopened = simulate_reopened_resampling(scenario.state_distribution,
+                    scenario.external_input_distribution, reopening_weight=scenario.reopening_weight,
+                    **arguments)
+                results.append(reopened)
+        losses = []
+        if closed is not None:
+            for path in closed.sampled_paths:
+                for before, after in zip(path.generations, path.generations[1:]):
+                    losses.extend(StateTransitionEvent(path.replicate_index, after.step, state)
+                        for state, p, count in zip(closed.state_order, before.state_frequencies,
+                                                   after.state_counts, strict=True)
+                        if p > 0 and count == 0)
+        comparison = _compare_scenarios(closed, reopened) if closed is not None and reopened is not None else None
+        return ScenarioExperimentResult(request, tuple(results), baseline, tuple(losses), comparison,
+            "closed_sampled_effective_distribution" if closed is not None else None)
+    except CanonicalValidationError as error:
+        raise CanonicalValidationError(error.code, error.safe_message, field="scenario_experiment") from None

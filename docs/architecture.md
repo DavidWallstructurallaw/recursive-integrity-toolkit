@@ -1,6 +1,128 @@
 # Architecture
 
-## Current Phase 6A architecture
+## Current Phase 6B Step 8 candidate boundary
+
+The dev6 candidate changes only package-version literals in `pyproject.toml`
+and `__init__.py`. All other product bytes remain fixed at accepted Step 7
+commit `9af8462bee86c367b6d0f5ae560e97f96cc58409`. The existing gate admits those
+two exact replacements and protects the remaining 81 product files. Runtime
+inventory remains 41 modules, with 18 canonical resources and schema 1.3.
+Candidate verification and installed delivery use the existing workflow; their
+actual status is recorded in [Phase 6B completion](../PHASE_6B_COMPLETION.md).
+
+## Accepted Phase 6B Step 7 verification boundary
+
+Step 7 changes tests, measurement support and documentation. All 83 product files
+remain frozen at Step 6 commit `065cafa017881258c6dc139c22815b806b75bce6`, with
+an empty implementation allowlist. The inventory remains 41 runtime modules,
+18 canonical packaged resources, package `0.1.0.dev5` and report schema 1.3.
+
+Cross-layer probes exercise the actual aggregate admission limit before any
+trajectory allocation. A failure after the first selected model completes
+discards the whole experiment while retaining independent audit results. Bounded
+performance checks reuse the complete CLI report fixture, separately time the
+actual coordinator, and measure Linux peak RSS through the executed process's
+`VmHWM`. See [Step 7 evidence](../PHASE_6B_STEP_7.md) for all observations and
+their workload boundaries.
+
+## Accepted Phase 6B Step 6 additions
+
+The packaged `simulation` example adds four canonical resources and an explicit
+`example --dataset simulation --simulate` entry point. Its two fictional audit
+records remain separate from the declared A/B probability vectors. The example
+uses the existing scenario configuration, experiment coordinator and report
+pipeline; no numerical implementation or schema changes are introduced.
+
+Extraction requires a fresh workspace, explicit simulation activation and no
+competing example mode or custom overlay. The config and mathematical expectations
+are copied byte-for-byte from packaged resources. Installed checks exercise the
+example outside the checkout with runtime network access blocked and compare
+same-environment replay, privacy views and input-only validation.
+
+The runtime inventory remains 41 modules. The four new resource copies bring
+the canonical packaged inventory to 18. Package version remains `0.1.0.dev5`
+and report schema remains 1.3. See the [user walkthrough](simulation_example.md)
+and [Step 6 evidence](../PHASE_6B_STEP_6.md).
+
+## Accepted Phase 6B Step 5 additions
+
+`config.py` retains complete immutable scenario declarations and validates their
+literal states, absolute probability mass tolerance, scalar bounds and combined
+work admission without importing numerical owners. The same input-only checks
+serve observability. Configuration serialization and normalized hashes retain
+all scenario context; public summaries expose only the requested flag.
+
+The CLI lazily constructs `ScenarioExperimentRequest` from explicit declarations
+and invokes the accepted coordinator only for enabled audit/example work.
+Scenario scope contains no audit record identities. Simulation failures retain
+independent audit results through the existing family-error mechanism. Run and
+result seeds agree. `validate` may assess enabled declarations but never imports
+the sampler or creates an RNG; assembly loads scenario types only when adapting
+supplied scenario evidence. Existing packaged examples remain unchanged;
+an explicit scenario-only local config can accompany an example invocation.
+
+The package remains `0.1.0.dev5`, with schema 1.3, 41 runtime modules and 14
+packaged resource copies. The installed synthetic example and dev6 candidate
+remain later planned work.
+
+## Accepted Phase 6B Step 4 additions
+
+Report schema 1.3 admits explicit experiment evidence through
+`assemble_report(..., scenario_experiment=...)`. The existing assembly owner
+checks the typed request/result binding and adapts selected closed/reopened
+results. `result.py` owns the schema and bounded cross-field validation, including
+source arithmetic, count/frequency/support identities, complete transition
+events, analytic baseline basis and comparison binding. These layers validate
+supplied evidence without invoking a sampler or rerunning an experiment.
+
+T5 results appear only under `simulations.external_reopening`. Closed results
+retain their existing slot, with an optional separate analytic baseline and
+explicit transition losses. Schema generation updates the canonical file and
+packaged copy together. Default simulations remain empty. The package version
+remained `0.1.0.dev5`; CLI/config activation was assigned to Step 5.
+
+Privacy views protect every new state-identity path with consistent aliases,
+preserving numerical positions and event relationships across both models.
+Record-identity omission does not remove semantic states. Markdown uses bounded
+scenario tables with omission counts and compact support/diversity trajectories;
+JSON retains the full admitted evidence. Both expose experimental simulation
+status, assumptions and the unavailable empirical intervention conclusion.
+
+## Accepted Phase 6B Step 3 additions
+
+`run_scenario_experiment` composes explicitly selected closed/reopened kernels
+in the existing `metrics/resampling.py` owner. Its inert immutable request uses
+the existing `ScenarioParameters`, with one common scope, representation, state
+meaning and seed. All declarations, shared supplied-vector/parameter agreement,
+combined work cells and predictable numerical failures are checked before any
+sampled trajectory is allocated. Each selected model resets the same named seed;
+adding or reordering the other model preserves its paths.
+
+The typed result retains the request and ordered sampled results. A selected
+closed model also receives a separate F-015 baseline computed from its sampled
+effective initial vector, plus exact local extinction events. Only a two-model
+request produces per-replicate/step support and diversity comparisons, labeled
+reopened minus closed, and pre-first-draw reachability. No data-record conversion,
+implicit control run, pooled summary or causal interpretation is performed.
+
+`metrics/resampling.py` now exposes `mix_external_input` and
+`simulate_reopened_resampling` alongside the accepted closed APIs. The pure
+mixture validates and detaches both declared vectors, preserves their separate
+normalization records and returns F-017 source evidence without importing NumPy.
+The explicit sampler uses constant external input and weight, existing PCG64 and
+bounded sampling, and immutable per-transition source/re-entry/extinction data.
+These kernels perform no input ingestion or implicit experiment scheduling.
+
+Lambda zero preserves the exact closed integer-count route. Lambda one refreshes
+the source at every step. Partial mixtures use the prior generation's count/n
+frequencies; source correction is disclosed. Initial and predictable future
+reachability underflow are rejected before RNG creation. See
+[the simulation contract](simulation_contract.md) for endpoint and horizon-zero
+details. The runtime module count remains 41. Configuration, CLI, observability,
+canonical report schema 1.2 and package version `0.1.0.dev5` remain unchanged;
+T5 report evidence and CLI/config activation belong to later planned steps.
+
+## Accepted Phase 6A architecture
 
 Development version `0.1.0.dev5` implements the approved
 [lineage contract](lineage_contract.md) and

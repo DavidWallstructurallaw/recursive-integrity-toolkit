@@ -420,3 +420,11 @@ Current canonical fixtures use package `0.1.0.dev5` and retain report schema
 `1.2`. Only the declared toolkit version changes from the accepted Step 8
 fixtures; every mathematical value, status, population, capability, diagnostic
 and privacy expectation is retained. Earlier version entries above are historical.
+
+## Phase 6B dev6 candidate metadata
+
+Current canonical fixtures use package `0.1.0.dev6` and retain the schema 1.3
+report contract accepted in Phase 6B Step 4. Relative to accepted Step 7, the
+five JSON/Markdown oracle files change only exact dev5-to-dev6 toolkit-version
+tokens. Every mathematical value, scope, evidence class, privacy identity and
+execution state is preserved. No generated candidate is promoted as an oracle.

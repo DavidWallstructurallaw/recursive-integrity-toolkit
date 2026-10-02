@@ -12,12 +12,12 @@ Limits:
 """
 
 
-def phase4_step2_evidence_report_fixture():
+def phase4_step2_evidence_report_fixture(*, simulation=False):
     """Independent literal control data, never generated from production code."""
     return {
         "run": {
             "run_id": "independent-evidence-case", "toolkit_version": "0.1.0.dev2",
-            "report_schema_version": "1.2", "started_at": None, "completed_at": None,
+            "report_schema_version": "1.3", "started_at": None, "completed_at": None,
             "duration_seconds": None, "python_version": None, "platform": None,
             "command": None, "config_hash": None, "random_seed": None,
             "strict_mode": False, "redacted_mode": False, "network_call_count": 0,
@@ -35,7 +35,8 @@ def phase4_step2_evidence_report_fixture():
         },
         "inputs": {}, "observability": {}, "capabilities": {}, "observed_facts": {},
         "derived_metrics": {}, "proxy_signals": {}, "simulations": {},
-        "unavailable_conclusions": [], "recommended_next_metadata": [],
+        "unavailable_conclusions": ([phase6b_empirical_intervention_unavailable_fixture()] if simulation else []),
+        "recommended_next_metadata": [],
         "warnings": [], "errors": [],
     }
 
@@ -344,6 +345,23 @@ def phase4_step2_additional_evidence_fixture(evidence_class):
     return item
 
 
+def phase6b_empirical_intervention_unavailable_fixture():
+    """A conditional scenario supplies no controlled empirical outcome evidence."""
+    item = phase4_step2_additional_evidence_fixture("unavailable_conclusion")
+    item.update({
+        "method_id": "T5.unavailable_conclusion", "owner_ids": ["T5"], "trace_ids": ["T5"],
+        "conclusion": "empirical_intervention_effect",
+        "statement": "Conditional scenarios do not establish an empirical intervention effect.",
+        "reason_codes": ["R_CONTROLLED_EMPIRICAL_DESIGN_MISSING"],
+        "required_evidence": ["A controlled empirical design with comparable measured outcomes."],
+        "blocking_evidence": ["Only mathematical scenario outputs were supplied."],
+        "required_next_metadata": ["Comparable measured empirical intervention outcomes."],
+        "related_capability": "intervention_simulation",
+        "theory_or_product_limit": "Mathematical scenarios do not establish production causality.",
+    })
+    return item
+
+
 def test_phase4_step2_proxy_simulation_and_unavailable_classes_have_valid_locations():
     from recursive_integrity_toolkit.result import CanonicalReport
 
@@ -352,7 +370,7 @@ def test_phase4_step2_proxy_simulation_and_unavailable_classes_have_valid_locati
         ("simulation", "simulations", "tail_extinction"),
         ("unavailable_conclusion", "unavailable_conclusions", None),
     ):
-        payload = phase4_step2_evidence_report_fixture()
+        payload = phase4_step2_evidence_report_fixture(simulation=evidence_class == "simulation")
         item = phase4_step2_additional_evidence_fixture(evidence_class)
         payload[section] = [item] if name is None else {name: item}
         exported = CanonicalReport.from_dict(payload).to_dict()
@@ -378,7 +396,7 @@ def test_phase4_step2_all_five_class_fixtures_also_satisfy_local_schema(schema_r
         ("simulation", "simulations", "tail_extinction"),
         ("unavailable_conclusion", "unavailable_conclusions", None),
     ):
-        payload = phase4_step2_evidence_report_fixture()
+        payload = phase4_step2_evidence_report_fixture(simulation=evidence_class == "simulation")
         item = phase4_step2_additional_evidence_fixture(evidence_class)
         payload[section] = [item] if name is None else {name: item}
         fixtures.append(payload)
@@ -399,7 +417,7 @@ def test_phase4_step2_additional_evidence_classes_cannot_be_relabelled():
         for wrong in ("observed_fact", "derived_metric", "proxy_signal", "simulation", "unavailable_conclusion"):
             if original == wrong:
                 continue
-            payload = phase4_step2_evidence_report_fixture()
+            payload = phase4_step2_evidence_report_fixture(simulation=original == "simulation")
             item = phase4_step2_additional_evidence_fixture(original)
             item["evidence_class"] = wrong
             payload[section] = [item] if name is None else {name: item}
@@ -413,14 +431,14 @@ def test_phase4_step2_simulations_are_experimental_and_require_model_metadata():
     from recursive_integrity_toolkit.result import CanonicalReport
 
     for field in ("model", "model_version", "method", "parameters", "initial_distribution", "by_state", "resample_size"):
-        payload = phase4_step2_evidence_report_fixture()
+        payload = phase4_step2_evidence_report_fixture(simulation=True)
         item = phase4_step2_additional_evidence_fixture("simulation")
         del item[field]
         payload["simulations"] = {"tail_extinction": item}
         with pytest.raises(ValueError):
             CanonicalReport.from_dict(payload)
     for wrong in ("available", "completed", "partial"):
-        payload = phase4_step2_evidence_report_fixture()
+        payload = phase4_step2_evidence_report_fixture(simulation=True)
         item = phase4_step2_additional_evidence_fixture("simulation")
         item["status"] = wrong
         payload["simulations"] = {"tail_extinction": item}
@@ -438,7 +456,7 @@ def test_phase4_step2_nonfinite_values_cannot_hide_inside_simulation_metadata():
                           ("parameters", "resample_size"),
                           ("numerical_policy", "relative_tolerance")):
         for wrong in (float("nan"), float("inf"), float("-inf"), True):
-            payload = phase4_step2_evidence_report_fixture()
+            payload = phase4_step2_evidence_report_fixture(simulation=True)
             item = phase4_step2_additional_evidence_fixture("simulation")
             target = (item["parameters"]["numerical_policy"] if branch == "numerical_policy" else
                       item["by_state"]["rare"] if branch == "by_state" else item[branch])
@@ -482,7 +500,7 @@ def test_phase4_step2_unapproved_external_reference_simulation_is_rejected():
 
     from recursive_integrity_toolkit.result import CanonicalReport
 
-    payload = phase4_step2_evidence_report_fixture()
+    payload = phase4_step2_evidence_report_fixture(simulation=True)
     payload["simulations"] = {"external_reference_loss": phase4_step2_additional_evidence_fixture("simulation")}
     with pytest.raises(ValueError):
         CanonicalReport.from_dict(payload)
@@ -614,7 +632,7 @@ def test_phase4_step2_contract_keyword_state_ids_are_literal_simulation_labels()
     for state in ("weighted_v1", "by_version", "evidence_class", "weighting_mode",
                   "representation_name", "coverage", "coverage_reason", "denominator",
                   "denominator_reason", "status", "scope", "value", "reason_codes"):
-        payload = phase4_step2_evidence_report_fixture()
+        payload = phase4_step2_evidence_report_fixture(simulation=True)
         scenario = phase4_step2_additional_evidence_fixture("simulation")
         expected = scenario["by_state"].pop("rare")
         scenario["by_state"][state] = expected
@@ -628,7 +646,7 @@ def test_phase4_step2_contract_keyword_state_ids_are_literal_simulation_labels()
 
 def phase4_step2_sampled_path_report_fixture():
     """Literal two-draw outcome loses two states in the same sampled step."""
-    payload = phase4_step2_evidence_report_fixture()
+    payload = phase4_step2_evidence_report_fixture(simulation=True)
     scenario = phase4_step2_additional_evidence_fixture("simulation")
     scenario.update({
         "method_id": "T1.closed_resampling", "owner_ids": ["T1"], "trace_ids": ["T1"],
@@ -658,6 +676,8 @@ def phase4_step2_sampled_path_report_fixture():
         {"replicate_index": 0, "step": 1, "state_id": "b"},
     ]
     payload["simulations"] = {"closed_resampling": scenario}
+    payload["run"]["random_seed"] = 1
+    del payload["run"]["null_reasons"]["random_seed"]
     return payload
 
 
@@ -855,7 +875,7 @@ def test_phase4_step2_visible_duplicate_identities_remain_at_least_two_and_uniqu
 def phase4_step3_run():
     return {
         "run_id": "step3-independent-case", "toolkit_version": "0.1.0.dev2",
-        "report_schema_version": "1.2", "started_at": None, "completed_at": None,
+        "report_schema_version": "1.3", "started_at": None, "completed_at": None,
         "duration_seconds": None, "python_version": None, "platform": None,
         "command": None, "config_hash": None, "random_seed": None,
         "strict_mode": False, "redacted_mode": False, "network_call_count": 0,
@@ -1059,7 +1079,10 @@ def test_phase4_step3_supplied_sampled_paths_are_copied_without_rng_execution(tm
         raise AssertionError("Assembly attempted RNG execution")
     monkeypatch.setattr(numpy.random, "default_rng", phase4_step3_forbid)
     monkeypatch.setattr(numpy.random, "Generator", phase4_step3_forbid)
-    report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run(), resampling=simulation), repo_root)
+    run = phase4_step3_run()
+    run["random_seed"] = 17
+    del run["null_reasons"]["random_seed"]
+    report = phase4_step3_schema(assemble_report(bundle, run=run, resampling=simulation), repo_root)
     scenario = report["simulations"]["closed_resampling"]
     assert len(scenario["sampled_paths"]) == 2
     for actual, original in zip(scenario["sampled_paths"], simulation.sampled_paths):
@@ -1283,8 +1306,11 @@ def test_phase4_step3_conflicting_closed_scenario_slots_are_rejected(tmp_path):
     context = {"scope": distribution.scope, "representation": distribution.representation}
     expected = expected_diversity_after_steps({"a": 1.0}, resample_size=4, steps=1, **context)
     sampled = simulate_closed_resampling({"a": 1.0}, resample_size=4, steps=1, seed=2, replicates=1, **context)
+    run = phase4_step3_run()
+    run["random_seed"] = 2
+    del run["null_reasons"]["random_seed"]
     with pytest.raises((TypeError, ValueError)):
-        assemble_report(bundle, run=phase4_step3_run(), expected_diversity=expected, resampling=sampled)
+        assemble_report(bundle, run=run, expected_diversity=expected, resampling=sampled)
 
 
 def test_phase4_step3_standalone_probability_evidence_does_not_invent_empirical_records(tmp_path, repo_root):
