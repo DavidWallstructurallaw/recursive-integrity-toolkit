@@ -1,0 +1,10 @@
+{
+  "basis": "Authored exact rational oracle for P3-D03 directed many-to-one mapping",
+  "earlier_version": "fine-v1",
+  "later_version": "coarse-v1",
+  "earlier_counts": {"red": 2, "green": 1, "pear": 1},
+  "later_counts": {"apple": 1, "pear": 3},
+  "direction": "earlier_to_later",
+  "mapping": {"red": "apple", "green": "apple", "pear": "pear"},
+  "expected": {"earlier_original_diversity": "5/8", "earlier_harmonized_diversity": "3/8", "later_diversity": "3/8", "support_delta": 0, "support_retention": "1", "diversity_delta": "0"}
+}

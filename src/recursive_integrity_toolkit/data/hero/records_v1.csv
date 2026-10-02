@@ -1,0 +1,9 @@
+record_id,dataset_version,content,topic
+v1_01,v1,"How to care for a house cat.",cat
+v1_02,v1,"How to care for a house dog.",dog
+v1_03,v1,"Why small birds need clean water.",bird
+v1_04,v1,"Signs of stress in aquarium fish.",fish
+v1_05,v1,"Basic habitat needs for lizards.",lizard
+v1_06,v1,"How turtles regulate temperature.",turtle
+v1_07,v1,"How to request a refund politely.",refund
+v1_08,v1,"Battery overheating warning signs.",battery

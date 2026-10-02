@@ -1,0 +1,20 @@
+{
+  "oracle_basis": "Authored metadata cross-product from Definitions 3.2-3.9 and P3-D08.",
+  "sources": [
+    "human",
+    "synthetic",
+    "mixed",
+    "sensor",
+    "unknown"
+  ],
+  "grounding_to_class": {
+    "yes": "known_open",
+    "no": "known_closed",
+    "unknown": "unresolved_grounding"
+  },
+  "review_values": [
+    true,
+    false,
+    null
+  ]
+}

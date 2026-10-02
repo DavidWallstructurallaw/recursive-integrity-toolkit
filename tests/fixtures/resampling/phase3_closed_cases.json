@@ -1,0 +1,13 @@
+{
+  "owner_ids": ["T1", "PR-016"],
+  "formula_ids": ["F-015"],
+  "source": "DEFINITIONS_AND_UNITS 12.5; VALIDATION_PLAN 16-17; PHASE_3_PLAN Step 8",
+  "expectations_generated_by_implementation": false,
+  "cases": [
+    {"probabilities":{"a":"1/2","b":"1/2"},"n":2,"steps":3,"expected":["1/2","1/4","1/8","1/16"]},
+    {"probabilities":{"a":"1/4","b":"1/4","c":"1/4","d":"1/4"},"n":4,"steps":2,"expected":["3/4","9/16","27/64"]},
+    {"probabilities":{"a":"1/2","b":"1/2","zero":"0"},"n":1,"steps":2,"expected":["1/2","0","0"]},
+    {"probabilities":{"only":"1"},"n":7,"steps":2,"expected":["0","0","0"]},
+    {"probabilities":{"a":"1/2","b":"1/4","c":"1/4"},"n":3,"steps":0,"expected":["5/8"]}
+  ]
+}

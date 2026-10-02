@@ -1,0 +1,30 @@
+{
+  "oracle_basis": "Authored rational expectations from Definitions 11 and 19.",
+  "weights": {
+    "a": 1,
+    "b": 2,
+    "c": 3,
+    "d": 4,
+    "e": 5,
+    "f": 6,
+    "g": 7,
+    "h": 8
+  },
+  "total_weight": 36,
+  "masses": {
+    "human": 3,
+    "synthetic": 7,
+    "mixed": 5,
+    "sensor": 6,
+    "unknown": 7
+  },
+  "shares": {
+    "human": "1/12",
+    "synthetic": "7/36",
+    "mixed": "5/36",
+    "sensor": "1/6",
+    "unknown": "7/36"
+  },
+  "missing_mass": 8,
+  "missing_share": "2/9"
+}

@@ -1,0 +1,90 @@
+{
+  "oracle_basis": "Authored rational expectations from Definitions 3 and 11; not implementation-generated.",
+  "record_ids": [
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h"
+  ],
+  "provenance": [
+    {
+      "record_id": "a",
+      "source_type": "human",
+      "provenance_confidence": "confirmed",
+      "external_grounding": "yes"
+    },
+    {
+      "record_id": "b",
+      "source_type": "human",
+      "provenance_confidence": "log_derived",
+      "external_grounding": "no"
+    },
+    {
+      "record_id": "c",
+      "source_type": "synthetic",
+      "provenance_confidence": "estimated",
+      "external_grounding": "yes"
+    },
+    {
+      "record_id": "d",
+      "source_type": "synthetic",
+      "provenance_confidence": "confirmed",
+      "external_grounding": "no"
+    },
+    {
+      "record_id": "e",
+      "source_type": "mixed",
+      "provenance_confidence": "unknown",
+      "external_grounding": "unknown"
+    },
+    {
+      "record_id": "f",
+      "source_type": "sensor",
+      "provenance_confidence": "confirmed",
+      "external_grounding": "no"
+    },
+    {
+      "record_id": "g",
+      "source_type": "unknown",
+      "provenance_confidence": "estimated",
+      "external_grounding": "yes"
+    }
+  ],
+  "expected": {
+    "source_type_counts": {
+      "human": 2,
+      "synthetic": 2,
+      "mixed": 1,
+      "sensor": 1,
+      "unknown": 1
+    },
+    "confidence_counts": {
+      "confirmed": 3,
+      "log_derived": 1,
+      "estimated": 2,
+      "unknown": 1
+    },
+    "source_type_shares": {
+      "human": "1/4",
+      "synthetic": "1/4",
+      "mixed": "1/8",
+      "sensor": "1/8",
+      "unknown": "1/8"
+    },
+    "missing_provenance_share": "1/8",
+    "direct_counts": [
+      3,
+      3,
+      2
+    ],
+    "coverage_numerators": [
+      7,
+      7,
+      6
+    ]
+  }
+}

@@ -1,35 +1,125 @@
-name: Phase 1 Release Scaffold
+name: Phase 4 Step 11 Build and Candidate Evidence
 
 on:
-  workflow_dispatch:
-  push:
-    tags:
-      - "v*"
+  workflow_call:
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  build-and-install:
+  delivery:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      RIT_TEST_PARQUET: "1"
     steps:
+      - name: Preserve canonical repository bytes
+        run: git config --global core.autocrlf false
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install release tools
-        run: python -m pip install ".[release,test]"
-      - name: Build wheel and source distribution
-        run: python -m build
-      - name: Install built wheel
-        run: python -m pip install --force-reinstall dist/*.whl
-      - name: Verify installed CLI
+          python-version: "3.12"
+      - name: Reuse complete core results from this candidate run
+        uses: actions/download-artifact@v4
+        with:
+          name: phase4-current-core-ubuntu-latest-3.12-current
+          path: ${{ runner.temp }}/rit-phase4-current/core-evidence/
+      - name: Reuse complete real-Parquet results from this candidate run
+        uses: actions/download-artifact@v4
+        with:
+          name: phase4-current-real-parquet
+          path: ${{ runner.temp }}/rit-phase4-current/parquet-evidence/
+      - name: Install approved build and test tools
+        run: python -m pip install ".[release,test,parquet]" "setuptools>=82"
+      - name: Check authority, declarations and current-step scope
         run: |
-          rit --help
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/rit-phase4-current"
+          test "$(cat "$evidence/core-evidence/source-commit.txt")" = "$(git rev-parse HEAD)"
+          test "$(cat "$evidence/parquet-evidence/source-commit.txt")" = "$(git rev-parse HEAD)"
+          cp "$evidence/core-evidence/core.xml" "$evidence/core.xml"
+          cp "$evidence/parquet-evidence/parquet.xml" "$evidence/parquet.xml"
+          python -m pip freeze > "$evidence/build-dependencies.txt"
+          python -m pip check
+          python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
+          python scripts/check_spec_consistency.py --phase 4 --step 11
+          python scripts/check_traceability.py --phase 4 --step 11
+          python scripts/release_check.py --phase 4 --step 11 --diff
           rit version
-      - name: Verify license and repository scaffold
-        run: python scripts/release_check.py
+      - name: Build and repeat the dev3 artifacts from the same committed source
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/rit-phase4-current"
+          export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
+          printf '%s\n' "$SOURCE_DATE_EPOCH" > "$evidence/source-date-epoch.txt"
+          python -m build --no-isolation --outdir "$evidence/dist" | tee "$evidence/phase4_build_results.log"
+          python -m twine check --strict "$evidence/dist/"*
+          mkdir -p "$evidence/rebuild-source"
+          git archive HEAD | tar -x -C "$evidence/rebuild-source"
+          python -m build --no-isolation "$evidence/rebuild-source" --outdir "$evidence/rebuild-dist" | tee "$evidence/repeated-build.log"
+          python -m twine check --strict "$evidence/rebuild-dist/"*
+      - name: Compare wheel bytes and complete source-distribution payloads
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import tarfile
 
-# Publishing is intentionally outside the Phase 1 workflow.
+          evidence = Path(os.environ["RUNNER_TEMP"]) / "rit-phase4-current"
+          first = {p.name: p for p in (evidence / "dist").iterdir() if p.is_file()}
+          second = {p.name: p for p in (evidence / "rebuild-dist").iterdir() if p.is_file()}
+          assert first.keys() == second.keys() and len(first) == 2
+          results = []
+          for name, original in sorted(first.items()):
+              repeated = second[name]
+              before, after = original.read_bytes(), repeated.read_bytes()
+              same_bytes = before == after
+              if name.endswith(".whl"):
+                  assert same_bytes, "Wheel bytes differ across repeated builds"
+                  payload_equal = True
+              else:
+                  assert name.endswith(".tar.gz")
+                  def payload(path):
+                      with tarfile.open(path, "r:gz") as archive:
+                          files = [m for m in archive.getmembers() if m.isfile()]
+                          assert len({m.name for m in files}) == len(files)
+                          return {m.name: archive.extractfile(m).read() for m in files}
+                  payload_equal = payload(original) == payload(repeated)
+                  assert payload_equal, "Source-distribution file payloads differ"
+              results.append({"artifact": name, "byte_identical": same_bytes,
+                              "file_payloads_identical": payload_equal,
+                              "first_sha256": hashlib.sha256(before).hexdigest(),
+                              "repeated_sha256": hashlib.sha256(after).hexdigest()})
+          result = {"scope": "Same committed source and recorded build environment; wheel bytes and all sdist file payloads. Sdist archive timestamps may differ.",
+                    "artifacts": results}
+          (evidence / "reproducibility.json").write_text(json.dumps(result, indent=2) + "\n")
+          print(json.dumps(result, indent=2))
+          PY
+      - name: Verify installed packages and produce the byte-verified Step 11 candidate
+        run: |
+          set -euo pipefail
+          python scripts/release_check.py --phase 4 --step 11 --candidate "$RUNNER_TEMP/rit-phase4-current" | tee "$RUNNER_TEMP/rit-phase4-current/installed-candidate.log"
+      - name: Retain candidate or failure evidence without masking failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recursive-integrity-toolkit-phase4-current-candidate
+          path: |
+            ${{ runner.temp }}/rit-phase4-current/
+            !${{ runner.temp }}/rit-phase4-current/rebuild-source/
+          if-no-files-found: error
+          retention-days: 90

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "recursive-integrity-toolkit"
-version = "0.1.0.dev1"
+version = "0.1.0.dev3"
 description = "Local-first, auditable research toolkit for recursive data integrity"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -79,6 +79,9 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["recursive_integrity_toolkit*"]
+
+[tool.setuptools.package-data]
+recursive_integrity_toolkit = ["data/hero/*", "data/report.schema.json"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"

@@ -1,0 +1,17 @@
+dataset_version,record_id,source_type,provenance_confidence,parent_ids,generator_id,generator_version,transformation,generation,human_reviewed,external_grounding
+v1,v1_01,human,confirmed,[],human_author,,carryover,0,true,yes
+v1,v1_02,human,confirmed,[],human_author,,carryover,0,true,yes
+v1,v1_03,human,confirmed,[],human_author,,carryover,0,true,yes
+v1,v1_04,human,confirmed,[],human_author,,carryover,0,true,yes
+v1,v1_05,human,confirmed,[],human_author,,carryover,0,true,yes
+v1,v1_06,human,confirmed,[],human_author,,carryover,0,true,yes
+v1,v1_07,human,confirmed,[],human_author,,carryover,0,true,yes
+v1,v1_08,human,confirmed,[],human_author,,carryover,0,true,yes
+v2,v2_01,human,confirmed,"[""v1::v1_01""]",human_author,,carryover,0,true,yes
+v2,v2_02,human,confirmed,"[""v1::v1_02""]",human_author,,carryover,0,true,yes
+v2,v2_03,human,confirmed,"[""v1::v1_03""]",human_author,,carryover,0,true,yes
+v2,v2_04,human,confirmed,"[""v1::v1_04""]",human_author,,carryover,0,true,yes
+v2,v2_05,synthetic,confirmed,"[""v1::v1_01""]",model_A,1.0,generate,1,false,no
+v2,v2_06,synthetic,confirmed,"[""v1::v1_02""]",model_A,1.0,generate,1,false,no
+v2,v2_07,synthetic,confirmed,"[""v1::v1_07""]",model_A,1.0,generate,1,false,no
+v2,v2_08,synthetic,confirmed,"[""v1::v1_01""]",model_A,1.0,generate,1,false,no

@@ -1,0 +1,132 @@
+# Phase 4 validation report
+
+Status: all required candidate gates passed; Phase 4 accepted.
+Version: `0.1.0.dev3`.
+Starting commit: `9142b344bfc2dc2b33dbc696159f07bbc81b223a`.
+Accepted candidate: `ceb0cf702284dbdbe50b14722026ec26fbcc21ba`.
+Candidate tree: `05a691710f8622b1f816e5a1e26b80d8b7e58069`.
+
+## Required candidate checks
+
+| Check | Scope | Current result |
+| --- | --- | --- |
+| Canonical regression | Complete suite on Ubuntu/Windows, Python 3.11/3.12, current/minimum dependencies | All eight profiles passed 3,965 cases each |
+| Real Parquet | Complete extra-enabled suite and all three real-Parquet cases | 3,968 passed |
+| Scientific fidelity | All 20 frozen mathematical cases and current report goldens | Complete matrix and 203-case Hero/mathematical job passed |
+| Boundaries | Privacy, local-only execution, malformed input, safe paired output and current unauthorized-mutation checks | Complete matrix and 3,277-case security job passed |
+| Packages | Wheel/sdist metadata, 40 modules, seven resource files, clean installed commands and package payloads | Dependent delivery job passed |
+| Examples | Documented Python and CLI examples outside the checkout | 18 commands passed using installed dev3; 11 JSON/Markdown pairs retained |
+| Security | Required boundary/security workflow | Accepted candidate passed 3,277 cases |
+| Source integrity | Exact tracked source archive, current scope and frozen authority | Candidate scope and all 246 archived source files passed |
+
+The minimum profile uses NumPy 2.0.0 and pandas 2.2.2, the documented jointly
+compatible pair. Core environments require actual PyArrow absence; the optional
+profile requires a real PyArrow installation. No skipped or projected scale run
+can substitute for a required candidate performance case.
+
+Local candidate preparation passed 96 affected current/historical control cases
+and a separate 244-case selection covering the changed version tests, current
+CLI, report goldens and frozen mathematical cases. Both selections passed on
+their first attempt. Specification, traceability, current scope, whitespace and
+document-link checks passed. These selections supplement the successful full
+supported-environment matrix. The installed example commands ran outside the
+checkout with package origin verified in site-packages.
+
+The first published candidate `0c2f5e4b5bb4730923ea87e54086fb077a66e996`
+passed the remote Hero/mathematical job (203 tests). Its security job recorded
+3,267 passes and 10 failures in 920.72 seconds. Those failures concern five
+historical stage preconditions that still inspect the moving checkout: the
+dev2 CLI migration, absence of Step 1 completion records, pre-repair assembly
+bytes and the Step 7/8 module-change sets. This candidate is not accepted.
+The repair binds those historical checks to already available accepted stage
+snapshots, retaining their assertions and mutation cases. Current Step 11
+behavior and unauthorized-mutation checks continue to inspect current source.
+Six complete core profiles and real Parquet also failed only these ten historical
+cases; both Windows/Python 3.11 jobs were cancelled. Delivery was skipped.
+Focused repair verification passed
+118 affected cases plus 143 related historical/workflow cases. A broader local
+control attempt was interrupted after partial progress; it is not recorded as a
+complete pass. Full remote logs and every attempt remain in the external evidence.
+
+## Repaired candidate and bounded budget correction
+
+Candidate `2ca1c9cff5f362a4771aa04987507e9af3738af0` passed seven core
+profiles with 3,965 cases each, the real-Parquet profile with 3,968 cases,
+Hero/mathematics with 203 cases and security with 3,277 cases. These successful
+jobs also passed their subsequent scope and evidence checks. Both complete
+controller modules ran within security, resolving the local execution gap
+without reclassifying either incomplete local attempt as a pass.
+
+Windows/Python 3.11 minimum was cancelled near the 75-minute outer job limit.
+Its 1,223 passing progress markers do not constitute a complete JUnit result,
+and the 100k case cannot be declared complete from that partial log. Delivery
+was skipped, so the repaired candidate is not accepted. The existing core job
+budget is corrected to 105 minutes; all profiles, cases and identity gates remain
+required, with the 100k subprocess still limited to 1,800 seconds. The next
+candidate completed every required gate, as recorded below. Every attempt is retained.
+
+## Accepted candidate outcomes
+
+CI run [35781946035](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35781946035),
+Hero run [35781944367](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35781944367)
+and security run [35781944491](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/35781944491)
+all completed successfully. All 12 job logs confirm the exact accepted candidate.
+Durations below are full pytest-suite durations, not isolated audit timings.
+
+| Profile or role | Python | NumPy / pandas | Tests passed | Seconds |
+| --- | --- | --- | ---: | ---: |
+| Ubuntu current | 3.11.16 | 2.4.6 / 3.0.6 | 3,965 | 4,292.86 |
+| Ubuntu minimum | 3.11.16 | 2.0.0 / 2.2.2 | 3,965 | 4,069.11 |
+| Ubuntu current | 3.12.14 | 2.5.3 / 3.0.6 | 3,965 | 1,966.36 |
+| Ubuntu minimum | 3.12.14 | 2.0.0 / 2.2.2 | 3,965 | 2,496.74 |
+| Windows current | 3.11.9 | 2.4.6 / 3.0.6 | 3,965 | 5,196.35 |
+| Windows minimum | 3.11.9 | 2.0.0 / 2.2.2 | 3,965 | 5,169.03 |
+| Windows current | 3.12.10 | 2.5.3 / 3.0.6 | 3,965 | 3,113.31 |
+| Windows minimum | 3.12.10 | 2.0.0 / 2.2.2 | 3,965 | 3,092.23 |
+| Ubuntu real Parquet, PyArrow 25.0.1 | 3.12.14 | 2.5.3 / 3.0.6 | 3,968 | 2,273.93 |
+| Hero and mathematical contract | 3.12.14 | 2.5.3 / 3.0.6 | 203 | 20.49 |
+| Security and local boundaries | 3.12.14 | 2.5.3 / 3.0.6 | 3,277 | 892.48 |
+
+Delivery job 106958634959 passed after all nine matrix profiles. It reused the
+same run's core and Parquet JUnit, checked exact identities and complete results,
+ran clean installed package checks, built wheel/sdist twice, checked strict
+metadata and source/resource equality, and verified the candidate source ZIP.
+Repeated wheels were byte-identical; all sdist member payloads matched while
+compressed container bytes differed. This is recorded-environment reproducibility.
+All nine matrix suites included the real 100,000-record audit with the unchanged
+1,800-second subprocess limit. No cancelled or partial attempt was counted as a pass.
+
+## Accepted prior measurements
+
+Step 10 already measured the repaired complete 100,000-record audit on Linux,
+Python 3.12.14, NumPy 2.5.3 and pandas 3.0.6: 1,362.470766888 seconds outer wall
+time and 7,640,743,936 bytes peak RSS. JSON size was 442,741,529 bytes and Markdown
+size 165,120,454 bytes. The expected 66,000 warnings and independent numerical
+values passed. Full-scale traced Python allocation peak was not measured.
+
+Three complete untraced Hero observations were 0.493891416, 0.654631544 and
+0.762660259 seconds. A separate traced Hero observation was 4.137158500 seconds
+with 11,044,047 bytes peak traced Python allocations. The traced observation is
+not an untraced throughput measurement. These results describe the recorded
+reference host and fixtures. Large report size and memory use remain limitations.
+
+The accepted Step 10 remote run 35718603026 passed 333 focused cases. Its raw
+artifact download was unavailable; available remote logs and metadata were
+archived. This prior result is not presented as Step 11's full matrix result.
+
+## Evidence and acceptance
+
+Raw commands, environment versions, JUnit, logs, measured observations and failed
+attempts are retained in the Step 11 evidence. An interrupted local 909-case run
+and its continuation remain incomplete; neither is reclassified by later remote
+success. A workspace disconnect was recovered using a hash-verified saved
+checkpoint and an exact Git checkout; completed tests were not rerun for recovery.
+
+Only the three descriptive acceptance reports change after the accepted code
+candidate. Focused document, scope, specification and traceability checks apply
+to this administrative successor; executable and authoritative bytes are retained.
+Its `[skip ci]` commit reuses the candidate's results without claiming a new matrix.
+The external receipt identifies the final source archive, package payload checks,
+artifact hashes and retrieval limitations. The hosted candidate ZIP contains the
+candidate-era reports; the final source ZIP contains these acceptance records.
+No new meta-verification layer, release publication or Phase 5 authority is added.

@@ -1,37 +1,135 @@
-name: Phase 1 CI
+name: Phase 4 Step 11 CI
 
 on:
-  push:
   pull_request:
+    paths-ignore:
+      - README.md
+      - CHANGELOG.md
+      - "docs/**"
+      - PHASE_4_COMPLETION.md
+      - PHASE_4_VALIDATION_REPORT.md
+      - PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  scaffold:
-    name: Scaffold checks on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+  core:
+    name: Core (${{ matrix.dependencies }}) on ${{ matrix.os }} with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 105
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ["3.11", "3.12"]
+        dependencies: [current, minimum]
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      RIT_TEST_PARQUET: "0"
     steps:
+      - name: Preserve canonical repository bytes
+        run: git config --global core.autocrlf false
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install package and Phase 1 test tools
+      - name: Install current compatible dependencies
+        if: matrix.dependencies == 'current'
         run: python -m pip install ".[test]"
-      - name: Run complete Phase 1 tests
-        env:
-          PYTHONDONTWRITEBYTECODE: "1"
-        run: python -m pytest -p no:cacheprovider -q
-      - name: Check specification structure
-        run: python scripts/check_spec_consistency.py
-      - name: Check module traceability and no-algorithm boundary
-        run: python scripts/check_traceability.py
-      - name: Run release scaffold check
-        run: python scripts/release_check.py
+      - name: Install minimum jointly compatible direct dependencies
+        if: matrix.dependencies == 'minimum'
+        run: python -m pip install ".[test]" "numpy==2.0.0" "pandas==2.2.2"
+      - name: Record resolved versions and dependency consistency
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rit-core"
+          python -m pip freeze > "$RUNNER_TEMP/rit-core/dependencies.txt"
+          python -m pip check
+          python -c "import platform,numpy,pandas; print(platform.platform(),platform.python_version(),numpy.__version__,pandas.__version__)"
+          git rev-parse HEAD > "$RUNNER_TEMP/rit-core/source-commit.txt"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell -NoProfile -Command 'Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory | ConvertTo-Json' | tee "$RUNNER_TEMP/rit-core/host-memory-kib.json"
+          else
+            free --bytes | tee "$RUNNER_TEMP/rit-core/host-memory-bytes.txt"
+          fi
+      - name: Verify actual optional dependency absence
+        run: python -c "import importlib.util; assert importlib.util.find_spec('pyarrow') is None"
+      - name: Run the complete core suite
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rit-core"
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-core/core.xml" --maxfail=1 | tee "$RUNNER_TEMP/rit-core/phase4_test_results.log"
+          python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-core/core.xml" --minimum-tests 3768
+      - name: Check current authorized scope and canonical suite
+        run: |
+          set -euo pipefail
+          python scripts/check_spec_consistency.py --phase 4 --step 11
+          python scripts/check_traceability.py --phase 4 --step 11
+          python scripts/release_check.py --phase 4 --step 11 --diff
+          python scripts/release_check.py --phase 4 --step 11 --baseline-evidence "$RUNNER_TEMP/rit-core"
+      - name: Retain core evidence without masking failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase4-current-core-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.dependencies }}
+          path: ${{ runner.temp }}/rit-core/
+          if-no-files-found: error
+          retention-days: 30
+
+  parquet:
+    name: Real optional Parquet on Ubuntu with Python 3.12
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      RIT_TEST_PARQUET: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install approved real Parquet extra
+        run: python -m pip install ".[test,parquet]"
+      - name: Run the complete extra-enabled suite
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rit-parquet"
+          python -m pip freeze > "$RUNNER_TEMP/rit-parquet/dependencies.txt"
+          python -m pip check
+          python -c "import pyarrow; print('PyArrow', pyarrow.__version__)"
+          git rev-parse HEAD > "$RUNNER_TEMP/rit-parquet/source-commit.txt"
+          free --bytes | tee "$RUNNER_TEMP/rit-parquet/host-memory-bytes.txt"
+          python -m pytest -p no:cacheprovider -q --junitxml="$RUNNER_TEMP/rit-parquet/parquet.xml" --maxfail=1 | tee "$RUNNER_TEMP/rit-parquet/phase4_parquet_results.log"
+          python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-parquet/parquet.xml" --require-parquet --minimum-tests 3771
+          python scripts/release_check.py --phase 4 --step 11 --baseline-evidence "$RUNNER_TEMP/rit-parquet"
+      - name: Retain Parquet evidence without masking failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase4-current-real-parquet
+          path: ${{ runner.temp }}/rit-parquet/
+          if-no-files-found: error
+          retention-days: 30
+
+  delivery:
+    name: Build verified candidate
+    needs: [core, parquet]
+    uses: ./.github/workflows/release.yml

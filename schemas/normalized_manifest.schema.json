@@ -1,43 +1,36 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://recursive-integrity-toolkit.example/schemas/normalized_manifest.schema.json",
-  "title": "Recursive Integrity Toolkit Normalized Manifest Row Skeleton",
-  "description": "Phase 1 structural contract for one normalized provenance-manifest row. Detailed enum, lineage, and cross-row validation is deferred to Phase 2.",
+  "title": "Recursive Integrity Toolkit Normalized Manifest Row Contract",
+  "description": "Phase 2 Step 4 structural field contract for a future normalized provenance export row. Enums, types, identifier limits and nonnegative generation are defined here. No parent resolution, duplicate-row check, generation derivation or exporter is implemented by this schema. Nullable or absent parent input is retained internally and is not certified as export-ready.",
   "type": "object",
-  "required": [
-    "dataset_version",
-    "record_id",
-    "source_type",
-    "provenance_confidence",
-    "external_grounding",
-    "parent_ids"
-  ],
+  "required": ["dataset_version", "record_id", "source_type", "provenance_confidence", "external_grounding", "parent_ids"],
   "properties": {
     "record_key": {"type": ["string", "null"]},
-    "dataset_version": {"type": "string"},
-    "record_id": {"type": "string"},
-    "source_type": {"type": "string"},
-    "provenance_confidence": {"type": "string"},
-    "external_grounding": {"type": "string"},
-    "parent_ids": {
-      "type": "array",
-      "items": {"type": "string"}
+    "dataset_version": {
+      "type": "string", "minLength": 1, "maxLength": 256,
+      "allOf": [{"not": {"pattern": "^\\s"}}, {"not": {"pattern": "\\s$"}}, {"not": {"pattern": "::"}}, {"not": {"pattern": "\\u0000"}}]
     },
+    "record_id": {
+      "type": "string", "minLength": 1, "maxLength": 512,
+      "allOf": [{"not": {"pattern": "^\\s"}}, {"not": {"pattern": "\\s$"}}, {"not": {"pattern": "::"}}, {"not": {"pattern": "\\u0000"}}]
+    },
+    "source_type": {"type": "string", "enum": ["human", "synthetic", "mixed", "sensor", "unknown"]},
+    "provenance_confidence": {"type": "string", "enum": ["confirmed", "log_derived", "estimated", "unknown"]},
+    "external_grounding": {"type": "string", "enum": ["yes", "no", "unknown"]},
+    "parent_ids": {"type": "array", "items": {"type": "string"}},
     "generator_id": {"type": ["string", "null"]},
     "generator_version": {"type": ["string", "null"]},
-    "transformation": {"type": ["string", "null"]},
-    "generation": {"type": ["integer", "null"]},
+    "transformation": {"type": ["string", "null"], "enum": ["generate", "rewrite", "summarize", "translate", "filter", "label", "carryover", "other", null]},
+    "generation": {"type": ["integer", "null"], "minimum": 0, "description": "Declared value only; consistency with parents is deferred."},
     "human_reviewed": {"type": ["boolean", "null"]},
     "batch_id": {"type": ["string", "null"]},
-    "timestamp": {"type": ["string", "null"]},
+    "timestamp": {"type": ["string", "null"], "format": "date-time"},
     "grounding_evidence_ref": {"type": ["string", "null"]},
     "source_uri": {"type": ["string", "null"]},
     "license_id": {"type": ["string", "null"]},
     "_validation_status": {"type": ["string", "null"]},
-    "_warning_codes": {
-      "type": "array",
-      "items": {"type": "string"}
-    },
+    "_warning_codes": {"type": "array", "items": {"type": "string"}},
     "extras": {
       "type": "object",
       "description": "Explicitly preserved unmapped fields. These fields must not affect metrics automatically.",

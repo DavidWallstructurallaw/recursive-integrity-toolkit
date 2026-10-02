@@ -1,64 +1,53 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://recursive-integrity-toolkit.example/schemas/config.schema.json",
-  "title": "Recursive Integrity Toolkit Configuration Skeleton",
-  "description": "Phase 1 structural contract for local audit configuration. Detailed cross-field validation is deferred to Phase 2.",
+  "title": "Recursive Integrity Toolkit Configuration",
+  "description": "Phase 2 structural contract for explicit local configuration. Cross-field data validation remains in the Phase 2 validation layer.",
   "type": "object",
   "properties": {
-    "config_version": {
-      "type": "string",
-      "description": "Version of the configuration document format."
-    },
+    "config_version": {"type": "string", "minLength": 1, "description": "Version of the configuration document format."},
     "inputs": {
       "type": "object",
-      "description": "Local input roles and paths.",
+      "description": "Explicit local input-role declarations. Detailed cardinality and filesystem validation are performed by the Phase 2 input layer.",
+      "propertyNames": {"enum": ["records_primary", "records_compare", "provenance_manifest", "schema_mapping", "config", "version_order", "embedding_data", "external_reference"]},
       "additionalProperties": true
     },
     "representation": {
       "type": "object",
-      "description": "Declared state representation.",
+      "description": "Declared state representation. Presence does not execute representation analysis in Phase 2.",
       "properties": {
-        "name": {"type": "string"},
-        "source": {"type": "string"},
-        "field": {"type": "string"},
-        "version": {"type": "string"},
-        "missing_value_policy": {"type": "string"},
-        "normalization_profile": {"type": "string"}
+        "name": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1},
+        "field": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "missing_value_policy": {"type": "string", "minLength": 1},
+        "normalization_profile": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false
     },
-    "representation_compatibility": {
+    "representation_compatibility": {"type": "object", "description": "Dataset-version to representation-version declarations.", "additionalProperties": {"type": "string"}},
+    "state_mapping": {"type": "object", "description": "Explicit state mapping declaration only. Phase 2 does not execute analytical state assignment.", "additionalProperties": {"type": "string"}},
+    "version_order": {"type": "array", "description": "Explicit dataset versions in user-declared chronological order.", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "privacy_mode": {"type": "string", "enum": ["standard", "redacted", "debug"], "default": "standard"},
+    "strict_mode": {"type": "boolean", "default": false, "description": "Promote only explicitly configured warnings in later validation steps."},
+    "strict_warning_codes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "resource_limits": {
       "type": "object",
-      "description": "Dataset-version to representation-version declarations.",
-      "additionalProperties": {"type": "string"}
+      "properties": {
+        "max_file_bytes": {"type": "integer", "minimum": 1},
+        "max_rows": {"type": "integer", "minimum": 1},
+        "max_content_bytes": {"type": "integer", "minimum": 1},
+        "max_parent_list_length": {"type": "integer", "minimum": 1},
+        "max_json_depth": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
     },
-    "state_mapping": {
-      "type": "object",
-      "description": "Explicit state mapping used only when separately approved.",
-      "additionalProperties": {"type": "string"}
-    },
-    "version_order": {
-      "type": "array",
-      "description": "Explicit dataset version order.",
-      "items": {"type": "string"}
-    },
-    "privacy_mode": {
-      "type": "string",
-      "description": "Selected standard, redacted, or debug privacy mode."
-    },
-    "output": {
-      "type": "object",
-      "description": "Local output settings.",
-      "additionalProperties": true
-    },
+    "output": {"type": "object", "description": "Reserved local output settings. Phase 2 does not generate analytical reports.", "additionalProperties": true},
     "simulation": {
       "type": "object",
-      "description": "Optional experimental scenario configuration. Presence does not activate analysis in Phase 1.",
-      "properties": {
-        "enabled": {"type": "boolean"},
-        "seed": {"type": "integer"}
-      },
-      "additionalProperties": true
+      "description": "Explicit experimental scenario declaration. Presence never executes a simulation in Phase 2.",
+      "properties": {"enabled": {"type": "boolean", "default": false}, "seed": {"type": "integer"}},
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

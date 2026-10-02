@@ -1,0 +1,22 @@
+{
+  "cases": [
+    {
+      "source": "embedding_clusters"
+    },
+    {
+      "source": "content_hash"
+    },
+    {
+      "field": "content"
+    },
+    {
+      "version": null
+    },
+    {
+      "missing_value_policy": "impute"
+    },
+    {
+      "normalization_profile": "case_fold"
+    }
+  ]
+}
