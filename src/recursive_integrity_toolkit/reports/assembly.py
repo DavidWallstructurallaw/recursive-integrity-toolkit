@@ -7,7 +7,7 @@ Outputs: immutable CanonicalReport and explicitly selected SafeReportView.
 Assumptions: supplied typed results are evidence handoffs, not authenticity certificates.
 Limits: no ingestion, classification, metric execution, graph traversal, simulation,
         filesystem access, rendering or CLI orchestration.
-Current phase status: Phase 5 Step 7 canonical lineage evidence and privacy views.
+Current phase status: Phase 6A Step 6 canonical series evidence and privacy views.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from dataclasses import dataclass, fields
 from math import isfinite, isclose
 from types import MappingProxyType
 from pathlib import PosixPath, WindowsPath
+from typing import TYPE_CHECKING
 
 from ..models import (
     BundleValidationResult, CalculationEvidenceClass, CalculationMetadata,
@@ -36,6 +37,9 @@ from ..metrics.resampling import ExpectedDiversityResult, ResamplingSimulation, 
 from ..metrics.tail import TailSelectionResult, ExtinctionProbabilityResult, RarityEntry
 from ..representations.compatibility import RepresentationCompatibility, StateMappingDeclaration
 from ..result import CanonicalReport, FIELD_REGISTRY, LEVEL_LABELS, SECTION_ORDER, ReportValidationError
+
+if TYPE_CHECKING:
+    from ..metrics.longitudinal import LongitudinalResult, LongitudinalFailureResult
 
 
 class ReportAssemblyError(ReportValidationError):
@@ -1446,17 +1450,21 @@ def assemble_report(bundle: BundleValidationResult, *, run: dict,
                     expected_diversity: ExpectedDiversityResult | None = None,
                     resampling: ResamplingSimulation | None = None,
                     extinction: tuple[ExtinctionProbabilityResult, ...] = (),
-                    family_errors: tuple[FamilyFailure, ...] = ()) -> CanonicalReport:
+                    family_errors: tuple[FamilyFailure, ...] = (),
+                    longitudinal: LongitudinalResult | None = None,
+                    longitudinal_failure: LongitudinalFailureResult | None = None) -> CanonicalReport:
     """Adapt explicit typed evidence; never run an analysis or resolve input files.
 
     Caller supplies complete standard-mode run metadata. Mathematical probability
     inputs and scenarios retain their own declared scopes; empirical results must
     bind to validated bundle identities. Each singleton family has one report slot.
+    Ordered series evidence occupies separate structural rows. An explicit failed
+    selection retains independently supplied snapshots without scheduling pairs.
     """
     _bundle_check(bundle)
     _require(type(run) is dict, "run metadata must be a public JSON object")
     _require(run.get("privacy_mode") == "standard" and run.get("redacted_mode") is False,
-             "Step 3 assembles standard evidence; a redacted declaration requires the later privacy transform")
+             "assembly requires standard evidence before the explicit privacy transform")
     _require(type(bundle.records) is tuple and all(type(row) is CanonicalRow for row in bundle.records), "bundle records require canonical row tuples")
     _require(len({row.record_key for row in bundle.records}) == len(bundle.records), "bundle record identities are duplicated")
     _require(set(bundle.version_order.loaded_versions) == {row.record_key.dataset_version for row in bundle.records}, "bundle loaded versions disagree with validated records")
@@ -1551,12 +1559,384 @@ def assemble_report(bundle: BundleValidationResult, *, run: dict,
         if shared_ancestry is not None:
             operations["lineage"].append("supplied_shared_ancestry_proxy")
     _capabilities(payload, bundle, operations, failures, lineage)
+    _longitudinal_report(payload, bundle, longitudinal, longitudinal_failure)
     if payload["errors"]:
         payload["run"]["run_status"] = "failed" if any(error["severity"] == "fatal" for error in payload["errors"]) else "partial" if bundle.records or distributions or payload["simulations"] else "failed"
         for error in payload["errors"]:
             error["effect_on_run"] = payload["run"]["run_status"]
     _disclosures(payload)
     return CanonicalReport.from_dict(payload)
+
+
+_LONGITUDINAL_FAMILIES = ("distribution", "provenance", "direct_closure", "tail", "lineage")
+_LONGITUDINAL_LINEAGE_FIELDS = (
+    "grounded_record_count", "closed_record_count", "unresolved_record_count",
+    "records_with_resolved_external_ancestry", "distinct_external_root_count",
+    "ancestry_concentration_hhi", "effective_external_root_count",
+    "resolved_parent_edge_coverage", "resolved_lineage_coverage", "external_ancestry_coverage",
+    "lineage_closure_lower_bound", "lineage_closure_upper_bound", "lineage_closure_interval_width")
+_LONGITUDINAL_LINEAGE_DELTAS = (
+    "distinct_external_root_count_delta", "ancestry_concentration_hhi_delta",
+    "effective_external_root_count_delta", "unresolved_parent_reference_count_delta",
+    "resolved_parent_edge_coverage_delta", "resolved_lineage_coverage_delta",
+    "external_ancestry_coverage_delta", "lineage_closure_lower_bound_delta",
+    "lineage_closure_upper_bound_delta", "lineage_closure_interval_width_delta")
+_LONGITUDINAL_ASSUMPTIONS = ("Each snapshot retains its independently declared complete population.",)
+_LONGITUDINAL_LIMITATIONS = (
+    "Observed changes use supplied retrospective evidence and do not establish causal or model-performance effects.",)
+_LONGITUDINAL_SAFE_TEXT = frozenset((*_LONGITUDINAL_ASSUMPTIONS, *_LONGITUDINAL_LIMITATIONS,
+    "valid_evidence_for_declared_snapshot", "not_applicable_to_difference",
+    "selected_valid_records", "all_valid_records_in_selected_dataset_scope", "declared_parent_references",
+    "supplied_ordered_longitudinal_series", "R_LONGITUDINAL_NOT_REQUESTED",
+    "R_LONGITUDINAL_FAMILY_NOT_REQUESTED", "R_LONGITUDINAL_SELECTION_INVALID",
+    "R_LONGITUDINAL_PAIR_BLOCKED", "R_LONGITUDINAL_ENDPOINT_UNAVAILABLE",
+    "R_LONGITUDINAL_PARTIAL_COVERAGE", "R_LONGITUDINAL_RESOURCE_LIMIT",
+    "E_LONGITUDINAL_RESOURCE_LIMIT_EXCEEDED",
+    "EARLIER_NO_RESOLVED_EXTERNAL_ROOTS", "LATER_NO_RESOLVED_EXTERNAL_ROOTS",
+    "EARLIER_LINEAGE_RESOURCE_LIMIT_EXCEEDED", "LATER_LINEAGE_RESOURCE_LIMIT_EXCEEDED",
+    "EARLIER_EMPTY_TARGET_SCOPE", "LATER_EMPTY_TARGET_SCOPE",
+    "EARLIER_PARENT_REFERENCE_COUNT_UNAVAILABLE", "LATER_PARENT_REFERENCE_COUNT_UNAVAILABLE",
+    "EARLIER_EMPTY_SCOPE", "LATER_EMPTY_SCOPE", "EARLIER_UNRESOLVED_ANCESTRY", "LATER_UNRESOLVED_ANCESTRY"))
+
+
+def _series_codes(codes):
+    return tuple(dict.fromkeys(code.value if hasattr(code, "value") else code for code in codes))
+
+
+def _series_envelope(section, name, value, scope_id, *, basis_id=None, denominator=None,
+                     coverage=None, status=None, reasons=()):
+    reasons = _series_codes(reasons)
+    if status is None:
+        status = "unavailable" if value is None else "available"
+    if value is None and not reasons:
+        reasons = ("R_LONGITUDINAL_ENDPOINT_UNAVAILABLE",)
+    envelope = _envelope(section + "." + name, value, None, denominator=denominator,
+        coverage=coverage, status=status, reasons=reasons,
+        assumptions=_LONGITUDINAL_ASSUMPTIONS, limitations=_LONGITUDINAL_LIMITATIONS,
+        required=("valid_evidence_for_declared_snapshot",) if value is None else ())
+    del envelope["scope"], envelope["representation"]
+    envelope.update({"scope_id": scope_id, "basis_id": basis_id,
+        "weighting": {"weighting_mode": "unweighted", "weight_field": None},
+        "input_basis": "empirical_assignments"})
+    return envelope
+
+
+def _series_family_rows(families):
+    return {item.family: {"execution_status": item.execution_status.value,
+                         "reason_codes": list(item.reason_codes)} for item in families}
+
+
+def _series_scope(scope, scope_id, snapshot_id):
+    return {"scope_id": scope_id, "snapshot_id": snapshot_id,
+            "record_count": len(scope.included_record_keys),
+            "excluded_record_count": len(scope.excluded_record_keys),
+            "denominator_basis": scope.denominator_basis}
+
+
+def _series_snapshot(snapshot, snapshot_id, basis_id, lineage_requested):
+    """Copy validated snapshot evidence into references, without a kernel call."""
+    observed, derived = {"snapshot_id": snapshot_id}, {"snapshot_id": snapshot_id}
+    population = snapshot_id + ".population"
+    represented = snapshot_id + ".representation" if snapshot.scope.representation_scope is not None else population
+    total = snapshot.record_count.value
+    opath, dpath = "observed_facts.longitudinal.snapshots", "derived_metrics.longitudinal.snapshots"
+    for name in ("record_count", "representation_eligible_record_count", "representation_excluded_record_count"):
+        scalar = getattr(snapshot, name)
+        observed[name] = _series_envelope(opath, name, scalar.value, population,
+            denominator=total,
+            status=scalar.status.value, reasons=scalar.reason_codes)
+    distribution = snapshot.distribution
+    for name in ("support_size", "gini_simpson_diversity"):
+        scalar = None if distribution is None else getattr(distribution.unweighted, name)
+        derived[name] = _series_envelope(dpath, name, None if scalar is None else scalar.value,
+            represented, basis_id=basis_id,
+            denominator=None if distribution is None else distribution.unweighted.frequency_denominator,
+            coverage=None if distribution is None else distribution.coverage.ratio,
+            reasons=snapshot.family_statuses[0].reason_codes if scalar is None else scalar.reason_codes)
+    provenance = snapshot.provenance
+    for name in ("provenance_row_coverage", "provenance_required_field_coverage", "grounding_field_coverage"):
+        coverage = None if provenance is None else getattr(provenance, name)
+        observed[name] = _series_envelope(opath, name, None if coverage is None else coverage.ratio,
+            population, denominator=total, coverage=None if coverage is None else coverage.ratio,
+            reasons=(CalculationReason.EMPTY_SCOPE.value,) if provenance is None else ())
+    for name, source in (("source_type_counts", None if provenance is None else provenance.source),
+                         ("provenance_confidence_counts", None if provenance is None else provenance.confidence)):
+        observed[name] = _series_envelope(opath, name,
+            None if source is None or source.counts is None else dict(source.counts), population,
+            denominator=total, coverage=None if source is None else source.field_coverage.ratio,
+            reasons=(CalculationReason.EMPTY_SCOPE.value,) if source is None else source.reason_codes)
+    for section, target, name in ((opath, observed, "missing_provenance_count"),
+                                  (dpath, derived, "missing_provenance_share")):
+        scalar = None if provenance is None else getattr(provenance, name)
+        target[name] = _series_envelope(section, name, None if scalar is None else scalar.value,
+            population, denominator=total,
+            coverage=None if provenance is None else provenance.provenance_row_coverage.ratio,
+            reasons=(CalculationReason.EMPTY_SCOPE.value,) if scalar is None else scalar.reason_codes)
+    source = None if provenance is None else provenance.source
+    derived["source_type_shares"] = _series_envelope(dpath, "source_type_shares",
+        None if source is None or source.shares is None else dict(source.shares), population,
+        denominator=total, coverage=None if source is None else source.field_coverage.ratio,
+        reasons=(CalculationReason.EMPTY_SCOPE.value,) if source is None else source.reason_codes)
+    for suffix in ("lower_bound", "upper_bound", "interval_width"):
+        scalar = None if snapshot.direct_closure is None else getattr(snapshot.direct_closure, suffix)
+        name = "direct_closure_" + suffix
+        derived[name] = _series_envelope(dpath, name, None if scalar is None else scalar.value,
+            population, denominator=total,
+            coverage=None if provenance is None else provenance.grounding_field_coverage.ratio,
+            reasons=(CalculationReason.EMPTY_SCOPE.value,) if scalar is None else scalar.reason_codes)
+    target = snapshot.lineage
+    missing = snapshot.family_statuses[-1].reason_codes if lineage_requested else ("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",)
+    for name in ("declared_parent_reference_count", "resolved_parent_reference_count", "unresolved_parent_reference_count"):
+        observed[name] = _series_envelope(opath, name, None if target is None else getattr(target, name),
+            population, denominator=None if target is None else target.declared_parent_reference_count,
+            coverage=None if target is None else target.resolved_parent_edge_coverage,
+            reasons=missing if target is None else target.reference_coverage_reason_codes)
+    for name in _LONGITUDINAL_LINEAGE_FIELDS:
+        number, denominator, coverage, status, reasons = None, total, None, "unavailable", missing
+        if target is not None:
+            number = getattr(snapshot.lineage_closure, name.removeprefix("lineage_closure_")) if name.startswith("lineage_closure_") else getattr(target, name)
+            coverage = target.resolved_lineage_coverage
+            status, reasons = ("available", ()) if number is not None else ("unavailable", target.ancestry_coverage_reason_codes)
+            if name in ("distinct_external_root_count", "ancestry_concentration_hhi", "effective_external_root_count"):
+                concentration = name != "distinct_external_root_count"
+                denominator = target.grounded_record_count if concentration else total
+                coverage = target.external_ancestry_coverage
+                status = (target.concentration_status if concentration else target.root_metrics_status).value
+                reasons = target.concentration_reason_codes if concentration and number is None else (
+                    ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",) if target.records is None else
+                    ("UNRESOLVED_ANCESTRY",) if status == "partial" else ())
+            elif name == "resolved_parent_edge_coverage":
+                denominator, coverage = target.declared_parent_reference_count, target.resolved_parent_edge_coverage
+                reasons = target.reference_coverage_reason_codes
+            elif name.startswith("lineage_closure_"):
+                status, reasons = snapshot.lineage_closure.status.value, snapshot.lineage_closure.reason_codes
+            elif target.records is None:
+                reasons = ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",)
+        elif name in ("ancestry_concentration_hhi", "effective_external_root_count", "resolved_parent_edge_coverage"):
+            denominator = None
+        derived[name] = _series_envelope(dpath, name, number, population, denominator=denominator,
+            coverage=coverage, status=status, reasons=reasons)
+        if name == "resolved_parent_edge_coverage":
+            derived[name]["no_declared_parents"] = None if target is None else target.no_declared_parents
+    return observed, derived
+
+
+def _series_delta(delta, earlier_id, later_id, *, basis_id=None, represented=False, pair_id=None):
+    suffix = ".representation" if represented else ".population"
+    earlier_scope, later_scope = earlier_id + suffix, later_id + suffix
+    if pair_id is not None:
+        earlier_scope, later_scope = pair_id + ".earlier", pair_id + ".later"
+    reasons = _series_codes(delta.reason_codes)
+    if delta.value is None:
+        reasons = tuple(dict.fromkeys(("R_LONGITUDINAL_PAIR_BLOCKED",) + reasons)) if CalculationReason.REPRESENTATION_INCOMPATIBLE.value in reasons else tuple(dict.fromkeys(("R_LONGITUDINAL_ENDPOINT_UNAVAILABLE",) + reasons))
+    result = _series_envelope("derived_metrics.longitudinal.comparisons", delta.metric_name,
+        delta.value, None, basis_id=basis_id, status=delta.status.value, reasons=reasons)
+    result.update({"earlier_scope_id": earlier_scope, "later_scope_id": later_scope,
+        "earlier_value": delta.earlier_value, "later_value": delta.later_value,
+        "earlier_denominator": delta.earlier_denominator, "later_denominator": delta.later_denominator,
+        "earlier_coverage": None if delta.earlier_coverage is None else _coverage(delta.earlier_coverage),
+        "later_coverage": None if delta.later_coverage is None else _coverage(delta.later_coverage),
+        "earlier_reason_codes": list(_series_codes(delta.earlier_reason_codes)),
+        "later_reason_codes": list(_series_codes(delta.later_reason_codes)),
+        "denominator_reason": "not_applicable_to_difference"})
+    if hasattr(delta, "earlier_no_declared_parents") and delta.metric_name in ("unresolved_parent_reference_count_delta", "resolved_parent_edge_coverage_delta"):
+        result.update({"earlier_no_declared_parents": delta.earlier_no_declared_parents,
+                       "later_no_declared_parents": delta.later_no_declared_parents})
+    return result
+
+
+def _series_comparison(pair, pair_id, earlier, later, basis_id, earlier_snapshot, later_snapshot):
+    row = {"comparison_id": pair_id}
+    path = "derived_metrics.longitudinal.comparisons"
+    comparison = pair.support_comparison
+    a = earlier + (".representation" if earlier_snapshot.scope.representation_scope is not None else ".population")
+    b = later + (".representation" if later_snapshot.scope.representation_scope is not None else ".population")
+    if comparison is not None:
+        a, b = pair_id + ".earlier", pair_id + ".later"
+    for delta in (*pair.deltas, *pair.lineage_deltas):
+        represented = delta.metric_name in ("support_delta", "gini_simpson_diversity_delta")
+        item = _series_delta(delta, earlier, later, basis_id=basis_id if represented else None,
+            represented=represented, pair_id=pair_id if represented and comparison is not None else None)
+        if represented:
+            item["earlier_scope_id"], item["later_scope_id"] = a, b
+        row[delta.metric_name] = item
+    shares = pair.source_type_share_deltas
+    exemplar = next(iter(shares.values()))
+    item = _series_delta(exemplar, earlier, later)
+    for field in ("value", "earlier_value", "later_value"):
+        values = {category: getattr(delta, field) for category, delta in shares.items()}
+        item[field] = None if any(number is None for number in values.values()) else values
+    row["source_type_share_deltas"] = item
+    missing = ("R_LONGITUDINAL_PAIR_BLOCKED",) if pair.compatibility is None else ("R_LONGITUDINAL_ENDPOINT_UNAVAILABLE",)
+    reasons = tuple(dict.fromkeys(missing + pair.family_statuses[0].reason_codes))
+    for name in ("support_loss_count", "support_added_count", "support_retention_ratio", "extinct_states", "added_states", "retained_states"):
+        value = None if comparison is None else getattr(comparison, name)
+        if value is not None:
+            value = _lineage_detail(list(value)) if name.endswith("_states") else value.value
+        item = _series_envelope(path, name, value, None, basis_id=basis_id,
+            denominator=comparison.retention_denominator if comparison is not None and name == "support_retention_ratio" else None,
+            reasons=reasons if comparison is None else ())
+        item.update({"earlier_scope_id": a, "later_scope_id": b})
+        row[name] = item
+    tail = pair.tail_disappearance
+    for name in ("tail_extinction_count", "tail_extinct_states"):
+        value = None if tail is None else getattr(tail, name)
+        if value is not None and name.endswith("_states"):
+            value = _lineage_detail(list(value))
+        item = _series_envelope(path, name, value, None, basis_id=basis_id,
+            reasons=("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",) if tail is None else tail.reason_codes)
+        options = None if tail is None else tail.options
+        item.update({"earlier_scope_id": a, "later_scope_id": b,
+            "tail_selection": None if options is None else {
+                "rule": options.rule, "count_threshold": options.count_threshold,
+                "frequency_threshold": options.frequency_threshold, "state_ids": list(options.state_ids),
+                "ranking_rule": "ascending_frequency_then_count_then_unicode_state_id"},
+            "earlier_sample_size": None if tail is None else tail.earlier_sample_size})
+        row[name] = item
+    for name in _LONGITUDINAL_LINEAGE_DELTAS:
+        if name not in row:
+            item = _series_envelope(path, name, None, None, reasons=("R_LONGITUDINAL_FAMILY_NOT_REQUESTED",))
+            item.update({"earlier_scope_id": earlier + ".population", "later_scope_id": later + ".population",
+                "earlier_value": None, "later_value": None, "earlier_denominator": None, "later_denominator": None,
+                "earlier_coverage": None, "later_coverage": None,
+                "earlier_reason_codes": ["R_LONGITUDINAL_FAMILY_NOT_REQUESTED"],
+                "later_reason_codes": ["R_LONGITUDINAL_FAMILY_NOT_REQUESTED"],
+                "denominator_reason": "not_applicable_to_difference"})
+            if name in ("unresolved_parent_reference_count_delta", "resolved_parent_edge_coverage_delta"):
+                item.update({"earlier_no_declared_parents": None, "later_no_declared_parents": None})
+            row[name] = item
+    return row
+
+
+def _longitudinal_report(payload, bundle, value, failure):
+    """Serialize only supplied series evidence and its explicitly recorded execution."""
+    _require(value is None or failure is None, "one series request cannot supply both selection success and failure")
+    if value is not None or failure is not None:
+        from ..metrics.longitudinal import _descriptor_for, validate_longitudinal_result
+    if value is not None:
+        validate_longitudinal_result(bundle, result=value)
+    if failure is not None:
+        from ..metrics.longitudinal import validate_longitudinal_failure
+        validate_longitudinal_failure(bundle, result=failure)
+    source = value if value is not None else failure
+    selection = None if value is None else value.selection
+    snapshots = () if source is None else source.snapshots
+    pairs = () if value is None else value.comparisons
+    context = () if source is None else selection.context_versions if selection is not None else failure.context_versions
+    longitudinal = {"requested": source is not None,
+        "baseline": "none" if source is None else selection.baseline if selection is not None else failure.baseline,
+        "primary_snapshot_id": None,
+        "selected_version_count": 0 if source is None else len(selection.selected_order) if selection is not None else failure.selected_version_count,
+        "comparison_count": len(pairs), "order_source": None if selection is None else selection.version_order.order_source,
+        "snapshots": [], "comparisons": [], "representations": [], "scopes": [],
+        "context_versions": _lineage_detail(list(context)), "context_version_count": len(context),
+        "max_versions": 100 if source is None else selection.max_versions if selection is not None else failure.max_versions,
+        "detail_limit": 100, "redaction": None}
+    observed = {"snapshots": [], "shared_lineage": None}
+    derived = {"snapshots": [], "comparisons": []}
+    execution = {"status": "not_requested" if source is None else source.execution_status.value,
+        "reason_codes": ["R_LONGITUDINAL_NOT_REQUESTED"] if source is None else list(source.reason_codes),
+        "requested_families": [] if source is None else ["distribution", "provenance", "direct_closure"] +
+            (["tail"] if source.tail_options is not None else []) + (["lineage"] if source.lineage_requested else []),
+        "snapshot_statuses": [], "comparison_statuses": []}
+    identities, basis_ids, snapshot_map, bases = {}, {}, {}, {}
+    roles_by_version = {}
+    if snapshots:
+        for record in bundle.records:
+            roles_by_version.setdefault(record.record_key.dataset_version, set()).add(record.location.file_role.value)
+    for ordinal, snapshot in enumerate(snapshots, 1):
+        snapshot_id = f"s{ordinal:04d}"
+        version = snapshot.scope.dataset_version
+        declaration = snapshot.scope.declaration
+        descriptor = _descriptor_for(declaration)
+        key = (descriptor, declaration.state_semantics)
+        if key not in bases:
+            basis_id = f"b{len(bases) + 1:04d}"
+            bases[key] = basis_id
+            longitudinal["representations"].append({"basis_id": basis_id,
+                "representation": _representation(descriptor), "state_semantics": declaration.state_semantics,
+                "redaction": None})
+        basis_id = bases[key]
+        identities[version], basis_ids[version], snapshot_map[version] = snapshot_id, basis_id, snapshot
+        population_id = snapshot_id + ".population"
+        representation_id = snapshot_id + ".representation" if snapshot.scope.representation_scope is not None else None
+        roles = roles_by_version.get(version, ())
+        longitudinal["snapshots"].append({"snapshot_id": snapshot_id, "dataset_version": version,
+            "ordinal": ordinal, "input_role": "declared_empty" if declaration.empty_scope else next(iter(roles)),
+            "empty_scope": declaration.empty_scope, "population_scope_id": population_id,
+            "representation_scope_id": representation_id, "basis_id": basis_id, "redaction": None})
+        longitudinal["scopes"].append(_series_scope(snapshot.scope.population_scope, population_id, snapshot_id))
+        if representation_id is not None:
+            longitudinal["scopes"].append(_series_scope(snapshot.scope.representation_scope, representation_id, snapshot_id))
+        first, second = _series_snapshot(snapshot, snapshot_id, basis_id, source.lineage_requested)
+        observed["snapshots"].append(first)
+        derived["snapshots"].append(second)
+        execution["snapshot_statuses"].append({"snapshot_id": snapshot_id, "families": _series_family_rows(snapshot.family_statuses)})
+    if selection is not None:
+        longitudinal["primary_snapshot_id"] = identities[selection.primary_version]
+    for ordinal, result in enumerate(pairs, 1):
+        pair_id, pair = f"p{ordinal:04d}", result.pair
+        earlier, later = identities[pair.earlier_version], identities[pair.later_version]
+        a_basis, b_basis = basis_ids[pair.earlier_version], basis_ids[pair.later_version]
+        compatible = result.compatibility
+        harmonized = None if compatible is None else bases[(compatible.harmonized_representation, compatible.harmonized_state_semantics)]
+        mapping, collisions = None, None
+        if pair.mapping is not None:
+            mapped = pair.mapping
+            forward = mapped.direction == "earlier_to_later"
+            mapping = {"direction": mapped.direction, "source_basis_id": a_basis if forward else b_basis,
+                "target_basis_id": b_basis if forward else a_basis,
+                "entries": _lineage_detail([{"source_state": state, "target_state": target}
+                    for state, target in sorted(mapped.state_mapping.items())])}
+            if compatible is not None:
+                groups = {}
+                for state, target in mapped.state_mapping.items():
+                    groups.setdefault(target, []).append(state)
+                collisions = _lineage_detail([{"target_state": target,
+                    "source_states": _lineage_detail(sorted(states))} for target, states in sorted(groups.items()) if len(states) > 1])
+        longitudinal["comparisons"].append({"comparison_id": pair_id,
+            "earlier_snapshot_id": earlier, "later_snapshot_id": later, "kinds": list(pair.kinds),
+            "compatibility_status": "available" if compatible is not None else "unavailable",
+            "reason_codes": [] if compatible is not None else list(dict.fromkeys(("R_LONGITUDINAL_PAIR_BLOCKED",) + result.family_statuses[0].reason_codes)),
+            "earlier_basis_id": a_basis, "later_basis_id": b_basis,
+            "harmonized_basis_id": harmonized, "mapping": mapping, "mapping_collisions": collisions})
+        if result.support_comparison is not None:
+            longitudinal["scopes"].extend((
+                _series_scope(result.support_comparison.harmonized_earlier.scope, pair_id + ".earlier", earlier),
+                _series_scope(result.support_comparison.harmonized_later.scope, pair_id + ".later", later)))
+        derived["comparisons"].append(_series_comparison(result, pair_id, earlier, later, harmonized,
+            snapshot_map[pair.earlier_version], snapshot_map[pair.later_version]))
+        execution["comparison_statuses"].append({"comparison_id": pair_id, "families": _series_family_rows(result.family_statuses)})
+    if source is not None:
+        if execution["status"] in ("partial", "failed") and payload["run"]["run_status"] == "complete":
+            payload["run"]["run_status"] = "partial"
+        _diagnostics(payload, source.messages, "dataset_longitudinal")
+        if source.lineage_requested:
+            from ..utils.logging import safe_diagnostic_text
+            shared = None if value is None else value.shared_lineage
+            usage = None if value is None else value.lineage_resource_usage
+            messages = source.messages if shared is None else shared.messages
+            observed["shared_lineage"] = {
+                "execution_status": "failed" if shared is None else shared.execution_status.value,
+                "reason_codes": list(source.reason_codes) if shared is None else list(shared.reason_codes),
+                "loaded_record_count": None if shared is None else shared.shared_graph.scope.loaded_record_count,
+                "unique_edge_count": None if shared is None else shared.resource_usage.admitted_edge_count,
+                "cycle_status": None if shared is None else shared.shared_cycles.cycle_status,
+                "cycle_count": None if shared is None else shared.shared_cycles.cycle_count,
+                "resource_usage": None if usage is None else _lineage_usage(usage),
+                "graph_diagnostics": _lineage_detail([{"code": message.code, "severity": message.severity.value,
+                    "message": safe_diagnostic_text(message.code, message.severity.value)} for message in messages]),
+                "evidence_scope": "common_supplied_retrospective_graph"}
+    payload["inputs"]["longitudinal"] = longitudinal
+    payload["observed_facts"]["longitudinal"] = observed
+    payload["derived_metrics"]["longitudinal"] = derived
+    entry = payload["capabilities"]["dataset_longitudinal"]
+    entry["longitudinal_execution"] = execution
+    if source is not None:
+        entry["execution_status"], entry["execution_reason_codes"] = execution["status"], list(execution["reason_codes"])
+        entry["execution_scope"].append("supplied_ordered_longitudinal_series")
+        entry["notes"] = [note for note in entry["notes"] if not note.startswith("Executed only the supplied explicit-pair")]
+    payload["observability"]["capabilities"]["dataset_longitudinal"] = entry
 
 
 def _disclosure_scope(payload):
@@ -2960,7 +3340,7 @@ def _privacy_alias(protection, domain, value):
 
 def _privacy_text(value, field, *, mode, protection):
     """Keep reviewed owner prose; treat caller-authored prose as private data."""
-    if value in _PRIVACY_SAFE_TEXT:
+    if value in _PRIVACY_SAFE_TEXT or value in _LONGITUDINAL_SAFE_TEXT:
         return value
     if field == "basis_fields" and any(value == definition.path for definition in FIELD_REGISTRY):
         return value
@@ -2977,9 +3357,85 @@ def _privacy_text(value, field, *, mode, protection):
     return _privacy_alias(protection, "private_" + field, value)
 
 
+def _privacy_series(value, contract, schema, *, mode, record_id_mode, protection,
+                    path, omissions, basis_id=None, source_basis_id=None,
+                    target_basis_id=None, states=False):
+    """Protect bounded series identities using their retained meaning basis."""
+    contract = _privacy_contract(value, contract, schema)
+    field = path[-1]
+    if "const" in contract or "enum" in contract:
+        return value
+    if value is None or type(value) in (int, float, bool):
+        return value
+    if type(value) is dict:
+        if set(value) == {"code", "severity", "message"} and "graph_diagnostics" in path:
+            from ..utils.logging import safe_code, safe_diagnostic_text
+            return {"code": safe_code(value["code"], value["severity"], protection=protection),
+                "severity": value["severity"],
+                "message": safe_diagnostic_text(value["code"], value["severity"])}
+        if record_id_mode == "omit" and set(value) == {
+                "items", "total_count", "returned_count", "omitted_count",
+                "limit", "detail_status", "omission_reasons"}:
+            omissions.append(("field", ".".join(path), ""))
+            return {"items": None, "total_count": value["total_count"], "returned_count": 0,
+                "omitted_count": value["total_count"], "limit": 100, "detail_status": "omitted",
+                "omission_reasons": list(dict.fromkeys(value["omission_reasons"] + ["redacted_identity_details"]))}
+        basis_id = value.get("basis_id", basis_id)
+        mapping = value.get("mapping")
+        source_basis_id = value.get("source_basis_id", source_basis_id)
+        target_basis_id = value.get("target_basis_id", target_basis_id)
+        if type(mapping) is dict:
+            source_basis_id, target_basis_id = mapping["source_basis_id"], mapping["target_basis_id"]
+        properties = contract.get("properties", {})
+        result = {}
+        for name, item in value.items():
+            selected_states = states or name == "state_ids" or name == "source_states" or (
+                name == "value" and value.get("unit") == "set_of_states")
+            selected_basis = source_basis_id if name == "source_states" else basis_id
+            result[name] = _privacy_series(item, properties.get(name, contract.get("additionalProperties", {})), schema,
+                mode=mode, record_id_mode=record_id_mode, protection=protection, path=path + (name,),
+                omissions=omissions, basis_id=selected_basis, source_basis_id=source_basis_id,
+                target_basis_id=target_basis_id, states=selected_states)
+        if mode == "redacted" and "state_semantics" in value:
+            result["state_semantics"] = None
+            result["redaction"] = {"omitted_fields": ["state_semantics"], "reason": "redacted_identity_details"}
+        if record_id_mode == "omit" and "snapshot_id" in value and "dataset_version" in value:
+            result["dataset_version"] = None
+            result["redaction"] = {"omitted_fields": ["dataset_version"], "reason": "redacted_identity_details"}
+        return result
+    if type(value) is list:
+        return [_privacy_series(item, contract.get("items", {}), schema, mode=mode,
+            record_id_mode=record_id_mode, protection=protection, path=path, omissions=omissions,
+            basis_id=basis_id, source_basis_id=source_basis_id, target_basis_id=target_basis_id,
+            states=states) for item in value]
+    if field in ("snapshot_id", "comparison_id", "basis_id", "primary_snapshot_id", "population_scope_id",
+                 "representation_scope_id", "scope_id", "earlier_scope_id", "later_scope_id",
+                 "earlier_snapshot_id", "later_snapshot_id", "earlier_basis_id", "later_basis_id",
+                 "harmonized_basis_id", "source_basis_id", "target_basis_id"):
+        return value
+    if field == "state_semantics":
+        return None if mode == "redacted" else value
+    if field == "dataset_version" or "context_versions" in path:
+        if field in ("omission_reasons", "detail_status"):
+            return value
+        return _privacy_alias(protection, "dataset_version", value) if mode == "redacted" else value
+    if field in ("source_state", "target_state", "missing_state_id") or states:
+        if field in ("omission_reasons", "detail_status"):
+            return value
+        selected = source_basis_id if field == "source_state" else target_basis_id if field == "target_state" else basis_id
+        return _privacy_alias(protection, "state_id", [selected, value]) if mode == "redacted" else value
+    if "const" in contract or "enum" in contract:
+        return value
+    return _privacy_value(value, contract, schema, mode=mode, record_id_mode=record_id_mode,
+        protection=protection, path=path, omissions=omissions)
+
+
 def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection, path=(), omissions=None):
     contract = _privacy_contract(value, contract, schema)
     field = path[-1] if path else "report"
+    if len(path) == 2 and path[1] == "longitudinal" and path[0] in ("inputs", "observed_facts", "derived_metrics"):
+        return _privacy_series(value, contract, schema, mode=mode, record_id_mode=record_id_mode,
+            protection=protection, path=path, omissions=omissions)
     if "const" in contract or "enum" in contract or value is None or type(value) in (int, float, bool):
         return value
     if type(value) is dict:
@@ -3047,6 +3503,8 @@ def _privacy_value(value, contract, schema, *, mode, record_id_mode, protection,
     identity_fields = ("run_id", "scope_id", "group_id", "representation_name", "representation_source", "representation_version",
                        "binning_or_mapping_rule", "field_name", "state_meaning", "earlier_state_semantics", "later_state_semantics",
                        "harmonized_state_semantics", "schema_fields", "source_field", "target_field", "fields_affected")
+    if field in ("snapshot_id", "comparison_id") and "longitudinal_execution" in path:
+        return value
     if field in version_fields:
         return _privacy_alias(protection, "dataset_version", value) if mode == "redacted" else value
     if field in state_fields or (field == "value" and len(path) > 1 and path[-2] in ("extinct_states", "added_states", "retained_states", "tail_states")):
@@ -3180,7 +3638,7 @@ def build_run_metadata(*, options, run_id: str, operation="python_api", started_
     if type(run_id) is not str or not run_id or "\x00" in run_id:
         raise ValueError("run identifier must be nonempty literal text")
     command = None if operation == "python_api" else "rit " + operation + (" --strict" if options.strict_mode else "") + (" --redacted" if options.privacy_mode == "redacted" else "")
-    result = {"run_id": run_id, "toolkit_version": __version__, "report_schema_version": "1.1",
+    result = {"run_id": run_id, "toolkit_version": __version__, "report_schema_version": "1.2",
               "started_at": started_at, "completed_at": completed_at, "duration_seconds": duration_seconds,
               "python_version": python_version, "platform": platform, "command": command,
               "config_hash": phase4_config_hash(options), "random_seed": random_seed,

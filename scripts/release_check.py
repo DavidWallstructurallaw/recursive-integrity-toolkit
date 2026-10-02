@@ -1,7 +1,8 @@
 """Current source and candidate checks for Recursive Integrity Toolkit.
 
-Step 10 opens only the dev4 version declarations. Historical dispatch, source-body
-migrations and phase registries are recoverable from the accepted Git commit.
+Phase 6A Step 9 freezes runtime behavior and permits the dev5 version update.
+Historical dispatch, source-body migrations and phase registries are recoverable
+from the accepted Git commit.
 Installed checks below retain their existing product, privacy and package cases.
 """
 from __future__ import annotations
@@ -24,11 +25,14 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ACCEPTED_COMMIT = "15d50c3d992265e716b0b27e69c43107d947d21d"
-PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/")
+ACCEPTED_COMMIT = "69e4e05ea19910290d38738d6ec83e3ffcdde091"
+PROTECTED_PREFIXES = ("src/", "schemas/", "examples/hero/", "examples/longitudinal/")
+LONGITUDINAL_NAMES = {"records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
+                      "provenance.jsonl", "config.json", "version_order.json",
+                      "EXPECTED_OUTPUTS.md"}
 CURRENT_IMPLEMENTATION_PATHS = frozenset({
-    "src/recursive_integrity_toolkit/__init__.py",
     "pyproject.toml",
+    "src/recursive_integrity_toolkit/__init__.py",
 })
 PARQUET_CASES = {
     "test_PR002_parquet_real_roundtrip",
@@ -36,10 +40,17 @@ PARQUET_CASES = {
     "test_PR002_parquet_real_invalid_file",
     "test_context_table_uses_existing_local_parsers_and_normalizer[parquet]",
     "test_context_loaders_and_repeated_inputs_keep_primary_only_denominators[parquet]",
+    "test_real_loaders_order_by_declaration_and_keep_all_snapshot_populations[False-parquet]",
+    "test_real_loaders_order_by_declaration_and_keep_all_snapshot_populations[True-parquet]",
+    "test_installed_record_loaders_baseline_and_privacy_modes[preserve-parquet]",
+    "test_installed_record_loaders_baseline_and_privacy_modes[hash-parquet]",
+    "test_installed_record_loaders_baseline_and_privacy_modes[omit-parquet]",
 }
 HERO_NAMES = {"records_v1.csv", "records_v2.csv", "provenance.csv", "config.json", "version_order.json", "EXPECTED_OUTPUTS.md"}
 RESOURCES = {f"src/recursive_integrity_toolkit/data/hero/{name}": f"examples/hero/{name}" for name in HERO_NAMES}
 RESOURCES["src/recursive_integrity_toolkit/data/report.schema.json"] = "schemas/report.schema.json"
+RESOURCES.update({f"src/recursive_integrity_toolkit/data/longitudinal/{name}":
+                  f"examples/longitudinal/{name}" for name in LONGITUDINAL_NAMES})
 
 
 def git(*arguments: str) -> bytes:
@@ -64,7 +75,7 @@ def _regular_file(root: Path, relative: str) -> Path:
 
 
 def verify_source_scope(root: Path = ROOT) -> dict:
-    """Reject product changes outside the currently authorized lineage owners.
+    """Reject product changes outside the currently authorized step.
 
     Later authorized implementation updates this single current boundary. It does
     not append another historical dispatcher or grant authority through metadata.
@@ -73,8 +84,14 @@ def verify_source_scope(root: Path = ROOT) -> dict:
                 if name.startswith(PROTECTED_PREFIXES) or name == "pyproject.toml"}
     for name, raw in expected.items():
         current = _regular_file(root, name).read_bytes()
+        if name in CURRENT_IMPLEMENTATION_PATHS and current != raw.replace(b'"0.1.0.dev4"', b'"0.1.0.dev5"'):
+            raise ValueError(f"Only the dev5 version update is authorized in: {name}")
         if name not in CURRENT_IMPLEMENTATION_PATHS and current != raw:
-            raise ValueError(f"Unauthorized product mutation outside Step 10 scope: {name}")
+            raise ValueError(f"Unauthorized product mutation outside the current step scope: {name}")
+    # New authorized modules must exist as regular files; deletions stay blocked.
+    authorized_inventory = set(expected) | CURRENT_IMPLEMENTATION_PATHS
+    for name in CURRENT_IMPLEMENTATION_PATHS - set(expected):
+        _regular_file(root, name)
     for prefix in PROTECTED_PREFIXES:
         paths = list((root / prefix).rglob("*"))
         if (root / prefix).is_symlink() or any(path.is_symlink() for path in paths):
@@ -85,11 +102,11 @@ def verify_source_scope(root: Path = ROOT) -> dict:
                   # It is outside the package; all product paths stay protected.
                   and not path.relative_to(root).as_posix().startswith(
                       "src/recursive_integrity_toolkit.egg-info/")}
-        if actual != {name for name in expected if name.startswith(prefix)}:
-            raise ValueError(f"Unauthorized product file-set mutation during Step 10: {prefix}")
-    return {"protected_product_files": len(expected) - len(CURRENT_IMPLEMENTATION_PATHS),
+        if actual != {name for name in authorized_inventory if name.startswith(prefix)}:
+            raise ValueError(f"Unauthorized product file-set mutation during the current step: {prefix}")
+    return {"protected_product_files": len(set(expected) - CURRENT_IMPLEMENTATION_PATHS),
             "authorized_implementation_files": len(CURRENT_IMPLEMENTATION_PATHS),
-            "product_file_inventory": "unchanged"}
+            "product_file_inventory": "current_authorized"}
 
 
 def verify_frozen_specifications(root: Path = ROOT) -> dict:
@@ -406,7 +423,7 @@ sections = ('run', 'inputs', 'observability', 'capabilities', 'observed_facts',
 payload = {
     'run': {
         'run_id': 'installed-empty-case', 'toolkit_version': '0.1.0.dev2',
-        'report_schema_version': '1.1', 'started_at': '2026-09-19T00:00:00+00:00',
+        'report_schema_version': '1.2', 'started_at': '2026-09-19T00:00:00+00:00',
         'completed_at': '2026-09-19T00:00:00+00:00', 'duration_seconds': 0,
         'python_version': '3.12', 'platform': 'isolated-installed-smoke',
         'command': 'rit validate', 'config_hash': '0123456789abcdef' * 4,
@@ -581,7 +598,7 @@ bundle = BundleValidationResult(
 )
 run = {
     'run_id': 'installed-typed-empty-case', 'toolkit_version': '0.1.0.dev2',
-    'report_schema_version': '1.1', 'started_at': None, 'completed_at': None,
+    'report_schema_version': '1.2', 'started_at': None, 'completed_at': None,
     'duration_seconds': None, 'python_version': None, 'platform': None,
     'command': None, 'config_hash': None, 'random_seed': None,
     'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0,
@@ -767,7 +784,7 @@ bundle = BundleValidationResult(
 )
 run = {
     'run_id': 'installed-typed-empty-case', 'toolkit_version': '0.1.0.dev2',
-    'report_schema_version': '1.1', 'started_at': None, 'completed_at': None,
+    'report_schema_version': '1.2', 'started_at': None, 'completed_at': None,
     'duration_seconds': None, 'python_version': None, 'platform': None,
     'command': None, 'config_hash': None, 'random_seed': None,
     'strict_mode': False, 'redacted_mode': False, 'network_call_count': 0,
@@ -1093,7 +1110,7 @@ def smoke_installed_publication(wheel: Path) -> None:
         bindir = work / "venv" / ("Scripts" if os.name == "nt" else "bin")
         python = bindir / ("python.exe" if os.name == "nt" else "python")
         subprocess.run([str(python), "-m", "pip", "install", "--no-index", "--no-deps", str(wheel.resolve())], cwd=work, check=True)
-        program = 'import importlib.abc, json, os, socket, sys\nfrom pathlib import Path\nclass BlockOptional(importlib.abc.MetaPathFinder):\n    def find_spec(self, fullname, path=None, target=None):\n        if fullname.split(".")[0] in ("numpy", "pandas", "pyarrow"):\n            raise AssertionError("optional or analytical dependency imported")\nsys.meta_path.insert(0, BlockOptional())\ndef phase4_step6_view(mode="standard", label="publication-case"):\n    from recursive_integrity_toolkit.reports.assembly import privacy_view\n    from recursive_integrity_toolkit.result import CanonicalReport\n    from recursive_integrity_toolkit.utils.hashing import IdentifierProtection\n\n    payload = {\n        "run": {\n            "run_id": label, "toolkit_version": "0.1.0.dev2", "report_schema_version": "1.1",\n            "started_at": "2026-09-20T00:00:00+00:00", "completed_at": "2026-09-20T00:00:00.500000+00:00",\n            "duration_seconds": 0.5, "python_version": "3.12.14", "platform": "independent-test-platform",\n            "command": "rit validate", "config_hash": "0123456789abcdef" * 4,\n            "random_seed": None, "strict_mode": False, "redacted_mode": False,\n            "network_call_count": 0, "deterministic": True, "privacy_mode": "standard",\n            "run_status": "complete", "null_reasons": {"random_seed": "No stochastic scenario was requested."},\n        },\n        "inputs": {}, "observability": {}, "capabilities": {}, "observed_facts": {},\n        "derived_metrics": {}, "proxy_signals": {}, "simulations": {},\n        "unavailable_conclusions": [], "recommended_next_metadata": [], "warnings": [], "errors": [],\n    }\n    return privacy_view(CanonicalReport.from_dict(payload), mode=mode,\n                        protection=IdentifierProtection.create(secret=b"publication-test-only-key-32byte!"))\nfrom recursive_integrity_toolkit.utils.paths import publish_reports, PublicationResult\nfrom recursive_integrity_toolkit.utils.logging import format_publication_diagnostic\nfrom recursive_integrity_toolkit.utils import paths\nfrom recursive_integrity_toolkit.reports.json_report import render_json\nfrom recursive_integrity_toolkit.reports.markdown_report import render_markdown\nimport recursive_integrity_toolkit as package\nassert not Path(package.__file__).resolve().is_relative_to(Path(sys.argv[2]).resolve())\nwork=Path(sys.argv[1]); source=work/\'input.txt\'; source.write_bytes(b\'PRIVATE_INSTALLED_SOURCE\')\nview=phase4_step6_view(\'redacted\')\nexpected={\'report.json\':render_json(view).encode(), \'report.md\':render_markdown(view).encode()}\ndef deny(*args, **kwargs):\n    raise AssertionError(\'network forbidden\')\nsocket.socket=deny; socket.getaddrinfo=deny\nactual_open=os.open\ndef no_input(path,*args,**kwargs):\n    assert Path(path)!=source\n    return actual_open(path,*args,**kwargs)\nos.open=no_input\ndef no_analysis(frame,event,arg):\n    if event==\'call\':\n        name=frame.f_globals.get(\'__name__\',\'\')\n        assert not name.startswith((\'recursive_integrity_toolkit.io.\',\'recursive_integrity_toolkit.metrics.\',\'recursive_integrity_toolkit.representations.\'))\nsys.setprofile(no_analysis)\ntry:\n    result=publish_reports(view,work/\'out\',input_paths=(source,))\n    assert result==PublicationResult(\'complete\',None,0,(\'report.json\',\'report.md\'))\n    assert publish_reports(view,work/\'out\',input_paths=(source,)).code==\'E_OUTPUT_EXISTS\'\n    actual_publish=paths._output_publish_one\n    def fail_second(src,dst):\n        if dst.name==\'report.md\':raise OSError(\'PRIVATE_INSTALLED_FAILURE\')\n        return actual_publish(src,dst)\n    paths._output_publish_one=fail_second\n    failed=publish_reports(view,work/\'failure\',input_paths=(source,))\n    assert failed.status==\'failed\' and failed.code==\'E_OUTPUT_IO\' and failed.temporary_cleanup_complete\n    assert \'PRIVATE_\' not in format_publication_diagnostic(failed)\nfinally:\n    sys.setprofile(None)\nassert {p.name:p.read_bytes() for p in (work/\'out\').iterdir()}==expected\nassert list((work/\'failure\').iterdir())==[]\nassert source.read_bytes()==b\'PRIVATE_INSTALLED_SOURCE\'\nprint(\'installed Step 6: exact safe JSON/Markdown bytes, no-overwrite, partial failure cleanup, safe diagnostics, unchanged input, blocked network/analysis: PASS\')\n'
+        program = 'import importlib.abc, json, os, socket, sys\nfrom pathlib import Path\nclass BlockOptional(importlib.abc.MetaPathFinder):\n    def find_spec(self, fullname, path=None, target=None):\n        if fullname.split(".")[0] in ("numpy", "pandas", "pyarrow"):\n            raise AssertionError("optional or analytical dependency imported")\nsys.meta_path.insert(0, BlockOptional())\ndef phase4_step6_view(mode="standard", label="publication-case"):\n    from recursive_integrity_toolkit.reports.assembly import privacy_view\n    from recursive_integrity_toolkit.result import CanonicalReport\n    from recursive_integrity_toolkit.utils.hashing import IdentifierProtection\n\n    payload = {\n        "run": {\n            "run_id": label, "toolkit_version": "0.1.0.dev2", "report_schema_version": "1.2",\n            "started_at": "2026-09-20T00:00:00+00:00", "completed_at": "2026-09-20T00:00:00.500000+00:00",\n            "duration_seconds": 0.5, "python_version": "3.12.14", "platform": "independent-test-platform",\n            "command": "rit validate", "config_hash": "0123456789abcdef" * 4,\n            "random_seed": None, "strict_mode": False, "redacted_mode": False,\n            "network_call_count": 0, "deterministic": True, "privacy_mode": "standard",\n            "run_status": "complete", "null_reasons": {"random_seed": "No stochastic scenario was requested."},\n        },\n        "inputs": {}, "observability": {}, "capabilities": {}, "observed_facts": {},\n        "derived_metrics": {}, "proxy_signals": {}, "simulations": {},\n        "unavailable_conclusions": [], "recommended_next_metadata": [], "warnings": [], "errors": [],\n    }\n    return privacy_view(CanonicalReport.from_dict(payload), mode=mode,\n                        protection=IdentifierProtection.create(secret=b"publication-test-only-key-32byte!"))\nfrom recursive_integrity_toolkit.utils.paths import publish_reports, PublicationResult\nfrom recursive_integrity_toolkit.utils.logging import format_publication_diagnostic\nfrom recursive_integrity_toolkit.utils import paths\nfrom recursive_integrity_toolkit.reports.json_report import render_json\nfrom recursive_integrity_toolkit.reports.markdown_report import render_markdown\nimport recursive_integrity_toolkit as package\nassert not Path(package.__file__).resolve().is_relative_to(Path(sys.argv[2]).resolve())\nwork=Path(sys.argv[1]); source=work/\'input.txt\'; source.write_bytes(b\'PRIVATE_INSTALLED_SOURCE\')\nview=phase4_step6_view(\'redacted\')\nexpected={\'report.json\':render_json(view).encode(), \'report.md\':render_markdown(view).encode()}\ndef deny(*args, **kwargs):\n    raise AssertionError(\'network forbidden\')\nsocket.socket=deny; socket.getaddrinfo=deny\nactual_open=os.open\ndef no_input(path,*args,**kwargs):\n    assert Path(path)!=source\n    return actual_open(path,*args,**kwargs)\nos.open=no_input\ndef no_analysis(frame,event,arg):\n    if event==\'call\':\n        name=frame.f_globals.get(\'__name__\',\'\')\n        assert not name.startswith((\'recursive_integrity_toolkit.io.\',\'recursive_integrity_toolkit.metrics.\',\'recursive_integrity_toolkit.representations.\'))\nsys.setprofile(no_analysis)\ntry:\n    result=publish_reports(view,work/\'out\',input_paths=(source,))\n    assert result==PublicationResult(\'complete\',None,0,(\'report.json\',\'report.md\'))\n    assert publish_reports(view,work/\'out\',input_paths=(source,)).code==\'E_OUTPUT_EXISTS\'\n    actual_publish=paths._output_publish_one\n    def fail_second(src,dst):\n        if dst.name==\'report.md\':raise OSError(\'PRIVATE_INSTALLED_FAILURE\')\n        return actual_publish(src,dst)\n    paths._output_publish_one=fail_second\n    failed=publish_reports(view,work/\'failure\',input_paths=(source,))\n    assert failed.status==\'failed\' and failed.code==\'E_OUTPUT_IO\' and failed.temporary_cleanup_complete\n    assert \'PRIVATE_\' not in format_publication_diagnostic(failed)\nfinally:\n    sys.setprofile(None)\nassert {p.name:p.read_bytes() for p in (work/\'out\').iterdir()}==expected\nassert list((work/\'failure\').iterdir())==[]\nassert source.read_bytes()==b\'PRIVATE_INSTALLED_SOURCE\'\nprint(\'installed Step 6: exact safe JSON/Markdown bytes, no-overwrite, partial failure cleanup, safe diagnostics, unchanged input, blocked network/analysis: PASS\')\n'
         subprocess.run([str(python), "-I", "-c", program, str(work), str(ROOT)], cwd=work, check=True)
 
 
@@ -1103,13 +1120,13 @@ def smoke_installed_cli(wheel: Path) -> None:
         work = Path(temporary)
         target = work / "installed"
         subprocess.run([sys.executable, "-m", "pip", "install", "--no-index", "--no-deps", "--target", str(target), str(wheel.resolve())], cwd=work, check=True)
-        program = "import importlib.abc, json, os, socket, sys\nfrom pathlib import Path\nsys.path.insert(0,sys.argv[1])\nimport recursive_integrity_toolkit as package\nassert Path(package.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve())\nassert not Path(package.__file__).resolve().is_relative_to(Path(sys.argv[3]).resolve())\nimport numpy,pandas\nclass NoParquet(importlib.abc.MetaPathFinder):\n def find_spec(self,fullname,path=None,target=None):\n  if fullname.split('.')[0]=='pyarrow':raise AssertionError('ordinary CLI requires no optional dependency')\nsys.meta_path.insert(0,NoParquet())\ndef deny(*args,**kwargs):raise AssertionError('network forbidden')\nsocket.socket=deny;socket.getaddrinfo=deny\nwork=Path(sys.argv[2]);records=work/'records.jsonl';config=work/'config.json'\nrecords.write_text('\\n'.join(json.dumps({'dataset_version':'v1','record_id':str(i),'content':'PRIVATE_CONTENT_'+str(i),'topic':topic}) for i,topic in enumerate(('A','A','B','C'))),encoding='utf-8')\nconfig.write_text(json.dumps({'representation':{'name':'topic','source':'topic_field','field':'topic','version':'1','missing_value_policy':'exclude'}}),encoding='utf-8')\nbefore=records.read_bytes()\nfrom recursive_integrity_toolkit.cli import main\nassert main(['audit','--records',str(records),'--config',str(config),'--out',str(work/'audit')])==0\nreport=json.loads((work/'audit/report.json').read_bytes())\nassert report['derived_metrics']['support']['by_version']['v1']['support_size']['value']==3\nassert report['derived_metrics']['diversity']['by_version']['v1']['gini_simpson_diversity']['value']==0.625\nassert report['simulations']=={} and report['run']['network_call_count']==0\nfrom recursive_integrity_toolkit import cli\ndef no_calculations(*args,**kwargs):raise AssertionError('validate invoked calculations')\noriginal_calculations=cli._calculations\ncli._calculations=no_calculations\nassert main(['validate','--records',str(records),'--out',str(work/'validate'),'--redacted'])==0\nvalidated=json.loads((work/'validate/report.json').read_bytes())\nassert validated['derived_metrics']==validated['proxy_signals']==validated['simulations']=={}\nassert records.read_bytes()==before\nassert all((work/name/'report.md').read_text(encoding='utf-8').startswith('# Recursive Integrity Audit Report') for name in ('audit','validate'))\nassert all('PRIVATE_CONTENT_' not in (work/name/file).read_text(encoding='utf-8') for name in ('audit','validate') for file in ('report.json','report.md'))\ncli._calculations=original_calculations\nimport importlib.metadata,runpy\nentries={entry.name:entry for entry in importlib.metadata.distribution('recursive-integrity-toolkit').entry_points}\nfor alias in ('rit','recursive-integrity'):\n assert entries[alias].load()(['version'])==0\n assert entries[alias].load()(['audit','--records',str(records),'--config',str(config),'--out',str(work/alias),'--redacted'])==0\nsys.argv=['rit','validate','--records',str(records),'--out',str(work/'module'),'--redacted']\ntry:runpy.run_module('recursive_integrity_toolkit',run_name='__main__')\nexcept SystemExit as error:assert error.code==0\nelse:raise AssertionError('module invocation did not exit')\nprint('installed Step 7: external local inputs, core dependencies, ordinary audit and input-only validate, blocked network, unchanged inputs: PASS')\n"
+        program = "import importlib.abc, json, os, socket, sys\nfrom pathlib import Path\nsys.path.insert(0,sys.argv[1])\nimport recursive_integrity_toolkit as package\nassert Path(package.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve())\nassert not Path(package.__file__).resolve().is_relative_to(Path(sys.argv[3]).resolve())\nimport numpy,pandas\nclass NoParquet(importlib.abc.MetaPathFinder):\n def find_spec(self,fullname,path=None,target=None):\n  if fullname.split('.')[0]=='pyarrow':raise AssertionError('ordinary CLI requires no optional dependency')\nsys.meta_path.insert(0,NoParquet())\ndef deny(*args,**kwargs):raise AssertionError('network forbidden')\nsocket.socket=deny;socket.getaddrinfo=deny\nwork=Path(sys.argv[2]);records=work/'records.jsonl';config=work/'config.json'\nrecords.write_text('\\n'.join(json.dumps({'dataset_version':'v1','record_id':str(i),'content':'PRIVATE_CONTENT_'+str(i),'topic':topic}) for i,topic in enumerate(('A','A','B','C'))),encoding='utf-8')\nconfig.write_text(json.dumps({'representation':{'name':'topic','source':'topic_field','field':'topic','version':'1','missing_value_policy':'exclude'}}),encoding='utf-8')\nbefore=records.read_bytes()\nfrom recursive_integrity_toolkit.cli import main\nassert main(['audit','--records',str(records),'--config',str(config),'--out',str(work/'audit')])==0\nreport=json.loads((work/'audit/report.json').read_bytes())\nassert report['derived_metrics']['support']['by_version']['v1']['support_size']['value']==3\nassert report['derived_metrics']['diversity']['by_version']['v1']['gini_simpson_diversity']['value']==0.625\nassert report['simulations']=={} and report['run']['network_call_count']==0\nfrom recursive_integrity_toolkit import cli\ndef no_calculations(*args,**kwargs):raise AssertionError('validate invoked calculations')\noriginal_calculations=cli._calculations\ncli._calculations=no_calculations\nassert main(['validate','--records',str(records),'--out',str(work/'validate'),'--redacted'])==0\nvalidated=json.loads((work/'validate/report.json').read_bytes())\nassert validated['derived_metrics']=={'longitudinal':{'snapshots':[],'comparisons':[]}}\nassert validated['proxy_signals']==validated['simulations']=={}\nassert validated['capabilities']['dataset_longitudinal']['longitudinal_execution']['status']=='not_requested'\nassert records.read_bytes()==before\nassert all((work/name/'report.md').read_text(encoding='utf-8').startswith('# Recursive Integrity Audit Report') for name in ('audit','validate'))\nassert all('PRIVATE_CONTENT_' not in (work/name/file).read_text(encoding='utf-8') for name in ('audit','validate') for file in ('report.json','report.md'))\ncli._calculations=original_calculations\nimport importlib.metadata,runpy\nentries={entry.name:entry for entry in importlib.metadata.distribution('recursive-integrity-toolkit').entry_points}\nfor alias in ('rit','recursive-integrity'):\n assert entries[alias].load()(['version'])==0\n assert entries[alias].load()(['audit','--records',str(records),'--config',str(config),'--out',str(work/alias),'--redacted'])==0\nsys.argv=['rit','validate','--records',str(records),'--out',str(work/'module'),'--redacted']\ntry:runpy.run_module('recursive_integrity_toolkit',run_name='__main__')\nexcept SystemExit as error:assert error.code==0\nelse:raise AssertionError('module invocation did not exit')\nprint('installed Step 7: external local inputs, core dependencies, ordinary audit and input-only validate, blocked network, unchanged inputs: PASS')\n"
         subprocess.run([sys.executable, "-I", "-c", program, str(target), str(work), str(ROOT)], cwd=work, check=True)
 
 
 def installed_example_program() -> str:
-    """Independent installed acceptance, using frozen section 8 Hero values."""
-    return r'''import hashlib, importlib.abc, json, socket, sys, urllib.request
+    """Independent installed Hero and three-version example acceptance."""
+    return r'''import hashlib, importlib.abc, json, math, socket, sys, urllib.request
 from pathlib import Path
 sys.path.insert(0,sys.argv[1])
 import recursive_integrity_toolkit as package
@@ -1165,7 +1182,7 @@ for name,privacy in (('lineage',[]),('lineage-redacted',['--redacted'])):
  assert main(['example','--lineage','--out',str(destination),*privacy])==0
  current=json.loads((destination/'reports/report.json').read_bytes())
  jsonschema.Draft202012Validator(json.loads(resources.joinpath('data','report.schema.json').read_bytes())).validate(current)
- assert current['run']['report_schema_version']=='1.1' and current['run']['run_status']=='complete'
+ assert current['run']['report_schema_version']=='1.2' and current['run']['run_status']=='complete'
  assert current['capabilities']['lineage']['execution_status']=='completed'
  assert current['capabilities']==current['observability']['capabilities']
  assert current['simulations']=={} and current['errors']==[]
@@ -1199,11 +1216,47 @@ for name,privacy in (('lineage',[]),('lineage-redacted',['--redacted'])):
   assert roots[0]['record_key']=={'dataset_version':'v1','record_id':'v1_01'}
  for p in (destination/'inputs').iterdir():
   assert p.read_bytes()==resources.joinpath('data','hero',p.name).read_bytes()
+for dataset,lineage,privacy in (('hero',True,False),('longitudinal',False,True)):
+ destination=work/('series-'+dataset)
+ arguments=['example','--longitudinal','--dataset',dataset,'--out',str(destination)]
+ if lineage:arguments.append('--lineage')
+ if privacy:arguments.append('--redacted')
+ assert main(arguments)==0
+ current=json.loads((destination/'reports/report.json').read_bytes())
+ jsonschema.Draft202012Validator(json.loads(resources.joinpath('data','report.schema.json').read_bytes())).validate(current)
+ assert current['run']['toolkit_version']==package.__version__=='0.1.0.dev5'
+ assert current['run']['report_schema_version']=='1.2' and current['run']['run_status']=='complete'
+ assert current['run']['network_call_count']==0 and current['simulations']=={} and current['errors']==[]
+ assert current['capabilities']==current['observability']['capabilities']
+ assert current['capabilities']['dataset_longitudinal']['longitudinal_execution']['status']=='completed'
+ snapshots=current['derived_metrics']['longitudinal']['snapshots']
+ comparisons=current['derived_metrics']['longitudinal']['comparisons']
+ if dataset=='hero':
+  assert [row['support_size']['value'] for row in snapshots]==[8,5]
+  assert [row['gini_simpson_diversity']['value'] for row in snapshots]==[7/8,3/4]
+  assert len(comparisons)==1
+  assert [comparisons[0][name]['value'] for name in ('support_delta','gini_simpson_diversity_delta','direct_closure_lower_bound_delta')]==[-3,-1/8,1/2]
+  assert [comparisons[0][name]['value'] for name in ('distinct_external_root_count_delta','ancestry_concentration_hhi_delta','effective_external_root_count_delta')]==[-3,1/8,-4]
+ else:
+  assert [row['support_size']['value'] for row in snapshots]==[3,2,3]
+  assert [row['support_delta']['value'] for row in comparisons]==[-1,1]
+  for name,values in (('gini_simpson_diversity_delta',[-1/8,1/6]),('direct_closure_lower_bound_delta',[1/4,1/12])):
+   assert all(math.isclose(row[name]['value'],value) for row,value in zip(comparisons,values,strict=True))
+  assert [row['missing_provenance_share']['value'] for row in snapshots]==[0,1/4,0]
+  assert [row['source_type_shares']['value']['unknown'] for row in snapshots]==[0,0,1/3]
+  assert current['observed_facts']['longitudinal']['shared_lineage'] is None
+ markdown=(destination/'reports/report.md').read_text(encoding='utf-8')
+ assert markdown.startswith('# Recursive Integrity Audit Report')
+ if privacy:
+  assert current['run']['privacy_mode']=='redacted'
+  assert str(work) not in json.dumps(current)+markdown
+ for p in (destination/'inputs').iterdir():
+  assert p.read_bytes()==resources.joinpath('data',dataset,p.name).read_bytes()
 for relative,digest in expected.items():
  assert hashlib.sha256(resources.joinpath(*relative.split('/')).read_bytes()).hexdigest()==digest
 for p in (target/'inputs').iterdir():
  assert p.read_bytes()==resources.joinpath('data','hero',p.name).read_bytes()
-print('installed Hero: ordinary and explicit lineage, frozen numerical oracles, local schema, exact resources, core-only, standard/redacted, no overwrite, blocked network: PASS')
+print('installed examples: ordinary Hero, explicit lineage, longitudinal Hero and three-version adjacency; frozen numerical oracles, local schema, exact resources, core-only, standard/redacted, no overwrite, blocked network: PASS')
 '''
 
 

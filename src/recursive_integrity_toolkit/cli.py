@@ -1,4 +1,4 @@
-"""Orchestrate local audits, one explicit pair and the packaged Hero example.
+"""Orchestrate local audits, explicit observed series and packaged examples.
 
 Owner IDs:
     PR-013, PR-015, PR-016, PR-018; product orchestration only.
@@ -10,10 +10,10 @@ Assumptions:
     Each calculated side uses one version and an explicitly declared representation.
 Limits:
     No formulas, implicit representation, weighting, content-reference resolution,
-    automatic pairs, trajectories or simulation. Lineage requires explicit opt-in. Help and
+    inferred chronology or simulation. Lineage requires explicit opt-in. Help and
     version import no analytical dependencies or input/report implementation.
 Current phase status:
-    Phase 5 Step 8. Accepted kernels own every numerical result.
+    Phase 6A Step 7. Accepted kernels own every numerical result.
 """
 from __future__ import annotations
 
@@ -46,22 +46,31 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"recursive-integrity-toolkit {__version__}")
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("version", help="Show the toolkit version.", allow_abbrev=False)
-    example = commands.add_parser("example", help="Extract and audit the packaged local Hero.", allow_abbrev=False)
+    example = commands.add_parser("example", help="Extract and audit a packaged local example; default Hero.", allow_abbrev=False)
     example.add_argument("--out", required=True, action=_Once, help="New example workspace; its parent must exist.")
     example.add_argument("--redacted", action=_Once, nargs=0, help="Protect paths and identifiers in reports.")
-    example.add_argument("--lineage", action=_Once, nargs=0, help="Calculate ancestry for the packaged Hero target.")
-    for command, description in (("audit", "Audit one version or one explicitly declared earlier/later pair."),
+    example.add_argument("--lineage", action=_Once, nargs=0, help="Calculate ancestry for the selected example targets.")
+    example.add_argument("--longitudinal", action=_Once, nargs=0, help="Calculate the explicitly ordered example snapshots.")
+    example.add_argument("--dataset", action=_Once, choices=("hero", "longitudinal"),
+        help="Packaged dataset; default hero. The three-version longitudinal dataset requires --longitudinal.")
+    for command, description in (("audit", "Audit one version, one explicit pair or an explicitly ordered series."),
                                  ("validate", "Validate inputs without running calculations.")):
         child = commands.add_parser(command, help=description, description=description, allow_abbrev=False)
         child.add_argument("--records", required=True, action=_Once, help="Local records file (CSV, JSONL or Parquet).")
         child.add_argument("--lineage-records", action="append", help="Local ancestor/context records; repeat for multiple files. Audit requires --lineage or config lineage=true.")
         if command == "audit":
-            child.add_argument("--lineage", action=_Once, nargs=0, help="Calculate lineage for the primary records using all explicitly loaded records.")
+            child.add_argument("--lineage", action=_Once, nargs=0,
+                help="Calculate lineage for the primary or all selected longitudinal snapshots using the loaded records.")
+            child.add_argument("--longitudinal", action=_Once, nargs=0,
+                help="Compare ordered selected snapshots; --records must be the latest version.")
+            child.add_argument("--baseline", action=_Once, choices=("none", "first"),
+                help="Additional first-snapshot comparisons; requires longitudinal mode.")
+        child.add_argument("--compare", action="append",
+            help="Local comparison records; repeat in longitudinal mode or input-only validate.")
         for flag, help_text in (
             ("provenance", "Local provenance manifest."), ("config", "Local JSON or TOML configuration."),
             ("schema-mapping", "Local declarative schema mapping."), ("version-order", "Local explicit version-order document."),
-            ("compare", "One local earlier-version file; --records is the later version."),
-            ("state-semantics", "Shared literal state meaning for the explicit pair; requires --compare."),
+            ("state-semantics", "Shared literal state meaning for an explicit pair or longitudinal series."),
             ("missing-state-id", "Literal ID required only for explicit_missing_state."),
             ("out", "Output directory; default ./rit-report. Existing targets are never overwritten."),
             ("id-salt-file", "Local 32-4096 byte identifier secret, requiring --redacted."),
@@ -135,7 +144,7 @@ def _options(namespace):
         except (ValueError, OverflowError):
             raise ConfigurationError(ErrorCode.CONFIG_INVALID, "Invalid tail threshold") from None
     options, inventory = load_phase4_invocation(cli=declarations, config_path=namespace.config,
-                                                base_directory=Path.cwd())
+                                                base_directory=Path.cwd(), operation=namespace.command)
     phase4_pair_requested(options, operation=namespace.command)
     if (namespace.command != "validate" and not options.lineage
             and any(source.role is FileRole.LINEAGE_CONTEXT for source in options.inputs)):
@@ -304,6 +313,116 @@ def _lineage_calculations(bundle, options):
         return {"family_errors": (failure,)}, (_error_exit(error),)
 
 
+def _longitudinal_file_errors(bundle):
+    """Require each selected physical input to identify one nonempty version."""
+    from dataclasses import replace
+    from .errors import CanonicalValidationError, ErrorCode
+    from .models import FileRole
+    selected = (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE)
+    by_file = {}
+    for row in bundle.records:
+        if row.location.file_role in selected:
+            by_file.setdefault((row.location.file_role, row.location.file_path), set()).add(
+                row.record_key.dataset_version)
+    errors = []
+    for entry in bundle.inventory:
+        if entry.role not in selected:
+            continue
+        versions = by_file.get((entry.role, str(entry.path)), set())
+        if len(versions) != 1:
+            error = CanonicalValidationError(ErrorCode.SCHEMA_TYPE,
+                "Each selected records file must identify exactly one nonempty version",
+                field="dataset_version", file_role=entry.role.value)
+            errors.append(replace(_message(error), file_path=str(entry.path)))
+    return tuple(errors)
+
+
+def _longitudinal_calculations(bundle, options, *, selection_errors=()):
+    """Bind explicit configuration to existing series and lineage owners once."""
+    from dataclasses import fields
+    from .errors import CanonicalValidationError, ErrorCode
+    from .metrics.longitudinal import (SnapshotDeclaration, LongitudinalMapping,
+        select_longitudinal_versions, analyze_longitudinal, analyze_longitudinal_failure)
+    from .models import CapabilityKey, FileRole, TailSelectionOptions, ValidationSeverity
+    from .reports.assembly import FamilyFailure
+    from .representations.compatibility import StateMappingDeclaration
+    configured = options.longitudinal
+    versions = tuple(sorted({row.record_key.dataset_version for row in bundle.records
+        if row.location.file_role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE)}))
+    declarations = tuple(SnapshotDeclaration(item.dataset_version, item.representation,
+        item.state_semantics, item.missing_state_id) for item in configured.versions) if configured.versions else tuple(
+        SnapshotDeclaration(version, options.configuration.representation,
+            configured.state_semantics, options.missing_state_id) for version in versions)
+    mappings = tuple(LongitudinalMapping(item.earlier_version, item.later_version,
+        StateMappingDeclaration(**{field.name: getattr(item.declaration, field.name)
+            for field in fields(item.declaration)})) for item in configured.mappings)
+    tail = None if options.tail_rule is None else TailSelectionOptions(options.tail_rule,
+        count_threshold=options.tail_threshold if options.tail_rule == "count_at_or_below" else None,
+        frequency_threshold=options.tail_threshold if options.tail_rule == "frequency_at_or_below" else None)
+    request = dict(declarations=declarations, baseline=configured.baseline,
+        max_versions=options.configuration.resource_limits.max_longitudinal_versions, mappings=mappings)
+    try:
+        selection = None if selection_errors else select_longitudinal_versions(bundle, **request)
+    except CanonicalValidationError:
+        selection = None
+    if selection is None:
+        try:
+            source = analyze_longitudinal_failure(bundle, **request, lineage=options.lineage,
+                tail_options=tail, selection_errors=selection_errors)
+        except CanonicalValidationError as error:
+            # A rejected population cannot provide a safe snapshot handoff.
+            # Retain its original physical-file/order rejection in the error
+            # report, while allowing unrelated implementation errors to surface.
+            if (not selection_errors or error.code is not ErrorCode.CONFIG_INVALID
+                    or error.safe_message not in (
+                        "selection requires a nonempty validated record bundle",
+                        "selection requires exactly one nonempty primary version",
+                        "snapshot roles and files must be disjoint complete version populations")):
+                raise
+            rejected = selection_errors[0]
+            raise CanonicalValidationError(ErrorCode(rejected.code), rejected.message,
+                field=rejected.field, file_role=None if rejected.file_role is None else rejected.file_role.value,
+                file_path=rejected.file_path) from None
+        results = {"longitudinal_failure": source}
+    else:
+        limits = None
+        if options.lineage:
+            from .lineage.graph import LineageLimits
+            declared = options.configuration.resource_limits
+            limits = LineageLimits(max_nodes=declared.max_lineage_nodes,
+                max_edges=declared.max_lineage_edges,
+                max_root_memberships=declared.max_lineage_root_memberships,
+                max_root_union_visits=declared.max_lineage_root_union_visits)
+        source = analyze_longitudinal(bundle, selection=selection, lineage=options.lineage,
+            tail_options=tail, lineage_limits=limits)
+        results = {"longitudinal": source}
+        if source.shared_lineage is not None:
+            from .lineage.ancestry import primary_lineage_from_selected, SharedAncestryDependence
+            from .metrics.bounds import lineage_closure_exposure
+            primary = primary_lineage_from_selected(bundle, selection=selection, result=source.shared_lineage)
+            results.update(lineage=primary, lineage_bounds=lineage_closure_exposure(primary),
+                shared_ancestry=SharedAncestryDependence(primary))
+    if options.lineage and "lineage" not in results:
+        failed = tuple(message for message in source.messages
+            if message.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL))
+        if failed:
+            results["family_errors"] = (FamilyFailure(CapabilityKey.LINEAGE, failed,
+                lineage_resource_usage=getattr(source, "lineage_resource_usage", None)),)
+    # Ordinary primary summary reuses the exact selected snapshot evidence.
+    primary_versions = _primary_versions(bundle)
+    if len(primary_versions) == 1:
+        primary = next((item for item in source.snapshots
+            if item.scope.dataset_version == primary_versions[0]), None)
+        if primary is not None:
+            if primary.distribution is not None:
+                results["distributions"] = (primary.distribution,)
+            if primary.provenance is not None:
+                results["provenance"] = primary.provenance
+            if primary.direct_closure is not None:
+                results["closure"] = primary.direct_closure
+    return results, _message_exits(source.messages)
+
+
 def _run_metadata(options, operation, started_at, started_clock, *, status="complete"):
     from datetime import datetime, timezone
     import platform
@@ -370,8 +489,9 @@ def _execute(namespace):
     started_at, started_clock = datetime.now(timezone.utc).isoformat(), time.perf_counter()
     options, protection, exits = None, None, ()
     input_paths = [getattr(namespace, key) for key in (
-        "records", "provenance", "compare", "config", "schema_mapping", "version_order", "id_salt_file")
+        "records", "provenance", "config", "schema_mapping", "version_order", "id_salt_file")
         if getattr(namespace, key, None) is not None]
+    input_paths.extend(getattr(namespace, "compare", None) or ())
     input_paths.extend(getattr(namespace, "lineage_records", None) or ())
     try:
         options, config_inventory = _options(namespace)
@@ -408,7 +528,7 @@ def _execute(namespace):
                         raise IngestionError(ErrorCode.FILE_PARSE, "Version-order input changed; retry with a stable file",
                             file_role=FileRole.VERSION_ORDER.value)
                     order_snapshots.append((entry, state))
-        order_failure = ()
+        order_failure, order_messages = (), ()
         try:
             bundle = validate_bundle(AuditBundle(options.inputs), configuration=phase4_validation_configuration(options),
                                      base_directory=Path.cwd())
@@ -432,6 +552,9 @@ def _execute(namespace):
                 if source.role is not FileRole.VERSION_ORDER)), configuration=unordered, base_directory=Path.cwd())
             bundle = replace(bundle, inventory=tuple(sorted(bundle.inventory + tuple(entry for entry, _ in order_snapshots),
                 key=lambda entry: (entry.role.value, str(entry.path)))))
+            order_messages = (_message(order_error),)
+            if options.longitudinal.enabled:
+                bundle = replace(bundle, validation_messages=bundle.validation_messages + order_messages)
             order_failure = tuple(FamilyFailure(family, (_message(order_error),)) for family in (
                 *((CapabilityKey.DATASET_LONGITUDINAL,) if pair_input else ()),
                 *((CapabilityKey.LINEAGE,) if options.lineage else ())))
@@ -443,24 +566,35 @@ def _execute(namespace):
         if namespace.command != "validate":
             from .config import phase4_pair_requested
             pair = phase4_pair_requested(options, operation=namespace.command)
-            results, calculation_exits = _pair_calculations(bundle, options) if pair else _calculations(
-                bundle, options, dataset_versions=_primary_versions(bundle), record_role=FileRole.RECORDS_PRIMARY)
+            series = options.longitudinal.enabled
+            if series:
+                file_errors = _longitudinal_file_errors(bundle)
+                if file_errors:
+                    bundle = replace(bundle, validation_messages=bundle.validation_messages + file_errors)
+                results, calculation_exits = _longitudinal_calculations(bundle, options,
+                    selection_errors=order_messages + file_errors)
+            else:
+                results, calculation_exits = _pair_calculations(bundle, options) if pair else _calculations(
+                    bundle, options, dataset_versions=_primary_versions(bundle), record_role=FileRole.RECORDS_PRIMARY)
             exits += calculation_exits
-            if options.lineage and not order_failure:
+            if options.lineage and not order_failure and not series:
                 lineage_results, lineage_exits = _lineage_calculations(bundle, options)
                 failures = results.get("family_errors", ()) + lineage_results.pop("family_errors", ())
                 results.update(lineage_results)
                 results["family_errors"] = failures
                 exits += lineage_exits
-            if order_failure:
+            if order_failure and not series:
                 results["family_errors"] = results.get("family_errors", ()) + order_failure
                 exits += (1,)
-            if not pair and len(_primary_versions(bundle)) > 1:
+            if not pair and not series and len(_primary_versions(bundle)) > 1:
                 sys.stderr.write("Audit requires one dataset_version; use rit validate to inspect multiple versions.\n")
         report = assemble_report(bundle, run=_run_metadata(options, namespace.command, started_at, started_clock), **results)
         if namespace.command == "validate":
             payload = report.to_dict()
-            for section in ("derived_metrics", "proxy_signals", "simulations"):
+            # Retain schema 1.2's explicit unrequested series metadata. No
+            # analytical values are calculated by the validate command.
+            payload["derived_metrics"] = {"longitudinal": payload["derived_metrics"]["longitudinal"]}
+            for section in ("proxy_signals", "simulations"):
                 payload[section] = {}
             report = CanonicalReport.from_dict(payload)
         return _publish(report, options, protection, input_paths, exits)
@@ -494,6 +628,10 @@ def _example(namespace):
     import sys
     from .utils.paths import (_OUTPUT_CODES, _OutputFailure, _output_local, _output_walk,
         _output_info, _output_recheck, _output_write, _output_clean_stage)
+    dataset = namespace.dataset or "hero"
+    if dataset == "longitudinal" and not namespace.longitudinal:
+        sys.stderr.write("E_CONFIG_INVALID: The longitudinal example requires --longitudinal.\n")
+        return 2
     workspace, root_chain, input_chain, owned = None, None, None, {}
     try:
         workspace = _output_local(namespace.out)
@@ -502,9 +640,11 @@ def _example(namespace):
             raise _OutputFailure("E_OUTPUT_UNSAFE")
         if _output_info(workspace) is not None:
             raise _OutputFailure("E_OUTPUT_EXISTS")
-        names = ("config.json", "records_v1.csv", "records_v2.csv", "provenance.csv",
-                 "version_order.json", "EXPECTED_OUTPUTS.md")
-        resource = files("recursive_integrity_toolkit").joinpath("data", "hero")
+        names = (("config.json", "records_v1.csv", "records_v2.csv", "provenance.csv",
+                 "version_order.json", "EXPECTED_OUTPUTS.md") if dataset == "hero" else
+                 ("config.json", "records_v1.jsonl", "records_v2.jsonl", "records_v3.jsonl",
+                  "provenance.jsonl", "version_order.json", "EXPECTED_OUTPUTS.md"))
+        resource = files("recursive_integrity_toolkit").joinpath("data", dataset)
         payloads = {name: resource.joinpath(name).read_bytes() for name in names}
         _output_recheck(parent_chain)
         workspace.mkdir(mode=0o700)
@@ -517,11 +657,17 @@ def _example(namespace):
             _output_recheck(input_chain)
             _output_write(inputs / name, payload, owned)
         _output_recheck(input_chain)
-        invocation = build_parser().parse_args(["audit", "--records", str(inputs / "records_v2.csv"),
-            "--compare", str(inputs / "records_v1.csv"), "--config", str(inputs / "config.json"),
-            "--provenance", str(inputs / "provenance.csv"), "--version-order", str(inputs / "version_order.json"),
-            "--state-semantics", "Hero topic labels retain their literal meaning across v1 and v2.",
+        selected_inputs = (["--records", str(inputs / "records_v2.csv"),
+            "--compare", str(inputs / "records_v1.csv"),
+            "--state-semantics", "Hero topic labels retain their literal meaning across v1 and v2."]
+            if dataset == "hero" else ["--records", str(inputs / "records_v3.jsonl"),
+                "--compare", str(inputs / "records_v1.jsonl"), "--compare", str(inputs / "records_v2.jsonl")])
+        invocation = build_parser().parse_args(["audit", *selected_inputs,
+            "--config", str(inputs / "config.json"),
+            "--provenance", str(inputs / ("provenance.csv" if dataset == "hero" else "provenance.jsonl")),
+            "--version-order", str(inputs / "version_order.json"),
             "--out", str(workspace / "reports"), *(["--redacted"] if namespace.redacted else []),
+            *(["--longitudinal"] if namespace.longitudinal else []),
             *(["--lineage"] if namespace.lineage else [])])
         invocation.command = "example"
     except Exception as error:
@@ -540,7 +686,8 @@ def _example(namespace):
             sys.stderr.write("E_OUTPUT_IO: Incomplete example files remain in the selected workspace; inspect it before retrying.\n")
         return _exit_code((_OUTPUT_CODES.get(code, 4), 1 if not cleaned else 0))
     if not namespace.lineage:
-        sys.stderr.write("Lineage was not requested. Use rit example --lineage to calculate the Hero ancestry results.\n")
+        sys.stderr.write("Lineage was not requested. Use rit example --lineage to calculate the Hero ancestry results.\n"
+            if dataset == "hero" else "Lineage was not requested. Add --lineage to calculate the example ancestry results.\n")
     return _execute(invocation)
 
 
@@ -549,6 +696,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     try:
         namespace = parser.parse_args(argv)
+        if (namespace.command == "audit" and len(namespace.compare or ()) > 1
+                and not namespace.longitudinal and namespace.config is None):
+            parser.error("repeated comparison inputs require longitudinal mode")
     except _InvocationError:
         import sys
         sys.stderr.write('E_CONFIG_INVALID: Invalid invocation; use rit audit --help, rit validate --help or rit example --help.\n')

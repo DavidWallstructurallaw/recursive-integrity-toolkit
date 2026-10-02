@@ -2,11 +2,11 @@
 
 A local-first research toolkit for examining recursive closure exposure in synthetic-data and recursive-data pipelines under explicit representations and assumptions.
 
-## Current milestone: Phase 5 lineage candidate
+## Current milestone: Phase 6A dev5 candidate
 
-Development version `0.1.0.dev4` provides local input validation, JSON and Markdown audit reports, privacy controls, one explicitly ordered dataset comparison and a packaged Hero example. The mathematical core includes literal topic/label and exact record-form representations, exact duplicates, support/diversity, provenance composition, direct closure-exposure bounds, tail ranking and explicitly invoked closed-resampling scenarios. Actual acceptance and execution evidence are recorded in `PHASE_4_COMPLETION.md`, `PHASE_4_VALIDATION_REPORT.md` and `PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md`.
+Development version `0.1.0.dev5` provides local input validation, JSON and Markdown audit reports, privacy controls, explicit pair and multi-version comparison, and packaged local examples. The mathematical core includes literal topic/label and exact record-form representations, exact duplicates, support/diversity, provenance composition, direct closure-exposure bounds, tail ranking and explicitly invoked closed-resampling scenarios.
 
-Phase 5 adds validated graphs, cycles, depth, external ancestry, root concentration, lineage closure bounds and descriptive shared-root evidence through explicit Python calls or `audit --lineage` and `example --lineage`. Repeatable local context inputs supply ancestors while the primary version keeps its own metric scopes. JSON and Markdown use report schema 1.1. Bounded mutation checks and actual 100k lineage measurement are complete. Step 10 verifies the dev4 candidate; [Phase 5 completion](PHASE_5_COMPLETION.md) records its actual gate status and limitations. Longitudinal orchestration remains Phase 6A work; external reopening and experiment orchestration remain Phase 6B work. The CLI does not execute simulations. HTML output is deferred. No stable release, main merge or registry publication is implied by this development milestone.
+`audit --longitudinal` compares ordered selected snapshots through adjacent pairs and an optional first-snapshot baseline. It reports observed distribution changes, provenance coverage/source changes and direct closure changes. Adding `--lineage` calculates every selected target from one shared supplied graph, including cycles, depth, external roots, concentration and lineage closure changes. JSON and Markdown use report schema **1.2**. See the [longitudinal contract](docs/longitudinal_contract.md) and [Step 8 completion](PHASE_6A_STEP_8.md) for implemented scope and preflight verification. The [Phase 6A candidate record](PHASE_6A_COMPLETION.md) identifies Step 9 verification status, including the supported matrix, installed delivery and actual 100,000-record series measurement; historical [Phase 5 acceptance](PHASE_5_COMPLETION.md) applies to its named source and workloads. External reopening and experiment orchestration remain Phase 6B work. The CLI does not execute simulations. HTML output is deferred. No stable release, main merge or registry publication is implied by this development milestone.
 
 ## Install and run
 
@@ -25,11 +25,15 @@ After installation, the following command works in any local working directory w
 ```bash
 rit example --out ./hero-workspace
 rit example --lineage --out ./hero-lineage-workspace
+rit example --longitudinal --lineage --out ./hero-series-workspace
+rit example --dataset longitudinal --longitudinal --out ./three-version-workspace
 ```
 
-Each invocation copies six packaged Hero files into its workspace's `inputs/` and writes `reports/report.json` and `report.md`. It downloads nothing. The packaged `EXPECTED_OUTPUTS.md` contains the independently specified ordinary and lineage targets.
+Hero invocations copy six unchanged packaged files into the workspace's `inputs/`; the separate three-version example copies seven files. Each writes `reports/report.json` and `report.md` and downloads nothing. Each packaged `EXPECTED_OUTPUTS.md` contains the independent expectations. Add `--redacted` to protect identifiers and paths in the reports.
 
-Both reports compare v1 with v2: support **8 to 5**, retention **5/8**, diversity **7/8 to 3/4**, and missing topic states `battery`, `lizard`, `turtle`. Later-version human and synthetic shares are each **1/2**, and direct closure exposure is **[1/2, 1/2]**. Input observability is Level 4 and simulations are empty. Plain `example` keeps lineage `not_requested`. With `--lineage`, all eight v2 targets have resolved external ancestry, with **5** roots, ancestry HHI **1/4**, effective roots **4**, lineage exposure **[0, 0]**, and shared-ancestry evidence `present`.
+The ordinary Hero reports compare v1 with v2: support **8 to 5**, retention **5/8**, diversity **7/8 to 3/4**, and missing topic states `battery`, `lizard`, `turtle`. Later-version human and synthetic shares are each **1/2**, and direct closure exposure is **[1/2, 1/2]**. Input observability is Level 4 and simulations are empty. Plain `example` keeps lineage `not_requested`. With `--lineage`, all eight v2 targets have resolved external ancestry, with **5** roots, ancestry HHI **1/4**, effective roots **4**, lineage exposure **[0, 0]**, and shared-ancestry evidence `present`.
+
+Hero series mode retains those values in explicit snapshot/pair rows. With lineage requested, supporting roots change **8 to 5**, HHI **1/8 to 1/4** and effective roots **8 to 4**. The separate three-version example shows support **3 to 2 to 3**, including state `B` disappearing and reappearing. Series fields preserve the intermediate change. Neither example selects a tail rule or first baseline by default.
 
 Use the extracted files for these independent commands, each with a fresh output destination:
 
@@ -42,9 +46,23 @@ rit audit --records ./hero-workspace/inputs/records_v2.csv --compare ./hero-work
 
 `validate` writes a validation report without calculating metrics; it accepts context files and rejects lineage execution. `audit` uses only an explicitly declared representation; missing representation or provenance produces specific unavailable results. `--lineage-records` may repeat and requires lineage opt-in for audit. Context versions must be disjoint from primary/comparison versions, and duplicate composite keys fail. Context alone does not request comparison. In a pair, `--compare` supplies the earlier version and `--records` the later version, with explicit chronology and shared state meaning. Reports are unweighted in this CLI. Existing report targets are never overwritten. Always check the exit code, since failed runs may retain useful partial reports.
 
+For a series, repeat `--compare` and add `--longitudinal`. Each selected file must contain one distinct nonempty version, and `--records` must be latest. Supply chronology through config or a local order document; argument order and filenames do not establish series chronology. Add `--baseline first` for first-to-later comparisons alongside adjacent pairs. Common representation/meaning declarations or per-version declarations with directed pair mappings are supported through local config. `validate` accepts repeated comparisons and inert longitudinal config, including `enabled: true`, while executing no series calculations. Its report retains explicit `not_requested` series metadata.
+
+Using the extracted three-version example, request all three adjacent/baseline comparisons with:
+
+```bash
+rit audit --records ./three-version-workspace/inputs/records_v3.jsonl \
+  --compare ./three-version-workspace/inputs/records_v1.jsonl \
+  --compare ./three-version-workspace/inputs/records_v2.jsonl \
+  --config ./three-version-workspace/inputs/config.json \
+  --provenance ./three-version-workspace/inputs/provenance.jsonl \
+  --version-order ./three-version-workspace/inputs/version_order.json \
+  --longitudinal --baseline first --out ./series-baseline-report
+```
+
 `recursive-integrity` and `python -m recursive_integrity_toolkit` provide the same commands. See [CLI options and exits](docs/cli.md), [data contracts](docs/data_schema.md), [report fields](docs/report_schema.md) and [privacy boundaries](docs/privacy.md).
 
-Runtime requires no network connection, model, service, credential or database. Installation and CI acquire dependencies separately. All forty package modules remain importable with numerical/optional dependencies and network access blocked; explicit calculation and Parquet operations load their required dependencies when used.
+Runtime requires no network connection, model, service, credential or database. Installation and CI acquire dependencies separately. All 41 package modules remain importable with numerical/optional dependencies and network access blocked; explicit calculation and Parquet operations load their required dependencies when used.
 
 ## Python validation and calculation
 
@@ -118,7 +136,13 @@ Reports keep observed facts, derived metrics, proxy signals, simulations and una
 
 Identity is `(dataset_version, record_id)`. Missing, null, declared unknown, zero and false remain distinct. Source type, grounding, human review and confidence are independent declarations. Direct exposure preserves unresolved evidence and validation errors. It does not certify provenance truth, independent ancestry or functional failure.
 
+Series differences are later minus earlier, with separate endpoint scopes, coverage and denominators. Missing provenance is separate from the five declared source categories. Context may supply ancestors but never enters a selected snapshot's population. Disappearance means absence from the supplied later snapshot under the declared representation; reappearance remains visible and no permanent-extinction or causal-failure claim follows. Lineage uses one common supplied retrospective graph, so changes do not reconstruct what an auditor knew at each historical date.
+
+The default selected-version limit is 100: at most 99 adjacent pairs or 197 adjacent/first-baseline pairs. Admission failure does not silently truncate the request. New series detail tables retain at most 100 rows and disclose exact total/omitted counts; full-report size can still grow with loaded records through ordinary sections. Shared lineage defaults are 200,000 nodes, 1,000,000 edges, 1,000,000 root memberships and 10,000,000 root-union visits. Exhaustion makes unfinished evidence unavailable, with independent valid results retained.
+
 Standard reports exclude raw content, private notes, full embeddings and secrets. `--redacted` additionally protects paths and structural identifiers; record IDs default to keyed hashes, with explicit preserve/omit options. Aggregate values and errors remain visible. Input/configuration hashes are linkable, and pseudonyms provide no statistical anonymity. Exact content hashes describe record form and cannot establish semantic equivalence or authorship. Content references are read only through explicit Python `LOCAL_REF` requests; CLI audit/validate do not activate that reader.
+
+[Phase 6A Step 8](PHASE_6A_STEP_8.md) measured complete longitudinal CLI publication with lineage at **11.46 seconds for 1,000 loaded records** and **124.65 seconds for 10,000** on its Linux/Python 3.12 reference container. The latter used **766,644,224 bytes peak process RSS**, producing **42,908,064 bytes JSON** and **26,943,450 bytes Markdown**. Both totals include 100 context anchors. All six final Hero series attempts, with and without lineage, took **0.94 to 1.11 seconds**. Their RSS counters inherited a parent-process high-water floor and cannot isolate Hero memory. These bounded observations do not replace the [candidate's actual 100k measurement](PHASE_6A_COMPLETION.md) or establish a new wall-time/memory SLA.
 
 The Phase 4 Step 10 reference-container measurement completed the 100,000-record synthetic metadata audit in **1,362.4708 seconds**, with **7.12 GiB peak process RSS**, approximately **443 MB JSON** and **165 MB Markdown**. This is a demanding, verbose report workload; plan memory, disk space and runtime before applying it to large datasets. Those observations are neither an SLA nor evidence for lineage performance. Full-scale Python allocation tracing was omitted after a separately recorded bounded tracing-overhead measurement.
 

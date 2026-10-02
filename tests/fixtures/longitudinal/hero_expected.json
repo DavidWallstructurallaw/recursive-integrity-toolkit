@@ -1,0 +1,239 @@
+{
+  "purpose": "Independent Phase 6A per-version Hero provenance and lineage arithmetic. Canonical Hero files are referenced unchanged.",
+  "sources": [
+    "examples/hero/records_v1.csv",
+    "examples/hero/records_v2.csv",
+    "examples/hero/provenance.csv",
+    "examples/hero/version_order.json"
+  ],
+  "fraction_encoding": "Exact rational strings; direct/lineage bounds are [lower, upper, width].",
+  "selected_versions": [
+    "v1",
+    "v2"
+  ],
+  "expected_provenance": {
+    "v1": {
+      "record_count": 8,
+      "source_counts": {
+        "human": 8,
+        "synthetic": 0,
+        "mixed": 0,
+        "sensor": 0,
+        "unknown": 0
+      },
+      "missing_provenance_count": 0,
+      "grounding_counts": {
+        "yes": 8,
+        "no": 0,
+        "unresolved": 0
+      },
+      "confidence_counts": {
+        "confirmed": 8,
+        "log_derived": 0,
+        "estimated": 0,
+        "unknown": 0
+      },
+      "source_shares": {
+        "human": "1",
+        "synthetic": "0",
+        "mixed": "0",
+        "sensor": "0",
+        "unknown": "0"
+      },
+      "missing_provenance_share": "0",
+      "coverage": {
+        "row": "1",
+        "required": "1",
+        "grounding": "1"
+      },
+      "direct_bounds": [
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    "v2": {
+      "record_count": 8,
+      "source_counts": {
+        "human": 4,
+        "synthetic": 4,
+        "mixed": 0,
+        "sensor": 0,
+        "unknown": 0
+      },
+      "missing_provenance_count": 0,
+      "grounding_counts": {
+        "yes": 4,
+        "no": 4,
+        "unresolved": 0
+      },
+      "confidence_counts": {
+        "confirmed": 8,
+        "log_derived": 0,
+        "estimated": 0,
+        "unknown": 0
+      },
+      "source_shares": {
+        "human": "1/2",
+        "synthetic": "1/2",
+        "mixed": "0",
+        "sensor": "0",
+        "unknown": "0"
+      },
+      "missing_provenance_share": "0",
+      "coverage": {
+        "row": "1",
+        "required": "1",
+        "grounding": "1"
+      },
+      "direct_bounds": [
+        "1/2",
+        "1/2",
+        "0"
+      ]
+    }
+  },
+  "expected_lineage": {
+    "v1": {
+      "N": 8,
+      "G": 8,
+      "C": 0,
+      "U": 0,
+      "complete_root_sets": {
+        "v1::v1_01": [
+          "v1::v1_01"
+        ],
+        "v1::v1_02": [
+          "v1::v1_02"
+        ],
+        "v1::v1_03": [
+          "v1::v1_03"
+        ],
+        "v1::v1_04": [
+          "v1::v1_04"
+        ],
+        "v1::v1_05": [
+          "v1::v1_05"
+        ],
+        "v1::v1_06": [
+          "v1::v1_06"
+        ],
+        "v1::v1_07": [
+          "v1::v1_07"
+        ],
+        "v1::v1_08": [
+          "v1::v1_08"
+        ]
+      },
+      "distinct_external_root_count": 8,
+      "hhi": "1/8",
+      "effective_root_count": "8",
+      "declared_parent_references": 0,
+      "resolved_parent_references": 0,
+      "unresolved_parent_references": 0,
+      "resolved_reference_coverage": "1",
+      "resolved_lineage_coverage": "1",
+      "external_ancestry_coverage": "1",
+      "lineage_bounds": [
+        "0",
+        "0",
+        "0"
+      ],
+      "root_metrics_status": "available",
+      "concentration_status": "available",
+      "concentration_reason_codes": []
+    },
+    "v2": {
+      "N": 8,
+      "G": 8,
+      "C": 0,
+      "U": 0,
+      "complete_root_sets": {
+        "v2::v2_01": [
+          "v1::v1_01"
+        ],
+        "v2::v2_02": [
+          "v1::v1_02"
+        ],
+        "v2::v2_03": [
+          "v1::v1_03"
+        ],
+        "v2::v2_04": [
+          "v1::v1_04"
+        ],
+        "v2::v2_05": [
+          "v1::v1_01"
+        ],
+        "v2::v2_06": [
+          "v1::v1_02"
+        ],
+        "v2::v2_07": [
+          "v1::v1_07"
+        ],
+        "v2::v2_08": [
+          "v1::v1_01"
+        ]
+      },
+      "distinct_external_root_count": 5,
+      "hhi": "1/4",
+      "effective_root_count": "4",
+      "declared_parent_references": 8,
+      "resolved_parent_references": 8,
+      "unresolved_parent_references": 0,
+      "resolved_reference_coverage": "1",
+      "resolved_lineage_coverage": "1",
+      "external_ancestry_coverage": "1",
+      "lineage_bounds": [
+        "0",
+        "0",
+        "0"
+      ],
+      "root_metrics_status": "available",
+      "concentration_status": "available",
+      "concentration_reason_codes": []
+    }
+  },
+  "expected_pairs": [
+    {
+      "earlier": "v1",
+      "later": "v2",
+      "provenance": {
+        "coverage_delta": {
+          "row": "0",
+          "required": "0",
+          "grounding": "0"
+        },
+        "source_share_delta": {
+          "human": "-1/2",
+          "synthetic": "1/2",
+          "mixed": "0",
+          "sensor": "0",
+          "unknown": "0"
+        },
+        "missing_provenance_share_delta": "0",
+        "direct_bounds_delta": [
+          "1/2",
+          "1/2",
+          "0"
+        ]
+      },
+      "lineage": {
+        "distinct_external_root_count_delta": -3,
+        "hhi_delta": "1/8",
+        "effective_root_count_delta": "-4",
+        "unresolved_parent_references_delta": "0",
+        "resolved_reference_coverage_delta": "0",
+        "resolved_lineage_coverage_delta": "0",
+        "external_ancestry_coverage_delta": "0",
+        "lineage_bounds_delta": [
+          "0",
+          "0",
+          "0"
+        ],
+        "root_delta_status": "available",
+        "concentration_delta_status": "available",
+        "concentration_delta_reason_codes": []
+      }
+    }
+  ]
+}

@@ -216,7 +216,8 @@ def test_phase4_step7_validate_blocks_every_calculation_and_content_reader(tmp_p
     monkeypatch.setattr(loaders, "load_content_reference", denied)
     code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys, command="validate")
     assert code == 0 and touched == [] and report["run"]["run_status"] == "complete"
-    assert report["derived_metrics"] == report["proxy_signals"] == report["simulations"] == {}
+    assert report["derived_metrics"] == {"longitudinal": {"snapshots": [], "comparisons": []}}
+    assert report["proxy_signals"] == report["simulations"] == {}
     assert report["observed_facts"]["record_counts"]["v1"]["value"] == 4
     assert report["capabilities"]["provenance"]["execution_status"] == "not_requested"
 
@@ -351,7 +352,7 @@ for args in ([],['--help'],['--version'],['version'],['audit','--help'],['valida
 '''
     result = subprocess.run([sys.executable, "-c", program], cwd=tmp_path, env=subprocess_env, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert "0.1.0.dev4" in result.stdout and "--records" in result.stdout
+    assert "0.1.0.dev5" in result.stdout and "--records" in result.stdout
     assert not list(tmp_path.iterdir())
 
 
@@ -564,7 +565,8 @@ def test_phase4_step8_validate_two_inputs_never_dispatches_pair(tmp_path, capsys
     monkeypatch.setattr(diversity, "compare_support", denied)
     code, report, streams = phase4_step7_invoke(args, tmp_path / "out", capsys, command="validate")
     assert code == 0 and called == []
-    assert report["derived_metrics"] == report["proxy_signals"] == report["simulations"] == {}
+    assert report["derived_metrics"] == {"longitudinal": {"snapshots": [], "comparisons": []}}
+    assert report["proxy_signals"] == report["simulations"] == {}
     assert set(report["observed_facts"]["record_counts"]) == {"earlier", "later"}
 
 

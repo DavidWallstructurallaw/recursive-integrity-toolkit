@@ -37,6 +37,9 @@ def test_full_matrix_requires_explicit_candidate_selection(repo_root):
     focused = text.split("  focused:\n", 1)[1].split("\n  core:", 1)[0]
     assert "inputs.gate != 'candidate'" in focused
     assert "test_current_verification.py" in focused and "test_lineage_fixture_inputs.py" in focused
+    for name in ("tests/unit/test_longitudinal*.py", "test_selected_lineage_handoff.py",
+                 "test_longitudinal_cli.py", "test_longitudinal_reports.py", "test_longitudinal_installed.py"):
+        assert name in focused
     assert "--ignore=tests/performance" not in focused and "tests/performance " not in focused
     assert 'os: [ubuntu-latest, windows-latest]' in text
     assert 'python-version: ["3.11", "3.12"]' in text
@@ -44,7 +47,15 @@ def test_full_matrix_requires_explicit_candidate_selection(repo_root):
     assert '"numpy==2.0.0" "pandas==2.2.2"' in text
     assert "find_spec('pyarrow') is None" in text and "--require-parquet" in text
     assert text.count("--ignore=tests/performance") == 2
-    assert text.count("-q tests/performance --junitxml=") == 1
+    performance = text.split("  performance:\n", 1)[1].split("\n  hero:", 1)[0]
+    assert "strategy:" not in performance and "runs-on: ubuntu-latest" in performance
+    assert 'python-version: "3.12"' in performance
+    assert performance.count("::test_longitudinal_100k_complete_reports") == 1
+    assert performance.count("-k 'not test_longitudinal_100k_complete_reports'") == 1
+    assert performance.count("--basetemp=") == 2
+    assert '"$RUNNER_TEMP/rit-performance/longitudinal-100k.xml"' in performance
+    assert '"$RUNNER_TEMP/rit-performance/performance.xml"' in performance
+    assert "source-commit.txt" in performance and "host-memory-bytes.txt" in performance
     assert "needs: [core, parquet, performance, hero, security]" in text
 
 
@@ -56,9 +67,18 @@ def test_candidate_checks_preserve_behavior_and_package_roles(repo_root):
         assert "pull_request:" not in text
     golden = (workflows / "golden.yml").read_text(encoding="utf-8")
     assert "test_phase3_math.py" in golden and "test_phase4_reports.py" in golden
+    for name in ("test_frozen_snapshot_and_pair_oracles", "test_hero_series_matches_frozen_pair_oracle",
+                 "test_packaged_examples_outside_checkout_with_network_blocked"):
+        assert name in golden
     assert "build_golden.py" not in golden
     security = (workflows / "security.yml").read_text(encoding="utf-8")
     for name in ("test_no_network.py", "test_PR015_redaction.py", "test_PR017_content_refs.py", "test_phase4_output_safety.py"):
+        assert name in security
+    for name in ("test_analysis_never_dispatches_graph_scenarios_or_io",
+                 "test_report_assembly_and_rendering_never_execute_series_or_graph_algorithms",
+                 "test_redacted_mapping_joins_remain_basis_local_and_keys_never_leak",
+                 "test_validate_repeated_comparisons_and_enabled_config_never_execute",
+                 "test_installed_record_loaders_baseline_and_privacy_modes"):
         assert name in security
     release = (workflows / "release.yml").read_text(encoding="utf-8")
     for required in ("python -m build", "python -m twine check --strict", "--candidate", "SOURCE_DATE_EPOCH", "assert same_bytes", "assert payload_equal", "actions/download-artifact@v4", "source-commit.txt"):
@@ -144,7 +164,12 @@ def test_current_junit_gate_accepts_real_case_names(repo_root, tmp_path):
         "test_PR002_parquet_real_roundtrip", "test_PR002_parquet_real_row_limit", "test_PR002_parquet_real_invalid_file",
         "test_context_table_uses_existing_local_parsers_and_normalizer[parquet]",
         "test_context_loaders_and_repeated_inputs_keep_primary_only_denominators[parquet]",
+        "test_real_loaders_order_by_declaration_and_keep_all_snapshot_populations[False-parquet]",
+        "test_real_loaders_order_by_declaration_and_keep_all_snapshot_populations[True-parquet]",
+        "test_installed_record_loaders_baseline_and_privacy_modes[preserve-parquet]",
+        "test_installed_record_loaders_baseline_and_privacy_modes[hash-parquet]",
+        "test_installed_record_loaders_baseline_and_privacy_modes[omit-parquet]",
     )
     body = "".join(f'<testcase classname="real" name="{name}"/>' for name in names)
-    result = _release_tools(repo_root)["verify_junit"](_junit(tmp_path, body, 'tests="5"'), require_parquet=True)
-    assert result["real_parquet_cases"] == 5
+    result = _release_tools(repo_root)["verify_junit"](_junit(tmp_path, body, 'tests="10"'), require_parquet=True)
+    assert result["real_parquet_cases"] == 10

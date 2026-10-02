@@ -21,7 +21,7 @@ def phase4_step2_report_fixture():
         "run": {
             "run_id": "independent-empty-case",
             "toolkit_version": "0.1.0.dev2",
-            "report_schema_version": "1.1",
+            "report_schema_version": "1.2",
             "started_at": "2026-09-19T00:00:00+00:00",
             "completed_at": "2026-09-19T00:00:00.500000+00:00",
             "duration_seconds": 0.5,
@@ -211,6 +211,7 @@ def test_phase4_step2_run_status_and_schema_version_are_exact(schema_root):
     validator = phase4_step2_schema_validator(schema_root)
     for field, value in (
         ("report_schema_version", "1"), ("report_schema_version", 1.0),
+        ("report_schema_version", "1.1"),
         ("report_schema_version", "2.0"), ("run_status", "success"),
         ("run_status", "available"), ("privacy_mode", "anonymous"),
     ):

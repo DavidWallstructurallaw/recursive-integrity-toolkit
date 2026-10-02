@@ -14,7 +14,7 @@ Limits:
     No ingestion, classifier, metric, simulation, adapter, renderer or CLI runs.
     A valid contract does not certify the truth of supplied evidence.
 Current phase status:
-    Phase 5 Step 7 adds bounded lineage evidence under schema 1.1.
+    Phase 6A Step 6 adds referenced longitudinal evidence under schema 1.2.
 """
 from __future__ import annotations
 
@@ -225,6 +225,199 @@ def _observed(path: str, value: dict, owner: str, unit: str, method: str,
                   method=method, level=level, value_type=value_type, boundary=boundary, representation=representation)
 
 
+LONGITUDINAL_FAMILIES = ("distribution", "provenance", "direct_closure", "tail", "lineage")
+
+
+def _series_field(path: str, value: dict, owner: str, unit: str, method: str,
+                  *, observed: bool = False, pair: bool = False, delta: bool = False,
+                  representation: bool = False) -> dict:
+    """Keep ordinary envelope meaning while storing report-local references."""
+    result = _field(path, value, owner=owner,
+                    evidence="observed_fact" if observed else "derived_metric",
+                    unit=unit, method=method, level=4, value_type="longitudinal_value",
+                    representation=False)
+    properties = result["properties"]
+    del properties["scope"], properties["representation"]
+    properties.update({"scope_id": _nullable(_text()), "basis_id": _nullable(_text())})
+    properties["weighting"] = {"const": {"weighting_mode": "unweighted", "weight_field": None}}
+    properties["input_basis"] = {"const": "empirical_assignments"}
+    properties["theory_map_ids"] = {"const": []}
+    properties["trace_ids"] = {"const": [owner] if owner.startswith("T") else []}
+    required = [key for key in result["required"] if key not in ("scope", "representation")]
+    required.extend(("scope_id", "basis_id", "weighting", "input_basis"))
+    if pair:
+        properties["scope_id"] = {"type": "null"}
+        properties.update({"earlier_scope_id": _text(), "later_scope_id": _text()})
+        required.extend(("earlier_scope_id", "later_scope_id"))
+    else:
+        properties["scope_id"] = _text()
+    if delta:
+        properties.update({"earlier_value": _nullable(value), "later_value": _nullable(value),
+            "earlier_denominator": _nullable(_number(minimum=0)),
+            "later_denominator": _nullable(_number(minimum=0)),
+            "earlier_coverage": _nullable(_ref("coverage")),
+            "later_coverage": _nullable(_ref("coverage")),
+            "earlier_reason_codes": _strings(), "later_reason_codes": _strings()})
+        required.extend(("earlier_value", "later_value", "earlier_denominator", "later_denominator",
+                         "earlier_coverage", "later_coverage", "earlier_reason_codes", "later_reason_codes"))
+        properties["denominator"] = {"type": "null"}
+        properties["denominator_reason"] = {"const": "not_applicable_to_difference"}
+    if representation:
+        result["allOf"].append({"if": {"properties": {"status": {"enum": ["available", "partial"]}}},
+                                  "then": {"properties": {"basis_id": _text()}}})
+    else:
+        properties["basis_id"] = {"type": "null"}
+    result["required"] = required
+    return result
+
+
+def _longitudinal_contract(resource_usage: dict) -> tuple[dict, dict, dict, dict]:
+    """The complete public series inventory, with no identity-bearing object keys."""
+    ratio = _number(minimum=0, maximum=1)
+    signed = _number()
+    signed_integer = {**_integer(), "minimum": -sys.float_info.max}
+    source_categories = ("human", "synthetic", "mixed", "sensor", "unknown")
+    confidence_categories = ("confirmed", "log_derived", "estimated", "unknown")
+    snapshot = _object({
+        "snapshot_id": _text(), "dataset_version": _nullable(_text()), "ordinal": _integer(minimum=1),
+        "input_role": _enum("records_primary", "records_compare", "declared_empty"),
+        "empty_scope": {"type": "boolean"}, "population_scope_id": _text(),
+        "representation_scope_id": _nullable(_text()), "basis_id": _nullable(_text()),
+        "redaction": _nullable(_ref("redaction")),
+    })
+    mapping = _object({"direction": _enum("earlier_to_later", "later_to_earlier"),
+        "source_basis_id": _text(), "target_basis_id": _text(),
+        "entries": _lineage_details(_object({"source_state": _text(empty=True), "target_state": _text(empty=True)}))})
+    pair = _object({
+        "comparison_id": _text(), "earlier_snapshot_id": _text(), "later_snapshot_id": _text(),
+        "kinds": _array(_enum("adjacent", "baseline"), minimum=1, unique=True),
+        "compatibility_status": _enum("available", "unavailable"), "reason_codes": _strings(),
+        "earlier_basis_id": _nullable(_text()), "later_basis_id": _nullable(_text()),
+        "harmonized_basis_id": _nullable(_text()), "mapping": _nullable(mapping),
+        "mapping_collisions": _nullable(_lineage_details(_object({
+            "target_state": _text(empty=True), "source_states": _lineage_details(_text(empty=True))}))),
+    })
+    inputs = _object({
+        "requested": {"type": "boolean"}, "baseline": _enum("none", "first"),
+        "primary_snapshot_id": _nullable(_text()), "selected_version_count": _integer(),
+        "comparison_count": _integer(), "order_source": _nullable(_text()),
+        "snapshots": _array(snapshot), "comparisons": _array(pair),
+        "representations": _array(_object({"basis_id": _text(), "representation": _ref("representation"),
+            "state_semantics": _nullable(_text()), "redaction": _nullable(_ref("redaction"))})),
+        "scopes": _array(_object({"scope_id": _text(), "snapshot_id": _text(),
+            "record_count": _integer(), "excluded_record_count": _integer(), "denominator_basis": _text()})),
+        "context_versions": _lineage_details(_text()), "context_version_count": _integer(),
+        "max_versions": _integer(minimum=1), "detail_limit": {"const": 100},
+        "redaction": _nullable(_ref("redaction")),
+    })
+    observed_fields = {}
+    observed_specs = (
+        ("record_count", "PR-002", "records", "PR-002.record_count", _integer()),
+        ("representation_eligible_record_count", "PR-011", "records", "PR-011.representation_eligible_record_count", _integer()),
+        ("representation_excluded_record_count", "PR-011", "records", "PR-011.representation_excluded_record_count", _integer()),
+        ("provenance_row_coverage", "PR-004", "ratio", "F-008", ratio),
+        ("provenance_required_field_coverage", "PR-004", "ratio", "PR-004.provenance_required_field_coverage", ratio),
+        ("grounding_field_coverage", "PR-004", "ratio", "PR-004.grounding_field_coverage", ratio),
+        ("source_type_counts", "PR-005", "records", "PR-005.source_type_counts", _object({k: _integer() for k in source_categories})),
+        ("missing_provenance_count", "PR-004", "records", "PR-004.missing_provenance_count", _integer()),
+        ("provenance_confidence_counts", "PR-004", "records", "PR-004.provenance_confidence_counts", _object({k: _integer() for k in confidence_categories})),
+        *((name, "PR-008", "reference_entries", "PR-008." + name, _integer()) for name in (
+            "declared_parent_reference_count", "resolved_parent_reference_count", "unresolved_parent_reference_count")),
+    )
+    for name, owner, unit, method, value in observed_specs:
+        observed_fields[name] = _series_field("observed_facts.longitudinal.snapshots." + name,
+                                               value, owner, unit, method, observed=True)
+    snapshot_fields = {}
+    metric_specs = (
+        ("support_size", "T1", "states", "F-002", _integer()),
+        ("gini_simpson_diversity", "T1", "dimensionless", "F-003", ratio),
+        ("source_type_shares", "PR-005", "ratio", "F-007", _object({k: ratio for k in source_categories})),
+        ("missing_provenance_share", "PR-004", "ratio", "PR-004.one_minus_row_coverage", ratio),
+        *(("direct_closure_" + name, "T3", "ratio", method, ratio) for name, method in (
+            ("lower_bound", "F-009"), ("upper_bound", "F-010"), ("interval_width", "T3.upper_minus_lower"))),
+        *((name, "T4", "records", "T4." + name, _integer()) for name in (
+            "grounded_record_count", "closed_record_count", "unresolved_record_count", "records_with_resolved_external_ancestry")),
+        ("distinct_external_root_count", "T4", "roots", "T4.root_set_union", _integer()),
+        ("ancestry_concentration_hhi", "T4", "ratio", "F-012", ratio),
+        ("effective_external_root_count", "T4", "roots", "F-013", _number(minimum=0)),
+        ("resolved_parent_edge_coverage", "PR-008", "ratio", "PR-008.resolved_edges_over_declared", ratio),
+        ("resolved_lineage_coverage", "T4", "ratio", "T4.resolved_records_over_scope", ratio),
+        ("external_ancestry_coverage", "T4", "ratio", "T4.external_roots_over_scope", ratio),
+        *(("lineage_closure_" + name, "T3", "ratio", "T3.lineage_closure", ratio)
+          for name in ("lower_bound", "upper_bound", "interval_width")),
+    )
+    for name, owner, unit, method, value in metric_specs:
+        snapshot_fields[name] = _series_field("derived_metrics.longitudinal.snapshots." + name,
+            value, owner, unit, method, representation=name in ("support_size", "gini_simpson_diversity"))
+    reference_coverage = snapshot_fields["resolved_parent_edge_coverage"]
+    reference_coverage["properties"]["no_declared_parents"] = _nullable({"type": "boolean"})
+    reference_coverage["required"].append("no_declared_parents")
+    comparisons = {}
+    delta_specs = (
+        ("record_count_delta", "T1", "records", "F-018", signed_integer),
+        ("support_delta", "T1", "states", "F-005", signed_integer),
+        ("gini_simpson_diversity_delta", "T1", "dimensionless", "F-018", signed),
+        *((name + "_delta", "PR-004", "ratio", "F-018", signed) for name in (
+            "provenance_row_coverage", "provenance_required_field_coverage", "grounding_field_coverage", "missing_provenance_share")),
+        ("source_type_share_deltas", "PR-005", "ratio", "F-018", _object({k: signed for k in source_categories})),
+        *(("direct_closure_" + name + "_delta", "T3", "ratio", "F-018", signed)
+          for name in ("lower_bound", "upper_bound", "interval_width")),
+        ("distinct_external_root_count_delta", "T4", "roots", "F-018", signed_integer),
+        ("ancestry_concentration_hhi_delta", "T4", "ratio", "F-018", signed),
+        ("effective_external_root_count_delta", "T4", "roots", "F-018", signed),
+        ("unresolved_parent_reference_count_delta", "PR-008", "reference_entries", "F-018", signed_integer),
+        ("resolved_parent_edge_coverage_delta", "PR-008", "ratio", "F-018", signed),
+        *((name + "_delta", "T4", "ratio", "F-018", signed) for name in ("resolved_lineage_coverage", "external_ancestry_coverage")),
+        *(("lineage_closure_" + name + "_delta", "T3", "ratio", "F-018", signed)
+          for name in ("lower_bound", "upper_bound", "interval_width")),
+    )
+    for name, owner, unit, method, value in delta_specs:
+        comparisons[name] = _series_field("derived_metrics.longitudinal.comparisons." + name,
+            value, owner, unit, method, pair=True, delta=True,
+            representation=name in ("support_delta", "gini_simpson_diversity_delta"))
+        if name in ("unresolved_parent_reference_count_delta", "resolved_parent_edge_coverage_delta"):
+            for side in ("earlier", "later"):
+                flag = side + "_no_declared_parents"
+                comparisons[name]["properties"][flag] = _nullable({"type": "boolean"})
+                comparisons[name]["required"].append(flag)
+    for name, owner, unit, method, value in (
+        ("support_loss_count", "T1", "states", "T1.support_set_difference", _integer()),
+        ("support_added_count", "T1", "states", "T1.support_set_difference", _integer()),
+        ("support_retention_ratio", "T1", "ratio", "F-006", ratio),
+        ("extinct_states", "T1", "set_of_states", "T1.earlier_minus_later", _lineage_details(_text(empty=True))),
+        ("added_states", "T1", "set_of_states", "T1.later_minus_earlier", _lineage_details(_text(empty=True))),
+        ("retained_states", "T1", "set_of_states", "T1.support_intersection", _lineage_details(_text(empty=True))),
+        ("tail_extinction_count", "T2", "states", "T2.earlier_tail_intersect_missing", _integer()),
+        ("tail_extinct_states", "T2", "set_of_states", "T2.earlier_tail_intersect_missing", _lineage_details(_text(empty=True))),
+    ):
+        comparisons[name] = _series_field("derived_metrics.longitudinal.comparisons." + name,
+            value, owner, unit, method, pair=True, representation=True)
+        if owner == "T2":
+            comparisons[name]["properties"].update({"tail_selection": _nullable(_ref("tail_selection")),
+                                                     "earlier_sample_size": _nullable(_integer())})
+            comparisons[name]["required"].extend(("tail_selection", "earlier_sample_size"))
+    shared = _object({"execution_status": _enum("completed", "partial", "failed"),
+        "reason_codes": _strings(), "loaded_record_count": _nullable(_integer()),
+        "unique_edge_count": _nullable(_integer()), "cycle_status": _nullable(_enum("acyclic", "cyclic")),
+        "cycle_count": _nullable(_integer()), "resource_usage": _nullable(resource_usage),
+        "graph_diagnostics": _lineage_details(_object({"code": _text(),
+            "severity": _enum("warning", "error", "fatal"), "message": _text()})),
+        "evidence_scope": {"const": "common_supplied_retrospective_graph"}})
+    observed = _object({"snapshots": _array(_object({"snapshot_id": _text(), **observed_fields})),
+                         "shared_lineage": _nullable(shared)})
+    derived = _object({"snapshots": _array(_object({"snapshot_id": _text(), **snapshot_fields})),
+        "comparisons": _array(_object({"comparison_id": _text(), **comparisons}))})
+    family = _object({"execution_status": _enum("completed", "partial", "failed", "not_requested"),
+                      "reason_codes": _strings()})
+    execution = _object({"status": _enum("completed", "partial", "failed", "not_requested"),
+        "reason_codes": _strings(), "requested_families": _array(_enum(*LONGITUDINAL_FAMILIES), unique=True),
+        "snapshot_statuses": _array(_object({"snapshot_id": _text(),
+            "families": _object({name: family for name in LONGITUDINAL_FAMILIES})})),
+        "comparison_statuses": _array(_object({"comparison_id": _text(),
+            "families": _object({name: family for name in LONGITUDINAL_FAMILIES})}))})
+    return inputs, observed, derived, execution
+
+
 def _build_contract() -> dict:
     source_categories = ("human", "synthetic", "mixed", "sensor", "unknown")
     confidence_categories = ("confirmed", "log_derived", "estimated", "unknown")
@@ -264,7 +457,7 @@ def _build_contract() -> dict:
     }, ("status", "reason_codes", "coverage", "coverage_reason", "requirements_met",
         "requirements_missing", "notes", "execution_status", "execution_scope", "execution_reason_codes"))
     run = _object({
-        "run_id": _text(), "toolkit_version": _text(), "report_schema_version": {"const": "1.1"},
+        "run_id": _text(), "toolkit_version": _text(), "report_schema_version": {"const": "1.2"},
         "started_at": _nullable(_text()), "completed_at": _nullable(_text()),
         "duration_seconds": _nullable(_number(minimum=0)), "python_version": _nullable(_text()),
         "platform": _nullable(_text()), "command": _nullable(_text()),
@@ -633,6 +826,11 @@ def _build_contract() -> dict:
         }),
         "location": location,
     }
+    series_inputs, series_observed, series_derived, series_execution = _longitudinal_contract(resource_usage)
+    inputs["properties"]["longitudinal"] = series_inputs
+    observed["properties"]["longitudinal"] = series_observed
+    derived["properties"]["longitudinal"] = series_derived
+    capability["properties"]["longitudinal_execution"] = series_execution
     schema = _object({"run": run, "inputs": inputs, "observability": observability,
         "capabilities": _ref("capabilities"), "observed_facts": observed, "derived_metrics": derived,
         "proxy_signals": _object(proxies, ()), "simulations": _object(simulations, ()),
@@ -643,8 +841,8 @@ def _build_contract() -> dict:
         "warnings": _array(warning), "errors": _array(error)})
     return {"$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": "https://recursive-integrity-toolkit.example/schemas/report.schema.json",
-            "title": "Recursive Integrity Toolkit canonical report 1.1",
-            "description": "Phase 5 public contract with bounded lineage evidence. Product metadata and five analytical evidence classes remain separate.",
+            "title": "Recursive Integrity Toolkit canonical report 1.2",
+            "description": "Phase 6A public contract with referenced longitudinal and bounded lineage evidence. Product metadata and five analytical evidence classes remain separate.",
             **schema, "$defs": defs}
 
 
@@ -858,7 +1056,7 @@ def _check_nullable_reason(value: dict, name: str, reason_name: str, path: str) 
         _fail(path, "null requires its reason; a present value cannot carry a null reason")
 
 
-def _lineage_detail_checks(detail: dict) -> None:
+def _lineage_detail_checks(detail: dict, *, unique: bool = True) -> None:
     path = "$.lineage.details"
     for name in ("total_count", "returned_count", "omitted_count", "limit"):
         if type(detail[name]) is not int:
@@ -877,8 +1075,8 @@ def _lineage_detail_checks(detail: dict) -> None:
         _fail(path, "visible detail must contain the bounded prefix of the supplied total")
     elif (status == "complete") != (omitted == 0):
         _fail(path, "detail status disagrees with omitted count")
-    if items:
-        identities = [row.get("record_key", row) for row in items]
+    if items and unique:
+        identities = [row.get("record_key", row) if type(row) is dict else row for row in items]
         if len({_equality_key(key) for key in identities}) != len(identities):
             _fail(path, "detail identities must be unique")
 
@@ -1127,6 +1325,420 @@ def _lineage_semantic_checks(payload: dict) -> None:
             _fail("$.lineage.reference_coverage", "reference coverage contradicts its declared count basis")
 
 
+def _series_equal(actual, expected) -> bool:
+    if type(actual) is dict and type(expected) is dict:
+        return set(actual) == set(expected) and all(_series_equal(actual[k], expected[k]) for k in actual)
+    if type(actual) in (int, float) and type(expected) in (int, float):
+        return math.isclose(actual, expected, rel_tol=1e-12, abs_tol=1e-12)
+    return _same(actual, expected)
+
+
+def _series_snapshot_checks(observed: dict, metrics: dict, population: dict) -> None:
+    """Check supplied count partitions and ratios without reconstructing inputs."""
+    path = "$.longitudinal.snapshots"
+    n = population["record_count"]
+    value = lambda name: (observed if name in observed else metrics)[name]["value"]
+    if value("record_count") != n:
+        _fail(path, "record count disagrees with its complete population")
+    eligible, excluded = value("representation_eligible_record_count"), value("representation_excluded_record_count")
+    if eligible is not None and excluded is not None and eligible + excluded != n:
+        _fail(path, "representation counts must partition the population")
+    for row in (observed, metrics):
+        for name, envelope in row.items():
+            if name == "snapshot_id":
+                continue
+            denominator = n
+            if name in ("support_size", "gini_simpson_diversity"):
+                denominator = eligible or None
+            elif name in ("ancestry_concentration_hhi", "effective_external_root_count"):
+                denominator = value("grounded_record_count")
+            elif name in ("declared_parent_reference_count", "resolved_parent_reference_count",
+                          "unresolved_parent_reference_count", "resolved_parent_edge_coverage"):
+                denominator = value("declared_parent_reference_count")
+            if envelope["denominator"] != denominator:
+                _fail(path, "snapshot metric must retain its declared population or allocation denominator")
+    missing = value("missing_provenance_count")
+    if missing is not None and missing > n:
+        _fail(path, "missing provenance exceeds the population")
+    for name in ("source_type_counts", "provenance_confidence_counts"):
+        counts = value(name)
+        if counts is not None and sum(counts.values()) > n:
+            _fail(path, "category counts exceed the population")
+    if n and missing is not None:
+        for name, expected in (("missing_provenance_share", missing / n),
+                               ("provenance_row_coverage", (n - missing) / n)):
+            if value(name) is not None and not _series_equal(value(name), expected):
+                _fail(path, "provenance coverage disagrees with its complete population")
+        counts, shares = value("source_type_counts"), value("source_type_shares")
+        if counts is not None and shares is not None:
+            if sum(counts.values()) + missing != n:
+                _fail(path, "source counts and missing rows must partition the population")
+            if any(not _series_equal(shares[key], count / n) for key, count in counts.items()):
+                _fail(path, "source shares disagree with the complete population")
+    for family in ("direct", "lineage"):
+        entries = [metrics[f"{family}_closure_{name}"] for name in ("lower_bound", "upper_bound", "interval_width")]
+        values = [entry["value"] for entry in entries]
+        if any(x is not None for x in values):
+            if any(x is None for x in values) or values[0] > values[1] or not _series_equal(values[2], values[1] - values[0]):
+                _fail(path, "closure interval must retain consistent endpoints and width")
+            if any(entry["denominator"] != n for entry in entries):
+                _fail(path, "closure interval must disclose its complete population denominator")
+    grounded, closed, unresolved = (value(name) for name in (
+        "grounded_record_count", "closed_record_count", "unresolved_record_count"))
+    if any(x is not None for x in (grounded, closed, unresolved)):
+        if any(x is None for x in (grounded, closed, unresolved)) or grounded + closed + unresolved != n:
+            _fail(path, "lineage classifications must partition the complete population")
+        if value("records_with_resolved_external_ancestry") != grounded + closed:
+            _fail(path, "resolved ancestry count disagrees with classifications")
+        for name, numerator in (("resolved_lineage_coverage", grounded + closed),
+                                ("external_ancestry_coverage", grounded)):
+            expected = numerator / n if n else None
+            if not _series_equal(value(name), expected):
+                _fail(path, "lineage coverage disagrees with its complete population")
+        hhi, effective, roots = (value(name) for name in (
+            "ancestry_concentration_hhi", "effective_external_root_count", "distinct_external_root_count"))
+        if grounded == 0:
+            if hhi is not None or effective is not None or roots != 0:
+                _fail(path, "empty grounded population has no concentration or supporting roots")
+        elif (hhi is None or hhi <= 0 or effective is None or roots is None or roots < 1
+              or not _series_equal(hhi * effective, 1)):
+            _fail(path, "positive grounded population requires reciprocal concentration values")
+        for name in ("ancestry_concentration_hhi", "effective_external_root_count"):
+            if metrics[name]["denominator"] != grounded:
+                _fail(path, "concentration must retain its grounded allocation denominator")
+            if grounded and unresolved and metrics[name]["status"] != "partial":
+                _fail(path, "incomplete ancestry cannot claim complete concentration")
+        if n:
+            for name, numerator in (("lower_bound", closed), ("upper_bound", closed + unresolved), ("interval_width", unresolved)):
+                if not _series_equal(value("lineage_closure_" + name), numerator / n):
+                    _fail(path, "lineage interval disagrees with classifications")
+    elif any(value(name) is not None for name in ("distinct_external_root_count", "ancestry_concentration_hhi",
+            "effective_external_root_count", "resolved_lineage_coverage", "external_ancestry_coverage")):
+        _fail(path, "uncomputed ancestry cannot supply dependent metrics")
+    declared, resolved, unresolved_refs = (value(name) for name in (
+        "declared_parent_reference_count", "resolved_parent_reference_count", "unresolved_parent_reference_count"))
+    reference_coverage = metrics["resolved_parent_edge_coverage"]
+    if any(x is not None for x in (declared, resolved, unresolved_refs)):
+        if any(x is None for x in (declared, resolved, unresolved_refs)) or resolved + unresolved_refs != declared:
+            _fail(path, "resolved and unresolved declarations must partition reference entries")
+        if (reference_coverage["no_declared_parents"] != (declared == 0)
+                or reference_coverage["denominator"] != declared
+                or not _series_equal(reference_coverage["value"], resolved / declared if declared else 1)):
+            _fail(path, "reference coverage must retain the inherited zero-declaration convention")
+    elif reference_coverage["value"] is not None or reference_coverage["no_declared_parents"] is not None:
+        _fail(path, "uncomputed references cannot supply coverage or zero-reference assertions")
+
+
+def _longitudinal_semantic_checks(payload: dict) -> None:
+    path = "$.longitudinal"
+    inputs = payload["inputs"].get("longitudinal")
+    observed = payload["observed_facts"].get("longitudinal")
+    derived = payload["derived_metrics"].get("longitudinal")
+    execution = payload["capabilities"].get("dataset_longitudinal", {}).get("longitudinal_execution")
+    if inputs is None and observed is None and derived is None and execution is None:
+        return
+    if any(value is None for value in (inputs, observed, derived, execution)):
+        _fail(path, "longitudinal inputs, evidence and execution must appear together")
+    if any("longitudinal_execution" in value for key, value in payload["capabilities"].items() if key != "dataset_longitudinal"):
+        _fail(path, "series execution belongs to the dataset-longitudinal capability")
+    snapshots, pairs, scopes, bases = (inputs[name] for name in ("snapshots", "comparisons", "scopes", "representations"))
+    snapshot_ids = [row["snapshot_id"] for row in snapshots]
+    pair_ids = [row["comparison_id"] for row in pairs]
+    if snapshot_ids != [f"s{index:04d}" for index in range(1, len(snapshots) + 1)]:
+        _fail(path, "snapshot structural IDs must follow their declared sequence")
+    if pair_ids != [f"p{index:04d}" for index in range(1, len(pairs) + 1)]:
+        _fail(path, "comparison structural IDs must follow the exact schedule")
+    basis_ids = [row["basis_id"] for row in bases]
+    if basis_ids != [f"b{index:04d}" for index in range(1, len(bases) + 1)]:
+        _fail(path, "basis declarations require distinct structural IDs in encounter order")
+    scope_ids = [row["scope_id"] for row in scopes]
+    if len(scope_ids) != len(set(scope_ids)):
+        _fail(path, "scope IDs must be unique")
+    scope_map = {row["scope_id"]: row for row in scopes}
+    snapshot_map = {row["snapshot_id"]: row for row in snapshots}
+    observed_map = {row["snapshot_id"]: row for row in observed["snapshots"]}
+    metric_map = {row["snapshot_id"]: row for row in derived["snapshots"]}
+    for rows in (observed["snapshots"], derived["snapshots"], execution["snapshot_statuses"]):
+        if [row["snapshot_id"] for row in rows] != snapshot_ids:
+            _fail(path, "snapshot evidence and status rows must match the complete declared sequence")
+    for rows in (derived["comparisons"], execution["comparison_statuses"]):
+        if [row["comparison_id"] for row in rows] != pair_ids:
+            _fail(path, "comparison evidence and status rows must match the intended schedule")
+    if inputs["comparison_count"] != len(pairs) or inputs["context_version_count"] != inputs["context_versions"]["total_count"]:
+        _fail(path, "exact public counts disagree with their declared inventories")
+    reasons = execution["reason_codes"]
+    if (execution["status"] == "completed") != (not reasons):
+        _fail(path, "execution status must retain explicit noncompleted reasons")
+    if not inputs["requested"]:
+        if (execution["status"] != "not_requested" or execution["requested_families"] or snapshots or pairs or scopes or bases
+                or inputs["selected_version_count"] or inputs["primary_snapshot_id"] is not None
+                or inputs["order_source"] is not None or observed["shared_lineage"] is not None):
+            _fail(path, "unrequested series cannot contain calculated work")
+        return
+    requested = execution["requested_families"]
+    if requested[:3] != list(LONGITUDINAL_FAMILIES[:3]) or requested != [name for name in LONGITUDINAL_FAMILIES if name in requested]:
+        _fail(path, "requested series must declare its required families in canonical order")
+    if execution["status"] == "not_requested":
+        _fail(path, "requested series requires an execution outcome")
+    outer = payload["capabilities"]["dataset_longitudinal"]
+    if (outer["execution_status"] != execution["status"]
+            or outer["execution_reason_codes"] != execution["reason_codes"]):
+        _fail(path, "requested series execution must agree with its capability execution mirror")
+    admission_failed = ("R_LONGITUDINAL_RESOURCE_LIMIT" in reasons and execution["status"] == "failed" and not snapshots)
+    selection_failed = ("R_LONGITUDINAL_SELECTION_INVALID" in reasons and execution["status"] == "failed"
+                        and inputs["order_source"] is None and not pairs)
+    if not admission_failed and not selection_failed and inputs["selected_version_count"] != len(snapshots):
+        _fail(path, "selected-version count must preserve every selected snapshot")
+    if selection_failed and inputs["selected_version_count"] < len(snapshots):
+        _fail(path, "failed selection cannot retain more populations than supplied declarations")
+    if inputs["selected_version_count"] > inputs["max_versions"] and not admission_failed:
+        _fail(path, "version admission cannot silently truncate selected work")
+    if inputs["order_source"] is None:
+        if execution["status"] != "failed" or pairs or inputs["primary_snapshot_id"] is not None:
+            _fail(path, "failed selection cannot fabricate chronology or comparisons")
+    else:
+        if len(snapshots) < 2 or inputs["primary_snapshot_id"] not in snapshot_map:
+            _fail(path, "ordered series requires its primary snapshot and at least two versions")
+        if snapshot_map[inputs["primary_snapshot_id"]]["input_role"] != "records_primary":
+            _fail(path, "primary snapshot reference must name the primary input population")
+        schedule = []
+        for later in range(1, len(snapshots)):
+            if inputs["baseline"] == "first":
+                schedule.append((snapshot_ids[0], snapshot_ids[later], ["adjacent", "baseline"] if later == 1 else ["baseline"]))
+            if inputs["baseline"] == "none" or later > 1:
+                schedule.append((snapshot_ids[later - 1], snapshot_ids[later], ["adjacent"]))
+        if [(row["earlier_snapshot_id"], row["later_snapshot_id"], row["kinds"]) for row in pairs] != schedule:
+            _fail(path, "comparisons must retain the exact adjacent and optional first-baseline schedule")
+    literal_versions = [row["dataset_version"] for row in snapshots if row["dataset_version"] is not None]
+    if len(literal_versions) != len(set(literal_versions)):
+        _fail(path, "selected version literals must be distinct")
+    if inputs["order_source"] is not None and len(literal_versions) == len(snapshots):
+        retained_order = payload["inputs"].get("version_order", [])
+        if retained_order and [version for version in retained_order if version in literal_versions] != literal_versions:
+            _fail(path, "selected snapshot chronology must be a subsequence of the retained input order")
+    if inputs["order_source"] is not None:
+        primary = inputs["primary_snapshot_id"]
+        if [row["snapshot_id"] for row in snapshots if row["input_role"] == "records_primary"] != [primary]:
+            _fail(path, "ordered series requires exactly one primary snapshot")
+        nonempty = [row["snapshot_id"] for row in snapshots if not row["empty_scope"]]
+        if not nonempty or primary != nonempty[-1]:
+            _fail(path, "primary snapshot must be the latest nonempty selected population")
+    allowed_scopes = set()
+    for ordinal, descriptor in enumerate(snapshots, 1):
+        sid = descriptor["snapshot_id"]
+        population_id, representation_id = descriptor["population_scope_id"], descriptor["representation_scope_id"]
+        if descriptor["ordinal"] != ordinal or population_id != sid + ".population" or population_id not in scope_map:
+            _fail(path, "snapshot ordinals and complete population scopes must match their structural identity")
+        allowed_scopes.add(population_id)
+        population = scope_map[population_id]
+        if (population["snapshot_id"] != sid or population["excluded_record_count"] != 0
+                or population["denominator_basis"] != "selected_valid_records"
+                or descriptor["empty_scope"] != (population["record_count"] == 0)
+                or (descriptor["input_role"] == "declared_empty") != descriptor["empty_scope"]):
+            _fail(path, "snapshot population scope must retain exact membership totals and empty declarations")
+        if descriptor["basis_id"] is not None and descriptor["basis_id"] not in basis_ids:
+            _fail(path, "snapshot basis reference is foreign")
+        if representation_id is not None:
+            if representation_id != sid + ".representation" or representation_id not in scope_map:
+                _fail(path, "representation scope must resolve within its selected snapshot")
+            allowed_scopes.add(representation_id)
+            scope = scope_map[representation_id]
+            if (scope["snapshot_id"] != sid or scope["record_count"] + scope["excluded_record_count"] != population["record_count"]
+                    or scope["denominator_basis"] != "included_representation_records"):
+                _fail(path, "representation scope must partition the complete population")
+        redaction = descriptor["redaction"]
+        if (descriptor["dataset_version"] is None) != (redaction is not None and "dataset_version" in redaction["omitted_fields"]):
+            _fail(path, "omitted version literal must retain explicit identity redaction metadata")
+        for row in (observed_map[sid], metric_map[sid]):
+            for name, envelope in row.items():
+                if name == "snapshot_id":
+                    continue
+                expected_scope = representation_id if name in ("support_size", "gini_simpson_diversity") else population_id
+                if envelope["scope_id"] != (expected_scope or population_id):
+                    _fail(path, "snapshot envelope references the wrong selected scope")
+                if envelope["basis_id"] is not None and envelope["basis_id"] != descriptor["basis_id"]:
+                    _fail(path, "snapshot envelope references the wrong representation basis")
+        _series_snapshot_checks(observed_map[sid], metric_map[sid], population)
+    for basis in bases:
+        omitted = basis["redaction"] is not None and "state_semantics" in basis["redaction"]["omitted_fields"]
+        if (basis["state_semantics"] is None) != omitted:
+            _fail(path, "omitted state meaning requires explicit redaction metadata")
+        if payload["run"]["redacted_mode"] and basis["state_semantics"] is not None:
+            _fail(path, "redacted reports cannot retain user state-meaning text")
+    for descriptor, row in zip(pairs, derived["comparisons"]):
+        pid = descriptor["comparison_id"]
+        earlier, later = (snapshot_map[descriptor[key]] for key in ("earlier_snapshot_id", "later_snapshot_id"))
+        for side, endpoint in (("earlier", earlier), ("later", later)):
+            if descriptor[side + "_basis_id"] != endpoint["basis_id"]:
+                _fail(path, "comparison basis does not match its endpoint declaration")
+            optional_scope = pid + "." + side
+            if optional_scope in scope_map:
+                allowed_scopes.add(optional_scope)
+                scope = scope_map[optional_scope]
+                population = scope_map[endpoint["population_scope_id"]]
+                if scope["snapshot_id"] != endpoint["snapshot_id"] or scope["record_count"] + scope["excluded_record_count"] != population["record_count"]:
+                    _fail(path, "harmonized endpoint scope must retain its selected population")
+        basis = descriptor["harmonized_basis_id"]
+        if descriptor["compatibility_status"] == "available":
+            if basis not in basis_ids or descriptor["reason_codes"]:
+                _fail(path, "compatible comparison requires its declared harmonized basis")
+        elif basis is not None or not descriptor["reason_codes"]:
+            _fail(path, "blocked comparison must preserve its gap and reasons")
+        mapping = descriptor["mapping"]
+        if mapping is not None:
+            source, target = (earlier, later) if mapping["direction"] == "earlier_to_later" else (later, earlier)
+            if mapping["source_basis_id"] != source["basis_id"] or mapping["target_basis_id"] != target["basis_id"]:
+                _fail(path, "directed mapping basis references do not match its endpoints")
+            if descriptor["mapping_collisions"] is None and descriptor["compatibility_status"] == "available":
+                _fail(path, "mapping summary requires bounded collision evidence")
+            groups = descriptor["mapping_collisions"]
+            if groups is not None and groups["items"] is not None:
+                targets = [group["target_state"] for group in groups["items"]]
+                if len(targets) != len(set(targets)):
+                    _fail(path, "mapping collision groups require distinct target identities")
+            for group in (() if groups is None else groups["items"] or ()):
+                if group["source_states"]["total_count"] < 2:
+                    _fail(path, "collision group requires at least two source states")
+        elif descriptor["mapping_collisions"] is not None:
+            _fail(path, "unmapped comparison cannot contain mapping collision evidence")
+        for name, envelope in row.items():
+            if name == "comparison_id":
+                continue
+            for side, endpoint in (("earlier", earlier), ("later", later)):
+                scope_id = envelope[side + "_scope_id"]
+                if scope_id not in scope_map or scope_map[scope_id]["snapshot_id"] != endpoint["snapshot_id"]:
+                    _fail(path, "comparison envelope references a foreign endpoint scope")
+            if envelope["basis_id"] is not None and envelope["basis_id"] != basis:
+                _fail(path, "comparison envelope references a foreign harmonized basis")
+            if descriptor["compatibility_status"] == "unavailable" and envelope["status"] != "unavailable":
+                _fail(path, "blocked comparison cannot contain a completed metric")
+            if "earlier_value" in envelope:
+                a, b, value = (envelope[key] for key in ("earlier_value", "later_value", "value"))
+                if value is not None:
+                    if a is None or b is None:
+                        _fail(path, "available difference requires both explicit endpoint values")
+                    expected = {key: b[key] - a[key] for key in value} if type(value) is dict else b - a
+                    if not _series_equal(value, expected):
+                        _fail(path, "difference must equal later minus earlier")
+                endpoint_name = "source_type_shares" if name == "source_type_share_deltas" else name.removesuffix("_delta")
+                if endpoint_name == "support":
+                    endpoint_name = "support_size"
+                if name not in ("support_delta", "gini_simpson_diversity_delta") or mapping is None:
+                    for side, endpoint in (("earlier", earlier), ("later", later)):
+                        sid = endpoint["snapshot_id"]
+                        source = observed_map[sid] if endpoint_name in observed_map[sid] else metric_map[sid]
+                        source_envelope = source[endpoint_name]
+                        if not _series_equal(envelope[side + "_value"], source_envelope["value"]):
+                            _fail(path, "difference endpoint value disagrees with its declared snapshot")
+                        not_requested = "R_LONGITUDINAL_FAMILY_NOT_REQUESTED" in envelope["reason_codes"]
+                        expected_denominator = None if name == "record_count_delta" or not_requested else source_envelope["denominator"]
+                        if envelope[side + "_denominator"] != expected_denominator:
+                            _fail(path, "difference endpoint denominator disagrees with its declared snapshot")
+                        if envelope[side + "_reason_codes"] != source_envelope["reason_codes"]:
+                            _fail(path, "difference endpoint must preserve the source reason list")
+                        endpoint_coverage = envelope[side + "_coverage"]
+                        count = scope_map[endpoint["population_scope_id"]]["record_count"]
+                        coverage_denominator = count
+                        coverage_name = "all_valid_records_in_selected_dataset_scope"
+                        source_coverage = source_envelope["coverage"]
+                        if name == "record_count_delta" or not_requested:
+                            coverage_expected = False
+                        elif endpoint_name in ("support_size", "gini_simpson_diversity"):
+                            coverage_expected = endpoint["representation_scope_id"] is not None
+                            coverage_name = "selected_valid_records"
+                        elif endpoint_name in ("unresolved_parent_reference_count", "resolved_parent_edge_coverage"):
+                            coverage_denominator = observed_map[sid]["declared_parent_reference_count"]["value"]
+                            coverage_expected = coverage_denominator is not None
+                            coverage_name = "declared_parent_references"
+                        elif endpoint_name in ("distinct_external_root_count", "ancestry_concentration_hhi", "effective_external_root_count"):
+                            coverage_expected = metric_map[sid]["grounded_record_count"]["value"] is not None
+                        elif endpoint_name in ("resolved_lineage_coverage", "external_ancestry_coverage") or endpoint_name.startswith("lineage_closure_"):
+                            coverage_expected = metric_map[sid]["records_with_resolved_external_ancestry"]["value"] is not None
+                        else:
+                            coverage_expected = count > 0
+                        if (endpoint_coverage is not None) != coverage_expected:
+                            _fail(path, "difference endpoint must preserve source coverage presence")
+                        if endpoint_coverage is not None:
+                            if (endpoint_coverage["denominator"] != coverage_denominator
+                                    or endpoint_coverage["denominator_name"] != coverage_name):
+                                _fail(path, "difference endpoint must preserve its named coverage population")
+                            expected_coverage = endpoint_coverage["ratio"]
+                            if endpoint_name in ("unresolved_parent_reference_count", "resolved_parent_edge_coverage") and endpoint_coverage["denominator"] == 0:
+                                expected_coverage = 1
+                            if not _series_equal(source_coverage, expected_coverage):
+                                _fail(path, "difference endpoint coverage disagrees with its declared snapshot")
+                        flag = side + "_no_declared_parents"
+                        if flag in envelope and envelope[flag] != metric_map[sid]["resolved_parent_edge_coverage"]["no_declared_parents"]:
+                            _fail(path, "difference endpoint lost its zero-reference convention")
+        for count, table in (("support_loss_count", "extinct_states"), ("support_added_count", "added_states"),
+                             ("tail_extinction_count", "tail_extinct_states")):
+            if row[table]["value"] is not None and row[count]["value"] != row[table]["value"]["total_count"]:
+                _fail(path, "bounded state detail must preserve its exact count")
+        retention = row["support_retention_ratio"]
+        retained = row["retained_states"]["value"]
+        if retention["value"] is not None:
+            if retained is None or not retention["denominator"] or not _series_equal(retention["value"], retained["total_count"] / retention["denominator"]):
+                _fail(path, "retention must use its earlier positive-mass support denominator")
+    if set(scope_ids) != allowed_scopes:
+        _fail(path, "scope inventory contains foreign or unreferenced scopes")
+    statuses = []
+    for row in (*execution["snapshot_statuses"], *execution["comparison_statuses"]):
+        for family, status in row["families"].items():
+            if (status["execution_status"] == "completed") != (not status["reason_codes"]):
+                _fail(path, "family execution state must retain its explicit reasons")
+            if family not in requested and status["execution_status"] != "not_requested":
+                _fail(path, "omitted optional families cannot claim executed work")
+            if "snapshot_id" in row:
+                sid = row["snapshot_id"]
+                candidates = (*observed_map[sid].items(), *metric_map[sid].items())
+            else:
+                candidates = next(item for item in derived["comparisons"] if item["comparison_id"] == row["comparison_id"]).items()
+            for name, envelope in candidates:
+                if name in ("snapshot_id", "comparison_id"):
+                    continue
+                lineage_metric = (name.startswith("lineage_closure_") or "parent_reference_count" in name
+                    or name.startswith("resolved_parent_edge_coverage") or name.startswith("resolved_lineage_coverage")
+                    or name.startswith("external_ancestry_coverage") or name.startswith("distinct_external_root_count")
+                    or name.startswith("ancestry_concentration_hhi") or name.startswith("effective_external_root_count")
+                    or name in ("grounded_record_count", "closed_record_count", "unresolved_record_count", "records_with_resolved_external_ancestry"))
+                field_family = ("lineage" if lineage_metric else "tail" if name.startswith("tail_") else
+                    "direct_closure" if name.startswith("direct_closure_") else
+                    "provenance" if any(part in name for part in ("provenance", "source_type", "grounding_field")) else "distribution")
+                if field_family == family:
+                    if status["execution_status"] == "completed" and envelope["status"] != "available":
+                        _fail(path, "completed family cannot contain partial or unavailable required evidence")
+                    if family not in requested:
+                        if envelope["value"] is not None or "R_LONGITUDINAL_FAMILY_NOT_REQUESTED" not in envelope["reason_codes"]:
+                            _fail(path, "unrequested optional family must retain null evidence and its explicit reason")
+            if family in requested and status["execution_status"] == "not_requested" and not (family == "tail" and "snapshot_id" in row):
+                _fail(path, "requested family cannot claim it was not requested")
+            if family in requested and not (family == "tail" and "snapshot_id" in row and status["execution_status"] == "not_requested"):
+                statuses.append(status["execution_status"])
+    if execution["status"] == "completed" and any(status != "completed" for status in statuses):
+        _fail(path, "completed series requires every requested family and comparison to complete")
+    useful = any(envelope["value"] is not None for row in derived["comparisons"]
+                 for name, envelope in row.items() if name != "comparison_id" and "earlier_value" in envelope)
+    if ((execution["status"] == "partial" and not useful)
+            or (execution["status"] == "failed" and useful)):
+        _fail(path, "partial and failed execution must distinguish useful supplied comparison values")
+    shared = observed["shared_lineage"]
+    if (shared is not None) != ("lineage" in requested):
+        _fail(path, "shared graph evidence must reflect explicit lineage enablement")
+    if shared is not None:
+        if shared["execution_status"] != "completed" and not shared["reason_codes"]:
+            _fail(path, "incomplete shared graph requires explicit reasons")
+        if shared["cycle_status"] is not None and ((shared["cycle_status"] == "cyclic") != bool(shared["cycle_count"])):
+            _fail(path, "shared cycle count and status disagree")
+        if shared["resource_usage"] is not None:
+            _lineage_usage_checks(shared["resource_usage"], shared["execution_status"])
+            usage = shared["resource_usage"]
+            if shared["loaded_record_count"] is not None and (shared["loaded_record_count"] != usage["admitted_node_count"]
+                    or shared["loaded_record_count"] < sum(scope_map[row["population_scope_id"]]["record_count"] for row in snapshots)):
+                _fail(path, "shared loaded scope must include every selected population and agree with admitted nodes")
+            if shared["unique_edge_count"] is not None and shared["unique_edge_count"] != usage["admitted_edge_count"]:
+                _fail(path, "shared unique edge count must agree with admitted graph evidence")
+
+
 def _semantic_checks(payload: dict) -> None:
     run = payload["run"]
     null_fields = {key for key in RUN_NULLABLE_FIELDS if run[key] is None}
@@ -1149,6 +1761,7 @@ def _semantic_checks(payload: dict) -> None:
         if capability["execution_status"] in ("completed", "partial") and not capability["execution_scope"]:
             _fail("$.capabilities", "executed work must name its operation scope")
     _lineage_semantic_checks(payload)
+    _longitudinal_semantic_checks(payload)
     tail = payload["derived_metrics"].get("tail", {})
     if "tail_rule" in tail and "selection" in tail and tail["tail_rule"] != tail["selection"]["rule"]:
         _fail("$.derived_metrics.tail", "tail rule declarations disagree")
@@ -1167,7 +1780,8 @@ def _semantic_checks(payload: dict) -> None:
         if type(item) is not dict:
             continue
         if "detail_status" in contract.get("properties", {}):
-            _lineage_detail_checks(item)
+            _lineage_detail_checks(item, unique=path != (
+                "observed_facts", "longitudinal", "shared_lineage", "graph_diagnostics"))
         if contract is _REPORT_SCHEMA["$defs"]["coverage"]:
             if item["numerator"] > item["denominator"]:
                 _fail("$.coverage", "coverage numerator exceeds denominator")

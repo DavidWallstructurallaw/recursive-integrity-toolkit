@@ -637,6 +637,7 @@ class BundleValidationResult:
     content_read_keys: tuple[RecordKey, ...]
     validation_messages: tuple[ValidationMessage, ...]
     parent_validation: ParentBatchValidationResult | None = field(default=None, repr=False)
+    content_mode: ContentMode = ContentMode.INLINE
 
     @property
     def has_errors(self) -> bool:

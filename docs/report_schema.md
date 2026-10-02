@@ -1,6 +1,6 @@
 # Report Schema
 
-Status: Phase 5 dev4 development report contract (`0.1.0.dev4`). Schema version: `1.1`.
+Status: Phase 6A dev5 candidate report contract (`0.1.0.dev5`). Schema version: `1.2`. Candidate verification is recorded in [Phase 6A completion](../PHASE_6A_COMPLETION.md).
 
 The authoritative public shape is `schemas/report.schema.json`, Draft 2020-12. Runtime validation is implemented in `result.py` using the standard library. `report_schema()` returns a detached copy of the same declarative contract. No runtime schema package, filesystem lookup or remote resolver is used. The `$schema` and `$id` identifiers are descriptive; all references are local `$defs` references.
 
@@ -8,7 +8,8 @@ The authoritative public shape is `schemas/report.schema.json`, Draft 2020-12. R
 
 The installed CLI publishes `report.json` and `report.md` from the same validated
 privacy view. `audit` computes explicitly requested supported families; `validate`
-keeps analytical sections empty; `example` runs the packaged explicit Hero pair.
+keeps calculations unrequested and retains explicit series metadata; `example`
+runs the packaged explicit Hero pair or an explicitly requested series.
 Default `simulations` is `{}`. Existing Python scenario results may be supplied
 explicitly to assembly, but CLI simulation execution is unsupported. Python
 callers can supply completed lineage, lineage bounds and shared-root proxy
@@ -16,12 +17,17 @@ results explicitly. `audit --lineage` and `example --lineage` compute these
 families explicitly. Input inventories and diagnostic locations accept the
 dedicated `lineage_context` role. Graph scope counts loaded context separately
 from the primary target; ordinary metric denominators remain scoped to their
-selected primary/comparison versions. Broader longitudinal orchestration and
-HTML remain deferred.
+selected primary/comparison versions. `audit --longitudinal` requests ordered
+snapshot and pair results; `example --longitudinal` uses the unchanged Hero pair,
+and `example --dataset longitudinal --longitudinal` uses the separate three-version
+example. Adding `--lineage` requests every selected target from shared graph
+evidence. HTML remains deferred.
 
 Capability eligibility and execution are separate. An input Level 4 report can
-retain `not_requested` lineage, and a completed explicit pair has partial longitudinal
-execution because additional change families remain deferred. This alone does
+retain `not_requested` lineage, and a completed ordinary explicit pair retains
+partial capability execution because its operation scope is limited. Its separate
+series execution remains `not_requested`. An explicitly requested series has its
+own completed/partial/failed execution record. Limited ordinary pair scope alone does
 not create an error. Unavailable values retain null plus their required reasons,
 while actual zero and empty measured sets remain values.
 
@@ -62,7 +68,7 @@ Existing Phase 3 calculation contracts and their three-class enum remain unchang
 | 11 | `warnings` | array | PR-014 | `[]` |
 | 12 | `errors` | array | PR-014 | `[]` |
 
-Every section is present in empty, validation-only and error-only reports. Empty analytical sections contain no invented measurements. `run` always contains the complete required metadata, with explicitly explained nulls where no execution supplied a value. A schema-only contract fixture may use a complete run status and documented non-execution nulls. An actual failed audit uses failed or partial status and structured errors.
+Every section is present in empty, validation-only and error-only reports. Empty analytical sections contain no invented measurements. Ordinary and validation reports retain explicit unrequested longitudinal structures, including empty snapshot/comparison arrays and `not_requested` execution; validation supplies no calculated values. `run` always contains the complete required metadata, with explicitly explained nulls where no execution supplied a value. A schema-only contract fixture may use a complete run status and documented non-execution nulls. An actual failed audit uses failed or partial status and structured errors.
 
 ## Interpretation and null rules
 
@@ -81,6 +87,55 @@ Every section is present in empty, validation-only and error-only reports. Empty
 Input capability status is `available`, `partial`, `unavailable` or `experimental`. Execution status is independently `completed`, `partial`, `not_requested`, `deferred` or `failed`. Executed work names its operations in `execution_scope`; all noncompleted statuses carry `execution_reason_codes`. A nonempty matrix contains exactly the seven approved capability keys. Its copy at `observability.capabilities` is structurally equal on input and shares the same immutable object in the canonical result. A mismatch is rejected.
 
 `observability` may be empty before assessment; otherwise all six fields are required. Maximum level 0–5 must match its exact registered label. Level 4 input eligibility can coexist with lineage execution `not_requested`. Supplied lineage results retain their actual `completed`, `partial` or `failed` execution status. Without an explicit result, existing declared/resolved edge observations and the explicitly named earlier-version ordering certificate retain their limited validation provenance.
+
+## Longitudinal fields in schema 1.2
+
+Series structures use ordered arrays and structural references. Dataset/state
+identities remain values, preventing identity-bearing dictionary keys in the new
+family. The complete field, unit and method inventory is fixed in the
+[longitudinal contract](longitudinal_contract.md#4-public-report-contract-schema-12).
+The ordinary analytical registry below keeps its existing meanings.
+
+| Path | Purpose |
+|---|---|
+| `inputs.longitudinal` | Explicit request, baseline, primary snapshot reference, selected/comparison counts, order source, snapshots, comparisons, representations, scopes, bounded context versions and limits |
+| `observed_facts.longitudinal.snapshots` | Full-population counts, state-count details, provenance counts/coverage and target reference observations |
+| `observed_facts.longitudinal.shared_lineage` | One shared graph execution/status, loaded records, unique edges, cycles, resource usage and bounded diagnostics; null when unrequested |
+| `derived_metrics.longitudinal.snapshots` | Snapshot distributions, provenance shares, direct bounds and explicitly requested lineage values |
+| `derived_metrics.longitudinal.comparisons` | Directed pair support/state differences, named later-minus-earlier deltas and optional earlier-tail disappearance |
+| `capabilities.dataset_longitudinal.longitudinal_execution` | Series status/reasons, requested families and separate snapshot/comparison family statuses |
+| `observability.capabilities.dataset_longitudinal.longitudinal_execution` | Equal capability mirror |
+
+Required series families are `distribution`, `provenance` and `direct_closure`.
+Optional `tail` and `lineage` retain `not_requested` when omitted and do not make
+an otherwise complete request partial. Series status is `completed` only when
+every requested pair/family completes; `partial` preserves useful comparison
+values alongside incomplete work. Selection/order/admission failure or absence
+of usable comparison-family values gives `failed`, while independently valid
+snapshot evidence survives. No requested series yields `not_requested`.
+
+Every difference is later minus earlier in its endpoint unit. F-005 remains the
+support-delta method; the other numerical differences use F-018. Each delta
+references both complete endpoint scopes, values, statuses, denominators,
+coverage and reasons. Counts, ratios and root counts retain distinct units.
+Unavailable endpoints produce null differences with side-specific reasons.
+Partially resolved grounded-subset concentration may remain finite and partial;
+zero grounded records leave HHI/effective roots unavailable. Direct and lineage
+closure bounds remain separate.
+
+Snapshot scope and representation rows are stored once and referenced by
+`scope_id`/`basis_id`. New state/root detail tables use a 100-item display cap
+with exact total/returned/omitted counts. Aggregates use complete eligible data.
+No series pair fills the old singular comparison slot. The CLI may reuse the
+actual primary snapshot in ordinary fields; its lineage adapter verifies the
+selected certificate and shares primary cycle/root evidence without rerunning
+graph construction, cycle discovery or root propagation.
+
+Privacy uses the same identity domains across series scopes, versions, states,
+roots and ordinary fields. Redacted/omit mode removes identity-bearing detail
+collections with omission reasons while retaining numeric values and counts.
+Both JSON and Markdown render the same protected canonical evidence. Exact
+parent reference entries remain distinct from deduplicated graph edges.
 
 ## Analytical field registry
 
@@ -203,7 +258,7 @@ The following tables enumerate non-envelope public fields and containers. A `$de
 | `run` | object | required | PR-016 | Not nullable |
 | `run.run_id` | string | required | PR-016 | Not nullable |
 | `run.toolkit_version` | string | required | PR-016 | Not nullable |
-| `run.report_schema_version` | constant "1.1" | required | PR-013 | Not nullable |
+| `run.report_schema_version` | constant "1.2" | required | PR-013 | Not nullable |
 | `run.started_at` | string or null | required | PR-016 | Explicitly not applicable/unavailable as described above |
 | `run.completed_at` | string or null | required | PR-016 | Explicitly not applicable/unavailable as described above |
 | `run.duration_seconds` | number or null | required | PR-016 | Explicitly not applicable/unavailable as described above |
@@ -1000,7 +1055,7 @@ Schema validation is separate from evidence assembly, privacy selection, renderi
 
 ## Explicit evidence assembly
 
-`recursive_integrity_toolkit.reports.assembly` emits report schema version `1.1`, retaining the twelve sections, their order and registered field ownership. Strict schema-1.0 readers must explicitly adopt 1.1; no migration loader is supplied. `weighted_source_type_masses` is a category-to-mass object (`category_mass_map`).
+`recursive_integrity_toolkit.reports.assembly` emits report schema version `1.2`, retaining the twelve sections, their order and registered field ownership. Strict schema-1.1 readers must explicitly adopt 1.2; no migration loader is supplied. `weighted_source_type_masses` is a category-to-mass object (`category_mass_map`).
 
 ### Public Python interface
 
@@ -1022,6 +1077,8 @@ def assemble_report(
     resampling: ResamplingSimulation | None = None,
     extinction: tuple[ExtinctionProbabilityResult, ...] = (),
     family_errors: tuple[FamilyFailure, ...] = (),
+    longitudinal: LongitudinalResult | None = None,
+    longitudinal_failure: LongitudinalFailureResult | None = None,
 ) -> CanonicalReport:
     ...
 
@@ -1029,6 +1086,7 @@ def assemble_report(
 class FamilyFailure:
     capability: CapabilityKey
     messages: tuple[ValidationMessage, ...]
+    lineage_resource_usage: LineageResourceUsage | None = None
 
 class ReportAssemblyError(ReportValidationError):
     ...
@@ -1039,6 +1097,16 @@ Both `bundle` and `run` are required. `bundle` is the existing typed `BundleVali
 Callers first obtain results through the accepted validation and calculation APIs, then explicitly pass the results they want represented. Collection arguments are immutable tuples. The adapters require their exact supported result classes and retain the registered fields through explicit field selection. A returned `CanonicalReport` supplies the same immutable sections and detached `to_dict()` export described above. Unsupported types, duplicate public slots and inconsistent handoffs raise a validation error instead of silently dropping or overwriting evidence.
 
 Assembly validates result types, finite values, metadata ownership, accepted method declarations, scope membership, coverage and denominator consistency. These checks do not authenticate the producer or establish the truth of supplied content, provenance, state meanings or calculations. A coherent supplied result remains a declaration-bound handoff. Assembly does not rerun its owner calculation as an independent numerical oracle.
+
+For a series, the consumer additionally revalidates the selected chronology,
+representations, input binding, snapshot population, pair schedule, state-set
+relations and endpoint differences. Retained lineage certificates support local
+parent/root and graph-structure consistency checks. These checks do not rerun
+state assignment, graph construction, cycle discovery or root propagation.
+`longitudinal` and `longitudinal_failure` are mutually exclusive. Rejected
+selection can retain independent snapshots through the explicit failure result;
+it cannot claim a primary snapshot reference, comparison schedule or completed
+lineage work. Version admission failure performs no snapshot calculation.
 
 ### Accepted adapters and evidence placement
 
@@ -1059,6 +1127,8 @@ Assembly validates result types, finite values, metadata ownership, accepted met
 | `resampling` | `ResamplingSimulation` | Experimental sampled paths, support trajectories, extinction events and supplied scenario metadata |
 | `extinction` | Tuple of `ExtinctionProbabilityResult` | Explicitly supplied selected-state one-step extinction marginals under one shared scenario basis |
 | `family_errors` | Tuple of `FamilyFailure` | Explicit capability-bound error/fatal diagnostics alongside independently useful evidence |
+| `longitudinal` | `LongitudinalResult` | Validated selected snapshots, directed pair results, optional shared lineage and exact execution states |
+| `longitudinal_failure` | `LongitudinalFailureResult` | Explicit rejected selection with independently valid snapshots, no inferred chronology or pair schedule |
 
 Empirical frequencies remain derived metrics. Explicit supplied probabilities are observed declarations under `observed_facts.supplied_state_probabilities.by_version`, with an explicit probability basis and no invented record-count denominator. Scenario probabilities remain simulations. Product metadata, capability decisions, warnings, errors and recommendations retain their product ownership without an additional scientific evidence class.
 
@@ -1126,7 +1196,7 @@ The existing Python calculation API supports both explicit mapping directions, `
 
 A probability-pair-only handoff preserves `input_basis: explicit_probability_vector`, pair scopes, comparison declarations, supplied deltas and support sets. It does not automatically export complete original probability tables. To include those independent tables, also pass the original `DistributionMetrics` through `distributions`; their own declared version slots must remain unambiguous. Retaining pair basis therefore does not claim that every original distribution has been serialized.
 
-The schema has one scalar/table slot per version and weighting mode, plus singleton slots for provenance composition, duplicate summary, tail selection, direct bounds and one pair comparison. Duplicate version/weighting results are rejected. Callers must choose one explicit compatible scope for each singleton family or construct separate reports; assembly never pools versions, merges unrelated scopes or silently overwrites one result with another.
+The ordinary schema fields have one scalar/table slot per version and weighting mode, plus singleton slots for provenance composition, duplicate summary, tail selection, direct bounds and one pair comparison. Duplicate version/weighting results are rejected. Callers must choose one explicit compatible scope for each singleton family. The separate series arrays retain their own snapshots and comparison schedule; assembly never pools versions, merges unrelated scopes or silently overwrites one result with another.
 
 ### Supplied simulations
 
@@ -1146,7 +1216,7 @@ The seven capability input statuses, original reason codes, requirements and inp
 | `content_diagnostics` | Names supplied distribution, duplicate and tail operations. With no supplied result or family error it is `not_requested`; supplied operations are `completed` unless retained family errors make execution `partial`. An error with no supplied operation is `failed`. |
 | `provenance` | Names supplied provenance-composition/direct-bound operations under the same completed/partial/failed rules. Independent validation coverage remains available even when no calculation is requested. |
 | `lineage` | Defaults to `not_requested`; an explicit source result retains its `completed`, `partial` or `failed` execution. A bound family failure before an analytical result reports `failed`. Immediate-parent validation alone never claims graph execution. |
-| `dataset_longitudinal` | A supplied pair records its limited support/diversity operation with `partial` execution and an explicit deferred-change-families reason. Without a supplied pair it is `not_requested`, or `failed` when an explicitly bound failure exists. |
+| `dataset_longitudinal` | An explicit series supplies its exact completed/partial/failed execution and per-family statuses. An ordinary pair retains limited support/diversity `partial` execution with series `not_requested`. Without requested pair/series work it is `not_requested`; an explicitly bound failure remains failed. |
 | `model_longitudinal` | `deferred`, with the missing implementation/evidence boundary retained. |
 | `intervention_simulation` | Names supplied analytic expectation, sampled path or extinction-marginal operations; no supplied scenario means `not_requested`. Explicitly bound failures remain failed/partial execution. |
 
@@ -1181,7 +1251,7 @@ Recommendations do not enforce policy, repair records or promise that metadata a
 
 ### Assembly boundaries
 
-This interface performs in-memory assembly and validation of supplied evidence. It does not ingest files, resolve content references, assign states, classify new inputs, calculate a metric, traverse a graph, run a simulation, redact identities, render JSON/Markdown/HTML, invoke a CLI analysis, perform network calls or publish artifacts. Privacy transformation, rendering and CLI orchestration are separate explicit layers. Existing mathematical owners remain unchanged.
+This interface performs in-memory assembly and validation of supplied evidence. It does not ingest files, resolve content references, assign states, classify new inputs, discover graph components, propagate roots, run a simulation, redact identities, render JSON/Markdown/HTML, invoke a CLI analysis, perform network calls or publish artifacts. Local consistency checks validate supplied arithmetic and structural claims. Privacy transformation, rendering and CLI orchestration are separate explicit layers. Existing mathematical owners remain unchanged.
 
 ## Privacy and execution metadata APIs
 
@@ -1225,7 +1295,8 @@ Fresh secrets separate runs; an explicitly supplied checked local secret file
 permits cross-run stability. Neither secret bytes, secret paths nor a reverse
 mapping is exported. Fixed injected secrets support reproducible tests.
 
-`config.resolve_phase4_options` validates the Phase 4 declarations before use;
+`config.resolve_phase4_options` validates current invocation declarations, including
+the inert longitudinal object and the selected audit/validate/example operation;
 `phase4_config_summary` exposes a small allowlist and `phase4_config_hash` hashes
 normalized declared meaning under the documented secret exclusions. Existing
 Phase 2 configuration and validation entry points retain their prior behavior.

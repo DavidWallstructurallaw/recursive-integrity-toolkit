@@ -1,0 +1,10 @@
+{"dataset_version":"v1","record_id":"r1","source_type":"human","provenance_confidence":"confirmed","external_grounding":"yes","parent_ids":[],"transformation":"generate"}
+{"dataset_version":"v1","record_id":"r2","source_type":"human","provenance_confidence":"confirmed","external_grounding":"yes","parent_ids":[],"transformation":"generate"}
+{"dataset_version":"v1","record_id":"r3","source_type":"human","provenance_confidence":"confirmed","external_grounding":"yes","parent_ids":[],"transformation":"generate"}
+{"dataset_version":"v1","record_id":"r4","source_type":"human","provenance_confidence":"confirmed","external_grounding":"yes","parent_ids":[],"transformation":"generate"}
+{"dataset_version":"v2","record_id":"r1","source_type":"human","provenance_confidence":"confirmed","external_grounding":"yes","parent_ids":[],"transformation":"generate"}
+{"dataset_version":"v2","record_id":"r2","source_type":"human","provenance_confidence":"log_derived","external_grounding":"yes","parent_ids":[],"transformation":"generate"}
+{"dataset_version":"v2","record_id":"r3","source_type":"synthetic","provenance_confidence":"estimated","external_grounding":"no","parent_ids":[],"transformation":"generate"}
+{"dataset_version":"v3","record_id":"r1","source_type":"human","provenance_confidence":"confirmed","external_grounding":"yes","parent_ids":[],"transformation":"generate"}
+{"dataset_version":"v3","record_id":"r2","source_type":"synthetic","provenance_confidence":"estimated","external_grounding":"no","parent_ids":[],"transformation":"generate"}
+{"dataset_version":"v3","record_id":"r3","source_type":"unknown","provenance_confidence":"unknown","external_grounding":"unknown","parent_ids":[],"transformation":"generate"}

@@ -18,7 +18,7 @@ Limits:
     A valid safe view does not certify the truth of supplied evidence.
 
 Current phase status:
-    Phase 4 Step 5: required human-readable rendering only. Import-safe.
+    Phase 6A Step 6: ordinary and ordered-series rendering only. Import-safe.
 """
 from __future__ import annotations
 
@@ -102,6 +102,8 @@ def _null_reason(key: str | int, owner: dict) -> str:
         return "Withheld by the selected privacy view."
     if key == "record_keys" and owner.get("redaction"):
         return "Identity details omitted by the declared redaction policy."
+    if key in {"dataset_version", "state_semantics"} and owner.get("redaction"):
+        return "Identity or declaration text omitted by the selected privacy view."
     if key == "items" and owner.get("omission_reasons"):
         return "Detail omitted: " + _code(owner["omission_reasons"])
     if key in {"witness_record_keys", "witness_edge_count"} and owner.get("witness_reason"):
@@ -231,6 +233,73 @@ def _intervals(lines: list[str], metrics: dict) -> None:
     lines.append("")
 
 
+def _series_value(envelope: dict) -> str:
+    """Display the supplied status beside a series value, without inference."""
+    return (_value(envelope["value"], key="value", owner=envelope) +
+            " (" + _code(envelope["status"]) + ")")
+
+
+def _longitudinal(lines: list[str], payload: dict, section: str) -> None:
+    """Show selected chronology and pair gaps from validated structural rows."""
+    selection = payload["inputs"].get("longitudinal")
+    if not selection or not selection["requested"]:
+        return
+    series = payload[section].get("longitudinal", {})
+    if section == "observed_facts":
+        heading = ("Ordered longitudinal snapshots" if selection["order_source"] is not None
+                   else "Independent snapshot observations")
+        lines.extend(("### " + heading, ""))
+        descriptors = {row["snapshot_id"]: row for row in selection["snapshots"]}
+        rows = series.get("snapshots", [])
+        if rows:
+            if selection["order_source"] is None:
+                lines.extend(("No series chronology was accepted. These independent rows retain declaration order.", ""))
+            lines.extend((
+                "| Snapshot | Dataset version | Record count | Representation eligible | Representation excluded |",
+                "|---|---|---|---|---|",
+            ))
+            for row in rows:
+                descriptor = descriptors[row["snapshot_id"]]
+                lines.append("| " + " | ".join((
+                    _code(row["snapshot_id"]),
+                    _value(descriptor["dataset_version"], key="dataset_version", owner=descriptor),
+                    *(_series_value(row[name]) for name in (
+                        "record_count", "representation_eligible_record_count",
+                        "representation_excluded_record_count")),
+                )) + " |")
+            lines.append("")
+        else:
+            lines.extend(("No independent snapshot observations were supplied. See the execution reasons below.", ""))
+    elif section == "derived_metrics":
+        heading = ("Ordered longitudinal comparisons" if selection["order_source"] is not None
+                   else "Longitudinal comparisons")
+        lines.extend(("### " + heading, ""))
+        execution = payload["capabilities"]["dataset_longitudinal"]["longitudinal_execution"]
+        lines.extend((
+            "Series execution: " + _code(execution["status"]) +
+            "; reasons: " + _code(execution["reason_codes"]) + ".", "",
+            "Each change compares its declared earlier and later snapshots. Extinct states are absent from the observed later version under the declared representation; a subsequent snapshot may show reappearance.", "",
+        ))
+        descriptors = {row["comparison_id"]: row for row in selection["comparisons"]}
+        rows = series.get("comparisons", [])
+        if rows:
+            lines.extend((
+                "| Comparison | Earlier snapshot | Later snapshot | Pair kinds | Support delta | Diversity delta |",
+                "|---|---|---|---|---|---|",
+            ))
+            for row in rows:
+                descriptor = descriptors[row["comparison_id"]]
+                lines.append("| " + " | ".join((
+                    _code(row["comparison_id"]), _code(descriptor["earlier_snapshot_id"]),
+                    _code(descriptor["later_snapshot_id"]), _code(descriptor["kinds"]),
+                    _series_value(row["support_delta"]),
+                    _series_value(row["gini_simpson_diversity_delta"]),
+                )) + " |")
+            lines.append("")
+        else:
+            lines.extend(("No comparison values were supplied. See the execution reasons above and the retained snapshot observations.", ""))
+
+
 def _capabilities(lines: list[str], capabilities: dict) -> None:
     if not capabilities:
         lines.extend(("Unavailable: capability assessment was not supplied. Empty object: `{}`.", ""))
@@ -356,6 +425,8 @@ def render_markdown(report: SafeReportView) -> str:
             if value:
                 lines.extend(("The equal observability.capabilities compatibility mirror is represented once in the Capability matrix section.", ""))
         elif section in {"observed_facts", "derived_metrics", "proxy_signals", "simulations", "unavailable_conclusions"}:
+            if section in {"observed_facts", "derived_metrics"}:
+                _longitudinal(lines, payload, section)
             if section == "derived_metrics":
                 _intervals(lines, value)
             _analytical(lines, value, (section,))

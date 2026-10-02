@@ -1,39 +1,56 @@
 # Architecture
 
-## Current Phase 5 architecture
+## Current Phase 6A architecture
 
-Development version `0.1.0.dev4` implements the approved [lineage contract](lineage_contract.md).
-The report schema is 1.1. The existing forty package modules, local-only runtime,
-dependency declarations and canonical Hero inputs are retained.
+Development version `0.1.0.dev5` implements the approved
+[lineage contract](lineage_contract.md) and
+[longitudinal contract](longitudinal_contract.md). Report schema is 1.2 for
+ordinary and series commands. The 41 package modules include the bounded
+`metrics/longitudinal.py` coordinator. Local-only runtime, dependency declarations,
+frozen mathematical definitions and canonical Hero inputs are retained.
 
 | Current owner | Responsibility and boundary |
 |---|---|
 | `io/validation.py` | Input joins, retained parent declarations, chronology and generation dependency propagation; never executes lineage or metrics. |
 | `lineage/graph.py` | Immutable canonical graph, target/context scope and pre-insertion node/edge guards. |
 | `lineage/cycles.py` | Iterative cyclic components, bounded witnesses, affected descendants and structural depth independent of generation. |
-| `lineage/ancestry.py` | External-root resolution, strict G/C/U partition, incidence/fractional mass, concentration, coverage and descriptive shared-root evidence. Root memberships and work have finite guards. |
+| `lineage/ancestry.py` | External-root resolution, strict G/C/U partition, incidence/fractional mass, concentration, coverage and descriptive shared-root evidence. Selected snapshots share one graph/cycle/root pass and finite aggregate work budgets. |
 | `metrics/bounds.py` | Explicit direct and lineage closure intervals with distinct denominators and evidence. |
-| `models.py`, `reports/assembly.py` | Typed schema 1.1 results, supplied-result binding and canonical evidence assembly; no ancestry recomputation in rendering. |
+| `metrics/longitudinal.py` | Explicit selected-version admission, immutable snapshot/pair results and later-minus-earlier changes through existing owner kernels. Fresh source validation and one grouped provenance workspace per consumer; no persistent cache. |
+| `models.py`, `reports/assembly.py` | Typed schema 1.2 results, supplied-result binding and canonical evidence assembly. Series scope/basis references avoid repeating full identities; rendering performs no ancestry computation. |
 | `reports/json_report.py`, `reports/markdown_report.py` | Deterministic bounded output, local aliases, aggregate-preserving redaction and explicit unavailable states. |
-| `cli.py`, `config.py` | Explicit `audit --lineage` / `example --lineage`, repeatable local context inputs and validated finite limits. `validate` remains input-only. |
+| `cli.py`, `config.py` | Explicit `--longitudinal` / `--lineage`, repeated comparisons and local context, declared chronology/representations, optional first baseline and validated finite limits. Config and `validate` remain input-only. |
 
-Primary records define the target population. Comparison and dedicated context
-records can supply ancestors without entering primary metric denominators.
+Primary records define the ordinary target population. A series retains one
+complete population per selected version, with the primary latest in explicit
+chronology. Comparison and dedicated context records can supply ancestors;
+context never enters a selected population's metric denominators.
 Unresolved paths, missing provenance and cycles remain visible. Topological
 roots and depth do not establish independent causal evidence or semantic truth.
+
+The coordinator admits at most the configured selected-version limit before
+snapshot kernels execute, then schedules adjacent and optional first-baseline
+pairs without an all-pairs matrix. Incompatible pairs remain visible with their
+reasons. A common supplied graph supports retrospective lineage snapshots;
+root-stage exhaustion makes every incomplete root summary unavailable while
+independent facts survive. New series detail is capped at 100 rows with exact
+counts retained. Ordinary report sections can still grow with input size.
 
 Current verification uses one path in the existing consistency, traceability and
 release scripts. Exact historical method bodies, snapshot fixtures and migration
 chains are recoverable from Git, while direct current product/security tests
 remain active. [Release process](release_process.md) defines focused and candidate
-gates. Step 10 changes only package version metadata in runtime/package files;
-the single current source boundary protects all other accepted product bytes.
+gates. Step 9 changes only the approved dev4-to-dev5 version literals in
+runtime/package files; the single current source boundary protects all other
+accepted Step 8 product bytes. [Phase 6A completion](../PHASE_6A_COMPLETION.md)
+records actual candidate checks and measurements.
 
 ## Historical Phase 2-4 implementation notes
 
 The following step statements describe their original stage, including then
-unimplemented owners. The current ownership table above and the lineage contract
-describe the supported Phase 5 behavior. Historical test bodies remain in Git.
+unimplemented owners. The current ownership table above and the lineage and
+longitudinal contracts describe supported behavior. Historical test bodies
+remain in Git.
 
 Status: Phase 3 Step 11 development milestone. Actual acceptance is recorded in `PHASE_3_COMPLETION.md`.
 

@@ -1259,7 +1259,7 @@ def validate_bundle(bundle: AuditBundle, *, configuration: dict[str, object] | N
     classification = replace(classification, validation_messages=final_messages)
     return BundleValidationResult(tuple(sorted(inventory, key=_bundle_inventory_key)), canonical_records,
         canonical_provenance, joined, order, generation, classification, tuple(traces),
-        tuple(sorted(content or {})), final_messages, parent_validation)
+        tuple(sorted(content or {})), final_messages, parent_validation, options.content_mode)
 
 
 def _bundle_row_key(row):

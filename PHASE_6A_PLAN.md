@@ -7,17 +7,17 @@
 | Project | Recursive Integrity Toolkit |
 | Phase | Phase 6A: longitudinal dataset comparison |
 | Document version / date | 1.0 / 2026-09-26 |
-| Status | PROPOSED FOR THEORY OWNER REVIEW; implementation not started |
+| Status | APPROVED; Steps 1 through 9 complete |
 | Theory Owner | Xiangyu Guo |
 | Accepted starting commit | `f09521907558a193e6438d9acb316adb9e191195` |
 | Accepted source tree | `da6b0bc3ab64b417ef5be86050f9f932149bc712` |
 | Baseline branch / package / report schema | `phase5-lineage` / `0.1.0.dev4` / `1.1` |
-| Proposed implementation branch | `phase6a-longitudinal`, from the accepted Phase 5 history after Step 1 authorization |
-| Proposed completed-phase package / schema | `0.1.0.dev5` / `1.2` |
-| Current authorization | Prepare and deliver this plan |
+| Implementation branch | `phase6a-longitudinal`, from plan commit `753829a79fb6aa550d58dcd6fced360399c597e9` on the accepted Phase 5 history |
+| Verified completed-phase package / schema | `0.1.0.dev5` / `1.2` |
+| Current authorization | Step 9 explicitly requested on 2026-09-26 America/Los_Angeles (2026-09-27 UTC) |
 | Merge, tag, publication authorization | None |
 
-Approval of this plan would approve the recommended P6A-D decisions below, subject to any stated exceptions. Execution continues one authorized step at a time. Preparing this document does not record approval, start Step 1, or authorize Phase 6B.
+The Theory Owner instructed “phase 6a step 1开始” on 2026-09-26 America/Los_Angeles (2026-09-27 UTC), authorizing Step 1 under this plan with no stated exceptions. P6A-D01 through P6A-D08 are approved. The subsequent instructions “Phase 6A Step 2继续”, “Phase 6A Step 3 开始”, “Phase 6A Step 4 继续”, “Phase 6A Step 5 继续”, “Phase 6A Step 6 继续”, “Phase 6A Step 7 继续”, “Phase 6A Step 8 开始” and “Phase 6A Step 9 开始” authorize those steps. Execution continues one authorized step at a time. See `PHASE_6A_DECISIONS.md` and `docs/longitudinal_contract.md` for the contract record. Step 8 bounded adversarial and scale preparation is complete; see `PHASE_6A_STEP_8.md` for results. Step 9 candidate verification and handoff is complete: candidate `157109717079c9db9f02ac65ec1493709f37d8a4` passed all 13 required jobs. See `PHASE_6A_COMPLETION.md` for actual results, both performance attempts and delivery identities. Phase 6B has not started.
 
 ## 1. Starting point and authority
 
@@ -45,7 +45,7 @@ Required outputs from product specification section 16.3 are record-count delta,
 
 Excluded: Phase 6B experiment/reopening orchestration, automatic simulations, model-performance trends, causal intervention claims, permanent population extinction claims, universal scores or thresholds, automatic semantic remapping, all-pairs matrices, temporal regression/forecasting, HTML/dashboard work, remote retrieval and new runtime analytical dependencies. The approved relative-change formula remains available for a future explicit addition; this phase uses absolute deltas only. Avoid introducing percentages or ratios whose extra interpretation is unnecessary for the required outputs.
 
-## 3. Recommended contract decisions
+## 3. Approved contract decisions
 
 ### P6A-D01. Require explicit series selection and retained chronology
 

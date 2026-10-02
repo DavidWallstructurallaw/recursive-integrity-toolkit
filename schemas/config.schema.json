@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://recursive-integrity-toolkit.example/schemas/config.schema.json",
   "title": "Recursive Integrity Toolkit Configuration",
-  "description": "Phase 2 structural contract for explicit local configuration. Cross-field data validation remains in the Phase 2 validation layer.",
+  "description": "Structural contract for explicit local configuration, including inert longitudinal declarations. Input-dependent validation remains in the validation and selection layers.",
   "type": "object",
   "properties": {
     "config_version": {"type": "string", "minLength": 1, "description": "Version of the configuration document format."},
@@ -32,6 +32,19 @@
     "strict_mode": {"type": "boolean", "default": false, "description": "Promote only explicitly configured warnings in later validation steps."},
     "strict_warning_codes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
     "lineage": {"type": "boolean", "default": false, "description": "Explicit lineage execution request for audit or example. Input-only validate rejects true."},
+    "longitudinal": {
+      "type": "object",
+      "description": "Inert ordered snapshot declarations. Execution requires explicit enablement in audit or example; validate never executes a series.",
+      "properties": {
+        "enabled": {"type": "boolean", "default": false},
+        "baseline": {"type": "string", "enum": ["none", "first"], "default": "none"},
+        "state_semantics": {"$ref": "#/$defs/nonblank"},
+        "versions": {"type": "array", "default": [], "items": {"$ref": "#/$defs/longitudinalVersion"}},
+        "mappings": {"type": "array", "default": [], "items": {"$ref": "#/$defs/longitudinalMapping"}}
+      },
+      "additionalProperties": false,
+      "allOf": [{"if": {"required": ["versions"], "properties": {"versions": {"minItems": 1}}}, "then": {"not": {"required": ["state_semantics"]}}}]
+    },
     "resource_limits": {
       "type": "object",
       "properties": {
@@ -43,7 +56,8 @@
         "max_lineage_nodes": {"type": "integer", "minimum": 1, "default": 200000},
         "max_lineage_edges": {"type": "integer", "minimum": 1, "default": 1000000},
         "max_lineage_root_memberships": {"type": "integer", "minimum": 1, "default": 1000000},
-        "max_lineage_root_union_visits": {"type": "integer", "minimum": 1, "default": 10000000}
+        "max_lineage_root_union_visits": {"type": "integer", "minimum": 1, "default": 10000000},
+        "max_longitudinal_versions": {"type": "integer", "minimum": 1, "default": 100}
       },
       "additionalProperties": false
     },
@@ -55,5 +69,59 @@
       "additionalProperties": false
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [{"if": {"required": ["longitudinal"], "properties": {"longitudinal": {"required": ["versions"], "properties": {"versions": {"minItems": 1}}}}}, "then": {"not": {"required": ["representation"]}}}],
+  "$defs": {
+    "nonblank": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "longitudinalVersion": {
+      "type": "object",
+      "required": ["dataset_version", "representation", "state_semantics"],
+      "properties": {
+        "dataset_version": {"$ref": "#/$defs/nonblank", "maxLength": 256},
+        "representation": {"$ref": "#/properties/representation"},
+        "state_semantics": {"$ref": "#/$defs/nonblank"},
+        "missing_state_id": {"$ref": "#/$defs/nonblank"}
+      },
+      "additionalProperties": false,
+      "allOf": [{"if": {"properties": {"representation": {"required": ["missing_value_policy"], "properties": {"missing_value_policy": {"const": "explicit_missing_state"}}}}}, "then": {"required": ["missing_state_id"]}, "else": {"not": {"required": ["missing_state_id"]}}}]
+    },
+    "representationDescriptor": {
+      "type": "object",
+      "required": ["representation_name", "representation_source", "representation_version", "binning_or_mapping_rule", "field_name", "missing_value_policy", "missing_state_id", "normalization_profile"],
+      "properties": {
+        "representation_name": {"$ref": "#/$defs/nonblank"},
+        "representation_source": {"$ref": "#/$defs/nonblank"},
+        "representation_version": {"$ref": "#/$defs/nonblank"},
+        "binning_or_mapping_rule": {"$ref": "#/$defs/nonblank"},
+        "field_name": {"type": ["string", "null"], "minLength": 1},
+        "missing_value_policy": {"enum": ["error", "exclude", "explicit_missing_state"]},
+        "missing_state_id": {"type": ["string", "null"], "minLength": 1},
+        "normalization_profile": {"enum": [null, "exact_utf8_v1"]}
+      },
+      "additionalProperties": false,
+      "allOf": [{"if": {"properties": {"missing_value_policy": {"const": "explicit_missing_state"}}}, "then": {"properties": {"missing_state_id": {"$ref": "#/$defs/nonblank"}}}, "else": {"properties": {"missing_state_id": {"type": "null"}}}}]
+    },
+    "longitudinalMapping": {
+      "type": "object",
+      "required": ["earlier_version", "later_version", "declaration"],
+      "properties": {
+        "earlier_version": {"$ref": "#/$defs/nonblank"},
+        "later_version": {"$ref": "#/$defs/nonblank"},
+        "declaration": {
+          "type": "object",
+          "required": ["direction", "source_representation", "target_representation", "source_state_semantics", "target_state_semantics", "state_mapping"],
+          "properties": {
+            "direction": {"enum": ["earlier_to_later", "later_to_earlier"]},
+            "source_representation": {"$ref": "#/$defs/representationDescriptor"},
+            "target_representation": {"$ref": "#/$defs/representationDescriptor"},
+            "source_state_semantics": {"$ref": "#/$defs/nonblank"},
+            "target_state_semantics": {"$ref": "#/$defs/nonblank"},
+            "state_mapping": {"type": "object", "additionalProperties": {"type": "string"}}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
 }

@@ -22,7 +22,7 @@ Limits:
     equivalence of the original representations or restore lost distinctions.
 
 Current phase status:
-    Phase 3 Step 9 explicit representation compatibility only. Import-safe.
+    Phase 6A Step 2 shares declaration checks without relaxing legacy pair order.
 """
 from __future__ import annotations
 
@@ -63,6 +63,21 @@ class RepresentationCompatibility:
         "Many-to-one mapping can hide original distinctions; original bases remain separately visible.",
         "Chronology alone does not establish lineage, causality or functional failure.",
     )
+
+
+@dataclass(frozen=True, slots=True)
+class RepresentationBasisCompatibility:
+    """Declaration-only evidence; no assertion about loaded rows or map coverage."""
+
+    earlier_representation: RepresentationDescriptor
+    later_representation: RepresentationDescriptor
+    earlier_state_semantics: str
+    later_state_semantics: str
+    harmonized_representation: RepresentationDescriptor
+    harmonized_state_semantics: str
+    method: str
+    mapping: StateMappingDeclaration | None = field(repr=False)
+    collision_groups: tuple[tuple[str, tuple[str, ...]], ...] = field(repr=False)
 
 
 def _invalid(message: str, *, order: bool = False) -> CanonicalValidationError:
@@ -145,7 +160,7 @@ def _context(value: object) -> ExplicitPairContext:
                                _descriptor(value.later_representation), checked)
 
 
-def _mapping(value: object, context: ExplicitPairContext, earlier_meaning: str,
+def _mapping(value: object, earlier: RepresentationDescriptor, later: RepresentationDescriptor, earlier_meaning: str,
              later_meaning: str) -> tuple[StateMappingDeclaration, tuple[tuple[str, tuple[str, ...]], ...]]:
     if type(value) is not StateMappingDeclaration:
         raise _invalid("a bare state_mapping cannot establish a directed comparison basis")
@@ -153,9 +168,9 @@ def _mapping(value: object, context: ExplicitPairContext, earlier_meaning: str,
         raise _invalid("state mapping direction must be explicit")
     source, target = _descriptor(value.source_representation), _descriptor(value.target_representation)
     source_meaning, target_meaning = _text(value.source_state_semantics), _text(value.target_state_semantics)
-    expected = ((context.earlier_representation, context.later_representation, earlier_meaning, later_meaning)
+    expected = ((earlier, later, earlier_meaning, later_meaning)
                 if value.direction == "earlier_to_later" else
-                (context.later_representation, context.earlier_representation, later_meaning, earlier_meaning))
+                (later, earlier, later_meaning, earlier_meaning))
     if (source, target, source_meaning, target_meaning) != expected:
         raise _invalid("mapping source, target or state meanings disagree with its declared direction")
     if type(value.state_mapping) not in (dict, MappingProxyType):
@@ -182,25 +197,41 @@ def _mapping(value: object, context: ExplicitPairContext, earlier_meaning: str,
                                     MappingProxyType(mapping)), collisions
 
 
+def validate_representation_basis(
+    earlier: RepresentationDescriptor, later: RepresentationDescriptor, *,
+    earlier_state_semantics: str, later_state_semantics: str,
+    state_mapping: StateMappingDeclaration | None = None,
+) -> RepresentationBasisCompatibility:
+    """Check only descriptors, meanings and a literal directed declaration.
+
+    Callers validate chronology separately. Empty selected snapshots need not
+    masquerade as loaded versions. Kernels must still check total map coverage
+    on actual states, including zero-mass states, before any comparison.
+    """
+    earlier, later = _descriptor(earlier), _descriptor(later)
+    earlier_meaning, later_meaning = _text(earlier_state_semantics), _text(later_state_semantics)
+    if state_mapping is None:
+        if earlier != later or earlier_meaning != later_meaning:
+            raise _invalid("representation or state-meaning declarations differ without an explicit directed map")
+        return RepresentationBasisCompatibility(earlier, later, earlier_meaning, later_meaning,
+            earlier, earlier_meaning, "identical_declared_basis", None, ())
+    mapping, collisions = _mapping(state_mapping, earlier, later, earlier_meaning, later_meaning)
+    return RepresentationBasisCompatibility(earlier, later, earlier_meaning, later_meaning,
+        mapping.target_representation, mapping.target_state_semantics,
+        "explicit_directed_state_mapping", mapping, collisions)
+
+
 def validate_representation_compatibility(
     context: ExplicitPairContext, *, earlier_state_semantics: str, later_state_semantics: str,
     state_mapping: StateMappingDeclaration | None = None,
 ) -> RepresentationCompatibility:
-    """Require explicit chronology and identical declarations or a directed map.
-
-    Version names alone never authorize comparison. A map can intentionally
-    coarsen states, with its exact dictionary and collisions retained. It does
-    not silently alter record inclusion or missing-state policy. Consuming
-    kernels must still check map coverage against their actual state tables.
-    """
+    """Require the unchanged loaded-pair chronology and a declared common basis."""
     context = _context(context)
-    earlier_meaning, later_meaning = _text(earlier_state_semantics), _text(later_state_semantics)
-    if state_mapping is None:
-        if context.earlier_representation != context.later_representation or earlier_meaning != later_meaning:
-            raise _invalid("representation or state-meaning declarations differ without an explicit directed map")
-        return RepresentationCompatibility(context, earlier_meaning, later_meaning,
-            context.earlier_representation, earlier_meaning, "identical_declared_basis", None, ())
-    mapping, collisions = _mapping(state_mapping, context, earlier_meaning, later_meaning)
-    return RepresentationCompatibility(context, earlier_meaning, later_meaning,
-        mapping.target_representation, mapping.target_state_semantics,
-        "explicit_directed_state_mapping", mapping, collisions)
+    basis = validate_representation_basis(
+        context.earlier_representation, context.later_representation,
+        earlier_state_semantics=earlier_state_semantics,
+        later_state_semantics=later_state_semantics, state_mapping=state_mapping,
+    )
+    return RepresentationCompatibility(context, basis.earlier_state_semantics,
+        basis.later_state_semantics, basis.harmonized_representation,
+        basis.harmonized_state_semantics, basis.method, basis.mapping, basis.collision_groups)

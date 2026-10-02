@@ -1,6 +1,52 @@
 # Theory Traceability
 
-## Current Phase 5 implementation
+## Current Phase 6A implementation
+
+Development version `0.1.0.dev5` implements the approved
+[longitudinal contract](longitudinal_contract.md) while preserving the existing
+theory map, formula IDs and Phase 3-5 owner meanings. The frozen root
+`THEORY_TO_CODE_TRACEABILITY.md` remains unchanged. The following additive index
+connects series behavior to its existing mathematical or product basis. Detailed
+public field inventories appear in longitudinal contract sections 4.3-4.4 and
+[the schema registry](report_schema.md).
+
+| Series family / report path | Existing definition, owner and implementation | Evidence, denominator and limit | Independent verification |
+|---|---|---|---|
+| `configuration.longitudinal`, input snapshot/pair/basis/scope descriptors | PR-007, PR-011 and approved P6A-D01/D02/D06; selection in `metrics/longitudinal.py`, declarations in `config.py` | Product metadata; explicit chronology and compatible representations; context excluded from selected membership | `test_longitudinal_selection.py`, `test_longitudinal_config.py`, `test_longitudinal_cli.py` |
+| `observed_facts.longitudinal.snapshots`: population, representation and provenance counts/coverage | PR-002, PR-004, PR-005, PR-011; existing representation/provenance owners via the coordinator | Existing observed evidence; full selected population N, independent of representation exclusions; missing rows remain separate | `test_longitudinal_analysis.py`, `test_longitudinal_provenance.py`, `test_longitudinal_shared_inputs.py` |
+| `derived_metrics.longitudinal.snapshots`: support, diversity and source shares | T1 F-002/F-003 and PR-005 F-007; existing diversity/provenance owners | Derived metrics; declared representation for distributions; five source shares plus separate missing-provenance share | `test_longitudinal_analysis.py`, `test_longitudinal_provenance.py` |
+| Snapshot direct/lineage closure bounds and widths | T3 F-009/F-010 and approved Phase 5 G/C/U interval; `metrics/bounds.py` | Derived conservative intervals; retain each target's N and unknown evidence; no inferred midpoint or confidence discount | `test_longitudinal_provenance.py`, `test_longitudinal_lineage.py` |
+| Snapshot target-supported roots, HHI and effective root count | T4 F-012/F-013; `lineage/ancestry.py` selected-target summaries | Derived supplied-graph evidence; union of target supporting roots, incidence over N and fractional concentration over G; G=0 concentration unavailable | `test_selected_primary_lineage.py`, `test_longitudinal_lineage.py`, `test_selected_lineage_handoff.py` |
+| `observed_facts.longitudinal.shared_lineage` and declared/resolved/unresolved reference counts | PR-008, PR-009, T6; existing graph/cycle/ancestry owners | Supplied retrospective graph facts; declaration-entry coverage stays distinct from unique edges and ancestry coverage | `test_selected_lineage_handoff.py`, `test_longitudinal_adversarial.py`, `test_longitudinal_shared_structure.py` |
+| Comparison signed deltas | T1 support F-005; other signed changes F-018 with inherited T1/T3/T4 or PR owner; `metrics/longitudinal.py` | Derived later-minus-earlier differences in endpoint units; two scopes, denominators, coverages and reason lists retained | `test_longitudinal_analysis.py`, `test_longitudinal_provenance.py`, `test_longitudinal_lineage.py` |
+| Observed lost/added/retained sets and support retention | T1; Definitions 7.9-7.12, F-006; `metrics/diversity.py` | Exact pair sets and earlier-positive-support retention; observed later absence can be followed by reappearance | Frozen `cases.json` / `hero_expected.json`, `test_longitudinal_analysis.py` |
+| Earlier-tail disappearance | T2 accepted tail rules and T1 pair sets; `metrics/tail.py` through the coordinator | Derived observed disappearance from the earlier harmonized tail; no F-014 simulation is executed | `test_longitudinal_analysis.py` including asymmetric earlier/later-tail cases |
+| Schema 1.2, safe series views, status and failure handoffs | PR-012 through PR-016, PR-018; `result.py`, report/CLI owners | Preserve five evidence classes, null reasons, exact aggregate counts and scope/basis references through hash/omit; partial useful evidence survives | `test_longitudinal_report_contract.py`, `test_longitudinal_handoff.py`, `test_longitudinal_failure.py`, `test_longitudinal_reports.py`, `test_longitudinal_installed.py` |
+
+The frozen three-version oracle has support 3, 2, 3 with intermediate
+disappearance and later reappearance. Hero retains supports 8 and 5, diversity
+7/8 and 3/4, direct closure change +1/2, supporting roots 8 and 5, HHI 1/8 and
+1/4, and effective roots 8 and 4. Coverage and lineage variants preserve each
+snapshot's own N and G. Expected rational values, state sets and classifications
+were authored independently of the coordinator.
+
+[Step 8](../PHASE_6A_STEP_8.md) records eight detected concrete mutations:
+reversed deltas, lexical chronology, context in N, missing provenance folded
+into unknown, later-tail selection, incompatible-pair acceptance,
+unavailable-to-zero substitution and all-loaded roots replacing target roots.
+Five stopped at typed semantic guards, one at a chronology guard and two at
+direct assertions. This finite experiment does not establish exhaustive fault
+coverage. Bounded resource/detail cases verify admission before calculation,
+100-row display caps after exact aggregation and shared budgets without reset.
+
+No new theory equation, formula identifier, universal score or empirical causal
+inference is introduced. Model-performance decline, causal ancestor effect and
+permanent extinction remain unsupported. New series orchestration executes no
+simulation; Phase 6B remains separately gated. Actual candidate environments,
+installed evidence and scale measurements are identified in
+[Phase 6A completion](../PHASE_6A_COMPLETION.md).
+
+## Historical Phase 5 implementation
 
 Development version `0.1.0.dev4` implements the approved [lineage contract](lineage_contract.md)
 and preserves the existing mathematical definitions and direct calculations.

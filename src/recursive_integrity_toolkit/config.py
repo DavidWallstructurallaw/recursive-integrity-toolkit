@@ -1,4 +1,4 @@
-"""Resolve explicit inert input, report and opt-in lineage declarations.
+"""Resolve explicit inert input, report, lineage and longitudinal declarations.
 
 Owner IDs:
     PR-007, PR-010, PR-011, PR-015, PR-016 supporting infrastructure, PR-017
@@ -8,7 +8,7 @@ Inputs:
 
 Outputs:
     Immutable ``ResolvedConfig`` objects that preserve user declarations without
-    inference; report and lineage options, safe summaries and normalized hashes.
+    inference; report, lineage and series options, safe summaries and normalized hashes.
 
 Assumptions:
     Version order, representation choice, privacy mode, strict-mode promotion, and scenario
@@ -19,7 +19,7 @@ Limits:
     inference, metric, lineage, simulation, report assembly or remote access.
 
 Current phase status:
-    Phase 5 Step 8 explicit lineage and repeatable context invocation adapter.
+    Phase 6A Step 7 explicit longitudinal configuration and repeatable comparisons.
 """
 
 from __future__ import annotations
@@ -28,12 +28,13 @@ import json
 import math
 import tomllib
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Mapping
 
 from .errors import ConfigurationError, ErrorCode
-from .models import FileFormat, FileRole, InputSource, PrivacyMode
+from .models import FileFormat, FileRole, InputSource, PrivacyMode, RecordKey, RepresentationDescriptor
 from .utils.hashing import sha256_canonical
 from .utils.paths import local_input_path
 
@@ -52,6 +53,7 @@ _ALLOWED_TOP_LEVEL = {
     "output",
     "simulation",
     "lineage",
+    "longitudinal",
 }
 
 _MULTI_ROLES = {
@@ -80,6 +82,98 @@ class RepresentationConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class LongitudinalVersionConfig:
+    """One inert selected-version declaration, without analytical imports."""
+
+    dataset_version: str = field(repr=False)
+    representation: RepresentationConfig = field(repr=False)
+    state_semantics: str = field(repr=False)
+    missing_state_id: str | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        _longitudinal_version(self.dataset_version)
+        _longitudinal_literal(self.state_semantics)
+        _longitudinal_representation(self.representation, self.missing_state_id)
+
+
+@dataclass(frozen=True, slots=True)
+class LongitudinalMappingDeclaration:
+    """Detached literal mapping data. No mapping is executed by configuration."""
+
+    direction: str
+    source_representation: RepresentationDescriptor = field(repr=False)
+    target_representation: RepresentationDescriptor = field(repr=False)
+    source_state_semantics: str = field(repr=False)
+    target_state_semantics: str = field(repr=False)
+    state_mapping: Mapping[str, str] = field(repr=False)
+
+    def __post_init__(self) -> None:
+        if type(self.direction) is not str or self.direction not in ("earlier_to_later", "later_to_earlier"):
+            _invalid("longitudinal mapping requires an explicit supported direction")
+        for descriptor in (self.source_representation, self.target_representation):
+            if type(descriptor) is not RepresentationDescriptor:
+                _invalid("longitudinal mapping requires full representation descriptors")
+            for item in fields(descriptor):
+                value = getattr(descriptor, item.name)
+                if value is not None:
+                    _longitudinal_literal(value)
+            try:
+                replace(descriptor)
+            except (TypeError, ValueError):
+                _invalid("longitudinal mapping representation is invalid")
+        _longitudinal_literal(self.source_state_semantics)
+        _longitudinal_literal(self.target_state_semantics)
+        if type(self.state_mapping) not in (dict, MappingProxyType):
+            _invalid("longitudinal mapping requires a literal state dictionary")
+        detached = {}
+        for key, value in self.state_mapping.items():
+            detached[_longitudinal_literal(key, empty=True)] = _longitudinal_literal(value, empty=True)
+        object.__setattr__(self, "state_mapping", MappingProxyType(dict(sorted(detached.items()))))
+
+
+@dataclass(frozen=True, slots=True)
+class LongitudinalMappingConfig:
+    earlier_version: str = field(repr=False)
+    later_version: str = field(repr=False)
+    declaration: LongitudinalMappingDeclaration = field(repr=False)
+
+    def __post_init__(self) -> None:
+        if _longitudinal_version(self.earlier_version) == _longitudinal_version(self.later_version):
+            _invalid("longitudinal mapping endpoints must be distinct")
+        if type(self.declaration) is not LongitudinalMappingDeclaration:
+            _invalid("longitudinal mapping requires a typed declaration")
+        replace(self.declaration)
+
+
+@dataclass(frozen=True, slots=True)
+class LongitudinalOptions:
+    enabled: bool = False
+    baseline: str = "none"
+    state_semantics: str | None = field(default=None, repr=False)
+    versions: tuple[LongitudinalVersionConfig, ...] = field(default=(), repr=False)
+    mappings: tuple[LongitudinalMappingConfig, ...] = field(default=(), repr=False)
+
+    def __post_init__(self) -> None:
+        # Defaults are instantiated while the module is loading. Keep primitive
+        # checks local and resolve helper names only for nondefault declarations.
+        if type(self.enabled) is not bool or type(self.baseline) is not str or self.baseline not in ("none", "first"):
+            raise ConfigurationError(ErrorCode.CONFIG_INVALID, "invalid longitudinal execution declarations")
+        if self.state_semantics is not None:
+            _longitudinal_literal(self.state_semantics)
+        for values, expected in ((self.versions, LongitudinalVersionConfig), (self.mappings, LongitudinalMappingConfig)):
+            if type(values) is not tuple or any(type(value) is not expected for value in values):
+                raise ConfigurationError(ErrorCode.CONFIG_INVALID, "longitudinal declarations require immutable typed tuples")
+            for value in values:
+                replace(value)
+        if self.versions and self.state_semantics is not None:
+            _invalid("common and per-version state meanings compete")
+        if len({value.dataset_version for value in self.versions}) != len(self.versions):
+            _invalid("longitudinal versions must be unique")
+        if len({(value.earlier_version, value.later_version) for value in self.mappings}) != len(self.mappings):
+            _invalid("longitudinal mapping pairs must be unique")
+
+
+@dataclass(frozen=True, slots=True)
 class ResourceLimits:
     max_file_bytes: int | None = None
     max_rows: int | None = None
@@ -90,6 +184,7 @@ class ResourceLimits:
     max_lineage_edges: int = _LINEAGE_LIMIT_DEFAULTS["max_lineage_edges"]
     max_lineage_root_memberships: int = _LINEAGE_LIMIT_DEFAULTS["max_lineage_root_memberships"]
     max_lineage_root_union_visits: int = _LINEAGE_LIMIT_DEFAULTS["max_lineage_root_union_visits"]
+    max_longitudinal_versions: int = 100
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +208,7 @@ class ResolvedConfig:
     output: tuple[tuple[str, Any], ...] = ()
     simulation: ScenarioConfig = ScenarioConfig()
     lineage: bool = False
+    longitudinal: LongitudinalOptions = LongitudinalOptions()
 
 
 def load_config(path: str | Path) -> ResolvedConfig:
@@ -173,6 +269,11 @@ def resolve_config(data: Mapping[str, Any]) -> ResolvedConfig:
     output = _frozen_mapping(data.get("output"), "output")
     simulation = _parse_simulation(data.get("simulation"))
     lineage = _bool_value(data.get("lineage", False), "lineage")
+    longitudinal = _parse_longitudinal(data.get("longitudinal", {}))
+    if longitudinal.versions and representation is not None:
+        _invalid("common and per-version representations compete")
+    if longitudinal != LongitudinalOptions() and (state_mapping or representation_compatibility):
+        _invalid("legacy mappings compete with longitudinal declarations")
 
     return ResolvedConfig(
         config_version=config_version,
@@ -188,6 +289,7 @@ def resolve_config(data: Mapping[str, Any]) -> ResolvedConfig:
         output=output,
         simulation=simulation,
         lineage=lineage,
+        longitudinal=longitudinal,
     )
 
 
@@ -266,6 +368,111 @@ def _parse_version_order(value: Any) -> tuple[str, ...]:
     return values
 
 
+def _longitudinal_literal(value: object, *, empty: bool = False) -> str:
+    if type(value) is not str or (not value.strip() and not empty) or "\x00" in value:
+        _invalid("longitudinal declarations require literal nonblank text")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        _invalid("longitudinal declarations require valid Unicode")
+    return value
+
+
+def _longitudinal_version(value: object) -> str:
+    text = _longitudinal_literal(value)
+    try:
+        RecordKey(text, "config-check")
+    except (TypeError, ValueError):
+        _invalid("longitudinal version identity must be canonical")
+    return text
+
+
+def _longitudinal_representation(value: object, missing_state_id: object) -> None:
+    if type(value) is not RepresentationConfig:
+        _invalid("longitudinal snapshot requires an explicit representation")
+    for item in fields(value):
+        text = getattr(value, item.name)
+        if text is not None:
+            _longitudinal_literal(text)
+    if missing_state_id is not None:
+        _longitudinal_literal(missing_state_id)
+    if value.source == "content_hash":
+        if (value.name is None or value.version is None or value.field not in (None, "content")
+                or value.missing_value_policy not in (None, "error") or missing_state_id is not None
+                or value.normalization_profile != "exact_utf8_v1"):
+            _invalid("longitudinal exact-content declaration is incomplete or unsupported")
+    elif (value.source not in ("topic_field", "label_field") or value.field not in ("topic", "label")
+            or value.name is None or value.version is None or value.normalization_profile is not None
+            or value.missing_value_policy not in ("error", "exclude", "explicit_missing_state")
+            or (value.missing_value_policy == "explicit_missing_state") != (missing_state_id is not None)):
+        _invalid("longitudinal field declaration is incomplete or unsupported")
+
+
+def _longitudinal_object(value: object, allowed: set[str], required: set[str], label: str) -> Mapping:
+    if type(value) not in (dict, MappingProxyType) or set(value) - allowed or required - set(value):
+        _invalid(f"{label} has invalid, missing or unknown fields")
+    return value
+
+
+def _parse_longitudinal(value: object) -> LongitudinalOptions:
+    data = _longitudinal_object(value, {"enabled", "baseline", "state_semantics", "versions", "mappings"}, set(), "longitudinal")
+    versions, mappings = data.get("versions", []), data.get("mappings", [])
+    if type(versions) is not list or type(mappings) is not list:
+        _invalid("longitudinal versions and mappings must be arrays")
+    selected = []
+    for item in versions:
+        row = _longitudinal_object(item, {"dataset_version", "representation", "state_semantics", "missing_state_id"},
+                                  {"dataset_version", "representation", "state_semantics"}, "longitudinal version")
+        if "missing_state_id" in row:
+            _longitudinal_literal(row["missing_state_id"])
+        selected.append(LongitudinalVersionConfig(row["dataset_version"], _parse_representation(row["representation"]),
+                                                row["state_semantics"], row.get("missing_state_id")))
+    directed = []
+    descriptor_keys = {item.name for item in fields(RepresentationDescriptor)}
+    declaration_keys = {item.name for item in fields(LongitudinalMappingDeclaration)}
+    for item in mappings:
+        row = _longitudinal_object(item, {"earlier_version", "later_version", "declaration"},
+                                  {"earlier_version", "later_version", "declaration"}, "longitudinal mapping")
+        declared = dict(_longitudinal_object(row["declaration"], declaration_keys, declaration_keys, "longitudinal mapping declaration"))
+        for key in ("source_representation", "target_representation"):
+            descriptor = _longitudinal_object(declared[key], descriptor_keys, descriptor_keys, "longitudinal descriptor")
+            try:
+                declared[key] = RepresentationDescriptor(**descriptor)
+            except (TypeError, ValueError):
+                _invalid("longitudinal descriptor violates its literal contract")
+        directed.append(LongitudinalMappingConfig(row["earlier_version"], row["later_version"], LongitudinalMappingDeclaration(**declared)))
+    if "state_semantics" in data:
+        _longitudinal_literal(data["state_semantics"])
+    return LongitudinalOptions(data.get("enabled", False), data.get("baseline", "none"),
+                               data.get("state_semantics"), tuple(selected), tuple(directed))
+
+
+def _longitudinal_data(value: LongitudinalOptions) -> dict[str, Any]:
+    if type(value) is not LongitudinalOptions:
+        _invalid("longitudinal options must use the typed declaration contract")
+    replace(value)
+    result = {"enabled": value.enabled, "baseline": value.baseline, "versions": [], "mappings": []}
+    if value.state_semantics is not None:
+        result["state_semantics"] = value.state_semantics
+    for version in value.versions:
+        row = {"dataset_version": version.dataset_version,
+               "representation": {item.name: getattr(version.representation, item.name) for item in fields(RepresentationConfig)
+                                  if getattr(version.representation, item.name) is not None},
+               "state_semantics": version.state_semantics}
+        if version.missing_state_id is not None:
+            row["missing_state_id"] = version.missing_state_id
+        result["versions"].append(row)
+    for mapping in value.mappings:
+        declaration = mapping.declaration
+        result["mappings"].append({"earlier_version": mapping.earlier_version, "later_version": mapping.later_version,
+            "declaration": {"direction": declaration.direction,
+                "source_representation": {item.name: getattr(declaration.source_representation, item.name) for item in fields(RepresentationDescriptor)},
+                "target_representation": {item.name: getattr(declaration.target_representation, item.name) for item in fields(RepresentationDescriptor)},
+                "source_state_semantics": declaration.source_state_semantics,
+                "target_state_semantics": declaration.target_state_semantics, "state_mapping": dict(declaration.state_mapping)}})
+    return result
+
+
 def _parse_resource_limits(value: Any) -> ResourceLimits:
     if value is None:
         return ResourceLimits()
@@ -278,7 +485,7 @@ def _parse_resource_limits(value: Any) -> ResourceLimits:
         "max_parent_list_length",
         "max_json_depth",
     }
-    unknown = sorted(set(value) - allowed - _LINEAGE_LIMIT_DEFAULTS.keys())
+    unknown = sorted(set(value) - allowed - _LINEAGE_LIMIT_DEFAULTS.keys() - {"max_longitudinal_versions"})
     if unknown:
         _invalid(f"resource_limits has unknown fields: {', '.join(unknown)}")
     kwargs = {
@@ -290,6 +497,10 @@ def _parse_resource_limits(value: Any) -> ResourceLimits:
         if type(item) is not int or item <= 0:
             _invalid(f"resource_limits.{key} must be a positive integer")
         kwargs[key] = item
+    limit = value.get("max_longitudinal_versions", 100)
+    if type(limit) is not int or limit <= 0:
+        _invalid("resource_limits.max_longitudinal_versions must be a positive integer")
+    kwargs["max_longitudinal_versions"] = limit
     return ResourceLimits(**kwargs)
 
 
@@ -399,6 +610,7 @@ class Phase4Options:
     tail_rule: str | None
     tail_threshold: int | float | None
     lineage: bool = False
+    longitudinal: LongitudinalOptions = LongitudinalOptions()
 
     def __post_init__(self) -> None:
         if (type(self.configuration) is not ResolvedConfig or type(self.inputs) is not tuple
@@ -415,6 +627,7 @@ class Phase4Options:
                 or self.state_semantics is not None and type(self.state_semantics) is not str
                 or self.missing_state_id is not None and type(self.missing_state_id) is not str):
             _invalid("Phase 4 options have invalid structural fields")
+        _longitudinal_data(self.longitudinal)
         if (self.tail_rule is not None and (type(self.tail_rule) is not str
                 or self.tail_rule not in {"singleton_count", "count_at_or_below", "frequency_at_or_below"})
                 or self.tail_rule in (None, "singleton_count") and self.tail_threshold is not None
@@ -472,6 +685,7 @@ def _phase4_config_data(config: ResolvedConfig) -> dict[str, Any]:
         "privacy_mode": config.privacy_mode.value, "strict_mode": config.strict_mode,
         "strict_warning_codes": list(config.strict_warning_codes),
         "lineage": config.lineage,
+        "longitudinal": _longitudinal_data(config.longitudinal),
         "resource_limits": {
             "max_file_bytes": config.resource_limits.max_file_bytes,
             "max_rows": config.resource_limits.max_rows,
@@ -479,6 +693,7 @@ def _phase4_config_data(config: ResolvedConfig) -> dict[str, Any]:
             "max_parent_list_length": config.resource_limits.max_parent_list_length,
             "max_json_depth": config.resource_limits.max_json_depth,
             **{key: getattr(config.resource_limits, key) for key in _LINEAGE_LIMIT_DEFAULTS},
+            "max_longitudinal_versions": config.resource_limits.max_longitudinal_versions,
         },
         "output": dict(config.output),
         "simulation": {"enabled": config.simulation.enabled, "seed": config.simulation.seed},
@@ -508,17 +723,22 @@ def _phase4_literal(value: object) -> str:
 
 
 def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = None, *,
-                           cli: Mapping[str, Any] | None = None) -> Phase4Options:
+                           cli: Mapping[str, Any] | None = None, operation: str = "audit") -> Phase4Options:
     """Validate Phase 4 declarations without overriding competing singletons.
 
     CLI keys use underscore spellings of the approved option names. Omitted
     options are absent or ``None``. Raw config mappings retain explicit-field
     provenance. With a ``ResolvedConfig``, its privacy and strictness values are
     authoritative because resolved declarations do not retain omission provenance.
+    Input-only validation permits inert series configuration and repeated inputs;
+    it rejects invocation flags that explicitly request calculations.
     """
     allowed_cli = {"records", "provenance", "compare", "schema_mapping", "version_order",
                    "state_semantics", "missing_state_id", "out", "redacted", "record_ids",
-                   "id_salt_file", "strict", "tail_rule", "tail_threshold", "lineage", "lineage_records"}
+                   "id_salt_file", "strict", "tail_rule", "tail_threshold", "lineage", "lineage_records",
+                   "longitudinal", "baseline"}
+    if operation not in ("audit", "validate", "example"):
+        _invalid("unsupported invocation operation")
     if cli is None:
         cli = {}
     if not isinstance(cli, Mapping) or any(type(key) is not str or key not in allowed_cli for key in cli):
@@ -573,6 +793,27 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
         if "lineage" in declared:
             _invalid("lineage declarations compete")
         lineage = options["lineage"]
+    longitudinal = resolved.longitudinal
+    longitudinal_declared = raw.get("longitudinal", {})
+    if operation == "validate" and any(key in options for key in ("longitudinal", "baseline", "state_semantics")):
+        _invalid("input-only validation cannot request calculations")
+    for cli_key, config_key in (("longitudinal", "enabled"), ("baseline", "baseline"), ("state_semantics", "state_semantics")):
+        if cli_key in options and config_key in longitudinal_declared:
+            _invalid("longitudinal singleton declarations compete")
+    if "longitudinal" in options:
+        if type(options["longitudinal"]) is not bool:
+            _invalid("longitudinal selection must be boolean")
+        longitudinal = replace(longitudinal, enabled=options["longitudinal"])
+    if "baseline" in options:
+        longitudinal = replace(longitudinal, baseline=options["baseline"])
+        if not longitudinal.enabled:
+            _invalid("baseline requires longitudinal enablement")
+    if longitudinal.versions and ("state_semantics" in options or "missing_state_id" in options):
+        _invalid("common and per-version declarations compete")
+    if "state_semantics" in options and longitudinal.enabled:
+        longitudinal = replace(longitudinal, state_semantics=_longitudinal_literal(options["state_semantics"]))
+    if operation != "validate" and not longitudinal.enabled and longitudinal != LongitudinalOptions():
+        _invalid("longitudinal execution declarations require enablement")
     record_id_mode = options.get("record_ids", output.get("record_id_mode", "hash" if privacy_mode == "redacted" else "preserve"))
     if type(record_id_mode) is not str or record_id_mode not in {"preserve", "hash", "omit"}:
         _invalid("Phase 4 record ID mode must be preserve, hash or omit")
@@ -589,10 +830,17 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
     for key, role in (("records", FileRole.RECORDS_PRIMARY), ("provenance", FileRole.PROVENANCE_MANIFEST),
                       ("compare", FileRole.RECORDS_COMPARE), ("schema_mapping", FileRole.SCHEMA_MAPPING)):
         existing = [source for source in sources if source.role is role]
-        if len(existing) > 1 or existing and key in options:
+        repeatable = key == "compare" and (longitudinal.enabled or operation == "validate")
+        if (len(existing) > 1 and not repeatable) or existing and key in options:
             _invalid("Phase 4 singleton input declarations compete")
         if key in options:
-            sources.append(InputSource(role, _phase4_option_path(options[key])))
+            values = options[key]
+            if key == "compare" and type(values) in (tuple, list):
+                if len(values) > 1 and not repeatable:
+                    _invalid("ordinary audit accepts at most one comparison input")
+                sources.extend(InputSource(role, _phase4_option_path(value)) for value in values)
+            else:
+                sources.append(InputSource(role, _phase4_option_path(values)))
     if "lineage_records" in options:
         paths = options["lineage_records"]
         if type(paths) not in (list, tuple):
@@ -611,7 +859,7 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
             sources.append(InputSource(FileRole.VERSION_ORDER, _phase4_option_path(supplied_order)))
     if version_order and any(source.role is FileRole.VERSION_ORDER for source in sources):
         _invalid("Phase 4 version order declarations compete")
-    state_semantics = None if "state_semantics" not in options else _phase4_literal(options["state_semantics"])
+    state_semantics = longitudinal.state_semantics if "state_semantics" not in options else _phase4_literal(options["state_semantics"])
     missing_state_id = None if "missing_state_id" not in options else _phase4_literal(options["missing_state_id"])
     explicit_missing = resolved.representation is not None and resolved.representation.missing_value_policy == "explicit_missing_state"
     if explicit_missing != (missing_state_id is not None):
@@ -622,7 +870,7 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
             _invalid("Phase 4 tail threshold requires an explicit tail rule")
     elif type(tail_rule) is not str or tail_rule not in {"singleton_count", "count_at_or_below", "frequency_at_or_below"}:
         _invalid("unsupported Phase 4 tail rule")
-    elif resolved.representation is None:
+    elif resolved.representation is None and not longitudinal.versions:
         _invalid("Phase 4 tail selection requires an explicit representation")
     elif tail_rule == "singleton_count" and threshold is not None:
         _invalid("singleton_count rejects a tail threshold")
@@ -633,7 +881,7 @@ def resolve_phase4_options(config: ResolvedConfig | Mapping[str, Any] | None = N
         _invalid("frequency_at_or_below requires a finite threshold within zero and one")
     return Phase4Options(resolved, tuple(sorted(sources, key=lambda source: (source.role.value, str(source.path)))),
                          directory, privacy_mode, record_id_mode, salt_file, strict_mode, version_order,
-                         state_semantics, missing_state_id, tail_rule, threshold, lineage)
+                         state_semantics, missing_state_id, tail_rule, threshold, lineage, longitudinal)
 
 
 def phase4_config_summary(options: Phase4Options) -> dict[str, Any]:
@@ -683,6 +931,12 @@ def phase4_config_hash(options: Phase4Options) -> str:
     normalized["missing_state_id"] = options.missing_state_id
     normalized["tail_rule"] = options.tail_rule
     normalized["tail_threshold"] = options.tail_threshold
+    if options.longitudinal != LongitudinalOptions():
+        normalized["longitudinal"] = _longitudinal_data(options.longitudinal)
+    else:
+        normalized.pop("longitudinal")
+    if normalized["resource_limits"]["max_longitudinal_versions"] == 100:
+        del normalized["resource_limits"]["max_longitudinal_versions"]
     # Disabled lineage with unchanged graph defaults retains the ordinary hash.
     # Explicit graph overrides still identify distinct input settings.
     if options.lineage:
@@ -696,7 +950,7 @@ def phase4_config_hash(options: Phase4Options) -> str:
 
 
 def load_phase4_invocation(*, cli: Mapping[str, Any], config_path: str | Path | None = None,
-                           base_directory: Path) -> tuple[Phase4Options, tuple]:
+                           base_directory: Path, operation: str = "audit") -> tuple[Phase4Options, tuple]:
     """Read one local control document, retaining its explicit-field provenance.
 
     Reuse the accepted finite, unique-key control reader and its resource limits.
@@ -723,7 +977,7 @@ def load_phase4_invocation(*, cli: Mapping[str, Any], config_path: str | Path | 
         except ToolkitError:
             raise ConfigurationError(ErrorCode.CONFIG_INVALID, "The local configuration cannot be parsed or read") from None
         inventory, config_base = (entry,), entry.path.parent
-    options = resolve_phase4_options(raw, cli=cli)
+    options = resolve_phase4_options(raw, cli=cli, operation=operation)
     if inventory:
         limits = options.configuration.resource_limits
         if limits.max_file_bytes is not None and inventory[0].size_bytes > limits.max_file_bytes:
@@ -764,6 +1018,7 @@ def phase4_validation_configuration(options: Phase4Options) -> dict[str, Any]:
     data["privacy_mode"] = options.privacy_mode
     data["version_order"] = list(options.version_order)
     data["lineage"] = options.lineage
+    data["longitudinal"] = _longitudinal_data(options.longitudinal)
     return data
 
 
@@ -777,8 +1032,11 @@ def phase4_pair_requested(options: Phase4Options, *, operation: str) -> bool:
         _invalid("invalid Phase 4 operation")
     requested = any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs)
     if operation == "validate":
-        if options.state_semantics is not None or options.tail_rule is not None or options.lineage:
+        if (options.state_semantics is not None and options.configuration.longitudinal.state_semantics is None
+                or options.tail_rule is not None or options.lineage):
             _invalid("input-only validation cannot request calculations")
+        return False
+    if options.longitudinal.enabled:
         return False
     if requested != (options.state_semantics is not None):
         _invalid("comparison requires both an earlier input and one shared literal state meaning")

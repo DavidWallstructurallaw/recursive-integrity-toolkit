@@ -648,14 +648,14 @@ import recursive_integrity_toolkit as package
 installed = Path(package.__file__).resolve().parent
 assert not installed.is_relative_to(repository), installed
 distribution = importlib.metadata.distribution('recursive-integrity-toolkit')
-assert distribution.version == package.__version__ == '0.1.0.dev4'
+assert distribution.version == package.__version__ == '0.1.0.dev5'
 members = {str(p).replace('\\', '/') for p in distribution.files or ()}
 modules = sorted(p for p in installed.rglob('*.py'))
-assert len(modules) == 40
+assert len(modules) == 41
 hashes = {p.relative_to(installed).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in modules}
 assert all('recursive_integrity_toolkit/' + p in members for p in hashes), 'Package must be installed from a wheel'
 resources = sorted(p for p in (installed / 'data').rglob('*') if p.is_file())
-assert len(resources) == 7
+assert len(resources) == 14
 resource_hashes = {p.relative_to(installed).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in resources}
 from recursive_integrity_toolkit.cli import main
 exit_code = main(['example', '--out', str(target)])
@@ -741,7 +741,12 @@ def phase4_step9_assert_all_markdown_fields(report, text):
         obj = get(report, path)
         endpoint = hits[index + 1].start() if index + 1 < len(hits) else len(text)
         block = text[match.end():endpoint]
-        next_section = re.search(r'^## ', block, re.M)
+        # Schema 1.2 includes structural series tables between analytical
+        # envelopes. They are independent blocks, outside this envelope's
+        # compact array tables, and retain their own literal golden coverage.
+        next_section = re.search(
+            r'^##(?:#)? |^`\["(?:observed_facts|derived_metrics|proxy_signals|simulations)"\]',
+            block, re.M)
         if next_section:
             block = block[:next_section.start()]
         covered = set()

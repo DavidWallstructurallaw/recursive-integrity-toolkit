@@ -5,7 +5,7 @@ import ast
 
 def test_every_module_has_owner_and_phase_status(package_root) -> None:
     paths = sorted(package_root.rglob("*.py"))
-    assert len(paths) == 40
+    assert len(paths) == 41
     for path in paths:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         doc = ast.get_docstring(tree) or ""
