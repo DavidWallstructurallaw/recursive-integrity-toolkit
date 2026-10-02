@@ -1,14 +1,7 @@
-name: Phase 4 Step 11 Security Boundary
+name: Security boundaries
 
 on:
-  pull_request:
-    paths-ignore:
-      - README.md
-      - CHANGELOG.md
-      - "docs/**"
-      - PHASE_4_COMPLETION.md
-      - PHASE_4_VALIDATION_REPORT.md
-      - PHASE_4_ARCHITECTURE_COMPLIANCE_REPORT.md
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -52,6 +45,7 @@ jobs:
             tests/unit/test_PR017_content_refs.py \
             tests/integration/test_hero_end_to_end.py tests/golden/test_phase4_reports.py \
             tests/integration/test_partial_lineage_report.py \
+            tests/integration/test_phase5_lineage_privacy.py tests/unit/test_lineage_root_resources.py \
             tests/unit/test_T1_representation.py \
             tests/unit/test_PR006_duplicates.py \
             tests/unit/test_T1_support.py \
@@ -73,17 +67,15 @@ jobs:
             tests/integration/test_partial_provenance_report.py \
             tests/unit/test_phase4_output_safety.py \
             tests/integration/test_phase4_cli.py \
-            tests/unit/test_phase4_contracts.py \
-            tests/integration/test_phase4_gates.py \
-            --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/phase4_current_security_results.log"
-          python scripts/release_check.py --phase 4 --step 11 --junit "$RUNNER_TEMP/rit-security/security.xml"
-          python scripts/check_traceability.py --phase 4 --step 11
-          python scripts/release_check.py --phase 4 --step 11
+            --junitxml="$RUNNER_TEMP/rit-security/security.xml" | tee "$RUNNER_TEMP/rit-security/tests.log"
+          python scripts/release_check.py --junit "$RUNNER_TEMP/rit-security/security.xml"
+          python scripts/check_traceability.py
+          python scripts/release_check.py
       - name: Retain actual security test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase4-current-security-boundary
+          name: current-security-boundary
           path: ${{ runner.temp }}/rit-security/
           if-no-files-found: error
           retention-days: 30

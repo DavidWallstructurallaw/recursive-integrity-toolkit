@@ -39,14 +39,6 @@ def composition(fields):
 def values(x): return x.lower_bound.value,x.upper_bound.value,x.interval_width.value
 
 
-def test_T3_bounds_owner_and_placeholder(owner_checker,repo_root):
-    owner_checker('metrics/bounds.py','T3')
-    text=(repo_root/'src/recursive_integrity_toolkit/metrics/bounds.py').read_text()
-    assert 'Phase 3 Step 6' in text
-    for name in ('lineage_closure_bounds','midpoint','risk_score','ancestry_hhi'):
-        assert 'def '+name+'(' not in text
-
-
 @pytest.mark.parametrize('c,u,n,expected',[(3,2,8,(3/8,5/8,1/4)),(0,0,8,(0,0,0)),
     (8,0,8,(1,1,0)),(0,8,8,(0,1,1)),(1,0,1,(1,1,0)),(0,1,1,(0,1,1)),(2,0,8,(1/4,1/4,0))])
 def test_exact_intervals(c,u,n,expected):

@@ -102,6 +102,10 @@ def _null_reason(key: str | int, owner: dict) -> str:
         return "Withheld by the selected privacy view."
     if key == "record_keys" and owner.get("redaction"):
         return "Identity details omitted by the declared redaction policy."
+    if key == "items" and owner.get("omission_reasons"):
+        return "Detail omitted: " + _code(owner["omission_reasons"])
+    if key in {"witness_record_keys", "witness_edge_count"} and owner.get("witness_reason"):
+        return "Cycle witness omitted: " + _code(owner["witness_reason"])
     if key == "representation":
         return "No applicable representation supplied; consult status and required evidence."
     if key in {"record_count", "excluded_record_count"}:

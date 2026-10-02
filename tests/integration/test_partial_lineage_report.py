@@ -96,7 +96,7 @@ def test_phase2_step9_content_limits_and_invalid_utf8(tmp_path):
 def phase4_step3_run():
     return {
         "run_id": "step3-independent-case", "toolkit_version": "0.1.0.dev2",
-        "report_schema_version": "1.0", "started_at": None, "completed_at": None,
+        "report_schema_version": "1.1", "started_at": None, "completed_at": None,
         "duration_seconds": None, "python_version": None, "platform": None,
         "command": None, "config_hash": None, "random_seed": None,
         "strict_mode": False, "redacted_mode": False, "network_call_count": 0,
@@ -130,14 +130,14 @@ def phase4_step3_schema(report, repo_root):
     return payload
 
 
-def test_phase4_step3_level_four_keeps_lineage_input_available_and_execution_deferred(tmp_path, repo_root):
+def test_phase4_step3_level_four_keeps_lineage_input_available_and_execution_not_requested(tmp_path, repo_root):
     from recursive_integrity_toolkit.reports.assembly import assemble_report
 
     bundle = validate_bundle(_bundle(tmp_path, ["v1::p"]), configuration=_config())
     report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run()), repo_root)
     assert report["observability"]["maximum_level"] == 4
     lineage = report["capabilities"]["lineage"]
-    assert lineage["status"] == "available" and lineage["execution_status"] == "deferred"
+    assert lineage["status"] == "available" and lineage["execution_status"] == "not_requested"
     assert lineage["execution_reason_codes"]
     assert report["capabilities"]["dataset_longitudinal"]["status"] == "available"
     assert report["capabilities"]["dataset_longitudinal"]["execution_status"] == "not_requested"
@@ -171,7 +171,7 @@ def test_phase4_step3_unresolved_parent_warning_survives_without_observability_d
     report = phase4_step3_schema(assemble_report(bundle, run=phase4_step3_run()), repo_root)
     assert report["observability"]["maximum_level"] == 4
     assert report["capabilities"]["lineage"]["status"] == "unavailable"
-    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert report["capabilities"]["lineage"]["execution_status"] == "not_requested"
     assert any(item["code"] == WarningCode.PARENT_UNRESOLVED.value for item in report["warnings"])
     assert not report["errors"] and report["run"]["run_status"] == "complete"
 
@@ -204,7 +204,7 @@ def test_phase4_step3_assembly_never_traverses_or_revalidates_lineage(tmp_path, 
             monkeypatch.setattr(assembly, name, phase4_step3_forbid)
     report = phase4_step3_schema(assembly.assemble_report(bundle, run=phase4_step3_run()), repo_root)
     assert report["observability"]["maximum_level"] == 4
-    assert report["capabilities"]["lineage"]["execution_status"] == "deferred"
+    assert report["capabilities"]["lineage"]["execution_status"] == "not_requested"
 
 
 @pytest.mark.parametrize("redacted", [False, True])
@@ -240,7 +240,7 @@ def test_phase4_step9_parent_failure_survives_pair_cli_and_both_formats(
     assert all(path.read_bytes() == raw for path, raw in before.items())
     assert report["observability"]["maximum_level"] == 4
     lineage = report["capabilities"]["lineage"]
-    assert lineage["status"] == "unavailable" and lineage["execution_status"] == "deferred"
+    assert lineage["status"] == "unavailable" and lineage["execution_status"] == "not_requested"
     assert lineage == report["observability"]["capabilities"]["lineage"]
     support = report["derived_metrics"]["support"]
     assert support["support_delta"]["value"] == 0

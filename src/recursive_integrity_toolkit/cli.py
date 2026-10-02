@@ -10,10 +10,10 @@ Assumptions:
     Each calculated side uses one version and an explicitly declared representation.
 Limits:
     No formulas, implicit representation, weighting, content-reference resolution,
-    automatic pairs, trajectories, simulation or Phase 5 graph execution. Help and
+    automatic pairs, trajectories or simulation. Lineage requires explicit opt-in. Help and
     version import no analytical dependencies or input/report implementation.
 Current phase status:
-    Phase 4 Step 8. Accepted kernels own every numerical result.
+    Phase 5 Step 8. Accepted kernels own every numerical result.
 """
 from __future__ import annotations
 
@@ -49,10 +49,14 @@ def build_parser() -> argparse.ArgumentParser:
     example = commands.add_parser("example", help="Extract and audit the packaged local Hero.", allow_abbrev=False)
     example.add_argument("--out", required=True, action=_Once, help="New example workspace; its parent must exist.")
     example.add_argument("--redacted", action=_Once, nargs=0, help="Protect paths and identifiers in reports.")
+    example.add_argument("--lineage", action=_Once, nargs=0, help="Calculate ancestry for the packaged Hero target.")
     for command, description in (("audit", "Audit one version or one explicitly declared earlier/later pair."),
                                  ("validate", "Validate inputs without running calculations.")):
         child = commands.add_parser(command, help=description, description=description, allow_abbrev=False)
         child.add_argument("--records", required=True, action=_Once, help="Local records file (CSV, JSONL or Parquet).")
+        child.add_argument("--lineage-records", action="append", help="Local ancestor/context records; repeat for multiple files. Audit requires --lineage or config lineage=true.")
+        if command == "audit":
+            child.add_argument("--lineage", action=_Once, nargs=0, help="Calculate lineage for the primary records using all explicitly loaded records.")
         for flag, help_text in (
             ("provenance", "Local provenance manifest."), ("config", "Local JSON or TOML configuration."),
             ("schema-mapping", "Local declarative schema mapping."), ("version-order", "Local explicit version-order document."),
@@ -133,6 +137,9 @@ def _options(namespace):
     options, inventory = load_phase4_invocation(cli=declarations, config_path=namespace.config,
                                                 base_directory=Path.cwd())
     phase4_pair_requested(options, operation=namespace.command)
+    if (namespace.command != "validate" and not options.lineage
+            and any(source.role is FileRole.LINEAGE_CONTEXT for source in options.inputs)):
+        raise ConfigurationError(ErrorCode.CONFIG_INVALID, "Audit context inputs require explicit lineage execution")
     return options, inventory
 
 
@@ -264,6 +271,39 @@ def _pair_calculations(bundle, options):
     return results, exits
 
 
+def _primary_versions(bundle):
+    """Select the declared primary population without adopting context versions."""
+    from .models import FileRole
+    return tuple(sorted({row.record_key.dataset_version for row in bundle.records
+                         if row.location.file_role is FileRole.RECORDS_PRIMARY}))
+
+
+def _lineage_calculations(bundle, options):
+    """Request graph/root APIs explicitly and retain a bounded family failure."""
+    from .errors import CanonicalValidationError, ErrorCode, LineageResourceLimitError
+    from .lineage.ancestry import analyze_lineage, SharedAncestryDependence
+    from .lineage.graph import LineageLimits
+    from .metrics.bounds import lineage_closure_exposure
+    from .models import CapabilityKey
+    from .reports.assembly import FamilyFailure
+    try:
+        versions = _primary_versions(bundle)
+        if len(versions) > 1:
+            raise CanonicalValidationError(ErrorCode.SCHEMA_TYPE,
+                "Lineage requires one primary dataset version", field="dataset_version")
+        limits = options.configuration.resource_limits
+        lineage = analyze_lineage(bundle, target_dataset_version=versions[0] if versions else None,
+            limits=LineageLimits(max_nodes=limits.max_lineage_nodes, max_edges=limits.max_lineage_edges,
+                max_root_memberships=limits.max_lineage_root_memberships,
+                max_root_union_visits=limits.max_lineage_root_union_visits))
+        return {"lineage": lineage, "lineage_bounds": lineage_closure_exposure(lineage),
+                "shared_ancestry": SharedAncestryDependence(lineage)}, _message_exits(lineage.messages)
+    except Exception as error:
+        usage = error.resource_usage if isinstance(error, LineageResourceLimitError) else None
+        failure = FamilyFailure(CapabilityKey.LINEAGE, (_message(error),), lineage_resource_usage=usage)
+        return {"family_errors": (failure,)}, (_error_exit(error),)
+
+
 def _run_metadata(options, operation, started_at, started_clock, *, status="complete"):
     from datetime import datetime, timezone
     import platform
@@ -332,6 +372,7 @@ def _execute(namespace):
     input_paths = [getattr(namespace, key) for key in (
         "records", "provenance", "compare", "config", "schema_mapping", "version_order", "id_salt_file")
         if getattr(namespace, key, None) is not None]
+    input_paths.extend(getattr(namespace, "lineage_records", None) or ())
     try:
         options, config_inventory = _options(namespace)
         input_paths.extend(source.path for source in options.inputs)
@@ -357,7 +398,8 @@ def _execute(namespace):
                     file_role=FileRole.VERSION_ORDER.value) from None
             return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
         order_snapshots = []
-        if namespace.command != "validate" and any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs):
+        pair_input = any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs)
+        if namespace.command != "validate" and (pair_input or options.lineage):
             for source in options.inputs:
                 if source.role is FileRole.VERSION_ORDER:
                     state = order_state(source.path)
@@ -376,7 +418,7 @@ def _execute(namespace):
             from .reports.assembly import FamilyFailure
             if (not isinstance(order_error, ToolkitError) or order_error.code is not ErrorCode.VERSION_ORDER_CONFLICT
                     or namespace.command == "validate"
-                    or not any(source.role is FileRole.RECORDS_COMPARE for source in options.inputs)):
+                    or not (pair_input or options.lineage)):
                 raise
             # Invalid chronology cannot erase independently valid input evidence.
             # Revalidate without an ordering claim; retain the original failure.
@@ -390,7 +432,9 @@ def _execute(namespace):
                 if source.role is not FileRole.VERSION_ORDER)), configuration=unordered, base_directory=Path.cwd())
             bundle = replace(bundle, inventory=tuple(sorted(bundle.inventory + tuple(entry for entry, _ in order_snapshots),
                 key=lambda entry: (entry.role.value, str(entry.path)))))
-            order_failure = (FamilyFailure(CapabilityKey.DATASET_LONGITUDINAL, (_message(order_error),)),)
+            order_failure = tuple(FamilyFailure(family, (_message(order_error),)) for family in (
+                *((CapabilityKey.DATASET_LONGITUDINAL,) if pair_input else ()),
+                *((CapabilityKey.LINEAGE,) if options.lineage else ())))
         if config_inventory:
             bundle = replace(bundle, inventory=tuple(sorted(bundle.inventory + config_inventory,
                 key=lambda entry: (entry.role.value, str(entry.path)))))
@@ -399,12 +443,19 @@ def _execute(namespace):
         if namespace.command != "validate":
             from .config import phase4_pair_requested
             pair = phase4_pair_requested(options, operation=namespace.command)
-            results, calculation_exits = _pair_calculations(bundle, options) if pair else _calculations(bundle, options)
+            results, calculation_exits = _pair_calculations(bundle, options) if pair else _calculations(
+                bundle, options, dataset_versions=_primary_versions(bundle), record_role=FileRole.RECORDS_PRIMARY)
             exits += calculation_exits
+            if options.lineage and not order_failure:
+                lineage_results, lineage_exits = _lineage_calculations(bundle, options)
+                failures = results.get("family_errors", ()) + lineage_results.pop("family_errors", ())
+                results.update(lineage_results)
+                results["family_errors"] = failures
+                exits += lineage_exits
             if order_failure:
                 results["family_errors"] = results.get("family_errors", ()) + order_failure
                 exits += (1,)
-            if not pair and len(bundle.version_order.loaded_versions) > 1:
+            if not pair and len(_primary_versions(bundle)) > 1:
                 sys.stderr.write("Audit requires one dataset_version; use rit validate to inspect multiple versions.\n")
         report = assemble_report(bundle, run=_run_metadata(options, namespace.command, started_at, started_clock), **results)
         if namespace.command == "validate":
@@ -470,7 +521,8 @@ def _example(namespace):
             "--compare", str(inputs / "records_v1.csv"), "--config", str(inputs / "config.json"),
             "--provenance", str(inputs / "provenance.csv"), "--version-order", str(inputs / "version_order.json"),
             "--state-semantics", "Hero topic labels retain their literal meaning across v1 and v2.",
-            "--out", str(workspace / "reports"), *(["--redacted"] if namespace.redacted else [])])
+            "--out", str(workspace / "reports"), *(["--redacted"] if namespace.redacted else []),
+            *(["--lineage"] if namespace.lineage else [])])
         invocation.command = "example"
     except Exception as error:
         cleaned = True
@@ -487,7 +539,8 @@ def _example(namespace):
         if not cleaned:
             sys.stderr.write("E_OUTPUT_IO: Incomplete example files remain in the selected workspace; inspect it before retrying.\n")
         return _exit_code((_OUTPUT_CODES.get(code, 4), 1 if not cleaned else 0))
-    sys.stderr.write("Phase 4 example: lineage execution is deferred. inputs/EXPECTED_OUTPUTS.md is the full-product reference, not a claim of calculated lineage results.\n")
+    if not namespace.lineage:
+        sys.stderr.write("Lineage was not requested. Use rit example --lineage to calculate the Hero ancestry results.\n")
     return _execute(invocation)
 
 

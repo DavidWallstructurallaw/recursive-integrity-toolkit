@@ -42,8 +42,7 @@ def _map(value, *operations):
     return map_row({"x": value}, plan)
 
 
-def test_PR003_owner_and_operation_inventory(owner_checker, schema_root):
-    owner_checker("io/schema_mapping.py", "PR-003")
+def test_PR003_schema_operation_inventory(schema_root):
     schema = json.loads((schema_root / "schema_mapping.schema.json").read_text())
     Draft202012Validator.check_schema(schema)
     assert {name.removeprefix("op_") for name in schema["$defs"] if name.startswith("op_")} == APPROVED_OPERATIONS

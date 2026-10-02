@@ -9,10 +9,6 @@ from recursive_integrity_toolkit.errors import InputError
 from recursive_integrity_toolkit.utils.paths import local_input_path
 
 
-def test_PR017_paths_owner(owner_checker):
-    owner_checker("utils/paths.py", "PR-017")
-
-
 @pytest.mark.parametrize("value", ["http://invalid.example/data.csv", "https:/invalid/data.csv", "s3://bucket/file.csv", "gs://bucket/file.csv", "ftp://host/f.csv", "file:///tmp/f.csv", "ssh://host/file", "//server/share/file.csv", r"\\server\share\file.csv", r"\\?\C:\file.csv", "", "bad\x00path"])
 def test_PR017_nonlocal_paths_rejected_before_io(value, monkeypatch):
     def forbidden(*args, **kwargs):

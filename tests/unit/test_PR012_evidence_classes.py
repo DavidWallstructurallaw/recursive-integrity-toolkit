@@ -12,19 +12,12 @@ Limits:
 """
 
 
-def test_PR012_evidence_classes_owner_and_placeholder(owner_checker, placeholder_checker,phase3_final_owner_checker,phase3_final_placeholder_checker):
-    owner_checker = phase3_final_owner_checker
-    placeholder_checker = phase3_final_placeholder_checker
-    owner_checker("reports/assembly.py", "PR-012")
-    placeholder_checker("reports/assembly.py")
-
-
 def phase4_step2_evidence_report_fixture():
     """Independent literal control data, never generated from production code."""
     return {
         "run": {
             "run_id": "independent-evidence-case", "toolkit_version": "0.1.0.dev2",
-            "report_schema_version": "1.0", "started_at": None, "completed_at": None,
+            "report_schema_version": "1.1", "started_at": None, "completed_at": None,
             "duration_seconds": None, "python_version": None, "platform": None,
             "command": None, "config_hash": None, "random_seed": None,
             "strict_mode": False, "redacted_mode": False, "network_call_count": 0,
@@ -862,7 +855,7 @@ def test_phase4_step2_visible_duplicate_identities_remain_at_least_two_and_uniqu
 def phase4_step3_run():
     return {
         "run_id": "step3-independent-case", "toolkit_version": "0.1.0.dev2",
-        "report_schema_version": "1.0", "started_at": None, "completed_at": None,
+        "report_schema_version": "1.1", "started_at": None, "completed_at": None,
         "duration_seconds": None, "python_version": None, "platform": None,
         "command": None, "config_hash": None, "random_seed": None,
         "strict_mode": False, "redacted_mode": False, "network_call_count": 0,

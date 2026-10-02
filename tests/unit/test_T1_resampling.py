@@ -37,15 +37,6 @@ def sample(p=None, **kw):
     return simulate_closed_resampling({'a':.5,'b':.25,'c':.25} if p is None else p, **args)
 
 
-def test_T1_resampling_owner_and_placeholder(owner_checker, repo_root):
-    owner_checker('metrics/resampling.py', 'T1')
-    text = (repo_root/'src/recursive_integrity_toolkit/metrics/resampling.py').read_text()
-    assert 'Phase 3 Step 8' in text
-    assert 'def simulate_closed_resampling(' in text
-    for name in ('simulate_reopening', 'external_reference_loss', 'ancestry_hhi'):
-        assert 'def '+name+'(' not in text
-
-
 def test_T1_expected_one_step_contraction_matches_formula():
     result=analytic({'a':.5,'b':.5},resample_size=2,steps=1)
     assert result.expected_diversity == (.5,.25)

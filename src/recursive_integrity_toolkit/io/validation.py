@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections import deque
 from pathlib import Path
 from ..config import ResourceLimits
 from datetime import datetime, timezone
@@ -43,6 +44,7 @@ from ..models import (
     ProvenanceAssessment, ProvenanceMatch, ProvenanceJoinResult,
     ValidationCoverage, ValidationMessage, ValidationSeverity, ParentResolutionStatus,
     VersionOrderResult, ParentReference, ParentValidationResult,
+    ParentRecordValidation, ParentBatchValidationResult,
     GenerationAssessment, GenerationValidationResult,
     AuditBundle, BundleValidationResult, NormalizationOptions, ScenarioParameters,
 )
@@ -601,33 +603,53 @@ def _parent_lookup(keys: tuple[RecordKey, ...], order: VersionOrderResult
     return set(keys), by_id, {version: i for i, version in enumerate(order.order)}
 
 
+def _interpret_parent_reference(text: str, child: RecordKey,
+        lookup: tuple[set[RecordKey], dict[str, list[RecordKey]], dict[str, int]],
+        location: RowLocation) -> tuple[RecordKey | None, bool, bool, str]:
+    """Single interpretation shared by fail-fast and retained-batch adapters."""
+    loaded, by_id, positions = lookup
+    parsed = _reference_key(text, location, child)
+    bare = parsed is None
+    if bare:
+        candidates = by_id.get(text, [])
+        if len(candidates) > 1:
+            raise _fail(ErrorCode.PARENT_AMBIGUOUS, "bare parent matches multiple loaded records", "parent_ids", location, child)
+        parsed = candidates[0] if candidates else None
+    resolved = parsed in loaded if parsed is not None else False
+    if parsed == child:
+        raise _fail(ErrorCode.LINEAGE_CYCLE, "direct self-parent reference is invalid input", "parent_ids", location, child)
+    temporal = "unavailable"
+    if parsed is not None:
+        if parsed.dataset_version == child.dataset_version:
+            temporal = "same_version"
+        elif parsed.dataset_version in positions and child.dataset_version in positions:
+            if positions[parsed.dataset_version] > positions[child.dataset_version]:
+                raise _fail(ErrorCode.PARENT_FUTURE_VERSION, "parent refers to a later declared version", "parent_ids", location, child)
+            temporal = "earlier_version"
+    return parsed, bare, resolved, temporal
+
+
 def _resolve_parent_list(child: RecordKey, values: tuple[str, ...] | None,
                          lookup: tuple[set[RecordKey], dict[str, list[RecordKey]], dict[str, int]],
-                         location: RowLocation, promoted: tuple[str, ...]) -> ParentValidationResult:
-    loaded, by_id, positions = lookup
+                         location: RowLocation, promoted: tuple[str, ...], *,
+                         retain_errors: bool = False) -> ParentValidationResult:
     messages: list[ValidationMessage] = []
     grouped: dict[tuple[str, str], tuple[RecordKey | None, list[str], bool, str]] = {}
     graph_deferred = False
-    for text in sorted(values or ()):
-        parsed = _reference_key(text, location, child)
-        bare = parsed is None
-        if bare:
-            candidates = by_id.get(text, [])
-            if len(candidates) > 1:
-                raise _fail(ErrorCode.PARENT_AMBIGUOUS, "bare parent matches multiple loaded records", "parent_ids", location, child)
-            parsed = candidates[0] if candidates else None
-        resolved = parsed in loaded if parsed is not None else False
-        if parsed == child:
-            raise _fail(ErrorCode.LINEAGE_CYCLE, "direct self-parent reference is invalid input", "parent_ids", location, child)
-        temporal = "unavailable"
-        if parsed is not None:
-            if parsed.dataset_version == child.dataset_version:
-                temporal = "same_version"
-                graph_deferred = True
-            elif parsed.dataset_version in positions and child.dataset_version in positions:
-                if positions[parsed.dataset_version] > positions[child.dataset_version]:
-                    raise _fail(ErrorCode.PARENT_FUTURE_VERSION, "parent refers to a later declared version", "parent_ids", location, child)
-                temporal = "earlier_version"
+    # Invalid native entries are retained by count with static diagnostics;
+    # legacy callers still pass a parsed all-string tuple and fail immediately.
+    for text in sorted(values or (), key=lambda item: item if type(item) is str else ""):
+        try:
+            if type(text) is not str:
+                raise _fail(ErrorCode.PARENT_FORMAT, "parent reference must be a string", "parent_ids", location, child)
+            parsed, bare, resolved, temporal = _interpret_parent_reference(text, child, lookup, location)
+        except CanonicalValidationError as error:
+            if not retain_errors:
+                raise
+            messages.append(_join_message(error.code.value, ValidationSeverity.ERROR,
+                            error.safe_message, child, location, "parent_ids"))
+            continue
+        graph_deferred = graph_deferred or temporal == "same_version"
         token = ("key", str(parsed)) if parsed is not None else ("bare", text)
         if token in grouped:
             grouped[token][1].append(text)
@@ -672,6 +694,99 @@ def resolve_parent_references(
     return _resolve_parent_list(child_key, parents, _parent_lookup(keys, order), loc, promoted)
 
 
+def resolve_parent_batch(
+    loaded_keys: tuple[RecordKey, ...],
+    provenance: tuple[CanonicalRow | ProvenanceAssessment, ...] | None, *,
+    version_order: VersionOrderResult | None = None, strict_mode: bool = False,
+    strict_warning_codes: tuple[str, ...] = (),
+) -> ParentBatchValidationResult:
+    """Retain every record's immediate parent evidence with one lookup index.
+
+    Invalid references are diagnosed individually, preserving valid siblings.
+    This function performs no graph traversal, cycle detection, or ancestry
+    classification. Missing chronology does not erase a resolved identity.
+    """
+    from dataclasses import replace
+
+    keys = () if type(loaded_keys) is tuple and not loaded_keys else _parent_keys(loaded_keys)
+    promoted = _join_options(None, strict_mode, strict_warning_codes)
+    if keys:
+        order = _checked_order(version_order, tuple(sorted({key.dataset_version for key in keys})))
+    else:
+        order = VersionOrderResult((), (), "empty_scope", MappingProxyType({}), MappingProxyType({}))
+        if type(version_order) is VersionOrderResult and (version_order.declarations or
+                                                          version_order.invocation_order is not None):
+            declared = _version_labels(version_order.order, field="version_order")
+            checked = resolve_version_order(declared, document=version_order.declarations or None,
+                                            invocation_order=version_order.invocation_order)
+            order = replace(checked, loaded_versions=())
+    if version_order is not None and (type(version_order) is not VersionOrderResult or version_order != order):
+        raise _version_failure("parent batch ordering evidence disagrees with its declarations")
+    if provenance is not None and type(provenance) is not tuple:
+        raise CanonicalValidationError(ErrorCode.SCHEMA_TYPE, "parent batch requires explicit provenance rows")
+    lookup = _parent_lookup(keys, order)
+    rows: dict[RecordKey, tuple[ProvenanceAssessment, object, str]] = {}
+    for row in provenance or ():
+        if type(row) not in (CanonicalRow, ProvenanceAssessment):
+            raise CanonicalValidationError(ErrorCode.SCHEMA_TYPE, "parent batch requires canonical or assessed provenance")
+        loc = _join_location(row.location)
+        values = _join_fields(row.values, loc)
+        # Parent failures belong to the retained per-record result. Identity and
+        # other provenance fields keep their existing fail-closed validation.
+        raw_parents = values.pop("parent_ids", None)
+        assessed = assess_provenance_row(replace(row, values=MappingProxyType(values)))
+        key = assessed.record_key
+        if key in rows:
+            raise _fail(ErrorCode.PROVENANCE_DUPLICATE_ROW, "duplicate parent batch provenance identity", "record_id", loc, key)
+        if key not in lookup[0]:
+            raise _fail(ErrorCode.PROVENANCE_UNMATCHED_ROW, "parent batch provenance has no loaded record", "record_id", loc, key)
+        absent = "parent_ids" not in row.values
+        if type(row) is CanonicalRow:
+            states = _join_fields(row.field_states, loc)
+            state = states.get("parent_ids")
+            if state == "absent":
+                if raw_parents is not None:
+                    raise _fail(ErrorCode.SCHEMA_TYPE, "absent parent state conflicts with its value", "parent_ids", loc, key)
+                absent = True
+            elif state == "null" and raw_parents is not None:
+                raise _fail(ErrorCode.SCHEMA_TYPE, "null parent state conflicts with its value", "parent_ids", loc, key)
+        declaration = "absent" if absent else ("null" if raw_parents is None else
+                       "empty" if type(raw_parents) in (list, tuple) and not raw_parents else "declared")
+        rows[key] = (assessed, raw_parents, declaration)
+    assessments: list[ParentRecordValidation] = []
+    messages = [replace(message, severity=ValidationSeverity.ERROR if message.code in promoted
+                        else message.severity) for message in order.messages]
+    for key in keys:
+        item = rows.get(key)
+        if item is None:
+            missing = _join_message(WarningCode.PROVENANCE_MISSING_ROW.value,
+                ValidationSeverity.ERROR if WarningCode.PROVENANCE_MISSING_ROW.value in promoted
+                else ValidationSeverity.WARNING, "record has no provenance for parent validation", key, RowLocation())
+            result = ParentValidationResult(key, "absent", (), False, (missing,))
+            assessment = ParentRecordValidation(key, False, result, 0, 0, 0, (missing,))
+        else:
+            row, raw_parents, declaration = item
+            notices = tuple(_join_message(ErrorCode.SCHEMA_REQUIRED_FIELD.value, ValidationSeverity.ERROR,
+                "parent input lacks a required provenance field", key, row.location, name)
+                for name in row.missing_required_fields)
+            if raw_parents is not None and type(raw_parents) not in (list, tuple):
+                malformed = _join_message(ErrorCode.PARENT_FORMAT.value, ValidationSeverity.ERROR,
+                    "parent declaration must be an array of strings", key, row.location, "parent_ids")
+                assessment = ParentRecordValidation(key, True, None, None, 0, 0, notices + (malformed,))
+            else:
+                parents = None if raw_parents is None else tuple(raw_parents)
+                result = _resolve_parent_list(key, parents, lookup, row.location, promoted, retain_errors=True)
+                result = replace(result, declaration_state=declaration)
+                resolved = sum(len(ref.source_references) for ref in result.references
+                               if ref.resolution_status is ParentResolutionStatus.RESOLVED)
+                self_count = sum(message.code == ErrorCode.LINEAGE_CYCLE.value for message in result.messages)
+                assessment = ParentRecordValidation(key, True, result, len(parents or ()),
+                                                    resolved, self_count, notices + result.messages)
+        assessments.append(assessment)
+        messages.extend(assessment.messages)
+    return ParentBatchValidationResult(keys, tuple(assessments), order, tuple(messages), promoted)
+
+
 def validate_generation_declarations(
     loaded_keys: tuple[RecordKey, ...], provenance: tuple[CanonicalRow | ProvenanceAssessment, ...], *,
     version_order: VersionOrderResult | None = None, strict_mode: bool = False,
@@ -679,13 +794,15 @@ def validate_generation_declarations(
 ) -> GenerationValidationResult:
     """Validate non-grounding counts using only safely established dependencies.
 
-    This internal input check does not construct or traverse an ancestry graph.
-    Monotone bounded scans propagate established expected counts; declarations
-    never seed expected values. Stalled dependencies remain unavailable, without
+    This internal input check propagates counts through immediate dependencies;
+    it does not calculate ancestry or lineage depth. Each established dependency
+    is consumed once; declarations never seed expected values. Stalled
+    dependencies remain unavailable, without
     inferring a cycle. Grounding yes establishes zero directly, independently of
     lineage depth. Parent validity and incomplete-provenance errors stay visible.
     """
     keys = _parent_keys(loaded_keys)
+    key_set = set(keys)
     promoted = _join_options(None, strict_mode, strict_warning_codes)
     order = _checked_order(version_order, tuple(sorted({key.dataset_version for key in keys})))
     if type(provenance) is not tuple:
@@ -703,7 +820,7 @@ def validate_generation_declarations(
         key = assessed.record_key
         if key in rows:
             raise _fail(ErrorCode.PROVENANCE_DUPLICATE_ROW, "duplicate generation input identity", "record_id", assessed.location, key)
-        if key not in keys:
+        if key not in key_set:
             raise _fail(ErrorCode.PROVENANCE_UNMATCHED_ROW, "generation input has no matching loaded record", "record_id", assessed.location, key)
         rows[key] = assessed
     lookup = _parent_lookup(keys, order)
@@ -742,27 +859,31 @@ def validate_generation_declarations(
             reasons[key] = ("PARENT_UNRESOLVED",)
         elif any(ref.temporal_status == "unavailable" for ref in parents[key].references):
             reasons[key] = ("PARENT_CHRONOLOGY_UNAVAILABLE",)
-    # At most one new count per record. No queue of graph nodes or topological sort.
     pending = set(keys) - set(expected) - set(reasons)
-    # An existing declared version order can schedule scans, without deriving a
-    # topological order from parent edges. Same-version dependencies may need
-    # repeated scans. No stalled dependency is ever relabelled as a cycle.
-    positions = lookup[2]
-    scan_order = tuple(item[3] for item in sorted(
-        (positions.get(key.dataset_version, 0), key.dataset_version, key.record_id, key)
-        for key in pending))
-    for _ in range(len(pending)):
-        newly_established: set[RecordKey] = set()
-        for key in scan_order:
-            if key not in pending:
-                continue
-            dependencies = parents[key].references
-            if all(ref.parent_key in expected for ref in dependencies):
-                expected[key] = 1 + max(expected[ref.parent_key] for ref in dependencies)
-                newly_established.add(key)
-        if not newly_established:
-            break
-        pending.difference_update(newly_established)
+    # Only validated grounding seeds the queue. Unavailable dependencies never
+    # enter it, and stalled dependencies are never relabelled as cycles. Grounded
+    # records still reset to zero independently of their own parent declarations.
+    dependents: dict[RecordKey, list[RecordKey]] = {}
+    remaining: dict[RecordKey, int] = {}
+    largest_parent: dict[RecordKey, int] = {}
+    for key in keys:
+        if key not in pending:
+            continue
+        dependencies = parents[key].references
+        remaining[key] = len(dependencies)
+        largest_parent[key] = 0
+        for ref in dependencies:
+            dependents.setdefault(ref.parent_key, []).append(key)
+    ready = deque(key for key in keys if key in expected)
+    while ready:
+        parent = ready.popleft()
+        for child in dependents.get(parent, ()):
+            largest_parent[child] = max(largest_parent[child], expected[parent])
+            remaining[child] -= 1
+            if remaining[child] == 0:
+                expected[child] = 1 + largest_parent[child]
+                pending.remove(child)
+                ready.append(child)
     for key in pending:
         reasons[key] = ("PARENT_GENERATION_UNAVAILABLE",)
     assessments: list[GenerationAssessment] = []
@@ -1066,7 +1187,8 @@ def validate_bundle(bundle: AuditBundle, *, configuration: dict[str, object] | N
     source_by_key = {}
     provenance_supplied = any(source.role is FileRole.PROVENANCE_MANIFEST for source in sources)
     for source in sources:
-        if source.role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE, FileRole.PROVENANCE_MANIFEST):
+        if source.role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE,
+                           FileRole.LINEAGE_CONTEXT, FileRole.PROVENANCE_MANIFEST):
             entry, rows, row_traces, notices = _bundle_table(source, effective, options, mapping)
             inventory.append(entry)
             traces.extend(row_traces)
@@ -1081,6 +1203,14 @@ def validate_bundle(bundle: AuditBundle, *, configuration: dict[str, object] | N
             inventory.append(inventory_source(source, limits=effective))
     canonical_records = tuple(sorted(records, key=_bundle_row_key))
     validate_unique_keys(canonical_records, kind="records")
+    context_versions = {row.record_key.dataset_version for row in canonical_records
+                        if row.location.file_role is FileRole.LINEAGE_CONTEXT}
+    selected_versions = {row.record_key.dataset_version for row in canonical_records
+                         if row.location.file_role in (FileRole.RECORDS_PRIMARY, FileRole.RECORDS_COMPARE)}
+    if context_versions & selected_versions:
+        raise _fail(ErrorCode.CONFIG_INVALID,
+                    "lineage context versions must be disjoint from primary and comparison versions",
+                    "dataset_version", RowLocation(FileRole.LINEAGE_CONTEXT))
     canonical_provenance = tuple(sorted(provenance, key=_bundle_row_key)) if provenance_supplied else None
     joined = join_provenance(canonical_records, canonical_provenance,
                              strict_mode=config.strict_mode, strict_warning_codes=config.strict_warning_codes)
@@ -1088,6 +1218,9 @@ def validate_bundle(bundle: AuditBundle, *, configuration: dict[str, object] | N
     order = _bundle_order(versions, order_document, config.version_order, invocation_order)
     messages.extend(joined.messages)
     messages.extend(order.messages)
+    parent_validation = resolve_parent_batch(tuple(row.record_key for row in canonical_records),
+                        canonical_provenance, version_order=order,
+                        strict_mode=config.strict_mode, strict_warning_codes=config.strict_warning_codes)
     generation = None
     try:
         generation = validate_generation_declarations(tuple(row.record_key for row in canonical_records),
@@ -1100,6 +1233,7 @@ def validate_bundle(bundle: AuditBundle, *, configuration: dict[str, object] | N
             raise
         key = RecordKey.parse(error.record_key) if error.record_key is not None else None
         messages.append(_bundle_error_message(error, RowLocation(FileRole.PROVENANCE_MANIFEST), key))
+        messages.extend(parent_validation.messages)
     content = {} if options.content_mode is ContentMode.LOCAL_REF else None
     if resolve_local_content:
         for row in canonical_records:
@@ -1125,7 +1259,7 @@ def validate_bundle(bundle: AuditBundle, *, configuration: dict[str, object] | N
     classification = replace(classification, validation_messages=final_messages)
     return BundleValidationResult(tuple(sorted(inventory, key=_bundle_inventory_key)), canonical_records,
         canonical_provenance, joined, order, generation, classification, tuple(traces),
-        tuple(sorted(content or {})), final_messages)
+        tuple(sorted(content or {})), final_messages, parent_validation)
 
 
 def _bundle_row_key(row):

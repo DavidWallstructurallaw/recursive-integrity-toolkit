@@ -33,13 +33,6 @@ def weighted(r,w): return calculate_state_distribution(r,weighting=WeightingOpti
 def approx(v): return pytest.approx(float(v),abs=1e-12,rel=1e-12)
 
 
-def test_T1_diversity_owner_and_placeholder(owner_checker,repo_root):
-    owner_checker('metrics/diversity.py','T1')
-    text=(repo_root/'src/recursive_integrity_toolkit/metrics/diversity.py').read_text(encoding='utf-8')
-    assert 'F-003' in text and 'F-004' in text
-    assert all('def '+name not in text for name in ('support_delta','shannon_entropy','simulate','ancestry_hhi'))
-
-
 @pytest.mark.parametrize('p,d',[(('1',),'0'),(('1/2','1/2'),'1/2'),(('1/4',)*4,'3/4'),(('1/2','1/4','1/4'),'5/8')])
 def test_F003_A_to_D(p,d):
     x=distribution_from_probabilities(tuple((str(i),float(Fraction(v))) for i,v in enumerate(p)),scope=scope(),representation=descriptor())

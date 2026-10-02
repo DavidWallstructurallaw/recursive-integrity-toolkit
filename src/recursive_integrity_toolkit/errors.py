@@ -24,6 +24,10 @@ Current phase status:
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .lineage.graph import LineageResourceUsage
 
 
 class ErrorCode(StrEnum):
@@ -42,6 +46,7 @@ class ErrorCode(StrEnum):
     PARENT_AMBIGUOUS = "E_PARENT_AMBIGUOUS"
     PARENT_FUTURE_VERSION = "E_PARENT_FUTURE_VERSION"
     LINEAGE_CYCLE = "E_LINEAGE_CYCLE"
+    LINEAGE_RESOURCE_LIMIT_EXCEEDED = "E_LINEAGE_RESOURCE_LIMIT_EXCEEDED"
     VERSION_ORDER_CONFLICT = "E_VERSION_ORDER_CONFLICT"
     REPRESENTATION_INCOMPATIBLE = "E_REPRESENTATION_INCOMPATIBLE"
     MAPPING_SOURCE_FIELD_MISSING = "E_MAPPING_SOURCE_FIELD_MISSING"
@@ -94,6 +99,21 @@ class SchemaError(ToolkitError):
 
 class SecurityError(ToolkitError):
     """Local security-boundary violation."""
+
+
+class LineageResourceLimitError(ToolkitError):
+    """A bounded lineage stage stopped before admitting its next work unit.
+
+    ``resource_usage`` is the immutable ``LineageResourceUsage`` supplied by the
+    computation owner. It contains counts and limits only, with no input data.
+    """
+
+    reason_code = "LINEAGE_RESOURCE_LIMIT_EXCEEDED"
+
+    def __init__(self, resource_usage: LineageResourceUsage) -> None:
+        self.resource_usage = resource_usage
+        super().__init__(ErrorCode.LINEAGE_RESOURCE_LIMIT_EXCEEDED,
+                         "lineage computation exceeded an explicit resource limit")
 
 
 class IngestionError(InputError):

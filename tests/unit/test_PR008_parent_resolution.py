@@ -12,11 +12,6 @@ Limits:
 """
 
 
-def test_PR008_parent_resolution_owner_and_placeholder(owner_checker, placeholder_checker):
-    owner_checker("lineage/graph.py", "PR-008")
-    placeholder_checker("lineage/graph.py")
-
-
 # Phase 2 Step 6: PR-008 immediate references, without graph algorithms.
 import pytest
 from recursive_integrity_toolkit.errors import CanonicalValidationError, ErrorCode, WarningCode

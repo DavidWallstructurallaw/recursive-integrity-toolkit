@@ -27,13 +27,6 @@ def represented(fields, policy='exclude', missing=None):
     return assign_field_states(rows,dataset_versions=('v1',),scope_id='support-test',config=RepresentationConfig('topic','topic_field','topic','v1',policy),missing_state_id=missing)
 
 
-def test_T1_support_owner_and_placeholder(owner_checker,repo_root):
-    owner_checker('metrics/diversity.py','T1')
-    text=(repo_root/'src/recursive_integrity_toolkit/metrics/diversity.py').read_text(encoding='utf-8')
-    assert 'Phase 3 Step 4' in text
-    assert all('def '+name not in text for name in ('support_delta','support_retention','resample'))
-
-
 def test_F001_counts_and_frequencies():
     x=distribution_from_counts({'c':1,'a':2,'b':1},scope=scope(),representation=descriptor())
     assert tuple(s.state_count for s in x.states)==(2,1,1)

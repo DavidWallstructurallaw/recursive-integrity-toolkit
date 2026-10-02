@@ -1,6 +1,6 @@
 # Report Schema
 
-Status: Phase 4 development report contract (`0.1.0.dev3`). Schema version: `1.0`.
+Status: Phase 5 dev4 development report contract (`0.1.0.dev4`). Schema version: `1.1`.
 
 The authoritative public shape is `schemas/report.schema.json`, Draft 2020-12. Runtime validation is implemented in `result.py` using the standard library. `report_schema()` returns a detached copy of the same declarative contract. No runtime schema package, filesystem lookup or remote resolver is used. The `$schema` and `$id` identifiers are descriptive; all references are local `$defs` references.
 
@@ -10,11 +10,17 @@ The installed CLI publishes `report.json` and `report.md` from the same validate
 privacy view. `audit` computes explicitly requested supported families; `validate`
 keeps analytical sections empty; `example` runs the packaged explicit Hero pair.
 Default `simulations` is `{}`. Existing Python scenario results may be supplied
-explicitly to assembly, but CLI simulation execution is unsupported. General
-lineage, ancestry, broader longitudinal orchestration and HTML remain deferred.
+explicitly to assembly, but CLI simulation execution is unsupported. Python
+callers can supply completed lineage, lineage bounds and shared-root proxy
+results explicitly. `audit --lineage` and `example --lineage` compute these
+families explicitly. Input inventories and diagnostic locations accept the
+dedicated `lineage_context` role. Graph scope counts loaded context separately
+from the primary target; ordinary metric denominators remain scoped to their
+selected primary/comparison versions. Broader longitudinal orchestration and
+HTML remain deferred.
 
 Capability eligibility and execution are separate. An input Level 4 report can
-retain deferred lineage, and a completed explicit pair has partial longitudinal
+retain `not_requested` lineage, and a completed explicit pair has partial longitudinal
 execution because additional change families remain deferred. This alone does
 not create an error. Unavailable values retain null plus their required reasons,
 while actual zero and empty measured sets remain values.
@@ -26,7 +32,7 @@ retains input identities when privacy permits them. Warning codes, counts,
 capability effects and representative locations are preserved. Distinct contexts
 are retained, and only equal diagnostic entries are deduplicated in encounter
 order. This bounded representation prevents repeated full-dataset identity copies
-without changing schema version, analytical values or unknown-state meaning.
+without changing analytical values or unknown-state meaning.
 
 `run.duration_seconds` for CLI runs measures input/calculation work before report
 assembly and publication. It must not be treated as the complete report runtime.
@@ -74,7 +80,7 @@ Every section is present in empty, validation-only and error-only reports. Empty
 
 Input capability status is `available`, `partial`, `unavailable` or `experimental`. Execution status is independently `completed`, `partial`, `not_requested`, `deferred` or `failed`. Executed work names its operations in `execution_scope`; all noncompleted statuses carry `execution_reason_codes`. A nonempty matrix contains exactly the seven approved capability keys. Its copy at `observability.capabilities` is structurally equal on input and shares the same immutable object in the canonical result. A mismatch is rejected.
 
-`observability` may be empty before assessment; otherwise all six fields are required. Maximum level 0–5 must match its exact registered label. Level 4 input eligibility can coexist with lineage execution deferred. Phase 4 cannot claim completed or partially executed Phase 5 lineage analysis. Existing declared/resolved edge observations and the explicitly named earlier-version ordering certificate retain their limited Phase 2 provenance.
+`observability` may be empty before assessment; otherwise all six fields are required. Maximum level 0–5 must match its exact registered label. Level 4 input eligibility can coexist with lineage execution `not_requested`. Supplied lineage results retain their actual `completed`, `partial` or `failed` execution status. Without an explicit result, existing declared/resolved edge observations and the explicitly named earlier-version ordering certificate retain their limited validation provenance.
 
 ## Analytical field registry
 
@@ -102,8 +108,13 @@ Input capability status is `available`, `partial`, `unavailable` or `experimenta
 | `observed_facts.lineage.declared_parent_edge_count` | integer | `edges` | `observed_fact` | `PR-008` | `PR-008.declared_parent_edge_count` | 3 | Null only with unavailable reasons |
 | `observed_facts.lineage.resolved_parent_edge_count` | integer | `edges` | `observed_fact` | `PR-008` | `PR-008.resolved_parent_edge_count` | 3 | Null only with unavailable reasons |
 | `observed_facts.lineage.unresolved_parent_edge_count` | integer | `edges` | `observed_fact` | `PR-008` | `PR-008.unresolved_parent_edge_count` | 3 | Null only with unavailable reasons |
-| `observed_facts.lineage.cycle_status` | enum | `status` | `observed_fact` | `T6` | `T6.graph_cycle_check` | 3 | Unavailable only: Phase 5 deferred |
+| `observed_facts.lineage.cycle_status` | enum | `status` | `observed_fact` | `T6` | `T6.graph_cycle_check` | 3 | Null when graph analysis is unavailable |
 | `observed_facts.lineage.ordering_certificate` | ordering_certificate | `certificate` | `observed_fact` | `PR-008` | `PR-008.earlier_version_certificate` | 3 | Null only with unavailable reasons |
+| `observed_facts.lineage.graph_scope` | lineage_scope | `scope` | `observed_fact` | `T4` | `T4.graph_scope` | 3 | Explicit target and loaded scope |
+| `observed_facts.lineage.cycle_analysis` | cycle_analysis | `cycles` | `observed_fact` | `T6` | `T6.cyclic_strongly_connected_components` | 3 | Null only with unavailable reasons |
+| `observed_facts.lineage.depth_summary` | depth_summary | `edges` | `observed_fact` | `PR-009` | `PR-009.resolved_depth_summary` | 3 | Resolved subset retained |
+| `observed_facts.lineage.unresolved_record_details` | unresolved_record_details | `records` | `observed_fact` | `T4` | `T4.unresolved_record_details` | 3 | Null when target partition is unavailable |
+| `observed_facts.lineage.resource_usage` | lineage_resource_usage | `work_units` | `observed_fact` | `PR-015` | `PR-015.lineage_resource_usage` | 3 | Exact consumed work and explicit limits |
 | `observed_facts.state_counts.by_version.*` | state_count[] | `records` | `observed_fact` | `T1` | `T1.state_counts` | 1 | Null only with unavailable reasons |
 | `derived_metrics.support.by_version.*.support_size` | integer | `states` | `derived_metric` | `T1` | `F-002` | 1 | Null only with unavailable reasons |
 | `derived_metrics.support.by_version.*.weighted_support_size` | integer | `states` | `derived_metric` | `T1` | `F-002` | 1 | Null only with unavailable reasons |
@@ -139,20 +150,24 @@ Input capability status is `available`, `partial`, `unavailable` or `experimenta
 | `derived_metrics.closure_exposure.direct.lower_bound` | ratio | `ratio` | `derived_metric` | `T3` | `F-009` | 2 | Null only with unavailable reasons |
 | `derived_metrics.closure_exposure.direct.upper_bound` | ratio | `ratio` | `derived_metric` | `T3` | `F-010` | 2 | Null only with unavailable reasons |
 | `derived_metrics.closure_exposure.direct.interval_width` | ratio | `ratio` | `derived_metric` | `T3` | `T3.upper_minus_lower` | 2 | Null only with unavailable reasons |
-| `derived_metrics.closure_exposure.lineage.lower_bound` | ratio | `ratio` | `derived_metric` | `T3` | `T3.lineage_closure` | 3 | Unavailable only: Phase 5 deferred |
-| `derived_metrics.closure_exposure.lineage.upper_bound` | ratio | `ratio` | `derived_metric` | `T3` | `T3.lineage_closure` | 3 | Unavailable only: Phase 5 deferred |
-| `derived_metrics.closure_exposure.lineage.interval_width` | ratio | `ratio` | `derived_metric` | `T3` | `T3.lineage_closure` | 3 | Unavailable only: Phase 5 deferred |
+| `derived_metrics.closure_exposure.lineage.lower_bound` | ratio | `ratio` | `derived_metric` | `T3` | `T3.lineage_closure` | 3 | Null for empty or unavailable partition |
+| `derived_metrics.closure_exposure.lineage.upper_bound` | ratio | `ratio` | `derived_metric` | `T3` | `T3.lineage_closure` | 3 | Null for empty or unavailable partition |
+| `derived_metrics.closure_exposure.lineage.interval_width` | ratio | `ratio` | `derived_metric` | `T3` | `T3.lineage_closure` | 3 | Null for empty or unavailable partition |
+| `derived_metrics.lineage.grounded_record_count` | integer | `records` | `derived_metric` | `T4` | `T4.grounded_record_count` | 3 | Null for unavailable partition |
+| `derived_metrics.lineage.closed_record_count` | integer | `records` | `derived_metric` | `T4` | `T4.closed_record_count` | 3 | Null for unavailable partition |
+| `derived_metrics.lineage.unresolved_record_count` | integer | `records` | `derived_metric` | `T4` | `T4.unresolved_record_count` | 3 | Null for unavailable partition |
+| `derived_metrics.lineage.records_with_resolved_external_ancestry` | integer | `records` | `derived_metric` | `T4` | `T4.records_with_resolved_external_ancestry` | 3 | Null for unavailable partition |
 | `derived_metrics.lineage.resolved_parent_edge_coverage` | ratio | `ratio` | `derived_metric` | `PR-008` | `PR-008.resolved_edges_over_declared` | 3 | Null only with unavailable reasons |
-| `derived_metrics.lineage.resolved_lineage_coverage` | ratio | `ratio` | `derived_metric` | `T4` | `T4.resolved_records_over_scope` | 3 | Unavailable only: Phase 5 deferred |
-| `derived_metrics.lineage.external_ancestry_coverage` | ratio | `ratio` | `derived_metric` | `T4` | `T4.external_roots_over_scope` | 3 | Unavailable only: Phase 5 deferred |
-| `derived_metrics.lineage.distinct_external_root_count` | integer | `roots` | `derived_metric` | `T4` | `T4.root_set_union` | 3 | Unavailable only: Phase 5 deferred |
-| `derived_metrics.lineage.top_shared_ancestors` | ancestor_incidence[] | `records` | `derived_metric` | `T4` | `T4.incidence_ranking` | 3 | Unavailable only: Phase 5 deferred |
-| `derived_metrics.lineage.ancestry_concentration_hhi` | ratio | `ratio` | `derived_metric` | `T4` | `F-012` | 3 | Unavailable only: Phase 5 deferred |
-| `derived_metrics.lineage.effective_external_root_count` | number | `roots` | `derived_metric` | `T4` | `F-013` | 3 | Unavailable only: Phase 5 deferred |
-| `derived_metrics.lineage.lineage_depth` | integer | `edges` | `derived_metric` | `PR-009` | `PR-009.maximum_resolved_parent_depth` | 3 | Unavailable only: Phase 5 deferred |
+| `derived_metrics.lineage.resolved_lineage_coverage` | ratio | `ratio` | `derived_metric` | `T4` | `T4.resolved_records_over_scope` | 3 | Null for empty or unavailable partition |
+| `derived_metrics.lineage.external_ancestry_coverage` | ratio | `ratio` | `derived_metric` | `T4` | `T4.external_roots_over_scope` | 3 | Null for empty or unavailable partition |
+| `derived_metrics.lineage.distinct_external_root_count` | integer | `roots` | `derived_metric` | `T4` | `T4.root_set_union` | 3 | Complete-root subset with explicit coverage |
+| `derived_metrics.lineage.top_shared_ancestors` | root_contribution_details | `records` | `derived_metric` | `T4` | `T4.incidence_ranking` | 3 | Null for unavailable root analysis |
+| `derived_metrics.lineage.ancestry_concentration_hhi` | ratio | `ratio` | `derived_metric` | `T4` | `F-012` | 3 | Null without resolved external roots |
+| `derived_metrics.lineage.effective_external_root_count` | number | `roots` | `derived_metric` | `T4` | `F-013` | 3 | Null without resolved external roots |
+| `derived_metrics.lineage.lineage_depth` | integer | `edges` | `derived_metric` | `PR-009` | `PR-009.maximum_resolved_parent_depth` | 3 | Null for incomplete whole-target depth |
 | `proxy_signals.support_contraction` | proxy | `signal` | `proxy_signal` | `T1` | `T1.support_contraction` | 4 | No scalar value; typed class fields |
 | `proxy_signals.tail_fragility` | proxy | `signal` | `proxy_signal` | `T2` | `T2.tail_fragility` | 1 | No scalar value; typed class fields |
-| `proxy_signals.shared_ancestry_dependence` | proxy | `signal` | `proxy_signal` | `T4` | `T4.shared_ancestry_dependence` | 3 | Unavailable only: Phase 5 deferred |
+| `proxy_signals.shared_ancestry_dependence` | proxy | `signal` | `proxy_signal` | `T4` | `T4.shared_ancestry_dependence` | 3 | Presence may retain partial coverage; absence requires complete ancestry |
 | `proxy_signals.provenance_uncertainty` | proxy | `signal` | `proxy_signal` | `T3` | `T3.provenance_uncertainty` | 2 | No scalar value; typed class fields |
 | `simulations.closed_resampling` | scenario | `scenario` | `simulation` | `T1` | `T1.closed_resampling` | 5 | No scalar value; typed class fields |
 | `simulations.tail_extinction` | scenario | `scenario` | `simulation` | `T2` | `T2.tail_extinction` | 1 | No scalar value; typed class fields |
@@ -188,7 +203,7 @@ The following tables enumerate non-envelope public fields and containers. A `$de
 | `run` | object | required | PR-016 | Not nullable |
 | `run.run_id` | string | required | PR-016 | Not nullable |
 | `run.toolkit_version` | string | required | PR-016 | Not nullable |
-| `run.report_schema_version` | constant "1.0" | required | PR-013 | Not nullable |
+| `run.report_schema_version` | constant "1.1" | required | PR-013 | Not nullable |
 | `run.started_at` | string or null | required | PR-016 | Explicitly not applicable/unavailable as described above |
 | `run.completed_at` | string or null | required | PR-016 | Explicitly not applicable/unavailable as described above |
 | `run.duration_seconds` | number or null | required | PR-016 | Explicitly not applicable/unavailable as described above |
@@ -231,7 +246,7 @@ The following tables enumerate non-envelope public fields and containers. A `$de
 | `inputs` | object | required | PR-002 | Not nullable |
 | `inputs.artifacts` | object[] | optional | PR-002 | Not nullable |
 | `inputs.artifacts[]` | object | required | PR-002 | Not nullable |
-| `inputs.artifacts[].role` | enum: records_primary, records_compare, provenance_manifest, schema_mapping, config, version_order, embedding_data, external_reference | required | PR-002 | Not nullable |
+| `inputs.artifacts[].role` | enum: records_primary, records_compare, lineage_context, provenance_manifest, schema_mapping, config, version_order, embedding_data, external_reference | required | PR-002 | Not nullable |
 | `inputs.artifacts[].path` | string or null | required | PR-002 | Explicitly not applicable/unavailable as described above |
 | `inputs.artifacts[].path_redacted` | boolean | required | PR-002 | Not nullable |
 | `inputs.artifacts[].format` | enum: csv, jsonl, parquet, json, toml, npy | required | PR-002 | Not nullable |
@@ -323,6 +338,11 @@ The following tables enumerate non-envelope public fields and containers. A `$de
 | `observed_facts.lineage.unresolved_parent_edge_count` | object | optional | Enclosing registered owner | Not nullable |
 | `observed_facts.lineage.cycle_status` | object | optional | Enclosing registered owner | Not nullable |
 | `observed_facts.lineage.ordering_certificate` | object | optional | Enclosing registered owner | Not nullable |
+| `observed_facts.lineage.graph_scope` | object | optional | T4 | Not nullable |
+| `observed_facts.lineage.cycle_analysis` | object | optional | T6 | Not nullable |
+| `observed_facts.lineage.depth_summary` | object | optional | PR-009 | Not nullable |
+| `observed_facts.lineage.unresolved_record_details` | object | optional | T4 | Not nullable |
+| `observed_facts.lineage.resource_usage` | object | optional | PR-015 | Not nullable |
 | `observed_facts.state_counts` | object | optional | Enclosing registered owner | Not nullable |
 | `observed_facts.state_counts.by_version` | object | optional | Enclosing registered owner | Not nullable |
 | `observed_facts.state_counts.by_version.*` | object | required | Enclosing registered owner | Not nullable |
@@ -387,6 +407,10 @@ The following tables enumerate non-envelope public fields and containers. A `$de
 | `derived_metrics.closure_exposure.lineage.upper_bound` | object | optional | T3 | Not nullable |
 | `derived_metrics.closure_exposure.lineage.interval_width` | object | optional | T3 | Not nullable |
 | `derived_metrics.lineage` | object | optional | Enclosing registered owner | Not nullable |
+| `derived_metrics.lineage.grounded_record_count` | object | optional | T4 | Not nullable |
+| `derived_metrics.lineage.closed_record_count` | object | optional | T4 | Not nullable |
+| `derived_metrics.lineage.unresolved_record_count` | object | optional | T4 | Not nullable |
+| `derived_metrics.lineage.records_with_resolved_external_ancestry` | object | optional | T4 | Not nullable |
 | `derived_metrics.lineage.resolved_parent_edge_coverage` | object | optional | Enclosing registered owner | Not nullable |
 | `derived_metrics.lineage.resolved_lineage_coverage` | object | optional | Enclosing registered owner | Not nullable |
 | `derived_metrics.lineage.external_ancestry_coverage` | object | optional | Enclosing registered owner | Not nullable |
@@ -413,7 +437,7 @@ The following tables enumerate non-envelope public fields and containers. A `$de
 | `simulations` | object | required | Enclosing registered owner | Not nullable |
 | `simulations.closed_resampling` | object | optional | Enclosing registered owner | Not nullable |
 | `simulations.tail_extinction` | object | optional | Enclosing registered owner | Not nullable |
-| `simulations.external_reopening` | forbidden in Phase 4 | optional | Enclosing registered owner | Not nullable |
+| `simulations.external_reopening` | forbidden in the current schema | optional | Enclosing registered owner | Not nullable |
 
 ### `unavailable_conclusions`
 
@@ -741,7 +765,7 @@ All emitted scenario evidence remains `simulation` and `experimental`. The commo
 
 `simulations.closed_resampling` retains direct `expected_diversity`, `sampled_paths`, `support_trajectories` and `extinction_events` paths. Analytic expectation requires the supplied expectation vector, initial diversity, contraction factor and underflow steps; its vector length is horizon plus one. Sampled paths require seed, replicate count, NumPy/RNG identity and scheduling metadata. Path count must equal replicate count. Optional support trajectories and events may only preserve evidence already supplied by the accepted owner; their presence does not authorize the adapter or renderer to calculate them.
 
-`simulations.external_reopening` is a registered future field, explicitly rejected by this Phase 4 schema and constructor. `external_reference_loss` has no approved public trace and is unregistered. Neither is executed. The lack of implementation belongs in capability execution reasons and unavailable conclusions.
+`simulations.external_reopening` is a registered future field, explicitly rejected by the current schema and constructor. `external_reference_loss` has no approved public trace and is unregistered. Neither is executed. The lack of implementation belongs in capability execution reasons and unavailable conclusions.
 
 ## Path reconciliation and unchanged meaning
 
@@ -753,7 +777,7 @@ All emitted scenario evidence remains `simulation` and `experimental`. The commo
 | Existing `TailSelectionResult.tail_membership` | Public `derived_metrics.tail.tail_states`, plus `tail_rule` and typed selection metadata | Frozen planned public path; explicit adapter mapping, no numerical change |
 | Existing duplicate group object | `observed_facts.content.exact_duplicate_groups` | Frozen PR-006 planned public path |
 | Reporting operations-applied description | `inputs.schema_mapping.operations` with the exact accepted operation enum | Frozen PR-003 planned path and Phase 2 dispatcher |
-| Old `cycle_detected` and cycle-status detail sketches | Registered `observed_facts.lineage.cycle_status` is an unavailable envelope | Registry §32 and P4-D01; graph operations remain Phase 5 |
+| Old `cycle_detected` and cycle-status detail sketches | Registered `observed_facts.lineage.cycle_status` plus `cycle_analysis` | P5-D08 and the approved lineage contract; explicit completed graph observations |
 | Reporting simplified proxy example uses `status: present` | `level: present`, independent availability status | Full reporting §9.3/§16.6 |
 | Older privacy enum includes debug | Public Phase 4 privacy mode is standard or redacted | Approved Phase 4 Step 4 boundary |
 
@@ -909,8 +933,14 @@ The following additional fields are part of the registered envelopes, with the o
 | `derived_metrics.lineage.external_ancestry_coverage` | `method` | string | optional |
 | `derived_metrics.lineage.distinct_external_root_count` | `method` | string | optional |
 | `derived_metrics.lineage.top_shared_ancestors` | `method` | string | optional |
-| `derived_metrics.lineage.top_shared_ancestors` | `value[].record_key` | record_key | required |
-| `derived_metrics.lineage.top_shared_ancestors` | `value[].incidence_count` | integer | required |
+| `derived_metrics.lineage.top_shared_ancestors` | `value.items[].record_key` | record_key | required on visible rows |
+| `derived_metrics.lineage.top_shared_ancestors` | `value.items[].incidence_count` | integer | required on visible rows |
+| `derived_metrics.lineage.top_shared_ancestors` | `value.items[].incidence_share` | ratio | required on visible rows |
+| `derived_metrics.lineage.top_shared_ancestors` | `value.items[].incidence_denominator` | integer | required on visible rows |
+| `derived_metrics.lineage.top_shared_ancestors` | `value.items[].fractional_mass` | number | required on visible rows |
+| `derived_metrics.lineage.top_shared_ancestors` | `value.items[].normalized_weight` | ratio | required on visible rows |
+| `derived_metrics.lineage.top_shared_ancestors` | `value.items[].weight_denominator` | integer | required on visible rows |
+| `derived_metrics.lineage.resolved_parent_edge_coverage` | `no_declared_parents` | boolean | required for executed lineage |
 | `derived_metrics.lineage.ancestry_concentration_hhi` | `method` | string | optional |
 | `derived_metrics.lineage.effective_external_root_count` | `method` | string | optional |
 | `derived_metrics.lineage.lineage_depth` | `method` | string | optional |
@@ -970,7 +1000,7 @@ Schema validation is separate from evidence assembly, privacy selection, renderi
 
 ## Explicit evidence assembly
 
-`recursive_integrity_toolkit.reports.assembly` retains report schema version `1.0`, the twelve sections, their order and registered field ownership. `weighted_source_type_masses` is a category-to-mass object (`category_mass_map`).
+`recursive_integrity_toolkit.reports.assembly` emits report schema version `1.1`, retaining the twelve sections, their order and registered field ownership. Strict schema-1.0 readers must explicitly adopt 1.1; no migration loader is supplied. `weighted_source_type_masses` is a category-to-mass object (`category_mass_map`).
 
 ### Public Python interface
 
@@ -985,6 +1015,9 @@ def assemble_report(
     tail: TailSelectionResult | None = None,
     comparison: SupportComparison | None = None,
     closure: DirectClosureExposureBounds | None = None,
+    lineage: LineageAnalysisResult | None = None,
+    lineage_bounds: LineageClosureExposureBounds | None = None,
+    shared_ancestry: SharedAncestryDependence | None = None,
     expected_diversity: ExpectedDiversityResult | None = None,
     resampling: ResamplingSimulation | None = None,
     extinction: tuple[ExtinctionProbabilityResult, ...] = (),
@@ -1019,12 +1052,50 @@ Assembly validates result types, finite values, metadata ownership, accepted met
 | `tail` | `TailSelectionResult` | The declared rule, its parameters, supplied membership, support/share and rarity ranking |
 | `comparison` | `SupportComparison` | Supplied pair support delta, retention, loss/added counts, original support differences and diversity delta with explicit comparison basis |
 | `closure` | `DirectClosureExposureBounds` | Supplied lower bound, upper bound and interval width, with operationalization, coverage and separate confidence disclosure |
+| `lineage` | `LineageAnalysisResult` | Supplied target/context scope, graph/cycle/depth observations, original-reference coverage, G/C/U partition, root metrics, bounded details, resource usage and execution status |
+| `lineage_bounds` | `LineageClosureExposureBounds` | Explicit lineage closure interval from the same lineage source; direct bounds retain their own slot |
+| `shared_ancestry` | `SharedAncestryDependence` | Explicit descriptive shared-root signal, independent availability, coverage and limitations |
 | `expected_diversity` | `ExpectedDiversityResult` | Experimental analytic closed-resampling expectation and supplied scenario metadata |
 | `resampling` | `ResamplingSimulation` | Experimental sampled paths, support trajectories, extinction events and supplied scenario metadata |
 | `extinction` | Tuple of `ExtinctionProbabilityResult` | Explicitly supplied selected-state one-step extinction marginals under one shared scenario basis |
 | `family_errors` | Tuple of `FamilyFailure` | Explicit capability-bound error/fatal diagnostics alongside independently useful evidence |
 
 Empirical frequencies remain derived metrics. Explicit supplied probabilities are observed declarations under `observed_facts.supplied_state_probabilities.by_version`, with an explicit probability basis and no invented record-count denominator. Scenario probabilities remain simulations. Product metadata, capability decisions, warnings, errors and recommendations retain their product ownership without an additional scientific evidence class.
+
+### Lineage scope, bounded details and source handoffs
+
+The complete field shapes are fixed in [the lineage contract](lineage_contract.md#5-schema-11-placement-detail-bounds-and-privacy).
+Graph scope, cycle observations and resource usage describe all loaded records;
+root/depth population metrics and original-reference counts describe only the
+selected primary target. Context records support ancestry without changing N.
+G/C/U counts cover all targets, independently of representation eligibility.
+G-only concentration and root observations retain partial status and explicit
+G/N coverage when U is positive. A complete conservative interval can remain
+available even when its source execution is partial or failed for invalid input.
+
+Each of the five identity-bearing collections uses `items`, `total_count`,
+`returned_count`, `omitted_count`, `limit: 100`, `detail_status` and
+`omission_reasons`: top roots, unresolved records, cycle components, cycle
+members and affected records. Visible detail is complete or truncated with
+`diagnostic_limit`; whole-list privacy omission uses null items and
+`redacted_identity_details`, retaining an existing limit reason. Counts always
+satisfy `total_count = returned_count + omitted_count`. Component witnesses
+contain at most 64 edges and 65 closed-path keys. Details preserve the owner's
+rank/order, and their cap never changes full-distribution metrics or execution
+status.
+
+Assembly binds the selected target and complete loaded identities to the bundle.
+A private input signature additionally checks relevant retained declarations,
+field presence, policy and diagnostics so changed grounding under identical
+record keys cannot reuse an old result. Bounds and proxy results must match the
+explicit lineage source. The signature remains internal and provides no
+authenticity guarantee. These checks do not rerun graph or metric kernels.
+
+A typed root-resource failure retains completed graph/depth/reference results,
+resource counters and diagnostics, while root counts, concentration and intervals
+remain unavailable. A pre-result graph-admission error can use the existing
+lineage `FamilyFailure`; it supplies no completed graph observations. Supplying
+both a lineage result and a separate lineage family failure is rejected.
 
 ### Scope, coverage and representation
 
@@ -1063,7 +1134,7 @@ The schema has one scalar/table slot per version and weighting mode, plus single
 
 Scenario model/version, assumptions, supplied/effective distributions, normalization disclosure, numerical policy, horizon, sample size, seed, RNG identity, replicate schedule, paths and underflow disclosures remain attached to the applicable result. Analytic expectations, sampled paths and analytic one-step probabilities retain their distinct method labels. Mathematical scopes may differ from the bundle's empirical scope without upgrading its observability assessment.
 
-No scenario runs during assembly. Omitted scenario arguments leave `simulations` empty. A supplied extinction marginal alone does not select a tail or create a tail-fragility signal. External reopening remains rejected by the Phase 4 schema, and external-reference loss remains unregistered. Supplied scenarios cannot establish an empirical intervention effect or a calibrated production-failure forecast.
+No scenario runs during assembly. Omitted scenario arguments leave `simulations` empty. A supplied extinction marginal alone does not select a tail or create a tail-fragility signal. External reopening remains rejected by the current schema, and external-reference loss remains unregistered. Supplied scenarios cannot establish an empirical intervention effect or a calibrated production-failure forecast.
 
 ### Input eligibility, execution and failures
 
@@ -1074,7 +1145,7 @@ The seven capability input statuses, original reason codes, requirements and inp
 | `ingestion` | The retained bundle-validation operation is identified explicitly; retained ingestion errors produce partial/failed execution according to surviving input evidence. |
 | `content_diagnostics` | Names supplied distribution, duplicate and tail operations. With no supplied result or family error it is `not_requested`; supplied operations are `completed` unless retained family errors make execution `partial`. An error with no supplied operation is `failed`. |
 | `provenance` | Names supplied provenance-composition/direct-bound operations under the same completed/partial/failed rules. Independent validation coverage remains available even when no calculation is requested. |
-| `lineage` | Always `deferred` in Phase 4, including Level 4 input eligibility. Retained immediate-parent validation errors remain errors without asserting graph execution. |
+| `lineage` | Defaults to `not_requested`; an explicit source result retains its `completed`, `partial` or `failed` execution. A bound family failure before an analytical result reports `failed`. Immediate-parent validation alone never claims graph execution. |
 | `dataset_longitudinal` | A supplied pair records its limited support/diversity operation with `partial` execution and an explicit deferred-change-families reason. Without a supplied pair it is `not_requested`, or `failed` when an explicitly bound failure exists. |
 | `model_longitudinal` | `deferred`, with the missing implementation/evidence boundary retained. |
 | `intervention_simulation` | Names supplied analytic expectation, sampled path or extinction-marginal operations; no supplied scenario means `not_requested`. Explicitly bound failures remain failed/partial execution. |
@@ -1096,12 +1167,13 @@ The current deterministic signals are restricted to these existing bases. Compar
 | `support_contraction` | A usable supplied explicit-pair support delta is negative. Basis fields cite the delta and supplied support differences/comparison details. | Restricted to the pair's selected scope, representation and declared common state meaning; no production failure or model-performance claim. |
 | `tail_fragility` | A usable supplied tail-support count is positive under the supplied explicit tail-selection rule. | Declared tail membership, with no hidden threshold, importance claim or calibrated production forecast. |
 | `provenance_uncertainty` | A supplied usable direct interval width is positive, or a cited usable row/required-field/grounding coverage is below one. | Cites actual fields with matching scopes and preserves their distinct denominator meanings; completeness does not establish truth or source independence. |
+| `shared_ancestry_dependence` | An explicitly supplied proxy reports a complete external root with incidence at least two. An absent witness supports `not_present` only when nonempty target ancestry is complete. | Partial coverage can support `present`; incomplete evidence without a witness remains `indeterminate` and unavailable. No calibrated risk or causal conclusion. |
 
-Zero/positive support delta and an empty selected tail can produce `not_present` under their own usable basis. Missing, unavailable or zero-denominator evidence is not converted into zero or a negative finding. When a signal has no usable basis it is omitted. Each emitted proxy retains basis paths, deterministic trigger text, scope, representation where applicable, coverage and limitations. No `shared_ancestry_dependence` proxy is generated in this phase.
+Zero/positive support delta and an empty selected tail can produce `not_present` under their own usable basis. Missing, unavailable or zero-denominator evidence is not converted into zero or a negative finding. The existing non-lineage signals are omitted without a usable basis; an explicitly supplied shared-ancestry proxy retains its unavailable state and reasons. Each emitted proxy retains basis paths, deterministic trigger text, scope, representation where applicable, coverage and limitations. An omitted shared-ancestry argument does not request that proxy automatically.
 
-The required unavailable-conclusion safeguards include model-performance decline, causal ancestor effect, universal integrity and universal collapse prediction. Applicable additional entries explain production failure, complete-pipeline closure, deferred lineage analysis/closure/external ancestry and empirical intervention effects. Each uses its registered owner and method, unavailable evidence class/status, specific reasons, blocking evidence, required next metadata, related capability and theory/product limit. Missing input, invalid evidence, incompatible declarations, deferred implementation and conclusions outside product scope remain distinguishable. Unavailable does not establish that a conclusion is false.
+The required unavailable-conclusion safeguards include model-performance decline, causal ancestor effect, universal integrity and universal collapse prediction. Applicable additional entries explain production failure, complete-pipeline closure, unrequested or failed lineage analysis, incomplete ancestry coverage, unsupplied or unavailable lineage intervals, and empirical intervention effects. Each uses its registered owner and method, unavailable evidence class/status, specific reasons, blocking evidence, required next metadata, related capability and theory/product limit. Missing input, invalid evidence, incompatible declarations, deferred implementation and conclusions outside product scope remain distinguishable. Unavailable does not establish that a conclusion is false.
 
-Lineage validation observations remain bounded by their source method. Retained reference-entry counts preserve the classifier's multiplicity and denominator. The earlier-version ordering certificate is described as its sufficient declared-order certificate; it is not reported as general graph-cycle traversal. Root counts, HHI, effective roots, lineage depth, graph traversal, lineage closure and ancestry proxies remain deferred with explicit disclosures.
+Lineage validation observations remain bounded by their source method. Without an explicit analysis, retained reference-entry counts preserve the classifier's multiplicity and denominator, including null coverage when no reference exists. Executed lineage uses original target-reference multiplicity and coverage 1.0 for an exact zero total, with `no_declared_parents: true`. The earlier-version ordering certificate remains its limited declared-order observation. Supplied graph, root, concentration, depth, bounds and proxy results retain their independent scopes, availability and calculation owners.
 
 Recommendations are deterministic requests for evidence: missing matching provenance rows, usable required fields, unresolved external grounding, an explicitly missing representation, missing chronology, unresolved composite parent references and versioned model outcomes. Their priorities follow uncertainty reduction, the next available evidence requirement, error resolution and optional enrichment. Recommendations refer to the missing fields or retained classifier reasons; the absence of a single top-level representation summary alone does not assert that representation was never declared.
 
@@ -1130,6 +1202,7 @@ error severity are preserved. Input-inventory and normalized configuration hashe
 remain linkable reproducibility metadata; raw per-record content digests are
 protected when they serve as state or group identities.
 
+Standard mode preserves record IDs and does not accept record-ID overrides.
 In redacted mode, record IDs default to `hash`; `preserve` affects only the
 declared record-ID field, and `omit` removes identity-bearing lists. Duplicate
 groups with omitted identities retain `record_count` and the frozen
@@ -1138,6 +1211,13 @@ arrays may be omitted while their counts remain. Distinct registered exclusion
 reasons remain disclosed with their protected scope association under
 `run.identifier_protection.limitations`. Per-record linkage is intentionally
 omitted. Redaction does not introduce an unavailable analytical conclusion.
+
+Lineage roots, witnesses, unresolved records and loaded/target version labels
+use the same identifier domains as existing record keys and scopes. Each
+identity-bearing lineage detail collection uses whole-list omission in
+redacted/omit, preserving totals and aggregate analytical values. The
+100-item cap and canonical ranking precede hashing. JSON and Markdown render
+the same schema-valid safe result with identical metric values and omissions.
 
 The existing optional `run.identifier_protection` object records
 `HMAC-SHA-256`, `run` or `cross_run` stability, record-ID mode and limitations.

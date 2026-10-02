@@ -1,11 +1,12 @@
-"""Compute the direct closure-exposure interval, without lineage inference.
+"""Compute separately labeled direct and lineage closure-exposure intervals.
 
 Owner IDs:
-    T3: F-009, F-010; Definitions 5.3-5.5; Phase 3 Step 6.
+    T3: F-009, F-010; Definitions 5.3-5.5 and 5.9; Phase 5 Step 6.
 
 Inputs:
     Explicit integer counts and a single-version scope, or the accepted Step 5
-    ProvenanceCompositionResult. No source files or parent references are read.
+    ProvenanceCompositionResult for direct bounds. Explicit LineageAnalysisResult
+    for lineage bounds. No source files or parent references are read.
 
 Outputs:
     Immutable lower, upper and width calculations, denominator, operationalization
@@ -17,17 +18,19 @@ Assumptions:
     has not been independently verified by this calculation.
 
 Limits:
-    No lineage bounds, midpoint, confidence discount, risk threshold, universal
-    score, empirical truth checking, simulation, report or file/network access.
+    No ancestry inference, midpoint, confidence discount, risk threshold,
+    universal score, empirical truth checking, simulation, report or file/network access.
     A count envelope alone never certifies usable dataset provenance.
 
 Current phase status:
-    Phase 3 Step 6 direct bounds only. Pure explicit calls; import-safe.
+    Phase 5 Step 6 adds explicit lineage bounds. Direct behavior is unchanged.
+    Pure explicit calls; direct-only users do not import lineage modules.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from math import isclose
+from typing import TYPE_CHECKING
 
 from ..errors import CanonicalValidationError, ErrorCode
 from ..models import (
@@ -40,6 +43,11 @@ from .provenance import (
     DeclaredComposition, DirectGroundingAssignment, DirectGroundingBasis,
     ProvenanceCompositionResult,
 )
+
+if TYPE_CHECKING:
+    from ..lineage.ancestry import LineageAnalysisResult
+    from ..lineage.graph import LineageScope
+    from ..result import ExecutionStatus, ReportStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -338,3 +346,121 @@ def direct_closure_exposure(result: ProvenanceCompositionResult) -> DirectClosur
         grounding_field_coverage=grounding_cov, confidence_field_coverage=confidence_cov,
         confidence_status=confidence_status, confidence_counts=confidence_counts,
         input_has_errors=result.input_has_errors, validation_messages=messages)
+
+
+@dataclass(frozen=True, slots=True)
+class LineageClosureExposureBounds:
+    """Exact conservative envelope from a complete target G/C/U partition.
+
+    Interval availability is separate from input validity and ancestry coverage.
+    A nonempty all-unresolved partition supplies [0, 1], retaining all errors.
+    An aborted partition or an empty population cannot supply numeric bounds.
+    """
+    source: LineageAnalysisResult = field(repr=False)
+
+    def __post_init__(self) -> None:
+        from ..lineage.ancestry import LineageAnalysisResult
+        if type(self.source) is not LineageAnalysisResult:
+            raise CanonicalValidationError(
+                ErrorCode.SCHEMA_TYPE, "lineage bounds require a typed lineage analysis",
+                field="lineage_closure_exposure")
+        object.__setattr__(self, "source", replace(self.source))
+
+    @property
+    def status(self) -> ReportStatus:
+        from ..result import ReportStatus
+        return ReportStatus.UNAVAILABLE if self.reason_codes else ReportStatus.AVAILABLE
+
+    @property
+    def reason_codes(self) -> tuple[str, ...]:
+        if self.source.records is None:
+            return ("LINEAGE_RESOURCE_LIMIT_EXCEEDED",)
+        return () if self.denominator else ("EMPTY_TARGET_SCOPE",)
+
+    @property
+    def lower_bound(self) -> float | None:
+        return None if self.reason_codes else self.closed_record_count / self.denominator
+
+    @property
+    def upper_bound(self) -> float | None:
+        return None if self.reason_codes else (self.closed_record_count + self.unresolved_record_count) / self.denominator
+
+    @property
+    def interval_width(self) -> float | None:
+        return None if self.reason_codes else self.unresolved_record_count / self.denominator
+
+    @property
+    def scope(self) -> LineageScope:
+        return self.source.scope
+
+    @property
+    def denominator(self) -> int:
+        return self.scope.target_record_count
+
+    @property
+    def denominator_basis(self) -> str:
+        return "all_valid_records_in_selected_dataset_scope"
+
+    @property
+    def grounded_record_count(self) -> int | None:
+        return self.source.grounded_record_count
+
+    @property
+    def closed_record_count(self) -> int | None:
+        return self.source.closed_record_count
+
+    @property
+    def unresolved_record_count(self) -> int | None:
+        return self.source.unresolved_record_count
+
+    @property
+    def resolved_lineage_coverage(self) -> float | None:
+        return self.source.resolved_lineage_coverage
+
+    @property
+    def external_ancestry_coverage(self) -> float | None:
+        return self.source.external_ancestry_coverage
+
+    @property
+    def ancestry_coverage_reason_codes(self) -> tuple[str, ...]:
+        return self.source.ancestry_coverage_reason_codes
+
+    @property
+    def unresolved_reason_codes(self) -> tuple[str, ...]:
+        return tuple(sorted({reason for record in self.source.records or () for reason in record.reason_codes}))
+
+    @property
+    def input_execution_status(self) -> ExecutionStatus:
+        return self.source.execution_status
+
+    @property
+    def input_execution_reason_codes(self) -> tuple[str, ...]:
+        return self.source.execution_reason_codes
+
+    @property
+    def input_has_errors(self) -> bool:
+        return any(message.severity in (ValidationSeverity.ERROR, ValidationSeverity.FATAL)
+                   for message in self.source.messages)
+
+    @property
+    def validation_messages(self) -> tuple[ValidationMessage, ...]:
+        return self.source.messages
+
+    @property
+    def classification_basis(self) -> str:
+        return "toolkit_operationalization"
+
+    @property
+    def operationalization_label(self) -> str:
+        return "toolkit_operationalization"
+
+    @property
+    def limitations(self) -> tuple[str, ...]:
+        return ("Lineage exposure is relative to the audited loop and supplied metadata.",
+                "Unresolved ancestry remains in the conservative interval; availability does not certify input validity.",
+                "No midpoint, calibrated risk threshold or causal claim.")
+
+
+def lineage_closure_exposure(result: LineageAnalysisResult) -> LineageClosureExposureBounds:
+    """Explicit pure lineage interval request; keep direct bounds unchanged."""
+    return LineageClosureExposureBounds(result)

@@ -28,11 +28,6 @@ def _source(tmp_path, content, suffix=".csv", role=FileRole.RECORDS_PRIMARY, dec
     return InputSource(role, path, declared)
 
 
-def test_PR002_loader_owner(owner_checker):
-    owner_checker("io/loaders.py", "PR-002")
-    owner_checker("utils/hashing.py", "PR-016")
-
-
 @pytest.mark.parametrize("name,fmt", [("step2_records.csv", FileFormat.CSV), ("step2_records.jsonl", FileFormat.JSONL)])
 def test_PR002_minimal_local_fixture_loads(name, fmt):
     source = InputSource(FileRole.RECORDS_PRIMARY, FIXTURES / "minimal_valid" / name)

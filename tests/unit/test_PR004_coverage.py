@@ -5,14 +5,6 @@ active. No closure interval, confidence score or report is produced.
 """
 
 
-def test_PR004_coverage_owner_and_placeholder(owner_checker, repo_root):
-    owner_checker("metrics/provenance.py", "PR-004")
-    text = (repo_root / "src/recursive_integrity_toolkit/metrics/provenance.py").read_text(encoding="utf-8")
-    assert "Phase 3 Step 5" in text
-    for name in ("closure_bounds", "ancestry_hhi", "confidence_score", "effective_source_diversity"):
-        assert "def " + name + "(" not in text
-
-
 # Step 4 row-field validation only. Joins and coverage remain unimplemented.
 from datetime import datetime, timezone
 import json

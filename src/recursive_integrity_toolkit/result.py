@@ -14,7 +14,7 @@ Limits:
     No ingestion, classifier, metric, simulation, adapter, renderer or CLI runs.
     A valid contract does not certify the truth of supplied evidence.
 Current phase status:
-    Phase 4 Step 4 adds a safe-view wrapper; the Step 2 schema remains frozen.
+    Phase 5 Step 7 adds bounded lineage evidence under schema 1.1.
 """
 from __future__ import annotations
 
@@ -144,6 +144,31 @@ def _ref(name: str) -> dict:
     return {"$ref": "#/$defs/" + name}
 
 
+def _lineage_details(item: dict) -> dict:
+    """Bound identity-bearing diagnostics independently of analytical values."""
+    items = _array(item)
+    items["maxItems"] = 100
+    result = _object({
+        "items": _nullable(items), "total_count": _integer(),
+        "returned_count": {**_integer(), "maximum": 100}, "omitted_count": _integer(),
+        "limit": {"const": 100}, "detail_status": _enum("complete", "truncated", "omitted"),
+        "omission_reasons": _array(_enum("diagnostic_limit", "redacted_identity_details"), unique=True),
+    })
+    result["allOf"] = [
+        {"if": {"properties": {"detail_status": {"const": "omitted"}}},
+         "then": {"properties": {"items": {"type": "null"}, "returned_count": {"const": 0},
+                                   "omission_reasons": {"minItems": 1}}},
+         "else": {"properties": {"items": items}}},
+        {"if": {"properties": {"detail_status": {"const": "complete"}}},
+         "then": {"properties": {"omitted_count": {"const": 0}, "omission_reasons": {"maxItems": 0}}}},
+        {"if": {"properties": {"detail_status": {"const": "truncated"}}},
+         "then": {"properties": {"omitted_count": {"minimum": 1},
+                                   "returned_count": {"const": 100},
+                                   "omission_reasons": {"const": ["diagnostic_limit"]}}}},
+    ]
+    return result
+
+
 def _base_envelope(evidence: str, unit: str, owner: str, method: str) -> dict:
     return {
         "unit": {"const": unit}, "evidence_class": {"const": evidence},
@@ -239,7 +264,7 @@ def _build_contract() -> dict:
     }, ("status", "reason_codes", "coverage", "coverage_reason", "requirements_met",
         "requirements_missing", "notes", "execution_status", "execution_scope", "execution_reason_codes"))
     run = _object({
-        "run_id": _text(), "toolkit_version": _text(), "report_schema_version": {"const": "1.0"},
+        "run_id": _text(), "toolkit_version": _text(), "report_schema_version": {"const": "1.1"},
         "started_at": _nullable(_text()), "completed_at": _nullable(_text()),
         "duration_seconds": _nullable(_number(minimum=0)), "python_version": _nullable(_text()),
         "platform": _nullable(_text()), "command": _nullable(_text()),
@@ -260,7 +285,7 @@ def _build_contract() -> dict:
     }, ("run_id", "toolkit_version", "report_schema_version", *RUN_NULLABLE_FIELDS,
         "strict_mode", "redacted_mode", "network_call_count", "deterministic", "privacy_mode", "run_status", "null_reasons"))
     artifact = _object({
-        "role": _enum("records_primary", "records_compare", "provenance_manifest", "schema_mapping", "config",
+        "role": _enum("records_primary", "records_compare", "lineage_context", "provenance_manifest", "schema_mapping", "config",
                       "version_order", "embedding_data", "external_reference"),
         "path": _nullable(_text()), "path_redacted": {"type": "boolean"},
         "format": _enum("csv", "jsonl", "parquet", "json", "toml", "npy"),
@@ -325,7 +350,49 @@ def _build_contract() -> dict:
     observed_lineage = {name: _observed("observed_facts.lineage." + name, _integer(), "PR-008", "edges", "PR-008." + name, 3, "integer")
                         for name in ("declared_parent_edge_count", "resolved_parent_edge_count", "unresolved_parent_edge_count")}
     observed_lineage["cycle_status"] = _observed("observed_facts.lineage.cycle_status", _enum("acyclic", "cyclic"),
-                                                "T6", "status", "T6.graph_cycle_check", 3, "enum", boundary="deferred_phase5")
+                                                "T6", "status", "T6.graph_cycle_check", 3, "enum")
+    graph_scope = _object({
+        "target_dataset_version": _nullable(_text()), "target_record_count": _integer(),
+        "loaded_record_count": _integer(), "context_record_count": _integer(),
+        "loaded_dataset_versions": _strings(),
+    })
+    witness = _array(_ref("record_key"), minimum=2)
+    witness["maxItems"] = 65
+    component = _object({
+        "component_index": _integer(minimum=1), "member_count": _integer(minimum=1),
+        "target_member_count": _integer(), "witness_record_keys": _nullable(witness),
+        "witness_edge_count": _nullable({**_integer(minimum=1), "maximum": 64}),
+        "witness_reason": _nullable({"const": "diagnostic_limit"}),
+    })
+    cycle_analysis = _object({
+        "detected": {"type": "boolean"}, "cycle_count": _integer(),
+        "counting_method": {"const": "cyclic_strongly_connected_components"},
+        "cycle_member_count": _integer(), "target_cycle_member_count": _integer(),
+        "affected_record_count": _integer(), "target_affected_record_count": _integer(),
+        "components": _lineage_details(component),
+        "cycle_member_record_keys": _lineage_details(_ref("record_key")),
+        "affected_record_keys": _lineage_details(_ref("record_key")),
+    })
+    depth_summary = _object({"depth_resolved_record_count": _integer(),
+        "maximum_resolved_target_depth": _nullable(_integer()), "target_record_count": _integer()})
+    resource_usage = _object({
+        "admitted_node_count": _integer(), "admitted_edge_count": _integer(),
+        "stored_root_membership_count": _integer(), "root_union_visit_count": _integer(),
+        "limits": _object({name: _integer(minimum=1) for name in (
+            "max_nodes", "max_edges", "max_root_memberships", "max_root_union_visits")}),
+        "exhausted_limit": _nullable(_enum("max_nodes", "max_edges", "max_root_memberships", "max_root_union_visits")),
+        "attempted_value": _nullable(_integer(minimum=1)),
+    })
+    for name, value, owner, unit, method, value_type in (
+        ("graph_scope", graph_scope, "T4", "scope", "T4.graph_scope", "lineage_scope"),
+        ("cycle_analysis", cycle_analysis, "T6", "cycles", "T6.cyclic_strongly_connected_components", "cycle_analysis"),
+        ("depth_summary", depth_summary, "PR-009", "edges", "PR-009.resolved_depth_summary", "depth_summary"),
+        ("unresolved_record_details", _lineage_details(_object({"record_key": _ref("record_key"),
+            "reason_codes": _strings(minimum=1)})), "T4", "records", "T4.unresolved_record_details", "unresolved_record_details"),
+        ("resource_usage", resource_usage, "PR-015", "work_units", "PR-015.lineage_resource_usage", "lineage_resource_usage"),
+    ):
+        observed_lineage[name] = _observed("observed_facts.lineage." + name, value,
+                                         owner, unit, method, 3, value_type)
     observed_lineage["ordering_certificate"] = _observed("observed_facts.lineage.ordering_certificate", _object({
         "method": {"const": "declared_earlier_version_order"}, "version_order": _strings(),
         "all_resolved_edges_follow_order": {"type": "boolean"},
@@ -416,20 +483,30 @@ def _build_contract() -> dict:
             ("lower_bound", "F-009"), ("upper_bound", "F-010"), ("interval_width", "T3.upper_minus_lower"))}
     direct["classification_basis"] = {"const": "toolkit_operationalization"}
     direct["confidence_disclosure"] = {"const": "provenance_confidence_is_separate_and_does_not_discount_grounding"}
-    lineage_bounds = {name: _metric("derived_metrics.closure_exposure.lineage." + name, _number(minimum=0, maximum=1), "T3", "ratio", "T3.lineage_closure", 3, "ratio", boundary="deferred_phase5") for name in ("lower_bound", "upper_bound", "interval_width")}
+    lineage_bounds = {name: _metric("derived_metrics.closure_exposure.lineage." + name, _number(minimum=0, maximum=1), "T3", "ratio", "T3.lineage_closure", 3, "ratio") for name in ("lower_bound", "upper_bound", "interval_width")}
+    root_contribution = _object({
+        "record_key": _ref("record_key"), "incidence_count": _integer(minimum=1),
+        "incidence_share": _number(minimum=0, maximum=1), "incidence_denominator": _integer(minimum=1),
+        "fractional_mass": _number(minimum=0), "normalized_weight": _number(minimum=0, maximum=1),
+        "weight_denominator": _integer(minimum=1),
+    })
     lineage = {}
     for name, owner, unit, method, value, value_type in (
         ("resolved_parent_edge_coverage", "PR-008", "ratio", "PR-008.resolved_edges_over_declared", _number(minimum=0, maximum=1), "ratio"),
         ("resolved_lineage_coverage", "T4", "ratio", "T4.resolved_records_over_scope", _number(minimum=0, maximum=1), "ratio"),
         ("external_ancestry_coverage", "T4", "ratio", "T4.external_roots_over_scope", _number(minimum=0, maximum=1), "ratio"),
         ("distinct_external_root_count", "T4", "roots", "T4.root_set_union", _integer(), "integer"),
-        ("top_shared_ancestors", "T4", "records", "T4.incidence_ranking", _array(_object({"record_key": _ref("record_key"), "incidence_count": _integer()})), "ancestor_incidence[]"),
+        ("top_shared_ancestors", "T4", "records", "T4.incidence_ranking", _lineage_details(root_contribution), "root_contribution_details"),
+        ("grounded_record_count", "T4", "records", "T4.grounded_record_count", _integer(), "integer"),
+        ("closed_record_count", "T4", "records", "T4.closed_record_count", _integer(), "integer"),
+        ("unresolved_record_count", "T4", "records", "T4.unresolved_record_count", _integer(), "integer"),
+        ("records_with_resolved_external_ancestry", "T4", "records", "T4.records_with_resolved_external_ancestry", _integer(), "integer"),
         ("ancestry_concentration_hhi", "T4", "ratio", "F-012", _number(minimum=0, maximum=1), "ratio"),
         ("effective_external_root_count", "T4", "roots", "F-013", _number(minimum=0), "number"),
         ("lineage_depth", "PR-009", "edges", "PR-009.maximum_resolved_parent_depth", _integer(), "integer"),
     ):
-        lineage[name] = _metric("derived_metrics.lineage." + name, value, owner, unit, method, 3, value_type,
-                                boundary="current" if name == "resolved_parent_edge_coverage" else "deferred_phase5")
+        lineage[name] = _metric("derived_metrics.lineage." + name, value, owner, unit, method, 3, value_type)
+    lineage["resolved_parent_edge_coverage"]["properties"]["no_declared_parents"] = {"type": "boolean"}
     derived = _object({"support": _object(support, ()), "diversity": diversity, "tail": _object(tail, ()),
                       "provenance": _object(provenance_metrics, ()),
                       "closure_exposure": _object({"direct": _object(direct, ()), "lineage": _object(lineage_bounds, ())}, ()),
@@ -441,19 +518,13 @@ def _build_contract() -> dict:
         props.update({"signal": {"const": name}, "level": _enum("present", "not_present", "indeterminate"),
                       "basis_fields": _strings(minimum=1), "trigger_rule": _text()})
         props["limitations"] = _strings(minimum=1)
-        if name == "shared_ancestry_dependence":
-            props["status"] = {"const": "unavailable"}
-            props["level"] = {"const": "indeterminate"}
-            props["reason_codes"] = _strings(minimum=1)
-            props["required_evidence"] = _strings(minimum=1)
         proxies[name] = _object(props)
         proxies[name]["allOf"] = [{
             "if": {"properties": {"status": {"const": "unavailable"}}},
             "then": {"properties": {"level": {"const": "indeterminate"},
                                       "reason_codes": {"minItems": 1}, "required_evidence": {"minItems": 1}}},
         }]
-        _field_entries.append(FieldDefinition("proxy_signals." + name, owner, "proxy_signal", "signal", owner + "." + name, level, "proxy", False,
-                                               "deferred_phase5" if name == "shared_ancestry_dependence" else "current"))
+        _field_entries.append(FieldDefinition("proxy_signals." + name, owner, "proxy_signal", "signal", owner + "." + name, level, "proxy"))
     simulations = {}
     for name, owner, level in (("closed_resampling", "T1", 5), ("tail_extinction", "T2", 1)):
         props = _base_envelope("simulation", "scenario", owner, owner + "." + name)
@@ -535,7 +606,8 @@ def _build_contract() -> dict:
             "record_id_mode": _enum("preserve", "hash", "omit"), "representation": _nullable(_ref("representation")),
             "tail_selection": _nullable(_ref("tail_selection")), "version_order": _strings(),
             "state_meaning": _nullable(_text()), "weighted": {"type": "boolean"},
-            "comparison_requested": {"type": "boolean"}, "scenario_requested": {"type": "boolean"}}, ()),
+            "comparison_requested": {"type": "boolean"}, "scenario_requested": {"type": "boolean"},
+            "lineage_requested": {"type": "boolean"}}, ()),
         "state_probability": _object({"state_id": _text(empty=True), "probability": _number(minimum=0, maximum=1)}),
         "simulation_parameters": _object({
             "resample_size": _integer(minimum=1), "simulation_horizon": _integer(),
@@ -571,8 +643,8 @@ def _build_contract() -> dict:
         "warnings": _array(warning), "errors": _array(error)})
     return {"$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": "https://recursive-integrity-toolkit.example/schemas/report.schema.json",
-            "title": "Recursive Integrity Toolkit canonical report 1.0",
-            "description": "Phase 4 Step 2 public contract. Product metadata and five analytical evidence classes remain separate.",
+            "title": "Recursive Integrity Toolkit canonical report 1.1",
+            "description": "Phase 5 public contract with bounded lineage evidence. Product metadata and five analytical evidence classes remain separate.",
             **schema, "$defs": defs}
 
 
@@ -724,6 +796,8 @@ def _check(value, schema: dict, path: str) -> None:
     if type(value) is list:
         if len(value) < schema.get("minItems", 0):
             _fail(path, "too few array items")
+        if "maxItems" in schema and len(value) > schema["maxItems"]:
+            _fail(path, "too many array items")
         if schema.get("uniqueItems"):
             identities = {_equality_key(item) for item in value}
             if len(identities) != len(value):
@@ -784,6 +858,275 @@ def _check_nullable_reason(value: dict, name: str, reason_name: str, path: str) 
         _fail(path, "null requires its reason; a present value cannot carry a null reason")
 
 
+def _lineage_detail_checks(detail: dict) -> None:
+    path = "$.lineage.details"
+    for name in ("total_count", "returned_count", "omitted_count", "limit"):
+        if type(detail[name]) is not int:
+            _fail(path, "detail counts require exact integers")
+    total, returned, omitted = (detail[name] for name in ("total_count", "returned_count", "omitted_count"))
+    if total != returned + omitted:
+        _fail(path, "detail counts do not partition the total")
+    status, items, reasons = detail["detail_status"], detail["items"], detail["omission_reasons"]
+    if status == "omitted":
+        expected = {"redacted_identity_details"}
+        if total > 100:
+            expected.add("diagnostic_limit")
+        if items is not None or returned or omitted != total or set(reasons) != expected:
+            _fail(path, "privacy omission must retain the complete aggregate and applicable cap reason")
+    elif items is None or returned != len(items) or returned != min(total, 100):
+        _fail(path, "visible detail must contain the bounded prefix of the supplied total")
+    elif (status == "complete") != (omitted == 0):
+        _fail(path, "detail status disagrees with omitted count")
+    if items:
+        identities = [row.get("record_key", row) for row in items]
+        if len({_equality_key(key) for key in identities}) != len(identities):
+            _fail(path, "detail identities must be unique")
+
+
+def _lineage_usage_checks(usage: dict, execution: str) -> None:
+    """Validate exact supplied work accounting for admitted and aborted graphs."""
+    counter_names = {
+        "max_nodes": "admitted_node_count", "max_edges": "admitted_edge_count",
+        "max_root_memberships": "stored_root_membership_count", "max_root_union_visits": "root_union_visit_count",
+    }
+    for limit, counter in counter_names.items():
+        if (type(usage[counter]) is not int or type(usage["limits"][limit]) is not int
+                or not 0 <= usage[counter] <= usage["limits"][limit] or usage["limits"][limit] <= 0):
+            _fail("$.lineage.resource_usage", "consumed work must remain within its positive integer limit")
+    exhausted = usage["exhausted_limit"]
+    if exhausted is None:
+        if usage["attempted_value"] is not None:
+            _fail("$.lineage.resource_usage", "unexhausted work cannot contain a rejected attempt")
+    elif (execution != "failed" or type(usage["attempted_value"]) is not int
+          or usage["attempted_value"] != usage["limits"][exhausted] + 1
+          or usage[counter_names[exhausted]] != usage["limits"][exhausted]):
+        _fail("$.lineage.resource_usage", "resource exhaustion requires failed execution and its next rejected unit")
+
+
+def _lineage_semantic_checks(payload: dict) -> None:
+    """Check supplied lineage evidence consistency without traversing a graph."""
+    observed = payload["observed_facts"].get("lineage", {})
+    metrics = payload["derived_metrics"].get("lineage", {})
+    bounds = payload["derived_metrics"].get("closure_exposure", {}).get("lineage", {})
+    proxy = payload["proxy_signals"].get("shared_ancestry_dependence")
+    capability = payload["capabilities"].get("lineage", {})
+    execution = capability.get("execution_status", "not_requested")
+    new_observed = ("graph_scope", "cycle_analysis", "depth_summary", "unresolved_record_details", "resource_usage", "cycle_status")
+    new_metrics = tuple(name for name in metrics if name != "resolved_parent_edge_coverage")
+
+    def value(group, name):
+        return group.get(name, {}).get("value")
+
+    active = (any(value(observed, name) is not None for name in new_observed)
+              or any(value(metrics, name) is not None for name in new_metrics)
+              or any(entry["value"] is not None for entry in bounds.values())
+              or (proxy is not None and proxy["status"] != "unavailable"))
+    if execution in ("not_requested", "deferred"):
+        if active or "no_declared_parents" in metrics.get("resolved_parent_edge_coverage", {}):
+            _fail("$.capabilities.lineage", "unexecuted lineage cannot contain analytical results")
+        return
+    scope = value(observed, "graph_scope")
+    if scope is None:
+        if execution == "failed" and not active:
+            return
+        usage = value(observed, "resource_usage")
+        if execution == "failed" and usage is not None:
+            _lineage_usage_checks(usage, execution)
+            if (any(value(observed, name) is not None for name in new_observed if name != "resource_usage")
+                    or any(value(metrics, name) is not None for name in new_metrics)
+                    or any(entry["value"] is not None for entry in bounds.values())
+                    or (proxy is not None and proxy["status"] != "unavailable")):
+                _fail("$.lineage", "failed graph admission cannot contain subsequent analytical results")
+            loaded_scope = payload["inputs"].get("scope")
+            if loaded_scope is None or observed["resource_usage"]["scope"] != loaded_scope:
+                _fail("$.lineage.resource_usage", "admission accounting must retain the complete loaded input scope")
+            loaded = loaded_scope["record_count"]
+            exhausted = usage["exhausted_limit"]
+            if (exhausted not in ("max_nodes", "max_edges")
+                    or usage["stored_root_membership_count"] or usage["root_union_visit_count"]
+                    or type(loaded) is not int
+                    or exhausted == "max_nodes" and (usage["admitted_node_count"] >= loaded or usage["admitted_edge_count"])
+                    or exhausted == "max_edges" and usage["admitted_node_count"] != loaded):
+                _fail("$.lineage.resource_usage", "admission exhaustion is inconsistent with the loaded records or later-stage work")
+            if not any(error["code"] == "E_LINEAGE_RESOURCE_LIMIT_EXCEEDED"
+                       and "lineage" in error["effect_on_capabilities"] for error in payload["errors"]):
+                _fail("$.lineage.resource_usage", "admission exhaustion requires its matching lineage error")
+            return
+        _fail("$.observed_facts.lineage.graph_scope", "executed lineage requires its explicit target and loaded scope")
+    target, loaded, context = (scope[name] for name in ("target_record_count", "loaded_record_count", "context_record_count"))
+    if any(type(number) is not int for number in (target, loaded, context)) or loaded != target + context:
+        _fail("$.observed_facts.lineage.graph_scope", "loaded scope must partition into target and context")
+    version = scope["target_dataset_version"]
+    versions = scope["loaded_dataset_versions"]
+    if (target and (version is None or version not in versions)) or (loaded and not versions):
+        _fail("$.observed_facts.lineage.graph_scope", "scope counts require their declared versions")
+    target_versions = [] if version is None else [version]
+    graph_fields = {"graph_scope", "cycle_analysis", "cycle_status", "resource_usage"}
+    for name in graph_fields & observed.keys():
+        entry_scope = observed[name]["scope"]
+        if entry_scope["record_count"] != loaded or set(entry_scope["dataset_versions"]) != set(versions):
+            _fail("$.lineage.scope", "graph diagnostics must retain the complete loaded population")
+    entries = [entry for name, entry in observed.items() if name not in graph_fields] + list(metrics.values()) + list(bounds.values())
+    if proxy is not None:
+        entries.append(proxy)
+    for entry in entries:
+        if entry["scope"]["record_count"] != target or entry["scope"]["dataset_versions"] != target_versions:
+            _fail("$.lineage.scope", "lineage evidence must retain the selected target population")
+    usage = value(observed, "resource_usage")
+    if usage is None:
+        _fail("$.observed_facts.lineage.resource_usage", "executed lineage requires work accounting")
+    _lineage_usage_checks(usage, execution)
+    exhausted = usage["exhausted_limit"]
+    cycles, depth = value(observed, "cycle_analysis"), value(observed, "depth_summary")
+    if execution in ("completed", "partial") and (cycles is None or depth is None):
+        _fail("$.capabilities.lineage", "completed traversal requires cycle and depth observations")
+    if cycles is None:
+        if value(observed, "cycle_status") is not None:
+            _fail("$.lineage.cycle_status", "cycle status requires a completed cycle analysis")
+    else:
+        if usage["admitted_node_count"] != loaded:
+            _fail("$.lineage.resource_usage", "completed graph evidence requires every loaded node")
+        if any(type(cycles[name]) is not int for name in (
+                "cycle_count", "cycle_member_count", "target_cycle_member_count",
+                "affected_record_count", "target_affected_record_count")):
+            _fail("$.lineage.cycle_analysis", "cycle counts require exact integers")
+        total_members, target_members = cycles["cycle_member_count"], cycles["target_cycle_member_count"]
+        affected, target_affected = cycles["affected_record_count"], cycles["target_affected_record_count"]
+        if (cycles["detected"] != (cycles["cycle_count"] > 0)
+                or not cycles["cycle_count"] <= total_members <= affected <= loaded
+                or not target_members <= total_members or not target_members <= target_affected <= target
+                or target_affected > affected or (not cycles["detected"] and affected)):
+            _fail("$.lineage.cycle_analysis", "cycle counts disagree with their loaded and target scopes")
+        if execution == "completed" and cycles["detected"]:
+            _fail("$.capabilities.lineage", "cyclic input cannot claim completed valid lineage")
+        if value(observed, "cycle_status") != ("cyclic" if cycles["detected"] else "acyclic"):
+            _fail("$.lineage.cycle_status", "cycle status disagrees with cycle diagnostics")
+        for name, expected in (("components", cycles["cycle_count"]), ("cycle_member_record_keys", total_members), ("affected_record_keys", affected)):
+            if cycles[name]["total_count"] != expected:
+                _fail("$.lineage.cycle_analysis", "detail total disagrees with its aggregate")
+        rows = cycles["components"]["items"]
+        if rows is not None:
+            for index, row in enumerate(rows, 1):
+                if (any(type(row[name]) is not int for name in ("component_index", "member_count", "target_member_count"))
+                        or row["component_index"] != index or row["target_member_count"] > row["member_count"]):
+                    _fail("$.lineage.cycle_analysis", "component order or member counts are inconsistent")
+                witness = row["witness_record_keys"]
+                if witness is None:
+                    if row["witness_edge_count"] is not None or row["witness_reason"] != "diagnostic_limit":
+                        _fail("$.lineage.cycle_analysis", "omitted witness requires a diagnostic-limit reason")
+                elif (type(row["witness_edge_count"]) is not int or witness[0] != witness[-1]
+                      or row["witness_edge_count"] != len(witness) - 1
+                      or row["witness_reason"] is not None or len(witness) - 1 > row["member_count"]):
+                    _fail("$.lineage.cycle_analysis", "witness must be closed with a consistent bounded edge count")
+            if cycles["components"]["detail_status"] == "complete" and (
+                    sum(row["member_count"] for row in rows) != total_members
+                    or sum(row["target_member_count"] for row in rows) != target_members):
+                _fail("$.lineage.cycle_analysis", "component rows disagree with aggregate membership")
+    if depth is not None:
+        resolved_depth = depth["depth_resolved_record_count"]
+        maximum = depth["maximum_resolved_target_depth"]
+        if (type(resolved_depth) is not int or type(depth["target_record_count"]) is not int
+                or (maximum is not None and type(maximum) is not int)
+                or depth["target_record_count"] != target or resolved_depth > target
+                or (maximum is None) != (resolved_depth == 0)):
+            _fail("$.lineage.depth_summary", "depth subset must retain its actual target coverage")
+        expected_depth = maximum if target and resolved_depth == target else None
+        if value(metrics, "lineage_depth") != expected_depth:
+            _fail("$.derived_metrics.lineage.lineage_depth", "whole-target depth cannot claim a subset maximum")
+    count_names = ("grounded_record_count", "closed_record_count", "unresolved_record_count", "records_with_resolved_external_ancestry")
+    counts = [value(metrics, name) for name in count_names]
+    if any(count is None for count in counts):
+        if any(count is not None for count in counts) or execution in ("completed", "partial"):
+            _fail("$.derived_metrics.lineage", "an exact target partition requires all G/C/U counts")
+        if any(value(metrics, name) is not None for name in new_metrics if name != "lineage_depth") or any(entry["value"] is not None for entry in bounds.values()):
+            _fail("$.derived_metrics.lineage", "incomplete root traversal cannot supply dependent values")
+    else:
+        grounded, closed, unresolved, resolved = counts
+        if any(type(count) is not int for count in counts) or grounded + closed + unresolved != target or resolved != grounded + closed:
+            _fail("$.derived_metrics.lineage", "G/C/U counts must exactly partition the target")
+        if any(metrics[name]["denominator"] != target for name in count_names):
+            _fail("$.derived_metrics.lineage", "partition counts must disclose the complete target denominator")
+        if exhausted is not None or (execution == "completed" and unresolved):
+            _fail("$.capabilities.lineage", "execution status disagrees with root completeness")
+        for name, numerator in (("resolved_lineage_coverage", resolved), ("external_ancestry_coverage", grounded)):
+            entry = metrics.get(name)
+            if entry is None or entry["denominator"] != target:
+                _fail("$.derived_metrics.lineage", "ancestry coverage must disclose the whole target denominator")
+            ratio = entry["value"]
+            if (target == 0 and ratio is not None) or (target and (ratio is None or not math.isclose(ratio * target, numerator, rel_tol=1e-12, abs_tol=1e-12))):
+                _fail("$.derived_metrics.lineage", "ancestry coverage disagrees with the supplied partition")
+        details = value(observed, "unresolved_record_details")
+        if details is None or details["total_count"] != unresolved:
+            _fail("$.lineage.unresolved_record_details", "unresolved detail total disagrees with the target partition")
+        root_details = value(metrics, "top_shared_ancestors")
+        distinct = value(metrics, "distinct_external_root_count")
+        if type(distinct) is not int or root_details is None or root_details["total_count"] != distinct:
+            _fail("$.lineage.top_shared_ancestors", "root detail total disagrees with distinct roots")
+        if grounded == 0 and (distinct != 0 or any(value(metrics, name) is not None for name in ("ancestry_concentration_hhi", "effective_external_root_count"))):
+            _fail("$.derived_metrics.lineage", "empty grounded population has no concentration value")
+        if grounded and (not distinct or any(value(metrics, name) is None for name in ("ancestry_concentration_hhi", "effective_external_root_count"))):
+            _fail("$.derived_metrics.lineage", "grounded population requires its root distribution and concentration")
+        if grounded and (value(metrics, "ancestry_concentration_hhi") <= 0
+                or value(metrics, "effective_external_root_count") <= 0
+                or not math.isclose(value(metrics, "ancestry_concentration_hhi")
+                                    * value(metrics, "effective_external_root_count"),
+                                    1.0, rel_tol=1e-12, abs_tol=1e-12)):
+            _fail("$.derived_metrics.lineage", "effective roots and positive concentration must be reciprocal")
+        for name in ("distinct_external_root_count", "top_shared_ancestors", "ancestry_concentration_hhi", "effective_external_root_count"):
+            entry = metrics[name]
+            concentration = name in ("ancestry_concentration_hhi", "effective_external_root_count")
+            expected_status = "unavailable" if concentration and not grounded else "partial" if unresolved else "available"
+            if (entry["status"] != expected_status or entry["denominator"] != (grounded if concentration else target)
+                    or entry["coverage"] != value(metrics, "external_ancestry_coverage")):
+                _fail("$.derived_metrics.lineage", "root metrics must disclose their grounded subset and unresolved coverage")
+        rows = root_details["items"]
+        if rows is not None:
+            for row in rows:
+                if (any(type(row[name]) is not int for name in ("incidence_count", "incidence_denominator", "weight_denominator"))
+                        or row["incidence_denominator"] != target or row["weight_denominator"] != grounded
+                        or row["incidence_count"] > grounded or row["fractional_mass"] <= 0
+                        or row["fractional_mass"] > row["incidence_count"]
+                        or row["incidence_share"] <= 0 or row["normalized_weight"] <= 0
+                        or not math.isclose(row["incidence_share"] * target, row["incidence_count"], rel_tol=1e-12, abs_tol=1e-12)
+                        or not math.isclose(row["normalized_weight"] * grounded, row["fractional_mass"], rel_tol=1e-12, abs_tol=1e-12)):
+                    _fail("$.lineage.top_shared_ancestors", "root contribution contradicts its explicit count basis")
+            if any(left["incidence_count"] < right["incidence_count"] for left, right in zip(rows, rows[1:])):
+                _fail("$.lineage.top_shared_ancestors", "root contributions must retain decreasing incidence rank")
+        for name, numerator in (("lower_bound", closed), ("upper_bound", closed + unresolved), ("interval_width", unresolved)):
+            if name not in bounds:
+                continue
+            entry = bounds[name]
+            invalid_ratio = (entry["value"] is not None) if target == 0 else (
+                entry["value"] is None or not math.isclose(
+                    entry["value"] * target, numerator, rel_tol=1e-12, abs_tol=1e-12))
+            if entry["denominator"] != target or invalid_ratio:
+                _fail("$.derived_metrics.closure_exposure.lineage", "lineage interval contradicts its target partition")
+        if proxy is not None:
+            required_basis = {"derived_metrics.lineage.top_shared_ancestors", "derived_metrics.lineage.resolved_lineage_coverage", "derived_metrics.lineage.external_ancestry_coverage"}
+            if not required_basis.issubset(proxy["basis_fields"]):
+                _fail("$.proxy_signals.shared_ancestry_dependence", "shared-root signal must cite incidence and coverage evidence")
+            if proxy["denominator"] != target or proxy["coverage"] != value(metrics, "resolved_lineage_coverage"):
+                _fail("$.proxy_signals.shared_ancestry_dependence", "shared-root signal must disclose its target coverage")
+            if proxy["level"] == "not_present" and (not target or unresolved or proxy["status"] != "available"):
+                _fail("$.proxy_signals.shared_ancestry_dependence", "absence requires complete nonempty target evidence")
+            if proxy["level"] == "not_present" and rows and rows[0]["incidence_count"] >= 2:
+                _fail("$.proxy_signals.shared_ancestry_dependence", "absence contradicts a supplied shared-root witness")
+            if proxy["level"] == "present" and (grounded < 2 or proxy["status"] != ("partial" if unresolved else "available") or (rows is not None and (not rows or rows[0]["incidence_count"] < 2))):
+                _fail("$.proxy_signals.shared_ancestry_dependence", "presence requires a shared-root witness with honest coverage")
+    reference_counts = [value(observed, name) for name in ("declared_parent_edge_count", "resolved_parent_edge_count", "unresolved_parent_edge_count")]
+    reference = metrics.get("resolved_parent_edge_coverage")
+    if reference is None or "no_declared_parents" not in reference:
+        _fail("$.derived_metrics.lineage.resolved_parent_edge_coverage", "executed reference coverage requires its explicit zero-reference state")
+    if any(count is None for count in reference_counts):
+        if any(count is not None for count in reference_counts) or reference["value"] is not None or reference["no_declared_parents"]:
+            _fail("$.lineage.reference_coverage", "unknown reference cardinality cannot become a zero declaration")
+    else:
+        declared, resolved, unresolved = reference_counts
+        ratio = reference["value"]
+        if any(type(count) is not int for count in reference_counts) or declared != resolved + unresolved or reference["no_declared_parents"] != (declared == 0) or reference["denominator"] != declared or ratio is None or (declared == 0 and ratio != 1) or (declared and not math.isclose(ratio * declared, resolved, rel_tol=1e-12, abs_tol=1e-12)):
+            _fail("$.lineage.reference_coverage", "reference coverage contradicts its declared count basis")
+
+
 def _semantic_checks(payload: dict) -> None:
     run = payload["run"]
     null_fields = {key for key in RUN_NULLABLE_FIELDS if run[key] is None}
@@ -805,8 +1148,7 @@ def _semantic_checks(payload: dict) -> None:
             _fail("$.capabilities", "noncompleted execution needs explicit reasons")
         if capability["execution_status"] in ("completed", "partial") and not capability["execution_scope"]:
             _fail("$.capabilities", "executed work must name its operation scope")
-        if key == "lineage" and capability["execution_status"] in ("completed", "partial"):
-            _fail("$.capabilities.lineage", "Phase 5 lineage execution is deferred")
+    _lineage_semantic_checks(payload)
     tail = payload["derived_metrics"].get("tail", {})
     if "tail_rule" in tail and "selection" in tail and tail["tail_rule"] != tail["selection"]["rule"]:
         _fail("$.derived_metrics.tail", "tail rule declarations disagree")
@@ -824,6 +1166,8 @@ def _semantic_checks(payload: dict) -> None:
                             _fail("$.table", "typed table identity must be unique")
         if type(item) is not dict:
             continue
+        if "detail_status" in contract.get("properties", {}):
+            _lineage_detail_checks(item)
         if contract is _REPORT_SCHEMA["$defs"]["coverage"]:
             if item["numerator"] > item["denominator"]:
                 _fail("$.coverage", "coverage numerator exceeds denominator")
@@ -912,7 +1256,7 @@ def _semantic_checks(payload: dict) -> None:
             lower, upper = interval["lower_bound"]["value"], interval["upper_bound"]["value"]
             if lower > upper:
                 _fail("$.derived_metrics.closure_exposure", "interval lower bound exceeds upper bound")
-            if family == "direct" and not math.isclose(interval["interval_width"]["value"], upper - lower, rel_tol=1e-12, abs_tol=1e-12):
+            if not math.isclose(interval["interval_width"]["value"], upper - lower, rel_tol=1e-12, abs_tol=1e-12):
                 _fail("$.derived_metrics.closure_exposure", "interval width disagrees with endpoints")
     for name, scenario in payload["simulations"].items():
         parameters = scenario["parameters"]
