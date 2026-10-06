@@ -1,14 +1,17 @@
 # Development and Release Verification
 
-## Current 0.1.0 release preparation boundary
+## Current 0.1.0 release boundary
 
 The Theory Owner requested merging the accepted PRs and preparing the formal
 version and Release on 2026-10-02 UTC. PRs #1-#4 are merged into `main` without
 squashing or rewriting their accepted commits. The current package version is
-`0.1.0`; report schema remains 1.3. [Release preparation](../RELEASE_0_1_0.md)
-records current verification and outstanding official-publication requirements.
-The package's existing development-status classifier remains unchanged while
-formal review and publication are pending.
+`0.1.0`; report schema remains 1.3. On 2026-10-06, Xiangyu Guo accepted the
+handoff and authorized merging PR #5 and publishing v0.1.0 in both consolidated
+roles. The [release record](../RELEASE_0_1_0.md) retains approvals and validation;
+the [GitHub Release](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/releases/tag/v0.1.0)
+records the exact tag target and published artifacts. The package's existing
+development-status classifier remains unchanged. Experimental simulations and
+all documented interpretation limits remain in force.
 
 ## Accepted Phase 6B implementation boundary
 

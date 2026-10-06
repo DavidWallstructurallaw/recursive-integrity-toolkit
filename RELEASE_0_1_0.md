@@ -161,6 +161,46 @@ archive identity is separate from the `ddd5a40d` artifact above. The later 2026-
 authorizes the prepared repository metadata changes. The subsequent instruction
 `验收交接，合并 PR #5，发布 v0.1.0` accepts the handoff and authorizes publication.
 
+## Approved publication packages, 2026-10-06
+
+Publication documentation source: `fec89a7ed4da864e97ca1a967c85580bbbdf085a`,
+tree `47a52e4e2ae181b5e72aed001adeb66b022c80f3`.
+The README now links the official release and installs from tag `v0.1.0`.
+Only README.md, docs/getting_started.md and the four administrative records
+changed from the accepted PR head. No executable, dependency, schema, golden,
+workflow, theory source or canonical packaged resource changed.
+
+Two fresh Git-archive builds used Python 3.12.14, build 1.6.1, setuptools 84.0.0,
+Twine 7.0.0 and `SOURCE_DATE_EPOCH=1791320488`. Each wheel was built from its
+sdist. Strict Twine checks pass; repeated wheel bytes and every sdist file payload
+match. Comparison with the earlier SEO artifacts changes only the README
+description and corresponding METADATA/PKG-INFO/RECORD bytes. Metadata headers,
+all 41 modules and all 18 canonical resources match. Raw UTF-8 package long
+descriptions exactly equal the committed README.
+
+Existing `release_check.py --dist` checks pass for the exact new wheel and safely
+extracted sdist, including installed input, arithmetic, assembly, privacy,
+rendering, output, CLI, ordinary Hero, lineage, longitudinal and simulation
+examples. The three static checks, changed-document local links and formatting
+pass. Full runtime, security and performance results retain the original
+`c5837845` source identity; no new full candidate run is claimed.
+
+| Publication package | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `recursive_integrity_toolkit-0.1.0-py3-none-any.whl` | 389517 | `9d114cd296054d91fb59627d3378ba6271a6b20fd9efc1f6c19fc2044b1552fa` |
+| `recursive_integrity_toolkit-0.1.0.tar.gz` | 354650 | `4a8c3590a3d979836276f51b97c441c70413250d9af1b1d1087937bd20de3296` |
+
+The final source ZIP is generated from the actual merged main commit, including
+this completion record. Its commit and checksum are recorded alongside these
+packages in the GitHub Release and SHA256SUMS.txt. The final documentation-only
+successor updates this record, the changelog and release-process status; all three
+are outside wheel/sdist payloads. Package payloads remain unchanged.
+
+The first build attempt requested `--no-isolation` in the retained handoff
+environment, which lacked setuptools. It failed before producing an artifact.
+The standard isolated builds above supplied the declared backend and succeeded.
+The failed environment attempt is retained separately from successful validation.
+
 ## Full candidate validation and original artifacts
 
 The tested 0.1.0 preparation is `c5837845da603167e6f0c8216766d0a3a874835e`,
