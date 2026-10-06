@@ -2,6 +2,7 @@
 
 Request date: 2026-10-02 UTC (2026-10-01 in America/Los_Angeles).
 Verification completed: 2026-10-02.
+Independent assistant handoff rehearsal executed: 2026-10-06; human review pending.
 Status: PREPARATION VERIFIED; PUBLICATION PENDING. No public release or registry upload is claimed.
 
 The Theory Owner requested: `合并 PR，再准备正式版本和 Release`.
@@ -336,17 +337,28 @@ merge and preparation authority. MAINTAINERS.md still lists the Technical
 Maintainer as unassigned or acting; no named maintainer sign-off is invented.
 The same person may hold multiple roles if that consolidation is declared.
 
-GOVERNANCE_AND_HANDOFF.md section 31 also requires a handoff rehearsal by a
-reviewer who did not author the implementation: clone, install, run Hero, locate
+GOVERNANCE_AND_HANDOFF.md section 31 requires a handoff rehearsal by a reviewer
+who did not author the implementation. A fresh independent assistant reviewer
+executed all nine steps on 2026-10-06 at documentation successor
+`9fac436dc619900b19bc0ad4fa3cd38d3087435c`: clone, install, run Hero, locate
 definitions and a trace owner, run a unit test, build, identify blockers and
-explain unavailable conclusions. No completed HANDOFF_REHEARSAL.md is currently
-recorded. Existing assistant test reviews do not supply an unrecorded human role
-appointment or a completed independent handoff rehearsal.
+explain unavailable conclusions. [HANDOFF_REHEARSAL.md](HANDOFF_REHEARSAL.md)
+records the execution evidence, new rehearsal-build hashes and limitations.
+This is an independent assistant rehearsal, not an external human review or
+maintainer appointment. Human review of the record remains pending under
+GOVERNANCE_AND_HANDOFF.md section 28.4; named release approvals remain pending.
+The rehearsal builds do not replace the candidate artifacts identified above.
+
+This follow-up adds the rehearsal record and updates this release record only.
+Product, test, resource and workflow files retain the tested candidate bytes.
+The existing administrative evidence-reuse policy applies; no new full candidate
+run is claimed.
 
 Before public publication:
 
 1. Current version/package verification is complete, as recorded above.
-2. Record the required independent handoff rehearsal and maintainer approval.
+2. Review and accept the recorded independent handoff rehearsal; record the
+   Technical Maintainer appointment and approval.
 3. Confirm the official release approval and exact target commit.
 4. Create tag `v0.1.0` and the GitHub Release with verified artifacts and checksums.
 5. Treat any package-registry upload as a separate requested action.
