@@ -1,6 +1,6 @@
 # Report Schema
 
-Status: Phase 6B Step 4 report contract (`0.1.0.dev5`). Schema version: `1.3`.
+Status: Current public report contract for version `0.1.0`. Schema version: `1.3`.
 Report-contract verification is recorded in [Phase 6B Step 4](../PHASE_6B_STEP_4.md);
 CLI activation and input-only checks are recorded in [Step 5](../PHASE_6B_STEP_5.md).
 Earlier candidate evidence remains in [Phase 6A completion](../PHASE_6A_COMPLETION.md).
@@ -850,7 +850,7 @@ All emitted scenario evidence remains `simulation` and `experimental`. The commo
 
 `simulations.closed_resampling` retains direct `expected_diversity`, `sampled_paths`, `support_trajectories` and `extinction_events` paths. Analytic expectation requires the supplied expectation vector, initial diversity, contraction factor and underflow steps; its vector length is horizon plus one. Sampled paths require seed, replicate count, NumPy/RNG identity and scheduling metadata. Path count must equal replicate count. Optional support trajectories and events may only preserve evidence already supplied by the accepted owner; their presence does not authorize the adapter or renderer to calculate them.
 
-`simulations.external_reopening` is a registered future field, explicitly rejected by the current schema and constructor. `external_reference_loss` has no approved public trace and is unregistered. Neither is executed. The lack of implementation belongs in capability execution reasons and unavailable conclusions.
+`simulations.external_reopening` accepts an explicitly supplied reopened experiment result through `scenario_experiment`. It remains experimental simulation evidence under its declared assumptions. `external_reference_loss` has no approved public trace and remains unregistered.
 
 ## Path reconciliation and unchanged meaning
 

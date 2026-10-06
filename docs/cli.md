@@ -1,6 +1,6 @@
 # CLI
 
-Development version `0.1.0.dev5`, with Phase 6B Step 6 additions, supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. Reports use schema `1.3`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
+Version `0.1.0` supports `audit`, `validate`, `example`, `version`, `--version` and `--help`. Reports use schema `1.3`. The `recursive-integrity` alias and `python -m recursive_integrity_toolkit` use the same entry point. Help and version do not load analytical dependencies or user inputs.
 
 ## Packaged local example
 
@@ -262,4 +262,4 @@ The output directory's existing ancestors must be stable and trusted. Ordinary a
 
 The Python helper `utils.paths.publish_reports(safe_view, output_directory, input_paths=...)` consumes a validated `SafeReportView`; supply every input path, including declared missing inputs. A `complete` result means both exact reports were verified and private staging removed. `E_OUTPUT_PATH_INVALID` maps to exit 2; collision, existing/unsafe target, I/O or cleanup failure maps to 1; rendering/invariant failure maps to 4.
 
-Handled partial failures clean only files still identified as belonging to the attempt. An `incomplete` result discloses remaining or uncertain cleanup. Pair publication is not a filesystem transaction: another reader or process crash may observe one report before the other. See [privacy and filesystem limits](privacy.md) for platform permissions and race/crash boundaries. HTML and simulation orchestration remain deferred. [Step 8](../PHASE_6A_STEP_8.md) records bounded scale preparation; [Phase 6A completion](../PHASE_6A_COMPLETION.md) identifies the exact candidate and actual verification status.
+Handled partial failures clean only files still identified as belonging to the attempt. An `incomplete` result discloses remaining or uncertain cleanup. Pair publication is not a filesystem transaction: another reader or process crash may observe one report before the other. See [privacy and filesystem limits](privacy.md) for platform permissions and race/crash boundaries. HTML remains deferred. [Step 8](../PHASE_6A_STEP_8.md) records bounded scale preparation; [Phase 6A completion](../PHASE_6A_COMPLETION.md) identifies the exact candidate and actual verification status.
