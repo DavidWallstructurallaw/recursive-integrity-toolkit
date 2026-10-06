@@ -16,5 +16,8 @@ Public GitHub contact: [@DavidWallstructurallaw](https://github.com/DavidWallstr
 Routine project questions may be raised through
 [repository issues](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/issues).
 
-This appointment records acceptance of the maintenance role. Human acceptance of
-HANDOFF_REHEARSAL.md and approval of the exact official release remain pending.
+On 2026-10-06, Xiangyu Guo accepted HANDOFF_REHEARSAL.md and approved merging
+PR #5 and publishing v0.1.0 in both consolidated roles. The release scope is the
+reviewed PR head `97ebb1a0323b4daeed7c7cbb465373f7ad34b07b`, its publication
+documentation successors, and the resulting merge commit on main. Exact build
+and tag identities are retained in RELEASE_0_1_0.md and the GitHub Release.

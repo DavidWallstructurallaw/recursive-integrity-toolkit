@@ -10,8 +10,9 @@ shared roots. Export inspectable **JSON and Markdown reports** from CSV, JSONL,
 or optional Parquet files.
 
 Runtime works offline with no API key, model download, telemetry, or data upload.
-Version `0.1.0` is in [release preparation](RELEASE_0_1_0.md); the public release
-and registry upload are pending.
+Version **0.1.0** is available through [GitHub Releases](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/releases/tag/v0.1.0).
+See the [validation and release record](RELEASE_0_1_0.md). Install from the release
+files or the tagged source below; no package-registry publication is claimed.
 
 [Quick start](#quick-start) · [Your data](#audit-your-own-data) ·
 [Examples and Python API](docs/getting_started.md) · [CLI reference](docs/cli.md)
@@ -32,11 +33,11 @@ the report makes their coverage and limits visible.
 
 ## Quick start
 
-Use Python **3.11 or 3.12** on Linux or Windows. Install the current preparation
-branch from source, preferably in a virtual environment:
+Use Python **3.11 or 3.12** on Linux or Windows. Install the tagged release
+from source, preferably in a virtual environment:
 
 ```bash
-git clone --branch release-0.1.0 https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit.git
+git clone --branch v0.1.0 https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit.git
 cd recursive-integrity-toolkit
 python -m pip install .
 rit example --lineage --out ./rit-demo

@@ -102,7 +102,9 @@ python
 cli
 ```
 
-README changes are prepared on `release-0.1.0` in PR #5. They become the default
+README changes were prepared on `release-0.1.0` in PR #5. They become the default
 repository landing page when that PR is merged. Xiangyu Guo is now the acting
-Technical Maintainer. Human acceptance of the handoff and formal release approval
-remain pending.
+Technical Maintainer. On 2026-10-06 the user accepted the handoff and authorized
+merging PR #5 and publishing v0.1.0. The release entry now uses the immutable
+v0.1.0 tag; refreshed package descriptions and final artifact identities are
+recorded in RELEASE_0_1_0.md and the GitHub Release.

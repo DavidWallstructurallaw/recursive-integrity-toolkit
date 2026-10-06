@@ -1,14 +1,22 @@
-# Recursive Integrity Toolkit 0.1.0 release preparation
+# Recursive Integrity Toolkit 0.1.0 release record
 
 Request date: 2026-10-02 UTC (2026-10-01 in America/Los_Angeles).
 Verification completed: 2026-10-02.
-Independent assistant handoff rehearsal executed: 2026-10-06; human review pending.
+Independent assistant handoff rehearsal executed and accepted: 2026-10-06.
 Entry documentation and package-description refresh verified: 2026-10-06.
-Status: PREPARATION VERIFIED; PUBLICATION PENDING. No public release or registry upload is claimed.
+Status: VERIFIED AND APPROVED FOR OFFICIAL PUBLICATION on 2026-10-06.
+The GitHub Release records the completed publication, exact tag target and final
+attachment hashes. Package-registry upload remains outside this authorization.
 
 The Theory Owner requested: `合并 PR，再准备正式版本和 Release`.
 This authorizes the accepted PR merges and preparation of version 0.1.0 and its
-release materials. Official publication requirements remain explicit below.
+release materials. On 2026-10-06 the user additionally instructed:
+`验收交接，合并 PR #5，发布 v0.1.0`.
+Xiangyu Guo accepts the handoff and approves publication as both Theory Owner and
+acting Technical Maintainer. The approved scope is reviewed PR #5 at
+`97ebb1a0323b4daeed7c7cbb465373f7ad34b07b`, its publication-documentation
+successors and the resulting merge commit on main. This record preserves earlier
+candidate identities and their bounded validation evidence.
 
 ## Merged implementation
 
@@ -25,11 +33,13 @@ to accepted Phase 6B handoff `64bc1ce627e79f6960a5a17b0ac401246155549c`.
 No source content changed while merging. Prior successful candidate workflows
 were rechecked before the merges; no branch-protection requirement was bypassed.
 
-## Proposed release identity
+## Official release identity
 
 - Canonical repository: <https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit>.
 - Package: `recursive-integrity-toolkit`, version `0.1.0`.
-- Planned tag: `v0.1.0`, not created by this preparation.
+- Tag: `v0.1.0`, targeting the merge of the approved PR #5 into main.
+- Release label: `official-v0.1`.
+- Final commit and attachment identities: [GitHub Release](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/releases/tag/v0.1.0).
 - Report schema: `1.3`.
 - Theory versions and canonical references: [THEORY_SOURCES.md](THEORY_SOURCES.md).
 - Licensing: [LICENSING_NOTES.md](LICENSING_NOTES.md), [LICENSE](LICENSE),
@@ -43,7 +53,7 @@ No numerical expectation, input contract, dependency, resource guard or privacy
 behavior is changed. The existing source-scope check advances its single accepted
 reference to the Phase 6B handoff and permits exactly dev6-to-0.1.0 in both owners.
 
-## Release notes draft
+## Release notes
 
 Recursive Integrity Toolkit is a local-first research toolkit for supplied-data
 audits of recursive reuse, support/diversity, provenance gaps, closure exposure,
@@ -148,15 +158,15 @@ No product test, build or installed command failed in this entry refresh.
 
 The later completion-record update changes only this release record. Its source
 archive identity is separate from the `ddd5a40d` artifact above. The later 2026-10-06 instruction appoints the acting Technical Maintainer and
-authorizes the prepared repository metadata changes. Human acceptance of the
-handoff and official publication approval remain pending.
+authorizes the prepared repository metadata changes. The subsequent instruction
+`验收交接，合并 PR #5，发布 v0.1.0` accepts the handoff and authorizes publication.
 
 ## Full candidate validation and original artifacts
 
 The tested 0.1.0 preparation is `c5837845da603167e6f0c8216766d0a3a874835e`,
 tree `030fb987c9785ab7a4061c25302d079f9a37b341`, on `release-0.1.0`.
 [PR #5](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/pull/5)
-retains the preparation as a draft. The existing complete candidate workflow
+retains the preparation and publication history. The existing complete candidate workflow
 is [run 36976926784](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/actions/runs/36976926784).
 All required candidate jobs completed successfully, including performance and
 dependent hosted delivery. The sections below retain their exact evidence scopes.
@@ -411,8 +421,10 @@ repository metadata changes were explained, the Theory Owner confirmed:
 [MAINTAINERS.md](MAINTAINERS.md) discloses the consolidated roles and appointment
 date. The About description and eleven topics were saved and verified on GitHub.
 This instruction records role acceptance and repository-metadata authorization.
-Human acceptance of the handoff and approval of the exact public release remain
-pending. No maintainer release sign-off is inferred from appointment alone.
+The subsequent instruction `验收交接，合并 PR #5，发布 v0.1.0` explicitly accepts
+the handoff and approves this release in both consolidated roles. Approval covers
+the reviewed head identified above, publication-documentation successors, and the
+resulting merge into main. The final tag target is recorded in the GitHub Release.
 
 GOVERNANCE_AND_HANDOFF.md section 31 requires a handoff rehearsal by a reviewer
 who did not author the implementation. A fresh independent assistant reviewer
@@ -422,8 +434,8 @@ definitions and a trace owner, run a unit test, build, identify blockers and
 explain unavailable conclusions. [HANDOFF_REHEARSAL.md](HANDOFF_REHEARSAL.md)
 records the execution evidence, new rehearsal-build hashes and limitations.
 This is an independent assistant rehearsal, not an external human review or
-maintainer appointment. Human review of the record remains pending under
-GOVERNANCE_AND_HANDOFF.md section 28.4; named release approvals remain pending.
+maintainer appointment. Xiangyu Guo has accepted the record under
+GOVERNANCE_AND_HANDOFF.md section 28.4 and approved official publication.
 The rehearsal builds do not replace the candidate artifacts identified above.
 
 The handoff follow-up added the rehearsal record and updated this release record only.
@@ -431,13 +443,14 @@ Product, test, resource and workflow files retain the tested candidate bytes.
 The existing administrative evidence-reuse policy applies; no new full candidate
 run is claimed.
 
-Before public publication:
+Publication checklist:
 
 1. Current version/package verification is complete, as recorded above.
-2. Review and accept the recorded independent handoff rehearsal; record the
-   appointed Technical Maintainer's approval of the exact release.
-3. Confirm the official release approval and exact target commit.
-4. Create tag `v0.1.0` and the GitHub Release with verified artifacts and checksums.
+2. Handoff acceptance and both consolidated role approvals are recorded above.
+3. Merge PR #5, verify the merge tree against the approved branch, and use that
+   exact merge commit as the v0.1.0 tag target.
+4. Publish the GitHub Release with verified artifacts, the complete tagged-source
+   ZIP, checksums and exact build, validation and tag identities.
 5. Treat any package-registry upload as a separate requested action.
 
 This preparation preserves the read-only verification workflows and does not add

@@ -1,7 +1,7 @@
 # 0.1.0 handoff rehearsal
 
 Rehearsal date: 2026-10-06 UTC. Status: **all nine rehearsal steps executed;
-human review and acceptance of this report pending; official publication pending**.
+accepted by Xiangyu Guo on 2026-10-06; official v0.1.0 publication authorized**.
 
 This is a fresh assistant review by a reviewer that did not author the
 implementation. The reviewer cloned the public branch into a separate checkout,
@@ -9,8 +9,9 @@ installed fresh dependencies in a new virtual environment, and performed the
 commands below. A second assistant supplied a read-only trace cross-check.
 This is not external human review, a human role appointment, or a Theory Owner,
 Technical Maintainer, mathematical, security, or domain sign-off.
-GOVERNANCE_AND_HANDOFF.md section 28.4 still requires human review of this
-assistant-authored document for accuracy, licensing, traceability and public tone.
+Human acceptance under GOVERNANCE_AND_HANDOFF.md section 28.4 is recorded in
+the final follow-up below; the original assistant review remains independently
+identified and does not claim external human reviewer independence.
 
 No implementation, frozen specification, golden, workflow or dependency declaration
 was edited. No GitHub mutation, merge, tag, Release or registry upload was performed.
@@ -301,8 +302,8 @@ process-wide network blocking and large-workload performance were not repeated.
 The report does not claim PDF re-derivation, general scientific validation,
 external human independence or official release approval.
 
-Stop status: **TASK COMPLETE, PHASE CONTINUES**. Rehearsal execution is complete;
-human acceptance and official release approvals remain pending.
+Original stop status: **TASK COMPLETE, PHASE CONTINUES**. Rehearsal execution was
+complete; human acceptance and official release approvals were then pending.
 
 ## Appointment follow-up, 2026-10-06
 
@@ -310,5 +311,17 @@ After this rehearsal, Xiangyu Guo accepted the acting Technical Maintainer role,
 consolidated with the existing Theory Owner role as recorded in
 [MAINTAINERS.md](MAINTAINERS.md). This resolves the role-identification part of
 step 8. Its earlier unassigned-role observation remains a historical record.
-Human acceptance of this rehearsal and the named approvals of an exact official
-release remain pending.
+At this appointment stage, human acceptance and official release approval were
+still pending. The subsequent acceptance below resolves those remaining items.
+
+## Acceptance and publication authorization, 2026-10-06
+
+Xiangyu Guo, Theory Owner and acting Technical Maintainer, explicitly instructed:
+`验收交接，合并 PR #5，发布 v0.1.0`.
+This accepts the recorded handoff, including its stated scope and limitations,
+and approves official v0.1.0 publication in both consolidated roles under UD-032.
+The approved scope is PR #5 at `97ebb1a0323b4daeed7c7cbb465373f7ad34b07b`,
+publication-status documentation, refreshed README package descriptions and the
+resulting merge on main. No runtime, scientific, security or domain behavior is
+changed. Exact build source, tag target and checksums are retained in
+[RELEASE_0_1_0.md](RELEASE_0_1_0.md) and the GitHub Release.

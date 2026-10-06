@@ -3,7 +3,9 @@
 Start with the [quick demo](../README.md#quick-start) for installation and a small
 report you can inspect. This guide retains the complete example commands, Python
 API walkthrough, interpretation limits and historical workload measurements.
-Package version: `0.1.0`; report schema: `1.3`; official publication is pending.
+Package version: `0.1.0`; report schema: `1.3`.
+Download the [official GitHub release](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/releases/tag/v0.1.0)
+or use the [tagged-source quick start](../README.md#quick-start).
 
 ## Install and run
 
