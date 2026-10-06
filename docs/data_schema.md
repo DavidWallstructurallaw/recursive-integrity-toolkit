@@ -87,7 +87,7 @@ Content is read only by explicit LOCAL_REF requests through PR-017 containment a
 
 The bundle returns inventory, records, optional provenance, join evidence, chronology, generation when available, capability classification, mapping evidence, resolved-content identities and diagnostics. It writes no report. Check has_errors independently of maximum level. Content/parent-family failures can coexist with independent valid metadata; fatal structural input errors raise.
 
-Hero input validation qualifies as Level 4 without metric calculation. Model longitudinal remains unavailable. Scenario declarations may establish experimental eligibility without execution. The separately invoked calculation calls below provide approved fields. CLI audit orchestrates these calls and renders reports through the separate report contract. Explicit lineage/ancestry dispatch supports dedicated context inputs; Phase 6A adds ordered selected snapshots, pair schedules and optional shared lineage through the [longitudinal contract](longitudinal_contract.md). `report.schema.json` defines the current schema 1.2 public report. Configuration remains inert during input validation.
+Hero input validation qualifies as Level 4 without metric calculation. Model longitudinal remains unavailable. Scenario declarations may establish experimental eligibility without execution. The separately invoked calculation calls below provide approved fields. CLI audit orchestrates these calls and renders reports through the separate report contract. Explicit lineage/ancestry dispatch supports dedicated context inputs; Phase 6A adds ordered selected snapshots, pair schedules and optional shared lineage through the [longitudinal contract](longitudinal_contract.md). `report.schema.json` defines the current schema 1.3 public report. Configuration remains inert during input validation.
 
 
 ## Literal field representations
@@ -221,19 +221,23 @@ The pair context revalidates chronology and representation declarations. Both si
 
 ## CLI and report handoff
 
-The installed `audit` command accepts one primary records file and at most one
-`--compare` file. Each audit side must contain exactly one dataset version. The
-comparison side is earlier and the primary side later; explicit chronology and
-`--state-semantics` must establish the declared pair. The broader `AuditBundle`
-input API can validate more comparison sources without automatically analyzing
-them. Neither interface infers chronology from filenames or lexical version order.
+Ordinary pair `audit` accepts one primary records file and at most one `--compare`
+file. Each side contains exactly one dataset version: comparison is earlier and
+primary is later, with explicit chronology and compatible declared state meaning.
+Series `audit --longitudinal` accepts repeated `--compare` files and requires the
+primary version to be latest in the explicitly supplied order. The broader
+`AuditBundle` input API validates comparison sources without automatically
+analyzing them. No interface infers chronology from filenames or lexical order.
 
 CLI field/content-hash representations use the accepted representation config.
 CLI output calculations are unweighted, even if row weights exist. Tail selection
 accepts `singleton_count`, `count_at_or_below` and `frequency_at_or_below`; the
-Python-only `state_list` and directed state-mapping capabilities are not exposed
-through CLI flags. Closed-resampling Python functions require explicit invocation,
-and the CLI leaves simulations empty. No CLI command enables `LOCAL_REF` reading.
+Python-only `state_list` is not exposed through CLI flags. Directed per-version
+state mappings are available through longitudinal configuration, with no dedicated
+mapping flag. Closed-resampling Python functions require explicit invocation.
+CLI scenarios execute through `audit --simulate --config PATH` or a complete
+configuration with `simulation.enabled: true`; ordinary audits leave simulations
+empty, and `validate` never samples. No CLI command enables `LOCAL_REF` reading.
 
 `validate` publishes input-only reports. `audit` passes accepted result objects to
 `reports.assembly.assemble_report`, selects `privacy_view`, and publishes the
@@ -243,6 +247,6 @@ separately retained full selected scope. Missing, null, declared unknown, false,
 zero and unavailable conclusions remain distinct throughout this handoff.
 
 See [CLI options](cli.md), [public field registry](report_schema.md) and
-[privacy limits](privacy.md). The Phase 4 report schema is available both at
+[privacy limits](privacy.md). The current report schema is available both at
 `schemas/report.schema.json` in the checkout and
 `recursive_integrity_toolkit/data/report.schema.json` in installed resources.

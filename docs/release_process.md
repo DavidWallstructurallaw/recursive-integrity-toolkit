@@ -1,6 +1,19 @@
 # Development and Release Verification
 
-## Current Phase 6B implementation boundary
+## Current 0.1.0 release boundary
+
+The Theory Owner requested merging the accepted PRs and preparing the formal
+version and Release on 2026-10-02 UTC. PRs #1-#4 are merged into `main` without
+squashing or rewriting their accepted commits. The current package version is
+`0.1.0`; report schema remains 1.3. On 2026-10-06, Xiangyu Guo accepted the
+handoff and authorized merging PR #5 and publishing v0.1.0 in both consolidated
+roles. The [release record](../RELEASE_0_1_0.md) retains approvals and validation;
+the [GitHub Release](https://github.com/DavidWallstructurallaw/recursive-integrity-toolkit/releases/tag/v0.1.0)
+records the exact tag target and published artifacts. The package's existing
+development-status classifier remains unchanged. Experimental simulations and
+all documented interpretation limits remain in force.
+
+## Accepted Phase 6B implementation boundary
 
 Phase 6B Step 8 verifies the `0.1.0.dev6` development candidate with schema 1.3.
 Actual acceptance, supported environment results, measurements and artifacts are
@@ -30,9 +43,9 @@ python scripts/release_check.py
 
 Historical `--phase` and `--step` dispatch is retired. Earlier source forms,
 migrations and receipts remain recoverable from Git and archived phase records.
-The existing source check uses accepted Phase 6B Step 7 commit
-`9af8462bee86c367b6d0f5ae560e97f96cc58409`. Step 8 admits exactly the dev5-to-dev6
-version token in `pyproject.toml` and `__init__.py`. All remaining bytes in those
+The existing source check uses accepted Phase 6B handoff commit
+`64bc1ce627e79f6960a5a17b0ac401246155549c`. Release preparation admits exactly the
+dev6-to-0.1.0 version token in `pyproject.toml` and `__init__.py`. All remaining bytes in those
 two files and all other 81 product files, including numerical kernels,
 configuration, report owners, schemas and example resources, remain protected.
 It retains the exact product file inventory and

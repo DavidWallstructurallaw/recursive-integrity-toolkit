@@ -93,12 +93,12 @@ def test_current_scope_allows_only_the_candidate_version_token(
     current_tools["verify_source_scope"](protected_copy)
     target = protected_copy / relative
     source = target.read_bytes()
-    assert b'"0.1.0.dev6"' in source
+    assert b'"0.1.0"' in source
     if mutation == "extra_bytes":
         target.write_bytes(source + b"\n# Unapproved bytes beside the version token.\n")
     else:
-        replacement = b'"0.1.0.dev7"' if mutation == "different_version" else b'"0.1.0.dev5"'
-        target.write_bytes(source.replace(b'"0.1.0.dev6"', replacement))
+        replacement = b'"0.1.0.dev7"' if mutation == "different_version" else b'"0.1.0.dev6"'
+        target.write_bytes(source.replace(b'"0.1.0"', replacement))
     with pytest.raises(ValueError, match="Unauthorized product mutation"):
         current_tools["verify_source_scope"](protected_copy)
 

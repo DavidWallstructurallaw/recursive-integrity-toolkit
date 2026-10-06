@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.0: initial official release
+
+The first versioned release uses the accepted Phase 6B implementation.
+Phase 4, 5, 6A and 6B PRs are merged into `main`, preserving their commit history.
+Only the package-version tokens change in product files. Numerical behavior,
+input and privacy contracts, report schema 1.3, canonical examples and dependency
+requirements retain the dev6 candidate's bytes. Golden metadata and installed
+version assertions advance to 0.1.0 without changing expected scientific values.
+
+Release notes, validation, accepted handoff and both consolidated role approvals
+are recorded in `RELEASE_0_1_0.md`. The official tag is `v0.1.0`; its exact target
+and download checksums are recorded in the GitHub Release. Package-registry
+publication is not included. Experimental simulation remains experimental under
+the same declared assumptions and limitations.
+
 ## 0.1.0.dev6: Phase 6B experimental simulation candidate
 
 Added explicitly supplied constant-source external reopening alongside the
