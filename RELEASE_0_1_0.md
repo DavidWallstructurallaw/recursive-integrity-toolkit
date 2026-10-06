@@ -3,6 +3,7 @@
 Request date: 2026-10-02 UTC (2026-10-01 in America/Los_Angeles).
 Verification completed: 2026-10-02.
 Independent assistant handoff rehearsal executed: 2026-10-06; human review pending.
+Entry documentation and package-description refresh verified: 2026-10-06.
 Status: PREPARATION VERIFIED; PUBLICATION PENDING. No public release or registry upload is claimed.
 
 The Theory Owner requested: `合并 PR，再准备正式版本和 Release`.
@@ -78,7 +79,78 @@ complete reports can require several GB of memory and hundreds of MB of output;
 [Phase 6B measurements](PHASE_6B_COMPLETION.md) retain their exact dev6 source,
 environment, workload and measurement limits.
 
-## Current validation and artifacts
+## Entry documentation and package-description refresh, 2026-10-06
+
+The user requested current SEO/demand research and a clearer product entry before
+considering the pending maintainer role. [SEO_AND_ENTRY_REVIEW.md](SEO_AND_ENTRY_REVIEW.md)
+records primary sources, capability fit, keyword priorities and proposed GitHub
+About/topics. It makes no measured search-volume, ranking or uniqueness claim.
+About/topics settings have not been changed. The README now opens with the actual
+user questions, a small inspectable result and an installed command. Detailed
+commands/API guidance and historical observations moved to
+[docs/getting_started.md](docs/getting_started.md). Active CLI, data and report
+guides correct obsolete version, schema and simulation descriptions while
+preserving current definitions and historical evidence.
+
+Verified source: `ddd5a40d778098cbff5ea5554ffee42fa77305b4`, tree
+`f685be8b08b053d6ff85f4ce71428aa80121db8e`. Only six documentation files differ
+from the handoff successor. All executable, test, workflow, dependency and
+canonical-resource bytes remain unchanged. An independent assistant checked
+claims, values, commands and link targets against the implementation and existing
+oracles. All three static checks, local links and diff formatting passed.
+
+README is also the package long description, so old package checksums must not
+be presented as the refreshed description. A clean Git archive of this commit was
+built with its `SOURCE_DATE_EPOCH=1791312777`, Python 3.12.14, build 1.6.1 and
+setuptools 84.0.0. The wheel was built from the sdist; strict Twine 7.0.0 checks
+passed. Direct comparison with the recorded handoff build found exactly these
+uncompressed payload changes:
+
+- wheel: METADATA description and its RECORD checksum; all metadata headers,
+  41 runtime modules, 18 resources and other payloads remain byte-identical;
+- sdist: README.md and the two PKG-INFO descriptions only;
+- each description contains the exact current UTF-8 README bytes.
+
+`release_check.py --dist` passed its existing wheel/sdist inventory and installed
+input, arithmetic, assembly, privacy, rendering, output, CLI and example checks.
+The sdist check executes safely extracted source, not a separate pip installation.
+The exact new wheel was also force-installed without dependency changes and its
+isolated import origin verified outside the checkout. All six README commands
+ran from a fresh external directory: four packaged examples plus single-version
+validate/audit using copied canonical Hero records and config. All exited zero
+with no errors. Their warning counts in README order were 0, 9, 0, 0, 16 and 24;
+partial metadata retains its warnings rather than being silently promoted.
+Displayed support/diversity/missing-state values match the independent Hero oracle.
+
+| Refreshed local artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `recursive_integrity_toolkit-0.1.0-py3-none-any.whl` | 389462 | `94f07318337e07e1c47325191b6c67b3aa6413b5fe52b04e25cc84576f312041` |
+| `recursive_integrity_toolkit-0.1.0.tar.gz` | 354906 | `04bb4b22f613ee86c7adfbb2c0e0f7e005ffb6b68af3afdfaf8a86faf12b6c46` |
+| `recursive-integrity-toolkit-source.zip` | 1793554 | `14c23f348710d3a0f2ed1faa4a673a188671c88f33aa4775458bfcacb3efbd2c` |
+
+The source ZIP contains exactly the 358 tracked files of this verified commit;
+every payload was checked against Git, with ZIP CRC checks passing. These local
+refresh builds have not been uploaded to the old hosted candidate run or a public
+Release. They supersede the old package-description bytes for publication
+preparation. The full matrix, security and performance evidence below remains
+bound to `c5837845`; no fresh full candidate or performance run is claimed.
+Document-only verification reuses unchanged runtime evidence under the existing
+release process, with scoped package checks for the changed description.
+
+One inspection-helper assertion initially used the email parser's default ASCII
+body decoding and replaced non-ASCII README characters. Direct raw UTF-8 body
+comparison corrected that helper and passed; archive bytes were correct. A first
+README patch was rejected before applying because it targeted one file twice;
+the corrected write succeeded. A repository-sync read exceeded the command-output
+limit and was retried in bounded chunks before any remote tree was created.
+No product test, build or installed command failed in this entry refresh.
+
+The later completion-record update changes only this release record. Its source
+archive identity is separate from the `ddd5a40d` artifact above. Technical
+Maintainer appointment, human acceptance and official publication approval remain
+pending; the user's SEO request does not supply those approvals.
+
+## Full candidate validation and original artifacts
 
 The tested 0.1.0 preparation is `c5837845da603167e6f0c8216766d0a3a874835e`,
 tree `030fb987c9785ab7a4061c25302d079f9a37b341`, on `release-0.1.0`.
@@ -349,7 +421,7 @@ maintainer appointment. Human review of the record remains pending under
 GOVERNANCE_AND_HANDOFF.md section 28.4; named release approvals remain pending.
 The rehearsal builds do not replace the candidate artifacts identified above.
 
-This follow-up adds the rehearsal record and updates this release record only.
+The handoff follow-up added the rehearsal record and updated this release record only.
 Product, test, resource and workflow files retain the tested candidate bytes.
 The existing administrative evidence-reuse policy applies; no new full candidate
 run is claimed.
