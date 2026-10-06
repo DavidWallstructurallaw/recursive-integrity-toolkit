@@ -85,7 +85,8 @@ The user requested current SEO/demand research and a clearer product entry befor
 considering the pending maintainer role. [SEO_AND_ENTRY_REVIEW.md](SEO_AND_ENTRY_REVIEW.md)
 records primary sources, capability fit, keyword priorities and proposed GitHub
 About/topics. It makes no measured search-volume, ranking or uniqueness claim.
-About/topics settings have not been changed. The README now opens with the actual
+The prepared About description and eleven topics were applied and verified on
+GitHub on 2026-10-06 after the user authorized browser editing. The README now opens with the actual
 user questions, a small inspectable result and an installed command. Detailed
 commands/API guidance and historical observations moved to
 [docs/getting_started.md](docs/getting_started.md). Active CLI, data and report
@@ -146,9 +147,9 @@ limit and was retried in bounded chunks before any remote tree was created.
 No product test, build or installed command failed in this entry refresh.
 
 The later completion-record update changes only this release record. Its source
-archive identity is separate from the `ddd5a40d` artifact above. Technical
-Maintainer appointment, human acceptance and official publication approval remain
-pending; the user's SEO request does not supply those approvals.
+archive identity is separate from the `ddd5a40d` artifact above. The later 2026-10-06 instruction appoints the acting Technical Maintainer and
+authorizes the prepared repository metadata changes. Human acceptance of the
+handoff and official publication approval remain pending.
 
 ## Full candidate validation and original artifacts
 
@@ -404,10 +405,14 @@ evidence-reuse policy applies.
 ## Official publication requirements
 
 UD-032 and GOVERNANCE_AND_HANDOFF.md require Theory Owner and Technical
-Maintainer approval for `official-v0.1`. The user's current instruction records
-merge and preparation authority. MAINTAINERS.md still lists the Technical
-Maintainer as unassigned or acting; no named maintainer sign-off is invented.
-The same person may hold multiple roles if that consolidation is declared.
+Maintainer approval for `official-v0.1`. On 2026-10-06, after the role and
+repository metadata changes were explained, the Theory Owner confirmed:
+`可以，我兼任，执行`. Xiangyu Guo is now the acting Technical Maintainer;
+[MAINTAINERS.md](MAINTAINERS.md) discloses the consolidated roles and appointment
+date. The About description and eleven topics were saved and verified on GitHub.
+This instruction records role acceptance and repository-metadata authorization.
+Human acceptance of the handoff and approval of the exact public release remain
+pending. No maintainer release sign-off is inferred from appointment alone.
 
 GOVERNANCE_AND_HANDOFF.md section 31 requires a handoff rehearsal by a reviewer
 who did not author the implementation. A fresh independent assistant reviewer
@@ -430,7 +435,7 @@ Before public publication:
 
 1. Current version/package verification is complete, as recorded above.
 2. Review and accept the recorded independent handoff rehearsal; record the
-   Technical Maintainer appointment and approval.
+   appointed Technical Maintainer's approval of the exact release.
 3. Confirm the official release approval and exact target commit.
 4. Create tag `v0.1.0` and the GitHub Release with verified artifacts and checksums.
 5. Treat any package-registry upload as a separate requested action.

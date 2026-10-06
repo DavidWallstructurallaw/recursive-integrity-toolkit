@@ -70,21 +70,23 @@ wheel/sdist metadata and scoped installed checks before those new bytes can be
 used for publication. Existing full runtime evidence retains its original source
 identity; see `RELEASE_0_1_0.md` for the recorded verification scope.
 
-## Prepared repository metadata
+## Repository metadata applied, 2026-10-06
 
-At review time, GitHub About still reads:
+Before this update, GitHub About read:
 
 > An auditable, local-first research toolkit for analyzing recursive closure risk in synthetic-data training pipelines.
 
-There are no repository topics. The following replacement is prepared but has
-not been applied: the available GitHub connector exposes no repository-settings
-write operation. Browser fallback would require user authorization.
+The repository previously had no topics. On 2026-10-06, the user authorized
+browser editing and confirmed the acting Technical Maintainer role. The following
+description and eleven topics were saved through the repository About editor;
+the saved UI and the GitHub repository API both confirm the exact values.
+Website and other repository settings were left unchanged.
 
-Suggested About description:
+Applied About description:
 
 > Audit synthetic training data for category loss, provenance gaps and shared ancestry. Local Python CLI with dataset comparisons and JSON/Markdown reports.
 
-Suggested topics:
+Applied topics:
 
 ```text
 synthetic-data
@@ -101,5 +103,6 @@ cli
 ```
 
 README changes are prepared on `release-0.1.0` in PR #5. They become the default
-repository landing page when that PR is merged. Public release approval and a
-Technical Maintainer appointment remain separate pending decisions.
+repository landing page when that PR is merged. Xiangyu Guo is now the acting
+Technical Maintainer. Human acceptance of the handoff and formal release approval
+remain pending.

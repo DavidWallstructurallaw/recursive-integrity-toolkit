@@ -303,3 +303,12 @@ external human independence or official release approval.
 
 Stop status: **TASK COMPLETE, PHASE CONTINUES**. Rehearsal execution is complete;
 human acceptance and official release approvals remain pending.
+
+## Appointment follow-up, 2026-10-06
+
+After this rehearsal, Xiangyu Guo accepted the acting Technical Maintainer role,
+consolidated with the existing Theory Owner role as recorded in
+[MAINTAINERS.md](MAINTAINERS.md). This resolves the role-identification part of
+step 8. Its earlier unassigned-role observation remains a historical record.
+Human acceptance of this rehearsal and the named approvals of an exact official
+release remain pending.
